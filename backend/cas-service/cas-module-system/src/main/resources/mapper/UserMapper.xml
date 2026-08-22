@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.laoliu.cas.system.infrastructure.persistence.mapper.UserMapper">
+
+    <resultMap id="BaseResultMap" type="com.laoliu.cas.system.infrastructure.persistence.dataobject.UserDO">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="grade" column="grade"/>
+        <result property="sex" column="sex"/>
+        <result property="age" column="age"/>
+        <result property="email" column="email"/>
+        <result property="password" column="password"/>
+        <result property="role" column="role"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id,name,grade,sex,age,email,password,role
+    </sql>
+    <insert id="insert" parameterType="com.laoliu.cas.system.infrastructure.persistence.dataobject.UserDO">
+        insert into user (name, grade, sex, age, email, password, role)
+        values (#{name}, #{grade}, #{sex}, #{age}, #{email}, #{password}, #{role})
+    </insert>
+
+</mapper>

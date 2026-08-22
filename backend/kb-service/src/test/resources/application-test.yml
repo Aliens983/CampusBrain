@@ -1,0 +1,107 @@
+# ============================================================
+# Test Configuration — 所有中间件用轻量替代/禁用
+# ============================================================
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:kb_test;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 5
+
+  # 测试环境使用 H2 + schema-h2.sql 建表，禁用 Flyway 避免与 MySQL 迁移脚本冲突
+  flyway:
+    enabled: false
+
+  # 测试环境禁用自动初始化中间件
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+      - org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration
+
+  # 测试环境不自动启动 RabbitMQ 监听容器（RabbitMqConfig 的工厂读取此配置）
+  rabbitmq:
+    listener:
+      simple:
+        auto-startup: false
+
+  # 仅用于满足 EmailServiceImpl 的 @Value("${spring.mail.username}") 占位符解析
+  # JavaMailSender 已在测试中用 @MockBean 隔离，不会真正连接 SMTP
+  mail:
+    host: smtp.163.com
+    port: 465
+    username: test@example.com
+    password: test
+
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-h2.sql
+
+# 测试环境不检查 SMTP 连通性（JavaMailSender 已被 @MockBean 隔离）
+management:
+  health:
+    mail:
+      enabled: false
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    default-enum-type-handler: org.apache.ibatis.type.EnumOrdinalTypeHandler
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# 关闭不是测试需要的外部服务
+elasticsearch:
+  host: localhost
+  port: 19200
+
+qdrant:
+  host: localhost
+  port: 16334
+  collection-name: kb_chunks_test
+  vector-size: 1024
+
+minio:
+  endpoint: http://localhost:19000
+  access-key: minioadmin
+  secret-key: minioadmin123
+  bucket: test-bucket
+
+langchain4j:
+  openai:
+    api-key: test-key-not-used
+
+chunking:
+  default-size: 512
+  default-overlap: 50
+  strategy: fixed_size
+
+retrieval:
+  top-k-keyword: 5
+  top-k-vector: 5
+  final-top-k: 3
+  similarity-threshold: 0.7
+  rrf-k: 60
+
+app:
+  file-storage-path: /tmp/kb-test-files
+  security:
+    token-header: Authorization
+    mock-enable: true
+    mock-secret: test
+    access-token-validity-seconds: 7200
+    refresh-token-validity-seconds: 604800
+
+logging:
+  level:
+    root: WARN
+    com.kb: INFO

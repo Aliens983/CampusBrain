@@ -1,0 +1,40 @@
+# ===== 后端项目文档（个人笔记，不入库）=====
+docs/
+
+# ===== Maven 构建产物 =====
+target/
+*.class
+
+# ===== 日志 =====
+logs/
+*.log
+*.out
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# ===== 环境变量 / 密钥 =====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ===== 敏感配置文件（用 .example 版本复制后改名，勿提交）=====
+**/application.yml
+**/application-dev.yml
+**/application-docker.yml
+# 保留 .example 与测试配置（application-test.yml 不含真实凭据）
+
+# ===== 运行时上传/临时文件 =====
+uploads/
+data/
+*.tmp
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db

@@ -1,0 +1,229 @@
+# ============================================================
+# 微服务合体 — 完整编排（Nacos + KB 中间件 + 三个业务服务）
+# 使用前：先执行 `mvn clean package -DskipTests` 生成各服务 jar
+# （Dockerfile 采用"预编译 jar"方式，避免 Docker 内 Maven 镜像源问题）
+# CAS 依赖的 MySQL/Redis 使用宿主机（host.docker.internal:3306/6379）
+# ============================================================
+services:
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+
+  kb-mysql:
+    image: mysql:8.0
+    container_name: kb-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: knowledge_base
+    ports:
+      - "3307:3306"
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - kb-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  kb-redis:
+    image: redis:7.2-alpine
+    container_name: kb-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    volumes:
+      - kb-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  kb-es:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.0
+    container_name: kb-es
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - kb-es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  kb-qdrant:
+    image: qdrant/qdrant:v1.9.0
+    container_name: kb-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - kb-qdrant-data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q ':18BD.* 0A ' /proc/net/tcp || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
+  kb-rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: kb-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - kb-rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  kb-minio:
+    image: minio/minio:latest
+    container_name: kb-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - kb-minio-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # ==================== 业务服务 ====================
+  cas-service:
+    build:
+      context: ./cas-service
+      dockerfile: Dockerfile
+    container_name: cas-service
+    restart: unless-stopped
+    depends_on:
+      - nacos
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      NACOS_ADDR: nacos:8848
+      SPRING_DATASOURCE_URL: jdbc:mysql://host.docker.internal:3306/cas_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: host.docker.internal
+      SPRING_DATA_REDIS_PORT: "6379"
+      RABBITMQ_HOST: kb-rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: admin
+      RABBITMQ_PASSWORD: admin123
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
+      WEATHER_API_ID: ${WEATHER_API_ID:-}
+      WEATHER_API_KEY: ${WEATHER_API_KEY:-}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      ALIYUN_OSS_ACCESS_KEY_ID: ${ALIYUN_OSS_ACCESS_KEY_ID:-}
+      ALIYUN_OSS_ACCESS_KEY_SECRET: ${ALIYUN_OSS_ACCESS_KEY_SECRET:-}
+    ports:
+      - "18080:18080"
+
+  kb-service:
+    build:
+      context: ./kb-service
+      dockerfile: Dockerfile
+    container_name: kb-service
+    restart: unless-stopped
+    depends_on:
+      nacos:
+        condition: service_started
+      kb-mysql:
+        condition: service_healthy
+      kb-redis:
+        condition: service_healthy
+      kb-es:
+        condition: service_healthy
+      kb-qdrant:
+        condition: service_healthy
+      kb-rabbitmq:
+        condition: service_healthy
+      kb-minio:
+        condition: service_healthy
+    environment:
+      NACOS_ADDR: nacos:8848
+      SPRING_PROFILES_ACTIVE: docker
+      DB_HOST: kb-mysql
+      DB_PORT: "3306"
+      DB_USERNAME: root
+      DB_PASSWORD: root123
+      REDIS_HOST: kb-redis
+      REDIS_PORT: "6379"
+      RABBITMQ_HOST: kb-rabbitmq
+      RABBITMQ_PORT: "5672"
+      RABBITMQ_USERNAME: admin
+      RABBITMQ_PASSWORD: admin123
+      ES_HOST: kb-es
+      ES_PORT: "9200"
+      QDRANT_HOST: kb-qdrant
+      QDRANT_PORT: "6334"
+      MINIO_ENDPOINT: http://kb-minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin123
+      MAIL_HOST: ${MAIL_HOST:-smtp.163.com}
+      MAIL_PORT: "${MAIL_PORT:-465}"
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
+    ports:
+      - "8080:8080"
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    restart: unless-stopped
+    depends_on:
+      - nacos
+    environment:
+      GATEWAY_PORT: "80"
+      NACOS_ADDR: nacos:8848
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
+    ports:
+      - "80:80"
+
+volumes:
+  kb-mysql-data:
+  kb-redis-data:
+  kb-es-data:
+  kb-qdrant-data:
+  kb-rabbitmq-data:
+  kb-minio-data:

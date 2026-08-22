@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ServiceMapper">
+
+    <resultMap id="BaseResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
+        <id property="serviceId" column="service_id"/>
+        <result property="serviceName" column="service_name"/>
+        <result property="serviceDescribe" column="service_describe"/>
+        <result property="serviceState" column="service_state"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        service_id,service_name,service_describe,service_state
+    </sql>
+
+    <select id="selectAll" resultMap="BaseResultMap">
+        SELECT service_id,service_name,service_describe,service_state FROM services
+    </select>
+
+    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
+        SELECT service_id,service_name,service_describe,service_state
+        FROM services
+        WHERE service_id = #{id}
+    </select>
+
+    <insert id="insertSelective" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO"
+            useGeneratedKeys="true" keyProperty="serviceId">
+        INSERT INTO services (service_name, service_describe, service_state)
+        VALUES (#{serviceName}, #{serviceDescribe}, #{serviceState})
+    </insert>
+
+    <update id="updateByPrimaryKeySelective" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
+        UPDATE services
+        <set>
+            <if test="serviceName != null">
+                service_name = #{serviceName},
+            </if>
+            <if test="serviceDescribe != null">
+                service_describe = #{serviceDescribe},
+            </if>
+            <if test="serviceState != null">
+                service_state = #{serviceState},
+            </if>
+        </set>
+        WHERE service_id = #{serviceId}
+    </update>
+
+    <update id="updateByPrimaryKey" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
+        UPDATE services
+        SET service_name = #{serviceName},
+            service_describe = #{serviceDescribe},
+            service_state = #{serviceState}
+        WHERE service_id = #{serviceId}
+    </update>
+
+    <select id="selectUserServices" resultMap="BaseResultMap">
+        SELECT s.service_id, s.service_name, s.service_describe, s.service_state
+        FROM item i
+        JOIN services s ON i.service_id = s.service_id
+        WHERE i.user_id = #{userId}
+    </select>
+
+    <select id="selectAllWithPage" resultMap="BaseResultMap">
+        SELECT service_id, service_name, service_describe, service_state
+        FROM services
+        ORDER BY service_id DESC
+    </select>
+
+    <select id="selectUserServicesWithPage" resultMap="BaseResultMap">
+        SELECT s.service_id, s.service_name, s.service_describe, s.service_state
+        FROM item i
+        JOIN services s ON i.service_id = s.service_id
+        WHERE i.user_id = #{userId}
+        ORDER BY s.service_id DESC
+    </select>
+
+</mapper>

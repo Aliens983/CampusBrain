@@ -1,0 +1,10 @@
+{
+  "name": "@campus-appointment/user",
+  "version": "1.0.0",
+  "description": "Campus Appointment System - User Module",
+  "type": "module",
+  "main": "src/modules/user/index.ts",
+  "dependencies": {
+    "@campus-appointment/common": "workspace:*"
+  }
+}

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.laoliu</groupId>
+        <artifactId>CampusAppointmentSystem</artifactId>
+        <version>1.0.0</version>
+    </parent>
+
+    <artifactId>cas-framework</artifactId>
+    <packaging>pom</packaging>
+
+    <name>cas-framework</name>
+    <description>Technical Framework Layer - Spring Boot Starters</description>
+
+    <modules>
+        <module>cas-common</module>
+        <module>cas-spring-boot-starter-web</module>
+        <module>cas-spring-boot-starter-mybatis</module>
+        <module>cas-spring-boot-starter-redis</module>
+        <module>cas-spring-boot-starter-mq</module>
+        <module>cas-spring-boot-starter-security</module>
+        <module>cas-spring-boot-starter-test</module>
+    </modules>
+
+</project>

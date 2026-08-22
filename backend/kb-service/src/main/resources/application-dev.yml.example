@@ -1,0 +1,54 @@
+# ============================================================
+# Development Profile Configuration
+# ============================================================
+
+# 本地 MySQL Docker 端口
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3307/knowledge_base?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true&createDatabaseIfNotExist=true
+    username: root
+    password: CHANGE_ME
+
+  # ---------- 网易 163 邮箱 SMTP ----------
+  mail:
+    host: smtp.163.com
+    port: 465
+    username: your-email@163.com
+    password: your-smtp-auth-code
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+            required: true
+
+# ---------- Chat 模型：DeepSeek ----------
+langchain4j:
+  openai:
+    api-key: ${DEEPSEEK_API_KEY:CHANGE_ME}
+    chat-model:
+      base-url: https://api.deepseek.com
+      model-name: deepseek-chat
+      temperature: 0.3
+      max-tokens: 2048
+      timeout: 60s
+    embedding-model:
+      # DeepSeek 不支持 Embedding，需要单独的 Embedding 服务
+      # 选项1：硅基流动 siliconflow.cn（推荐，免费额度）
+      # 选项2：阿里百炼 dashscope.aliyuncs.com
+      # 选项3：本地 Ollama + bge-m3 模型
+      api-key: ${EMBEDDING_API_KEY:${DEEPSEEK_API_KEY:sk-xxx}}
+      base-url: ${EMBEDDING_BASE_URL:https://api.siliconflow.cn/v1}
+      model-name: ${EMBEDDING_MODEL:Qwen/Qwen3-Embedding-0.6B}
+      timeout: 120s
+
+# ---------- Security（开发环境开启 Mock 登录） ----------
+app:
+  security:
+    mock-enable: true
+
+logging:
+  level:
+    com.kb: DEBUG

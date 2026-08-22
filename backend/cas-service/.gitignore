@@ -1,0 +1,66 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+### Claude Code ###
+.claude/
+
+**/Config.md
+
+#localfile
+upload
+data/
+plan.md
+
+
+/logs/
+
+/uploads
+
+/interact
+
+# 项目文档/计划（本地笔记，不提交）
+/docs/
+
+# ========== 配置文件 ==========
+# 敏感配置，不提交到 Git
+application.yml
+application-local.yml
+application-prod.yml
+application-*.local.yml
+application-*.yml
+
+# 但保留示例文件
+!application.yml.example
+!application-local.yml.example
+!application-prod.yml.example

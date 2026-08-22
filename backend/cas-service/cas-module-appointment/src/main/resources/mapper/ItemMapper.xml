@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ItemMapper">
+
+    <resultMap id="BaseResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO">
+        <id property="orderId" column="order_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="serviceId" column="service_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="manageStatus" column="manage_status"/>
+        <result property="reason" column="reason"/>
+    </resultMap>
+
+    <resultMap id="ServiceStatusResultMap" type="com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse">
+        <id property="orderId" column="order_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="serviceName" column="service_name"/>
+        <result property="serviceDescribe" column="service_describe"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="manageStatus" column="manage_status"/>
+        <result property="reason" column="reason"/>
+    </resultMap>
+
+    <resultMap id="ServicesDOResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
+        <id property="serviceId" column="service_id"/>
+        <result property="serviceName" column="service_name"/>
+        <result property="serviceDescribe" column="service_describe"/>
+        <result property="serviceState" column="service_state"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        order_id,user_id,service_id,create_time,update_time,manage_status
+    </sql>
+
+    <!-- 幂等插入：60 秒内同用户对同一服务（待审核状态）不重复插入，防止连点/并发重复预约 -->
+    <insert id="insertServices">
+        INSERT INTO item(user_id,service_id)
+        SELECT #{userId}, s.service_id
+        FROM services s
+        WHERE s.service_id IN
+        <foreach collection="serviceId" item="sid" open="(" separator="," close=")">
+            #{sid}
+        </foreach>
+        AND NOT EXISTS (
+            SELECT 1 FROM item i
+            WHERE i.user_id = #{userId}
+              AND i.service_id = s.service_id
+              AND i.manage_status = 0
+              AND i.create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+        )
+    </insert>
+
+    <select id="getServiceStatus" resultMap="ServiceStatusResultMap">
+        SELECT i.order_id, i.user_id, u.name AS username,
+               s.service_name, s.service_describe, i.reason,
+               i.create_time, i.update_time, i.manage_status
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        JOIN services s ON i.service_id = s.service_id
+        ORDER BY i.create_time DESC
+    </select>
+
+    <select id="getServiceStatusByUserId" resultMap="ServiceStatusResultMap">
+        SELECT i.order_id, i.user_id, u.name AS username,
+               s.service_name, s.service_describe, i.reason,
+               i.create_time, i.update_time, i.manage_status
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        JOIN services s ON i.service_id = s.service_id
+        WHERE i.user_id = #{userId}
+        ORDER BY i.create_time DESC
+    </select>
+
+    <select id="getServiceStatusByOrderId" resultMap="ServiceStatusResultMap">
+        SELECT i.order_id, i.user_id, u.name AS username,
+               s.service_name, s.service_describe, i.reason,
+               i.create_time, i.update_time, i.manage_status
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        JOIN services s ON i.service_id = s.service_id
+        WHERE i.order_id = #{orderId}
+    </select>
+
+    <select id="getServiceStatusByOrderIdAndUserId" resultMap="ServiceStatusResultMap">
+        SELECT i.order_id, i.user_id, u.name AS username,
+               s.service_name, s.service_describe, i.reason,
+               i.create_time, i.update_time, i.manage_status
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        JOIN services s ON i.service_id = s.service_id
+        WHERE i.order_id = #{orderId}
+        AND i.user_id = #{userId}
+    </select>
+
+    <select id="getUserEmailByOrderId" resultType="String">
+        SELECT u.email
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        WHERE i.order_id = #{orderId}
+    </select>
+
+    <select id="selectUserServices" resultMap="ServicesDOResultMap">
+        SELECT s.service_id, s.service_name, s.service_describe, s.service_state
+        FROM item i
+        JOIN services s ON i.service_id = s.service_id
+        WHERE i.user_id = #{userId}
+    </select>
+
+    <update id="setBookingStatusByParts">
+        UPDATE item
+        SET manage_status = 3
+        WHERE user_id = #{userId}
+        AND order_id IN
+        <foreach collection="bookingIds" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="auditService">
+        UPDATE item
+        SET manage_status = #{status}
+        <if test="reason != null and reason != ''">
+            , reason = #{reason}
+        </if>
+        WHERE order_id = #{orderId}
+        AND manage_status = 0
+    </update>
+    <update id="setBookingStatus">
+        UPDATE item
+        SET manage_status = 3
+        WHERE user_id = #{userId}
+        AND order_id = #{bookingId}
+    </update>
+
+    <!-- 分页查询所有服务预约状态（支持按审核状态、服务名称筛选） -->
+    <select id="getServiceStatusWithPage" resultMap="ServiceStatusResultMap">
+        SELECT i.order_id, i.user_id, u.name AS username,
+               s.service_name, s.service_describe, i.reason,
+               i.create_time, i.update_time, i.manage_status
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        JOIN services s ON i.service_id = s.service_id
+        <where>
+            <if test="manageStatus != null">
+                AND i.manage_status = #{manageStatus}
+            </if>
+            <if test="serviceName != null and serviceName != ''">
+                AND s.service_name LIKE CONCAT('%', #{serviceName}, '%')
+            </if>
+        </where>
+        ORDER BY i.create_time DESC
+    </select>
+
+    <!-- 分页查询用户的预约状态（支持按审核状态、服务名称筛选） -->
+    <select id="getServiceStatusByUserIdWithPage" resultMap="ServiceStatusResultMap">
+        SELECT i.order_id, i.user_id, u.name AS username,
+               s.service_name, s.service_describe, i.reason,
+               i.create_time, i.update_time, i.manage_status
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        JOIN services s ON i.service_id = s.service_id
+        WHERE i.user_id = #{userId}
+        <if test="manageStatus != null">
+            AND i.manage_status = #{manageStatus}
+        </if>
+        <if test="serviceName != null and serviceName != ''">
+            AND s.service_name LIKE CONCAT('%', #{serviceName}, '%')
+        </if>
+        ORDER BY i.create_time DESC
+    </select>
+
+</mapper>

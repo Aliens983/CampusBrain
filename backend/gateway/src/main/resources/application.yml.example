@@ -1,0 +1,37 @@
+server:
+  port: 8888
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:localhost:8848}
+    gateway:
+      routes:
+        # CAS 服务：路径已含 /api/v1（CAS 自身 context-path 也是 /api/v1），不剥前缀
+        - id: cas-service
+          uri: lb://cas-service
+          predicates:
+            - Path=/api/v1/auth/**, /api/v1/captcha, /api/v1/users/**, /api/v1/admin/**, /api/v1/app/**, /api/v1/appointments/**, /api/v1/weather/**, /api/v1/ai/**, /api/v1/uploads/**
+        # KB 服务：统一走 /api/v1/kb/**，StripPrefix=2 后 KB 收到 /kb/**
+        - id: kb-service
+          uri: lb://kb-service
+          predicates:
+            - Path=/api/v1/kb/**
+          filters:
+            - StripPrefix=2
+
+# 与 CAS 共享的 JWT 密钥（网关验签用）
+jwt:
+  secret: ${JWT_SECRET:CHANGE_ME}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+# 内网签名密钥（网关签发、服务端校验）
+auth:
+  internal-sign-secret: ${INTERNAL_SIGN_SECRET:CHANGE_ME}
+
+logging:
+  level:
+    com.laoliu.gateway: info

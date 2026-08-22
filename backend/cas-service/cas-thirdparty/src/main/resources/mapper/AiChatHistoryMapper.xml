@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.laoliu.cas.thirdparty.infrastructure.persistence.mapper.AiChatHistoryMapper">
+
+    <resultMap id="BaseResultMap" type="com.laoliu.cas.thirdparty.infrastructure.persistence.dataobject.AiChatHistoryDO">
+        <id property="id" column="id"/>
+        <id property="userId" column="user_id"/>
+        <result property="model" column="model"/>
+        <result property="userMessage" column="user_message"/>
+        <result property="aiResponse" column="ai_response"/>
+        <result property="responseTimeMs" column="response_time_ms"/>
+        <result property="createdAt" column="created_at"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, user_id, model, user_message, ai_response, response_time_ms, created_at, updated_at
+    </sql>
+
+    <insert id="insert" parameterType="com.laoliu.cas.thirdparty.infrastructure.persistence.dataobject.AiChatHistoryDO"
+            useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO ai_chat_history (user_id, model, user_message, ai_response, response_time_ms, created_at, updated_at)
+        VALUES (#{userId}, #{model}, #{userMessage}, #{aiResponse}, #{responseTimeMs}, #{createdAt}, #{updatedAt})
+    </insert>
+
+</mapper>

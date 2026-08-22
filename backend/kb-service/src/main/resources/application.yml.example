@@ -1,0 +1,236 @@
+# ============================================================
+# Knowledge Base Platform — Application Configuration
+# ============================================================
+
+# 与网关共享的内网签名密钥（校验 X-Internal-Sign）
+auth:
+  internal-sign-secret: ${INTERNAL_SIGN_SECRET:CHANGE_ME}
+
+# common-auth 的 JWTUtils 会被扫描实例化（KB 本身不验 JWT，但需占位属性）
+jwt:
+  secret: ${JWT_SECRET:CHANGE_ME}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+spring:
+  application:
+    name: kb-service
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:localhost:8848}
+  profiles:
+    active: dev
+
+  # ---------- MySQL Datasource ----------
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/knowledge_base?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:CHANGE_ME}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      connection-timeout: 30000
+
+  # ---------- Redis ----------
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6380}
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 4
+
+  # ---------- RabbitMQ ----------
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:admin}
+    password: ${RABBITMQ_PASSWORD:CHANGE_ME}
+    listener:
+      simple:
+        concurrency: 2
+        max-concurrency: 5
+        prefetch: 1
+        retry:
+          enabled: true
+          initial-interval: 3000ms
+          max-attempts: 3
+
+  # ---------- File Upload ----------
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 50MB
+      max-request-size: 100MB
+
+  # ---------- Jackson ----------
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+
+  # ---------- Flyway ----------
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    table: flyway_schema_history
+    clean-disabled: true
+
+  # ---------- Graceful Shutdown ----------
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+
+# ---------- Server ----------
+server:
+  port: 8081
+  shutdown: graceful
+  tomcat:
+    uri-encoding: UTF-8
+  compression:
+    enabled: true
+    mime-types: text/plain,text/html,text/css,application/json,text/event-stream
+
+# ---------- MyBatis-Plus ----------
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.slf4j.Slf4jImpl
+    default-enum-type-handler: org.apache.ibatis.type.EnumOrdinalTypeHandler
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+# ---------- MinIO Object Storage ----------
+minio:
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:CHANGE_ME}
+  secret-key: ${MINIO_SECRET_KEY:CHANGE_ME}
+  bucket: knowledge-base-docs
+
+# ---------- Elasticsearch ----------
+elasticsearch:
+  host: ${ES_HOST:localhost}
+  port: ${ES_PORT:9200}
+  index-name: kb_documents
+
+# ---------- Qdrant Vector Database ----------
+qdrant:
+  host: ${QDRANT_HOST:localhost}
+  port: ${QDRANT_PORT:6334}
+  collection-name: kb_chunks
+  vector-size: 1024
+  distance: Cosine
+
+# ---------- LangChain4j / LLM ----------
+langchain4j:
+  openai:
+    api-key: ${OPENAI_API_KEY:CHANGE_ME}
+    chat-model:
+      model-name: ${LLM_MODEL:gpt-4o}
+      temperature: 0.3
+      max-tokens: 2048
+      timeout: 60s
+    embedding-model:
+      model-name: ${EMBEDDING_MODEL:text-embedding-3-small}
+
+# ---------- Chunking Strategy ----------
+chunking:
+  default-size: 512
+  default-overlap: 50
+  strategy: sliding_window     # Options: fixed_size | sliding_window | semantic
+
+# ---------- Retrieval Strategy ----------
+retrieval:
+  top-k-keyword: 10
+  top-k-vector: 10
+  final-top-k: 5
+  similarity-threshold: 0.7
+  rrf-k: 60                    # RRF constant k value
+
+# ---------- Actuator ----------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  health:
+    mail:
+      enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+    tags:
+      application: ${spring.application.name}
+
+# ---------- Resilience4j Circuit Breaker ----------
+resilience4j:
+  circuitbreaker:
+    instances:
+      llmService:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+        automatic-transition-from-open-to-half-open-enabled: true
+      embeddingService:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 3
+
+# ---------- App Config ----------
+app:
+  file-storage-path: ${FILE_STORAGE_PATH:../file}
+  security:
+    token-header: Authorization
+    mock-enable: false
+    mock-secret: test
+    access-token-validity-seconds: 7200
+    refresh-token-validity-seconds: 604800
+
+# ---------- SpringDoc / Knife4j ----------
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: default
+      paths-to-match: /api/**
+  default-flat-param-object: true
+
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+    enable-swagger-models: true
+    enable-footer: false
+
+# ---------- Logging ----------
+logging:
+  level:
+    root: INFO
+    com.kb: DEBUG
+    com.kb.infrastructure.persistence: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

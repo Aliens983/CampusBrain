@@ -1,0 +1,30 @@
+# ===== 项目文档（个人笔记，不入库）=====
+docs/
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+
+# ===== 日志 =====
+logs/
+*.log
+*.out
+
+# ===== 操作系统 =====
+.DS_Store
+Thumbs.db
+
+# ===== 环境变量 / 密钥 =====
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# ===== 临时文件 =====
+*.swp
+*.swo
+*~

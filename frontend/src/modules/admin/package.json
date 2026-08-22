@@ -1,0 +1,10 @@
+{
+  "name": "@campus-appointment/admin",
+  "version": "1.0.0",
+  "description": "Campus Appointment System - Admin Module",
+  "type": "module",
+  "main": "src/modules/admin/index.ts",
+  "dependencies": {
+    "@campus-appointment/common": "workspace:*"
+  }
+}

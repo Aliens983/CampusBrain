@@ -1,0 +1,2 @@
+com.laoliu.cas.redis.config.RedisAutoConfiguration
+com.laoliu.cas.redis.config.RedisCacheAutoConfiguration
