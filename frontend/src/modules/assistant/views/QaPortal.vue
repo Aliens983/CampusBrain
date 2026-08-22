@@ -271,12 +271,8 @@ async function deleteDocument(doc: DocumentItem) {
 }
 
 function getSessionId(): string {
-  let id = localStorage.getItem('qa_sessionId')
-  if (!id) {
-    id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()))
-    localStorage.setItem('qa_sessionId', id)
-  }
-  return id
+  // 每次提问用新会话，避免历史问题串入导致 LLM 重复回答/答错
+  return crypto.randomUUID ? crypto.randomUUID() : String(Date.now())
 }
 
 function askQuestion() {

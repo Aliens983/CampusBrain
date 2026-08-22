@@ -22,4 +22,10 @@ public interface CasClient {
      */
     @GetMapping("/api/v1/appointments/availability")
     CasResult<List<CasAvailability>> getAvailability();
+
+    /**
+     * 获取当前登录用户的预约记录（X-User-Id 由 Feign 拦截器动态注入）。
+     */
+    @GetMapping("/api/v1/appointments/mine")
+    CasResult<List<CasBooking>> getMyBookings();
 }

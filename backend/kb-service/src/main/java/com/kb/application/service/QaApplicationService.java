@@ -63,8 +63,9 @@ public class QaApplicationService implements IQaApplicationService {
         long startTime = System.currentTimeMillis();
         String sid = ensureSessionId(sessionId);
 
-        // Step 0: Check both caches (exact-match + semantic)
-        var exactCached = qaCacheService.getCachedAnswer(query);
+        // Step 0: 缓存已全部禁用，每次都实时检索 + LLM 回答，保证最新最准
+        // var exactCached = qaCacheService.getCachedAnswer(query);
+        var exactCached = java.util.Optional.<com.kb.infrastructure.cache.QaCacheService.QaCacheEntry>empty();
         if (exactCached.isPresent()) {
             log.debug("Exact cache hit for query: {}", query);
             metrics.recordCacheHit();
@@ -74,7 +75,8 @@ public class QaApplicationService implements IQaApplicationService {
             return exactCached.get().answer();
         }
 
-        String semanticCached = semanticCacheService.lookup(query);
+        // 语义缓存（向量相似度匹配）容易误命中导致答非所问，已禁用
+        String semanticCached = null; // semanticCacheService.lookup(query);
         if (semanticCached != null) {
             log.debug("Semantic cache hit for query: {}", query);
             metrics.recordCacheHit();
@@ -112,14 +114,26 @@ public class QaApplicationService implements IQaApplicationService {
             // Step 5: Save user message
             conversationRepository.save(sid, "user", query);
 
-            // Step 6: LLM streaming generation（预约相关问题走实时数据 Tool 链路）
+            // Step 6: LLM generation
+            // 意图路由：预约类 → Function Calling；非预约类 → 本地资料有结果走 RAG，无结果或 RAG 无法回答 → DeepSeek 兜底
             String fullAnswer;
             if (isAppointmentQuery(rewrittenQuery)) {
                 fullAnswer = llmService.generateAnswerWithTools(
                         rewrittenQuery, reranked, chatHistory, onToken);
+            } else if (reranked != null && !reranked.isEmpty()) {
+                // 先同步生成 RAG 回答判断是否能回答，避免"无法回答"推流后又推兜底导致拼接
+                String ragAnswer = llmService.generateAnswer(rewrittenQuery, reranked, chatHistory);
+                if (looksLikeNoAnswer(ragAnswer)) {
+                    fullAnswer = llmService.generateAnswerDirect(rewrittenQuery, chatHistory);
+                } else {
+                    fullAnswer = ragAnswer;
+                }
+                if (onToken != null) {
+                    onToken.accept(fullAnswer);
+                }
             } else {
-                fullAnswer = llmService.generateAnswerStreaming(
-                        rewrittenQuery, reranked, chatHistory, onToken);
+                fullAnswer = llmService.generateAnswerDirectStreaming(
+                        rewrittenQuery, chatHistory, onToken);
             }
 
             // Step 7: Build citations
@@ -134,9 +148,9 @@ public class QaApplicationService implements IQaApplicationService {
 
             onCitations.accept(citations);
 
-            // Step 9: Store in both caches
-            qaCacheService.cacheAnswer(query, fullAnswer, citations);
-            semanticCacheService.store(query, fullAnswer);
+            // Step 9: 缓存已全部禁用，不写入
+            // qaCacheService.cacheAnswer(query, fullAnswer, citations);
+            // semanticCacheService.store(query, fullAnswer);
 
             // Step 10: Record metrics
             metrics.recordQaRequest();
@@ -162,13 +176,15 @@ public class QaApplicationService implements IQaApplicationService {
         long startTime = System.currentTimeMillis();
         String sid = ensureSessionId(sessionId);
 
-        // Check both caches
-        var exactCached = qaCacheService.getCachedAnswer(query);
+        // 缓存已全部禁用，每次都实时检索 + LLM 回答
+        // var exactCached = qaCacheService.getCachedAnswer(query);
+        var exactCached = java.util.Optional.<com.kb.infrastructure.cache.QaCacheService.QaCacheEntry>empty();
         if (exactCached.isPresent()) {
             metrics.recordCacheHit();
             return exactCached.get().answer();
         }
-        String semanticCached = semanticCacheService.lookup(query);
+        // 语义缓存（向量相似度匹配）容易误命中导致答非所问，已禁用
+        String semanticCached = null; // semanticCacheService.lookup(query);
         if (semanticCached != null) {
             metrics.recordCacheHit();
             return semanticCached;
@@ -194,16 +210,23 @@ public class QaApplicationService implements IQaApplicationService {
         if (isAppointmentQuery(rewrittenQuery)) {
             answer = llmService.generateAnswerWithTools(
                     rewrittenQuery, reranked, chatHistory, null);
-        } else {
+        } else if (reranked != null && !reranked.isEmpty()) {
             answer = llmService.generateAnswer(rewrittenQuery, reranked, chatHistory);
+            // 本地资料检索到了但 LLM 认为无法回答 → 用 DeepSeek 兜底重新回答
+            if (looksLikeNoAnswer(answer)) {
+                answer = llmService.generateAnswerDirect(rewrittenQuery, chatHistory);
+            }
+        } else {
+            // 本地无相关资料 → DeepSeek 大模型兜底
+            answer = llmService.generateAnswerDirect(rewrittenQuery, chatHistory);
         }
 
         List<Conversation.CitationRef> citations = buildCitations(reranked);
         conversationRepository.saveWithReferences(sid, "assistant", answer, citations);
 
-        // Cache + metrics
-        qaCacheService.cacheAnswer(query, answer, citations);
-        semanticCacheService.store(query, answer);
+        // Cache 已全部禁用，不写入（metrics 保留）
+        // qaCacheService.cacheAnswer(query, answer, citations);
+        // semanticCacheService.store(query, answer);
         metrics.recordQaRequest();
         metrics.recordQaLatency(System.currentTimeMillis() - startTime);
         incrementDailyCounter();
@@ -246,6 +269,18 @@ public class QaApplicationService implements IQaApplicationService {
             return false;
         }
         return APPOINTMENT_KEYWORDS.stream().anyMatch(q::contains);
+    }
+
+    /** RAG 回答包含"无法回答"信号时，判定本地资料未真正回答问题，触发 DeepSeek 兜底 */
+    private boolean looksLikeNoAnswer(String answer) {
+        if (answer == null || answer.isBlank()) {
+            return true;
+        }
+        String[] markers = {
+                "无法回答", "没有相关", "未包含", "暂无法", "没有找到", "未找到",
+                "无法根据", "无法为您", "没有足够的", "文档中未"
+        };
+        return java.util.Arrays.stream(markers).anyMatch(answer::contains);
     }
 
     private void incrementDailyCounter() {

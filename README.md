@@ -54,7 +54,7 @@
 | 能力 | 状态 | 说明 |
 |---|---|---|
 | 校园预约（CAS） | ✅ 完整 | 服务/会议室/设备/咨询预约、审核、取消，DDD 分层 |
-| 知识库问答（KB） | ✅ 完整 | 文档上传 → 分块 → 向量化 → RAG 检索 → LLM 回答，SSE 流式 |
+| 知识库问答（KB） | ✅ 完整 | 文档上传 → 分块 → 向量化 → RAG 检索 → LLM 回答，SSE 流式；**本地资料优先 + 无资料 DeepSeek 兜底；缓存已禁用，每次实时回答** |
 | 微服务架构 | ✅ 完整 | Gateway + Nacos 注册/配置 + CAS/KB 两服务，Docker Compose 编排 |
 | 网关统一鉴权 | ✅ 完整 | JWT 验签 + 内网签名 `X-Internal-Sign` + 时间戳防重放 |
 | 预约实时查询（Function Calling） | ⚠️ 已实现 | Feign + Nacos 直连 CAS + LangChain4j `@Tool`；**需配置 `DEEPSEEK_API_KEY` 并重启两端后演示** |
@@ -136,19 +136,32 @@ export JWT_SECRET='<32字节以上随机串>'
 export INTERNAL_SIGN_SECRET='<随机串>'
 ```
 
-### 2. 启动后端（Docker）
+### 2. 启动中间件（Docker，只含 Nacos + KB 中间件）
 
 ```bash
 cd backend
-cp .env.example .env              # 按需修改：DB 密码、JWT/内网签名密钥等
-mvn clean package -DskipTests     # 首次或改过代码/配置后需重新打包
-docker compose up -d --build      # Nacos + 中间件 + gateway/cas-service/kb-service
+cp .env.example .env              # 按需修改：中间件密码、JWT/内网签名密钥等
+docker compose up -d              # Nacos + MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO
 ```
 
-> 业务服务 Dockerfile 走「预编译 jar」方式，改代码后必须先 `mvn package`。
+> 三个业务服务（gateway/cas-service/kb-service）**在本地运行**，不占用 Docker。
 > CAS 依赖宿主机 MySQL(3306)/Redis(6379)，需确保 `cas_db` 已建表。
 
-### 3. 启动前端
+### 3. 启动三个业务服务（本地）
+
+```bash
+# 导出环境变量（三个服务共用）
+export DEEPSEEK_API_KEY='<DeepSeek 密钥>'
+export DB_PASSWORD='<CAS 数据库密码>'
+export JWT_SECRET='<32字节以上随机串>' INTERNAL_SIGN_SECRET='<随机串>'
+
+# IDEA 分别启动，或 java -jar 依次启动：
+#   GatewayApplication → 8888
+#   CampusAppointmentApplication → 18080
+#   KbApplication → 8081
+```
+
+### 4. 启动前端
 
 ```bash
 cd frontend
@@ -156,37 +169,18 @@ npm install
 npm run dev        # http://localhost:3000
 ```
 
-### 4. 验证
+### 5. 验证
 
 ```bash
 # Nacos 三个服务注册
 curl http://localhost:8848/nacos/v1/ns/service/list?pageNo=1&pageSize=10
 # 网关路由到 KB
-curl http://localhost:80/api/v1/kb/health
+curl http://localhost:8888/api/v1/kb/health
 ```
 
 浏览器访问 http://localhost:3000，登录后：
 - CAS 功能：工作台 / 服务预约 / 我的预约 / 个人中心
 - **AI 助手**（导航栏"AI 助手"）：上传文档后提问，走 RAG 问答；问"有哪些服务可预约"触发 Function Calling 返回实时数据
-
-<details>
-<summary>💻 本地开发模式（不用 Docker，逐服务起）</summary>
-
-```bash
-# 1. 中间件仍建议用 Docker 起（Nacos/MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO）
-cd backend && docker compose up -d nacos kb-mysql kb-redis kb-es kb-qdrant kb-rabbitmq kb-minio
-
-# 2. 导出环境变量（同上）
-
-# 3. 三个终端分别启动
-java -jar cas-service/cas-server/target/cas-server-1.0.0.jar      # 18080
-java -jar kb-service/target/kb-service-1.0.0.jar                  # 8081
-java -jar gateway/target/gateway-1.0.0.jar                        # 8888
-
-# 4. 前端 vite 代理指向 8888（已配置）
-```
-
-</details>
 
 ## 五、测试
 
@@ -206,6 +200,7 @@ cd frontend && npm run type-check && npm run lint   # 前端类型检查 + lint
 ## 七、已知限制（如实）
 
 - **AI 问答依赖 `DEEPSEEK_API_KEY`**：未配置则 LLM 调用失败，AI 助手不可用。
+- **缓存已全部禁用**：每次提问实时检索 + LLM 回答（避免答非所问/历史串题），代价是每次调用 LLM 有延迟与费用，见 `docs/为什么不用缓存.md`。
 - **RabbitMQ 事件消费不完整**：KB 已接收预约变更事件但仅记录日志，索引/缓存更新尚未实现。
 - **Sentinel 流控规则为空**：已接入并演示接口，但未配置真实限流规则。
 - **响应模型跨服务不统一**：CAS 用 `CommonResult`，KB 用 `ApiResponse`。
@@ -221,6 +216,7 @@ cd frontend && npm run type-check && npm run lint   # 前端类型检查 + lint
 | `docs/秋招简历项目审查报告.md` | 简历视角审查 + 修复进度追踪 |
 | `docs/项目问题审计报告.md` | 安全/契约审计 |
 | `docs/当前项目遗留问题清单.md` | 当前遗留问题与低成本建议 |
+| `docs/为什么不用缓存.md` | AI 问答禁用缓存的原因与权衡 |
 | `docs/微服务合体方案.md` | 架构决策与演进 |
 | `docs/待办清单.md` | 剩余功能与技术债 |
 | `docs/FunctionCalling演示记录.md` | Function Calling 实时查询的可复现演示步骤 |

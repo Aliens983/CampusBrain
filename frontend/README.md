@@ -72,5 +72,5 @@ npm run lint         # eslint
 
 ## 关键说明
 
-- **AI 助手 SSE**：问答走 `EventSource /api/v1/kb/qa/ask/stream?token=...`，网关已支持从 query 读 token（EventSource 无法设 header）；回答完成后收到 `messageId` 事件，用于点赞/点踩反馈（`POST /api/v1/kb/qa/feedback`）。
+- **AI 助手 SSE**：问答走 `EventSource /api/v1/kb/qa/ask/stream?token=...`，网关已支持从 query 读 token（EventSource 无法设 header）。后端用 `ServerSentEvent` 结构化编码：回答文本为默认 message 事件（界面显示），`messageId`（点赞/点踩反馈）与 `citations`（引用来源）为命名事件，由 `addEventListener` 单独接收，**不会显示到回答框**。
 - **token 统一**：前端只维护一套 token（CAS JWT），经网关透传身份；KB 的 AI 问答需后端配置 `DEEPSEEK_API_KEY`，否则 LLM 调用失败。

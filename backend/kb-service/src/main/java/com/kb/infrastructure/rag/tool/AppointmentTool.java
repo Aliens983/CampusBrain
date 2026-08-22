@@ -1,8 +1,10 @@
 package com.kb.infrastructure.rag.tool;
 
 import com.kb.infrastructure.client.CasAvailability;
+import com.kb.infrastructure.client.CasBooking;
 import com.kb.infrastructure.client.CasClient;
 import com.kb.infrastructure.client.CasResult;
+import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,5 +49,46 @@ public class AppointmentTool {
             log.error("查询预约余量失败", e);
             return "预约数据服务暂时不可用，请稍后再试。";
         }
+    }
+
+    /**
+     * 查询当前登录用户自己的预约记录。
+     * userId 由 Feign 拦截器从当前请求的 X-User-Id 动态注入。
+     */
+    @Tool("查询当前登录用户自己的预约记录，例如：我预约过哪些服务。返回该用户的预约服务名称与审核状态。")
+    public String queryMyBookings() {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        if (userId == null) {
+            return "无法获取当前用户身份，请先登录后再查询个人预约。";
+        }
+        try {
+            CasResult<List<CasBooking>> result = casClient.getMyBookings();
+            if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
+                return "您当前没有预约记录。";
+            }
+            StringBuilder sb = new StringBuilder("您当前的预约记录如下：\n");
+            for (CasBooking b : result.getData()) {
+                sb.append("- ").append(b.getServiceName())
+                        .append("（状态：").append(statusLabel(b.getManageStatus()))
+                        .append(b.getReason() != null && !b.getReason().isBlank()
+                                ? "，" + b.getReason() : "")
+                        .append("）\n");
+            }
+            return sb.toString().trim();
+        } catch (Exception e) {
+            log.error("查询用户预约失败", e);
+            return "预约数据服务暂时不可用，请稍后再试。";
+        }
+    }
+
+    /** 审核状态数字 → 中文 */
+    private String statusLabel(Integer status) {
+        return switch (status == null ? -1 : status) {
+            case 0 -> "待审核";
+            case 1 -> "已通过";
+            case 2 -> "已拒绝";
+            case 3 -> "已取消";
+            default -> "未知";
+        };
     }
 }

@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.http.codec.ServerSentEvent;
 import reactor.core.publisher.Flux;
 
 import java.util.List;
@@ -58,7 +59,7 @@ public class QaController {
     @RateLimit(permits = 20, seconds = 60, message = "问答请求过于频繁，请稍后再试")
     @Operation(summary = "流式问答（SSE）", description = "通过 Server-Sent Events 逐字流式返回 AI 回答，支持会话上下文")
     @GetMapping(value = "/ask/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> askStreaming(
+    public Flux<ServerSentEvent<?>> askStreaming(
             @Parameter(description = "用户问题") @RequestParam String query,
             @Parameter(description = "会话 ID，不传则自动生成新会话") @RequestParam(required = false, defaultValue = "") String sessionId) {
 
@@ -66,13 +67,17 @@ public class QaController {
             try {
                 qaService.askStreaming(query, sessionId,
                         token -> {
-                            if (!sink.isCancelled()) sink.next(token);
+                            // 回答 token 用默认 message 事件
+                            if (!sink.isCancelled()) {
+                                sink.next(ServerSentEvent.builder().data(token).build());
+                            }
                         },
                         citations -> {
                             if (!sink.isCancelled()) {
                                 try {
                                     String json = objectMapper.writeValueAsString(citations);
-                                    sink.next("event: citations\ndata: " + json + "\n\n");
+                                    sink.next(ServerSentEvent.builder()
+                                            .event("citations").data(json).build());
                                 } catch (Exception e) {
                                     log.warn("Failed to serialize citations", e);
                                 }
@@ -80,7 +85,8 @@ public class QaController {
                         },
                         messageId -> {
                             if (!sink.isCancelled()) {
-                                sink.next("event: messageId\ndata: " + messageId + "\n\n");
+                                sink.next(ServerSentEvent.builder()
+                                        .event("messageId").data(messageId).build());
                             }
                         }
                 );

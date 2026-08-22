@@ -58,8 +58,7 @@ class QaAppServiceToolRoutingTest {
     @InjectMocks private QaApplicationService service;
 
     private void stubPipeline(String query) {
-        when(qaCacheService.getCachedAnswer(query)).thenReturn(Optional.empty());
-        when(semanticCacheService.lookup(query)).thenReturn(null);
+        // 缓存已全部禁用，不 stub qaCacheService/semanticCache
         when(conversationRepository.getRecentMessages(anyString(), anyInt())).thenReturn(List.of());
         when(queryRewriter.rewrite(query, List.of())).thenReturn(query);
         when(graphRetriever.retrieve(query)).thenReturn(List.<RetrievalResult>of());
@@ -87,17 +86,41 @@ class QaAppServiceToolRoutingTest {
         }
 
         @Test
-        @DisplayName("非预约类问题不应走工具链路")
-        void shouldNotRouteNonAppointmentQueryToTools() {
+        @DisplayName("非预约类 + 无本地资料 → 走 DeepSeek 兜底（不走工具）")
+        void shouldRouteNonAppointmentToDirectWhenNoDocs() {
             String query = "什么是 RAG 检索？";
-            stubPipeline(query);
-            when(llmService.generateAnswerStreaming(anyString(), anyList(), anyList(), any()))
-                    .thenReturn("RAG 答案");
+            stubPipeline(query);  // 检索为空
+            when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any()))
+                    .thenReturn("兜底答案");
 
             service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
             verify(llmService, never()).generateAnswerWithTools(anyString(), anyList(), anyList(), any());
-            verify(llmService).generateAnswerStreaming(anyString(), anyList(), anyList(), any());
+            verify(llmService).generateAnswerDirectStreaming(anyString(), anyList(), any());
+        }
+
+        @Test
+        @DisplayName("非预约类 + 有本地资料 → 走 RAG 回答（不走工具）")
+        void shouldRouteNonAppointmentToRagWhenDocsExist() {
+            String query = "什么是向量检索？";
+            // 单独 stub（有检索结果；缓存已禁用）
+            when(conversationRepository.getRecentMessages(anyString(), anyInt())).thenReturn(List.of());
+            when(queryRewriter.rewrite(query, List.of())).thenReturn(query);
+            RetrievalResult doc = RetrievalResult.builder()
+                    .chunkId("c1").documentId("d1").documentTitle("文档")
+                    .content("向量检索是...").chunkIndex(0).score(0.9).source("keyword")
+                    .build();
+            when(graphRetriever.retrieve(query)).thenReturn(List.of(doc));
+            when(rerankerService.rerank(query, List.of(doc))).thenReturn(List.of(doc));
+            when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
+                    .thenReturn(1L);
+            // RAG 能回答（不触发兜底）
+            when(llmService.generateAnswer(anyString(), anyList(), anyList())).thenReturn("RAG 答案");
+
+            service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
+
+            verify(llmService, never()).generateAnswerWithTools(anyString(), anyList(), anyList(), any());
+            verify(llmService).generateAnswer(anyString(), anyList(), anyList());
         }
 
         @Test

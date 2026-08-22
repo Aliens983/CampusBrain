@@ -51,6 +51,22 @@ public interface LlmService {
                                    Consumer<String> tokenConsumer);
 
     /**
+     * 本地资料库未检索到相关内容时的兜底回答：直接用大模型（DeepSeek）对话，
+     * 不携带 RAG 上下文。
+     *
+     * @param query               the user's question
+     * @param conversationHistory previous messages in this session
+     * @return the generated answer text
+     */
+    String generateAnswerDirect(String query, List<ChatMessage> conversationHistory);
+
+    /**
+     * 本地资料库未检索到相关内容时的兜底回答（流式版，SSE 逐 token 推送）。
+     */
+    String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
+                                         Consumer<String> tokenConsumer);
+
+    /**
      * A simplified chat message for domain use (no LangChain4j dependency).
      */
     record ChatMessage(String role, String content) {

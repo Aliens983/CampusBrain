@@ -99,7 +99,7 @@ curl http://localhost:18080/api/v1/sentinel-demo/limited
 ## 关键能力
 
 - **统一 JWT 网关鉴权**：网关验签 JWT、透传身份头 + 内网签名（5 分钟时间戳新鲜度），服务细粒度授权。
-- **KB 智能助手**：静态知识走 RAG 检索；预约余量通过 OpenFeign + Nacos 服务发现 + 内网签名直连 CAS 只读接口（`/appointments/availability`），LangChain4j `AppointmentTool`（`@Tool`）+ AiServices 实现 Function Calling（**需配置 `DEEPSEEK_API_KEY` 后演示**）。
+- **KB 智能助手**：问答按「本地资料优先 + DeepSeek 兜底」路由——本地资料有结果走 RAG（引用资料），无结果或 RAG 无法回答则 DeepSeek 直接回答；**问答缓存已全部禁用**，每次实时检索 + LLM 回答（避免答非所问/历史串题）；预约余量通过 OpenFeign + Nacos 服务发现 + 内网签名直连 CAS 只读接口（`/appointments/availability`），LangChain4j `AppointmentTool`（`@Tool`）+ AiServices 实现 Function Calling（**需配置 `DEEPSEEK_API_KEY` 后演示**）。
 - **RabbitMQ 预约事件**：CAS 发布 `appointment.changed` 事件，KB 已实现监听并接收（当前仅记录日志，索引/缓存更新为 TODO）。
 - **Nacos 配置中心**：`cas-service.yaml` 托管配置，提供 `/config-demo` 热更新演示。
 - **Sentinel 限流**：已接入并提供 `/sentinel-demo` 演示接口；Nacos 流控规则（`cas-sentinel-flow-rules`）当前为空。
@@ -112,12 +112,6 @@ curl http://localhost:18080/api/v1/sentinel-demo/limited
 cd backend && mvn test
 ```
 
-## Docker 部署
+## Docker（仅中间件）
 
-`docker-compose.yml` 包含三个业务服务（cas-service / kb-service / gateway），Dockerfile 采用「预编译 jar」方式：
-
-```bash
-mvn clean package -DskipTests   # 先在宿主机生成 jar
-docker compose build
-docker compose up -d
-```
+`docker-compose.yml` **只编排中间件**（Nacos + KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO）。三个业务服务（gateway/cas-service/kb-service）在**本地运行**（IDEA 或 `java -jar`），见「启动步骤」。

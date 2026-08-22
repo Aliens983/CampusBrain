@@ -206,7 +206,8 @@ public class QdrantVectorStore implements VectorStoreService {
     @SuppressWarnings("unchecked")
     private io.qdrant.client.grpc.JsonWithInt.Value convertToValue(Object obj) {
         if (obj == null) {
-            return value((String) null);
+            // Qdrant 的 setStringValue(null) 会抛 NPE，null 统一存为空字符串
+            return value("");
         }
         if (obj instanceof String s) {
             return value(s);

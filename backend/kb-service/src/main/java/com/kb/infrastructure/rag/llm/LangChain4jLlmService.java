@@ -81,8 +81,12 @@ public class LangChain4jLlmService implements LlmService {
         for (ChatMessage cm : fullPrompt) {
             messages.add(toLangChainMessage(cm));
         }
-        if (conversationHistory != null) {
-            for (ChatMessage cm : conversationHistory) {
+        // 只取最近 6 条历史，避免历史过长导致 LLM 串题
+        if (conversationHistory != null && !conversationHistory.isEmpty()) {
+            List<ChatMessage> recent = conversationHistory.size() > 6
+                    ? conversationHistory.subList(conversationHistory.size() - 6, conversationHistory.size())
+                    : conversationHistory;
+            for (ChatMessage cm : recent) {
                 messages.add(toLangChainMessage(cm));
             }
         }
@@ -228,8 +232,8 @@ public class LangChain4jLlmService implements LlmService {
             String userMessage = "对话历史：\n" + historyText
                     + "\n\n用户问题：" + query
                     + "\n\n知识库参考内容：\n" + context
-                    + "\n\n如果问题涉及可预约服务、预约余量、会议室、设备借用、咨询服务等，"
-                    + "请调用预约查询工具获取实时数据，并优先用实时数据回答。";
+                    + "\n\n你是校园预约助手。**仅当**用户询问「当前/今天有哪些服务可预约、预约余量、会议室/设备/咨询是否可用」这类需要实时预约数据的问题时，"
+                    + "才调用预约查询工具获取实时数据回答；其他问题（自我介绍、能力介绍、闲聊、知识问答等）请直接回答，不要调用任何工具。";
             String answer = toolAssistant.chat(userMessage);
             if (tokenConsumer != null) {
                 tokenConsumer.accept(answer);
@@ -243,6 +247,74 @@ public class LangChain4jLlmService implements LlmService {
             }
             return fallback;
         }
+    }
+
+    @Override
+    public String generateAnswerDirect(String query, List<ChatMessage> conversationHistory) {
+        List<dev.langchain4j.data.message.ChatMessage> messages = buildDirectMessages(query, conversationHistory);
+        try {
+            var response = chatModel.generate(messages);
+            return response.content().text();
+        } catch (Exception e) {
+            log.error("Direct LLM generation failed, trying fallback", e);
+            return tryFallback(messages);
+        }
+    }
+
+    @Override
+    public String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
+                                                Consumer<String> tokenConsumer) {
+        List<dev.langchain4j.data.message.ChatMessage> messages = buildDirectMessages(query, conversationHistory);
+        StringBuilder fullAnswer = new StringBuilder();
+        try {
+            CompletableFuture<Void> future = new CompletableFuture<>();
+            streamingChatModel.generate(messages, new dev.langchain4j.model.StreamingResponseHandler<>() {
+                @Override
+                public void onNext(String token) {
+                    tokenConsumer.accept(token);
+                    fullAnswer.append(token);
+                }
+                @Override
+                public void onComplete(
+                        dev.langchain4j.model.output.Response<dev.langchain4j.data.message.AiMessage> response) {
+                    future.complete(null);
+                }
+                @Override
+                public void onError(Throwable error) {
+                    log.error("Direct streaming error", error);
+                    tokenConsumer.accept("\n\n[生成出错，请重试]");
+                    future.completeExceptionally(error);
+                }
+            });
+            future.join();
+        } catch (Exception e) {
+            log.error("Direct streaming failed, trying fallback", e);
+            String fallback = tryFallback(messages);
+            tokenConsumer.accept(fallback);
+        }
+        return fullAnswer.toString();
+    }
+
+    /** 构建"直接对话"消息列表（不带 RAG 上下文，DeepSeek 兜底回答） */
+    private List<dev.langchain4j.data.message.ChatMessage> buildDirectMessages(
+            String query, List<ChatMessage> conversationHistory) {
+        List<dev.langchain4j.data.message.ChatMessage> messages = new ArrayList<>();
+        messages.add(dev.langchain4j.data.message.SystemMessage.from(
+                "你是一个智能校园助手。请用中文直接、自然、友好地回答用户的问题。"
+                        + "请只回答用户当前最后提出的这个问题；历史对话仅供理解上下文，"
+                        + "不要重复回答历史中已出现过的问题。"
+                        + "如果不知道答案，请诚实说明，不要编造。"));
+        // 只取最近 6 条历史，避免历史过长导致 LLM 串题
+        if (conversationHistory != null && !conversationHistory.isEmpty()) {
+            List<ChatMessage> recent = conversationHistory.size() > 6
+                    ? conversationHistory.subList(conversationHistory.size() - 6, conversationHistory.size())
+                    : conversationHistory;
+            for (ChatMessage cm : recent) {
+                messages.add(toLangChainMessage(cm));
+            }
+        }
+        messages.add(dev.langchain4j.data.message.UserMessage.from(query));
+        return messages;
     }
 
     /** 把多轮对话历史拼成文本，供 Tool 增强链路保留上下文 */

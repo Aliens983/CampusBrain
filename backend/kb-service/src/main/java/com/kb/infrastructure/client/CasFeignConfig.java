@@ -1,5 +1,6 @@
 package com.kb.infrastructure.client;
 
+import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import com.laoliu.auth.AuthConstants;
 import com.laoliu.auth.InternalSigner;
 import feign.RequestInterceptor;
@@ -31,7 +32,9 @@ public class CasFeignConfig {
     @Bean
     public RequestInterceptor casInternalAuthInterceptor() {
         return template -> {
-            String userId = SERVICE_USER_ID;
+            // 优先使用当前登录用户身份（供查询"我的预约"），无则用服务身份
+            Long currentUserId = SecurityFrameworkUtils.getLoginUserId();
+            String userId = currentUserId != null ? String.valueOf(currentUserId) : SERVICE_USER_ID;
             String role = SERVICE_ROLE;
             String timestamp = String.valueOf(System.currentTimeMillis());
             String sign = internalSigner.sign(userId, role, timestamp);

@@ -3,11 +3,13 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 import com.laoliu.cas.appointment.application.service.ServiceService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -43,5 +45,22 @@ public class AvailabilityController {
                 })
                 .toList();
         return CommonResult.success(result);
+    }
+
+    /**
+     * 获取当前用户的预约记录（供 KB 智能助手查询"我的预约"）。
+     * <p>
+     * userId 取自 {@code X-User-Id} 头——该头由 KB 携带内网签名（HMAC 绑定 userId），
+     * 经 {@code InternalAuthFilter} 校验后才放行，因此可信任。
+     * </p>
+     */
+    @Operation(summary = "获取当前用户的预约记录", description = "供 KB 智能助手查询用户自己的预约（X-User-Id 头）")
+    @GetMapping("/mine")
+    public CommonResult<List<ServiceStatusResponse>> getMyBookings(
+            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+        if (userId == null) {
+            return CommonResult.badRequest("缺少用户身份");
+        }
+        return CommonResult.success(bookingRepository.getServiceStatusByUserId(userId));
     }
 }
