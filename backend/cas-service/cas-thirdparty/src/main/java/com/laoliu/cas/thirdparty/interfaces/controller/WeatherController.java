@@ -1,5 +1,7 @@
 package com.laoliu.cas.thirdparty.interfaces.controller;
 
+import com.laoliu.cas.common.exception.BusinessException;
+import com.laoliu.cas.common.exception.code.CommonErrorCode;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.thirdparty.api.WeatherApi;
 import com.laoliu.cas.thirdparty.interfaces.dto.response.WeatherResponse;
@@ -65,7 +67,7 @@ public class WeatherController {
             return CommonResult.success(weatherApi.getWeather(region, city));
         } catch (Exception e) {
             log.error("获取天气失败", e);
-            return CommonResult.internalServerError("获取天气信息失败");
+            throw new BusinessException(CommonErrorCode.INTERNAL_ERROR);
         }
     }
 }

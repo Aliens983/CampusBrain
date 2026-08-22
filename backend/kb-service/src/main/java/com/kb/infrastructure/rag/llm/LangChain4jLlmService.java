@@ -224,7 +224,9 @@ public class LangChain4jLlmService implements LlmService {
                                            Consumer<String> tokenConsumer) {
         try {
             String context = buildRagContext(retrievedDocs);
-            String userMessage = "用户问题：" + query
+            String historyText = buildHistoryText(conversationHistory);
+            String userMessage = "对话历史：\n" + historyText
+                    + "\n\n用户问题：" + query
                     + "\n\n知识库参考内容：\n" + context
                     + "\n\n如果问题涉及可预约服务、预约余量、会议室、设备借用、咨询服务等，"
                     + "请调用预约查询工具获取实时数据，并优先用实时数据回答。";
@@ -241,6 +243,18 @@ public class LangChain4jLlmService implements LlmService {
             }
             return fallback;
         }
+    }
+
+    /** 把多轮对话历史拼成文本，供 Tool 增强链路保留上下文 */
+    private String buildHistoryText(List<ChatMessage> history) {
+        if (history == null || history.isEmpty()) {
+            return "（无）";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (ChatMessage cm : history) {
+            sb.append(cm.role()).append("：").append(cm.content()).append("\n");
+        }
+        return sb.toString().trim();
     }
 
     /** 将检索结果拼成简短的 RAG 上下文，供 Tool 增强链路使用 */

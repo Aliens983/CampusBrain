@@ -5,6 +5,8 @@ import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageReqVO;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
+import com.laoliu.cas.common.exception.BusinessException;
+import com.laoliu.cas.common.exception.code.CommonErrorCode;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.result.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,7 +43,8 @@ public class ServiceStatusController {
                     .getServiceStatusByUserIdWithDescription(userId, reqVO);
             return CommonResult.success(PageResult.of(statusPage));
         } catch (Exception e) {
-            return CommonResult.internalServerError("获取服务状态失败: " + e.getMessage());
+            // 交给 GlobalExceptionHandler 统一处理（返回 HTTP 500），不在 Controller 吞异常
+            throw new BusinessException(CommonErrorCode.INTERNAL_ERROR);
         }
     }
 

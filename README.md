@@ -49,7 +49,7 @@
 
 ## 一、功能状态总览（如实）
 
-> 下表为当前代码的真实状态（`mvn test` 120 个测试全绿验证）。**标注 ⚠️ 的项依赖外部配置或尚未端到端验证**。
+> 下表为当前代码的真实状态（`mvn test` 125 个测试全绿验证）。**标注 ⚠️ 的项依赖外部配置或尚未端到端验证**。
 
 | 能力 | 状态 | 说明 |
 |---|---|---|
@@ -81,7 +81,7 @@
                /api/v1/**   │              │  /api/v1/kb/**
                     ┌───────▼──────┐  ┌────▼─────────────┐
                     │ cas-service  │  │ kb-service       │
-                    │ :18080       │  │ :8080            │
+                    │ :18080       │  │ :8081            │
                     │ 预约/用户/审核 │  │ RAG 问答/文档管理 │
                     └──────┬───────┘  └────┬─────────────┘
                            │ 实时查询(Feign+内网签名)│
@@ -140,10 +140,12 @@ export INTERNAL_SIGN_SECRET='<随机串>'
 
 ```bash
 cd backend
-docker compose up -d --build     # Nacos + 中间件 + gateway/cas-service/kb-service
+cp .env.example .env              # 按需修改：DB 密码、JWT/内网签名密钥等
+mvn clean package -DskipTests     # 首次或改过代码/配置后需重新打包
+docker compose up -d --build      # Nacos + 中间件 + gateway/cas-service/kb-service
 ```
 
-> 首次或改过代码/配置后需先 `mvn clean package -DskipTests`（业务服务 Dockerfile 走「预编译 jar」方式）。
+> 业务服务 Dockerfile 走「预编译 jar」方式，改代码后必须先 `mvn package`。
 > CAS 依赖宿主机 MySQL(3306)/Redis(6379)，需确保 `cas_db` 已建表。
 
 ### 3. 启动前端
@@ -178,7 +180,7 @@ cd backend && docker compose up -d nacos kb-mysql kb-redis kb-es kb-qdrant kb-ra
 
 # 3. 三个终端分别启动
 java -jar cas-service/cas-server/target/cas-server-1.0.0.jar      # 18080
-java -jar kb-service/target/kb-service-1.0.0.jar                  # 8080
+java -jar kb-service/target/kb-service-1.0.0.jar                  # 8081
 java -jar gateway/target/gateway-1.0.0.jar                        # 8888
 
 # 4. 前端 vite 代理指向 8888（已配置）
@@ -189,7 +191,7 @@ java -jar gateway/target/gateway-1.0.0.jar                        # 8888
 ## 五、测试
 
 ```bash
-cd backend && mvn test     # 120 个测试全绿（CAS 65 + KB 55）
+cd backend && mvn test     # 125 个测试全绿（CAS 65 + KB 60）
 cd frontend && npm run type-check && npm run lint   # 前端类型检查 + lint
 ```
 
@@ -218,5 +220,7 @@ cd frontend && npm run type-check && npm run lint   # 前端类型检查 + lint
 | `frontend/README.md` | 前端开发指南 |
 | `docs/秋招简历项目审查报告.md` | 简历视角审查 + 修复进度追踪 |
 | `docs/项目问题审计报告.md` | 安全/契约审计 |
+| `docs/当前项目遗留问题清单.md` | 当前遗留问题与低成本建议 |
 | `docs/微服务合体方案.md` | 架构决策与演进 |
 | `docs/待办清单.md` | 剩余功能与技术债 |
+| `docs/FunctionCalling演示记录.md` | Function Calling 实时查询的可复现演示步骤 |

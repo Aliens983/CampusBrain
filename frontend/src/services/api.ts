@@ -190,13 +190,12 @@ export const adminAPI = {
     return request.get('/users/list', { params })
   },
 
-  // 获取预约管理列表
+  // 获取预约管理列表（与后端 ServiceStatusPageReqVO 契约一致：manageStatus/serviceName）
   getBookingManagement: (params: {
     pageNo?: number
     pageSize?: number
-    type?: string
-    status?: string
-    date?: string
+    manageStatus?: number
+    serviceName?: string
   }) => {
     return request.get('/admin/bookings', { params })
   },

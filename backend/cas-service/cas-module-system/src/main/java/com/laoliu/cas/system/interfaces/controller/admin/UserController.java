@@ -6,6 +6,8 @@ import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
 import com.laoliu.cas.common.pojo.PageParam;
 import com.laoliu.cas.system.domain.entity.User;
 import com.laoliu.cas.common.enums.UserRoleEnum;
+import com.laoliu.cas.common.exception.BusinessException;
+import com.laoliu.cas.common.exception.code.CommonErrorCode;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.result.PageResult;
 import com.laoliu.cas.common.util.PasswordUtils;
@@ -62,7 +64,7 @@ public class UserController {
             return CommonResult.success(UserConvert.INSTANCE.convert(user));
         } catch (Exception e) {
             log.error("获取用户信息失败", e);
-            return CommonResult.internalServerError("获取用户信息失败：" + e.getMessage());
+            throw new BusinessException(CommonErrorCode.INTERNAL_ERROR);
         }
     }
 
@@ -78,7 +80,7 @@ public class UserController {
             return CommonResult.success(UserConvert.INSTANCE.convertPage(pageResult));
         } catch (Exception e) {
             log.error("获取所有用户失败", e);
-            return CommonResult.internalServerError("获取所有用户失败：" + e.getMessage());
+            throw new BusinessException(CommonErrorCode.INTERNAL_ERROR);
         }
     }
 
@@ -104,7 +106,8 @@ public class UserController {
 
             return CommonResult.success("创建用户成功");
         } catch (Exception e) {
-            return CommonResult.internalServerError("创建用户失败：" + e.getMessage());
+            log.error("创建用户失败", e);
+            throw new BusinessException(CommonErrorCode.INTERNAL_ERROR);
         }
     }
 

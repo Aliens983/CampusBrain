@@ -140,9 +140,8 @@ export const roomService = {
   async getRooms(params: {
     pageNo?: number
     pageSize?: number
-    type?: string
-    capacity?: number
-    available?: boolean
+    serviceName?: string
+    serviceState?: number
   }) {
     return await roomAPI.getRooms(params)
   },
@@ -241,9 +240,8 @@ export const adminService = {
   async getBookingManagement(params: {
     pageNo?: number
     pageSize?: number
-    type?: string
-    status?: string
-    date?: string
+    manageStatus?: number
+    serviceName?: string
   }) {
     return await adminAPI.getBookingManagement(params)
   }

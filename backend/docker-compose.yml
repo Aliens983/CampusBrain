@@ -20,7 +20,7 @@ services:
     container_name: kb-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_ROOT_PASSWORD: ${KB_MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: knowledge_base
     ports:
       - "3307:3306"
@@ -28,7 +28,7 @@ services:
     volumes:
       - kb-mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot123"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${KB_MYSQL_ROOT_PASSWORD}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -89,7 +89,7 @@ services:
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -109,7 +109,7 @@ services:
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin123
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"
@@ -143,7 +143,7 @@ services:
       RABBITMQ_HOST: kb-rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: admin
-      RABBITMQ_PASSWORD: admin123
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
       WEATHER_API_ID: ${WEATHER_API_ID:-}
@@ -181,20 +181,20 @@ services:
       DB_HOST: kb-mysql
       DB_PORT: "3306"
       DB_USERNAME: root
-      DB_PASSWORD: root123
+      DB_PASSWORD: ${KB_MYSQL_ROOT_PASSWORD}
       REDIS_HOST: kb-redis
       REDIS_PORT: "6379"
       RABBITMQ_HOST: kb-rabbitmq
       RABBITMQ_PORT: "5672"
       RABBITMQ_USERNAME: admin
-      RABBITMQ_PASSWORD: admin123
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
       ES_HOST: kb-es
       ES_PORT: "9200"
       QDRANT_HOST: kb-qdrant
       QDRANT_PORT: "6334"
       MINIO_ENDPOINT: http://kb-minio:9000
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin123
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       MAIL_HOST: ${MAIL_HOST:-smtp.163.com}
       MAIL_PORT: "${MAIL_PORT:-465}"
       MAIL_USERNAME: ${MAIL_USERNAME:-}
@@ -202,7 +202,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
     ports:
-      - "8080:8080"
+      - "8081:8081"
 
   gateway:
     build:

@@ -3,6 +3,7 @@ package com.kb.domain.user;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import com.kb.infrastructure.client.CasClient;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -24,9 +25,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("UserRepository 集成测试")
 class UserRepositoryIntegrationTest {
 
-    // 隔离外部中间件：只验证 H2 持久化，不依赖 MQ/Redis
+    // 隔离外部中间件：只验证 H2 持久化，不依赖 MQ/Redis/Feign/Nacos
     @MockBean private ConnectionFactory rabbitConnectionFactory;
     @MockBean private RedisConnectionFactory redisConnectionFactory;
+    @MockBean private CasClient casClient;
 
     @Autowired
     private UserRepository userRepository;

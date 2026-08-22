@@ -134,8 +134,24 @@ export async function fetchAdminUsers() {
   return list.map(mapAdminUser)
 }
 
+/**
+ * 获取全部预约（管理端），用于 Admin 摘要统计。
+ * 后端 GET /admin/bookings 返回 PageResult，manageStatus: 0待审/1通过/2拒绝/3取消。
+ */
+async function fetchAllBookings(): Promise<{ id: number; status: BookingRecord['status'] }[]> {
+  const data = (await request.get('/admin/bookings', {
+    params: { pageNo: 1, pageSize: 1000 },
+  })) as { records?: Array<{ id?: number; manageStatus?: number }> } | Array<{ id?: number; manageStatus?: number }>
+  const list = Array.isArray(data) ? data : data?.records
+  const statusMap: Record<number, BookingRecord['status']> = { 0: 'pending', 1: 'approved', 2: 'rejected', 3: 'cancelled' }
+  return (list || []).map((item) => ({
+    id: item.id ?? 0,
+    status: statusMap[item.manageStatus ?? 0] || 'pending',
+  }))
+}
+
 export async function fetchAdminSummary(): Promise<AdminSummary> {
-  const [users, services, bookings] = await Promise.all([fetchAdminUsers(), fetchServiceCards(), fetchBookingRecords()])
+  const [users, services, bookings] = await Promise.all([fetchAdminUsers(), fetchServiceCards(), fetchAllBookings()])
   const approvedCount = bookings.filter((item) => item.status === 'approved').length
   const total = bookings.length || 1
 

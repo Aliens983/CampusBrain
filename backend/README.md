@@ -7,7 +7,7 @@
 ```
 frontend(统一前端) → gateway(8888，唯一入口)
                         ├─ /api/v1/**      → cas-service (18080)
-                        └─ /api/v1/kb/**   → kb-service (8080)
+                        └─ /api/v1/kb/**   → kb-service (8081)
                      Nacos(8848/9848) 注册中心 + 配置中心
                      Sentinel 限流（Nacos 动态规则）
 ```
@@ -17,7 +17,7 @@ frontend(统一前端) → gateway(8888，唯一入口)
 | `common-auth` | 共享认证：JWT + 内网签名（含时间戳新鲜度） | — |
 | `gateway` | Spring Cloud Gateway，统一 JWT 鉴权 + 路由 | 8888（本地）/ 80（docker） |
 | `cas-service` | 校园预约系统（7 个 Maven 子模块，DDD 分层） | 18080 |
-| `kb-service` | 知识库问答平台（扁平化单模块） | 8080 |
+| `kb-service` | 知识库问答平台（扁平化单模块） | 8081 |
 
 ## 依赖中间件
 
@@ -108,7 +108,7 @@ curl http://localhost:18080/api/v1/sentinel-demo/limited
 ## 测试
 
 ```bash
-# 全量测试：120 个测试全部通过（CAS 65 + KB 55），kb-service 用 H2 + MockBean 隔离中间件
+# 全量测试：125 个测试全部通过（CAS 65 + KB 60），kb-service 用 H2 + MockBean 隔离中间件
 cd backend && mvn test
 ```
 
