@@ -42,6 +42,12 @@
           </span>
           <template #dropdown>
             <el-dropdown-menu>
+              <el-dropdown-item
+                v-if="userStore.isAdmin"
+                command="admin"
+              >
+                切换到管理端
+              </el-dropdown-item>
               <el-dropdown-item command="profile">
                 个人中心
               </el-dropdown-item>
@@ -106,6 +112,10 @@ const initial = computed(() => userStore.userInfo?.username?.slice(0, 1) || 'U')
 function handleCommand(command: string) {
   if (command === 'profile') {
     router.push('/profile')
+    return
+  }
+  if (command === 'admin') {
+    router.push('/admin')
     return
   }
   userStore.logout()

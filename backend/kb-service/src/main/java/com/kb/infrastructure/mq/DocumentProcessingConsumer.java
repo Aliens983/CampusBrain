@@ -115,6 +115,16 @@ public class DocumentProcessingConsumer {
         }
 
         try {
+            // Step 0: 幂等——处理前清理该文档的旧向量/ES 索引/分块，避免失败重试时重复写入
+            String docIdStr = String.valueOf(documentId);
+            try {
+                vectorStore.deleteByDocumentId(docIdStr);
+                esRepository.deleteByDocumentId(docIdStr);
+                documentRepository.deleteChunksByDocumentId(documentId);
+            } catch (Exception e) {
+                log.warn("清理旧数据失败（继续处理）: id={}", documentId, e);
+            }
+
             // === Step 1: Parse ===
             updateStatus(doc, DocumentStatus.PARSING);
             ParsedDocument parsed = parse(doc);

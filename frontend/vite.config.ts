@@ -29,7 +29,8 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: true,
+    // 生产不生成 sourcemap，避免暴露源码与增大产物体积（开发 vite dev 不受影响）
+    sourcemap: false,
     chunkSizeWarningLimit: 900,
     rollupOptions: {
       output: {

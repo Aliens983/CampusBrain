@@ -159,6 +159,14 @@ public class DocumentRepositoryImpl implements DocumentRepository {
                 .toList();
     }
 
+    @Override
+    public void deleteChunksByDocumentId(Long documentId) {
+        com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<DocumentChunkDO> wrapper =
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<DocumentChunkDO>()
+                        .eq(DocumentChunkDO::getDocumentId, documentId);
+        chunkMapper.delete(wrapper);
+    }
+
     // ========== Conversion ==========
 
     private Document toDocument(DocumentDO docDO) {
