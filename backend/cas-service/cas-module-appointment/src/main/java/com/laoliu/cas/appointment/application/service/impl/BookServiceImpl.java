@@ -131,8 +131,8 @@ public class BookServiceImpl implements BookService {
         }
         boolean success = bookingRepository.cancelBookings(userId, bookingIds) > 0;
         if (success) {
-            // 取消成功：释放这些预约占用的库存
-            List<Long> serviceIds = bookingRepository.selectServiceIdsByBookingIds(bookingIds);
+            // 取消成功：释放这些预约占用的库存（仅当前用户待审核的单，防他人/重复释放）
+            List<Long> serviceIds = bookingRepository.selectServiceIdsByBookingIds(userId, bookingIds);
             if (serviceIds != null) {
                 serviceIds.forEach(bookingRepository::releaseStock);
             }

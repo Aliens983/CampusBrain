@@ -115,6 +115,7 @@
         UPDATE item
         SET manage_status = 3
         WHERE user_id = #{userId}
+        AND manage_status = 0
         AND order_id IN
         <foreach collection="bookingIds" item="id" open="(" separator="," close=")">
             #{id}
@@ -148,7 +149,9 @@
 
     <select id="selectServiceIdsByBookingIds" resultType="long">
         SELECT DISTINCT service_id FROM item
-        WHERE order_id IN
+        WHERE user_id = #{userId}
+          AND manage_status = 0
+          AND order_id IN
         <foreach collection="bookingIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>

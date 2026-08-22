@@ -5,6 +5,7 @@ import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityVO;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.result.CommonResult;
+import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -50,14 +51,18 @@ public class AvailabilityController {
     /**
      * 获取当前用户的预约记录（供 KB 智能助手查询"我的预约"）。
      * <p>
-     * userId 取自 {@code X-User-Id} 头——该头由 KB 携带内网签名（HMAC 绑定 userId），
-     * 经 {@code InternalAuthFilter} 校验后才放行，因此可信任。
+     * 身份来源：优先用 JWT 登录用户（{@link SecurityFrameworkUtils#getLoginUserId()}），
+     * 忽略前端传入的 {@code X-User-Id}，防止越权；仅当无 JWT 用户（KB 内网签名场景，
+     * 该头经 {@code InternalAuthFilter} 签名校验绑定）时才信任 {@code X-User-Id}。
      * </p>
      */
-    @Operation(summary = "获取当前用户的预约记录", description = "供 KB 智能助手查询用户自己的预约（X-User-Id 头）")
+    @Operation(summary = "获取当前用户的预约记录", description = "供 KB 智能助手查询用户自己的预约")
     @GetMapping("/mine")
     public CommonResult<List<ServiceStatusResponse>> getMyBookings(
-            @RequestHeader(value = "X-User-Id", required = false) Long userId) {
+            @RequestHeader(value = "X-User-Id", required = false) Long headerUserId) {
+        // 有 JWT 登录用户：以登录身份为准（忽略 header，防伪造 X-User-Id 越权）
+        Long loginUserId = SecurityFrameworkUtils.getLoginUserId();
+        Long userId = loginUserId != null ? loginUserId : headerUserId;
         if (userId == null) {
             return CommonResult.badRequest("缺少用户身份");
         }

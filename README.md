@@ -49,12 +49,12 @@
 
 ## 一、功能状态总览（如实）
 
-> 下表为当前代码的真实状态（`mvn test` 125 个测试全绿验证）。**标注 ⚠️ 的项依赖外部配置或尚未端到端验证**。
+> 下表为当前代码的真实状态（`mvn test` 134 个测试全绿验证）。**标注 ⚠️ 的项依赖外部配置或尚未端到端验证**。
 
 | 能力 | 状态 | 说明 |
 |---|---|---|
 | 校园预约（CAS） | ✅ 完整 | 服务/会议室/设备/咨询预约、审核、取消；**乐观锁库存扣减防超卖 + 取消/审核回退**，DDD 分层 |
-| 知识库问答（KB） | ✅ 完整 | 文档上传 → 分块 → 向量化 → RAG 检索 → LLM 回答，SSE 流式；**本地资料优先 + 无资料 DeepSeek 兜底；缓存已禁用，每次实时回答** |
+| 知识库问答（KB） | ✅ 完整 | 文档上传 → 分块 → 向量化 → RAG 检索 → LLM 回答（无资料路径 SSE 流式，RAG/预约路径一次性返回）；**本地资料优先 + 无资料 DeepSeek 兜底；缓存已禁用，每次实时回答** |
 | 微服务架构 | ✅ 完整 | Gateway + Nacos 注册/配置 + CAS/KB 两服务，Docker Compose 编排 |
 | 网关统一鉴权 | ✅ 完整 | JWT 验签 + 内网签名 `X-Internal-Sign` + 时间戳防重放 |
 | 预约实时查询（Function Calling） | ⚠️ 已实现 | Feign + Nacos 直连 CAS + LangChain4j `@Tool`；**需配置 `DEEPSEEK_API_KEY` 并重启两端后演示** |
@@ -185,7 +185,7 @@ curl http://localhost:8888/api/v1/kb/health
 ## 五、测试
 
 ```bash
-cd backend && mvn test     # 125 个测试全绿（CAS 65 + KB 60）
+cd backend && mvn test     # 134 个测试全绿（CAS 73 + KB 61）
 cd frontend && npm run type-check && npm run lint   # 前端类型检查 + lint
 ```
 

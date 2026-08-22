@@ -131,6 +131,38 @@ class BookServiceImplTest {
                     () -> bookService.bookService(USER_ID, List.of(SERVICE_ID)));
             assertEquals(ServiceErrorCode.SERVICE_DISABLED.getCode(), exception.getCode());
         }
+
+        @Test
+        @DisplayName("容量已满时应当抛出 BOOKING_CAPACITY_FULL 且不插入预约")
+        void shouldThrowWhenCapacityFull() {
+            // Given：decrementStock 返回 0（乐观锁扣减失败 = 容量满）
+            when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(buildAvailableService(SERVICE_ID)));
+            when(bookingRepository.decrementStock(SERVICE_ID)).thenReturn(0);
+
+            // When & Then
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> bookService.bookService(USER_ID, List.of(SERVICE_ID)));
+            assertEquals(BookErrorCode.BOOKING_CAPACITY_FULL.getCode(), exception.getCode());
+            // 容量满不应继续插入预约
+            verify(bookingRepository, never()).insertServices(anyLong(), anyList());
+        }
+
+        @Test
+        @DisplayName("预约成功时应先乐观锁扣减库存")
+        void shouldDecrementStockBeforeInsert() {
+            // Given
+            when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(buildAvailableService(SERVICE_ID)));
+            when(bookingRepository.decrementStock(SERVICE_ID)).thenReturn(1);
+            when(bookingRepository.insertServices(eq(USER_ID), anyList())).thenReturn(1);
+            when(userInfoApi.getUserById(USER_ID)).thenReturn(buildUserInfo());
+
+            // When
+            bookService.bookService(USER_ID, List.of(SERVICE_ID));
+
+            // Then：先扣减后插入
+            verify(bookingRepository).decrementStock(SERVICE_ID);
+            verify(bookingRepository).insertServices(eq(USER_ID), anyList());
+        }
     }
 
     @Nested
@@ -150,6 +182,40 @@ class BookServiceImplTest {
             // Then
             assertTrue(result);
             verify(bookingRepository).cancelBookings(USER_ID, bookingIds);
+        }
+
+        @Test
+        @DisplayName("取消成功时应释放对应服务库存")
+        void shouldReleaseStockOnCancel() {
+            // Given
+            List<Long> bookingIds = List.of(ORDER_ID);
+            when(bookingRepository.cancelBookings(USER_ID, bookingIds)).thenReturn(1);
+            when(bookingRepository.selectServiceIdsByBookingIds(USER_ID, bookingIds))
+                    .thenReturn(List.of(SERVICE_ID));
+
+            // When
+            boolean result = bookService.cancelBookings(USER_ID, bookingIds);
+
+            // Then：查待审核单的 serviceId 并回退库存
+            assertTrue(result);
+            verify(bookingRepository).selectServiceIdsByBookingIds(USER_ID, bookingIds);
+            verify(bookingRepository).releaseStock(SERVICE_ID);
+        }
+
+        @Test
+        @DisplayName("取消失败时不应释放库存")
+        void shouldNotReleaseStockWhenCancelFailed() {
+            // Given：cancelBookings 返回 0（无待审核单可取消）
+            List<Long> bookingIds = List.of(ORDER_ID);
+            when(bookingRepository.cancelBookings(USER_ID, bookingIds)).thenReturn(0);
+
+            // When
+            boolean result = bookService.cancelBookings(USER_ID, bookingIds);
+
+            // Then：不查 serviceId、不释放库存
+            assertFalse(result);
+            verify(bookingRepository, never()).selectServiceIdsByBookingIds(anyLong(), anyList());
+            verify(bookingRepository, never()).releaseStock(anyLong());
         }
 
         @Test

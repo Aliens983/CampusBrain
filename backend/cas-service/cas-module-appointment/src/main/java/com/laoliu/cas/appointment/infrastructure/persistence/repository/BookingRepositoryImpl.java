@@ -40,8 +40,8 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public List<Long> selectServiceIdsByBookingIds(List<Long> bookingIds) {
-        return itemMapper.selectServiceIdsByBookingIds(bookingIds);
+    public List<Long> selectServiceIdsByBookingIds(Long userId, List<Long> bookingIds) {
+        return itemMapper.selectServiceIdsByBookingIds(userId, bookingIds);
     }
 
     @Override

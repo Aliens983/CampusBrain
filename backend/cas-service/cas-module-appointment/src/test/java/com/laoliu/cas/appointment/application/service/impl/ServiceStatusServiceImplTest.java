@@ -144,6 +144,25 @@ class ServiceStatusServiceImplTest {
         }
 
         @Test
+        @DisplayName("驳回成功时应释放该预约占用的库存")
+        void shouldReleaseStockOnReject() {
+            // Given
+            ServiceStatusResponse status = buildPendingStatus();
+            String reason = "预约信息不完整";
+            when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
+            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason)))
+                    .thenReturn(true);
+            when(bookingRepository.selectServiceIdByOrderId(VALID_ORDER_ID)).thenReturn(1L);
+
+            // When
+            assertDoesNotThrow(() -> serviceStatusService.auditReject(VALID_ORDER_ID, reason));
+
+            // Then：释放该预约对应的服务库存
+            verify(bookingRepository).selectServiceIdByOrderId(VALID_ORDER_ID);
+            verify(bookingRepository).releaseStock(1L);
+        }
+
+        @Test
         @DisplayName("驳回原因为 null 时应当抛出 AUDIT_REASON_REQUIRED 异常")
         void shouldThrowExceptionWhenReasonIsNull() {
             // When & Then

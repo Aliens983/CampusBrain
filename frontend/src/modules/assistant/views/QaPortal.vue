@@ -17,7 +17,10 @@
         </div>
       </template>
 
-      <div class="upload-row" v-if="isAdmin">
+      <div
+        v-if="isAdmin"
+        class="upload-row"
+      >
         <input
           ref="fileInput"
           type="file"
@@ -70,6 +73,7 @@
           </template>
         </el-table-column>
         <el-table-column
+          v-if="isAdmin"
           label="操作"
           width="80"
         >

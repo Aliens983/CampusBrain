@@ -23,8 +23,8 @@ public interface BookingRepository {
     /** 释放库存（取消/审核拒绝时 -1，最低到 0） */
     int releaseStock(Long serviceId);
 
-    /** 查询一批预约单对应的服务 ID（用于回退库存） */
-    List<Long> selectServiceIdsByBookingIds(List<Long> bookingIds);
+    /** 查询当前用户一批待审核预约单对应的服务 ID（用于回退库存，防他人/重复释放） */
+    List<Long> selectServiceIdsByBookingIds(Long userId, List<Long> bookingIds);
 
     /** 查询单个预约单对应的服务 ID（用于审核拒绝回退） */
     Long selectServiceIdByOrderId(Long orderId);
