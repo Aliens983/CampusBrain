@@ -66,9 +66,12 @@ mybatis-plus:
       logic-not-delete-value: 0
 
 # 关闭不是测试需要的外部服务
+# 注意：application.yml 被 gitignore（CI checkout 后不存在），
+# 因此测试配置必须自包含，覆盖所有 @Value 占位符，不依赖主配置。
 elasticsearch:
   host: localhost
   port: 19200
+  index-name: kb_documents_test
 
 qdrant:
   host: localhost
