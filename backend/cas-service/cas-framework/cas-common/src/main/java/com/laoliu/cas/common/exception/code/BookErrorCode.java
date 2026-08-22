@@ -21,6 +21,8 @@ public interface BookErrorCode {
 
     ErrorCode BOOKING_REPEATED = new ErrorCode(40009, "您已预约该服务，请勿重复提交");
 
+    ErrorCode BOOKING_CAPACITY_FULL = new ErrorCode(40010, "该服务预约名额已满，请选择其他服务");
+
     // ========== 审核 ==========
 
     ErrorCode STATUS_NOT_FOUND = new ErrorCode(40004, "预约状态不存在");

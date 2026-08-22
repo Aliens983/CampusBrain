@@ -17,6 +17,18 @@ public interface BookingRepository {
     /** 幂等插入预约，返回实际插入行数 */
     int insertServices(Long userId, List<Integer> serviceIds);
 
+    /** 乐观锁扣减库存（容量充足才 +1），返回 0 表示容量满 */
+    int decrementStock(Long serviceId);
+
+    /** 释放库存（取消/审核拒绝时 -1，最低到 0） */
+    int releaseStock(Long serviceId);
+
+    /** 查询一批预约单对应的服务 ID（用于回退库存） */
+    List<Long> selectServiceIdsByBookingIds(List<Long> bookingIds);
+
+    /** 查询单个预约单对应的服务 ID（用于审核拒绝回退） */
+    Long selectServiceIdByOrderId(Long orderId);
+
     int cancelBookings(Long userId, List<Long> bookingIds);
 
     List<ServiceStatusResponse> getServiceStatus();

@@ -3,16 +3,10 @@
     <section class="admin-hero">
       <div class="admin-hero__main">
         <span class="hero-chip">工具箱</span>
-        <h1>AI 助手 · 天气 · 二维码 · 文件存储</h1>
-        <p>集成 DeepSeek 大模型对话、实时天气查询、二维码生成与 OSS 文件管理能力。</p>
+        <h1>天气 · 二维码 · 文件存储</h1>
+        <p>实时天气查询、二维码生成与 OSS 文件管理能力。（AI 助手已迁移至导航栏「AI 助手」）</p>
       </div>
       <div class="admin-hero__signal">
-        <div
-          class="signal-card"
-          @click="scrollTo('ai')"
-        >
-          <span>AI 助手</span><strong>DeepSeek</strong><small>大模型对话</small>
-        </div>
         <div
           class="signal-card"
           @click="scrollTo('weather')"
@@ -21,97 +15,6 @@
         </div>
       </div>
     </section>
-
-    <!-- AI 助手 -->
-    <div
-      id="ai"
-      class="tools-card"
-    >
-      <div class="tools-card__head">
-        <div class="tools-card__icon">
-          🤖
-        </div>
-        <div>
-          <h3>AI 智能助手</h3>
-          <p>基于 DeepSeek 大模型，可以回答问题、提供建议、辅助决策</p>
-        </div>
-        <el-select
-          v-model="aiModel"
-          size="small"
-          style="width:140px"
-        >
-          <el-option
-            label="DeepSeek-V3"
-            value="deepseek-chat"
-          />
-          <el-option
-            label="DeepSeek-R1"
-            value="deepseek-reasoner"
-          />
-        </el-select>
-      </div>
-      <div
-        ref="chatBox"
-        class="chat-messages"
-      >
-        <div
-          v-if="chatHistory.length === 0"
-          class="chat-empty"
-        >
-          <div class="chat-empty__icon">
-            💬
-          </div>
-          <p>向 AI 助手提问，获取智能回复</p>
-          <div class="chat-hints">
-            <span
-              v-for="h in hints"
-              :key="h"
-              @click="chatInput = h; sendChat()"
-            >{{ h }}</span>
-          </div>
-        </div>
-        <div
-          v-for="(msg, i) in chatHistory"
-          :key="i"
-          :class="['chat-msg', msg.role]"
-        >
-          <div class="chat-msg__avatar">
-            {{ msg.role === 'user' ? '👤' : '🤖' }}
-          </div>
-          <div class="chat-msg__bubble">
-            {{ msg.content }}
-          </div>
-        </div>
-        <div
-          v-if="chatLoading"
-          class="chat-msg assistant"
-        >
-          <div class="chat-msg__avatar">
-            🤖
-          </div>
-          <div class="chat-msg__bubble typing">
-            <span /><span /><span />
-          </div>
-        </div>
-      </div>
-      <div class="chat-input">
-        <el-input
-          v-model="chatInput"
-          placeholder="输入问题，按 Enter 发送..."
-          :disabled="chatLoading"
-          size="large"
-          @keyup.enter="sendChat"
-        />
-        <el-button
-          type="primary"
-          size="large"
-          :loading="chatLoading"
-          @click="sendChat"
-        >
-          发送
-        </el-button>
-      </div>
-    </div>
 
     <section class="grid-cards">
       <!-- 天气 -->
@@ -263,40 +166,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import request from '@/common/utils/request'
 import axios from 'axios'
-
-// ====== AI Chat ======
-const aiModel = ref('deepseek-chat')
-const chatInput = ref('')
-const chatLoading = ref(false)
-const chatBox = ref<HTMLElement>()
-const chatHistory = ref<{ role: 'user' | 'assistant'; content: string }[]>([])
-const hints = ['校园有哪些预约服务？', '如何申请会议室？', '审批流程是怎样的？']
-
-async function sendChat() {
-  const msg = chatInput.value.trim()
-  if (!msg) return
-  chatHistory.value.push({ role: 'user', content: msg })
-  chatInput.value = ''
-  chatLoading.value = true
-  await nextTick()
-  chatBox.value?.scrollTo({ top: chatBox.value.scrollHeight, behavior: 'smooth' })
-
-  try {
-    const res = await request.post('/ai/chat', { message: msg, model: aiModel.value }) as { response: string; success: boolean; model: string }
-    chatHistory.value.push({ role: 'assistant', content: res.response || '（AI 未返回内容）' })
-  } catch {
-    chatHistory.value.push({ role: 'assistant', content: 'AI 服务暂时不可用，请稍后重试' })
-  } finally {
-    chatLoading.value = false
-    await nextTick()
-    chatBox.value?.scrollTo({ top: chatBox.value.scrollHeight, behavior: 'smooth' })
-  }
-}
 
 // ====== Weather ======
 const weatherSheng = ref('')

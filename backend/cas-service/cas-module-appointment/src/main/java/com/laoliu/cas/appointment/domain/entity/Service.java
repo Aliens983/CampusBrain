@@ -31,12 +31,26 @@ public class Service implements Serializable {
     private String serviceDescribe;
     /** 服务状态 */
     private Integer serviceState;
+    /** 可预约容量（-1=不限） */
+    private Integer capacity;
+    /** 已预约数 */
+    private Integer bookedCount;
 
     /**
      * 领域行为：检查服务是否可用
      */
     public boolean isAvailable() {
         return Objects.equals(this.serviceState, 1);
+    }
+
+    /**
+     * 领域行为：是否还有剩余容量（-1=不限，否则已预约数 < 容量）
+     */
+    public boolean hasCapacity() {
+        if (capacity == null || capacity == -1) {
+            return true;
+        }
+        return bookedCount == null || bookedCount < capacity;
     }
 
     /**

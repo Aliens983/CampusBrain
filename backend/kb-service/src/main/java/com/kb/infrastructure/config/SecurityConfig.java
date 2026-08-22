@@ -53,6 +53,9 @@ public class SecurityConfig {
                         .requestMatchers("/kb/auth/**").permitAll()
                         .requestMatchers("/kb/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
+                        // 知识库文档的管理（上传/删除）仅限管理员，普通用户只能问答
+                        .requestMatchers(HttpMethod.POST, "/kb/documents/upload")
+                            .hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/kb/documents/**")
                             .hasRole("ADMIN")
                         .anyRequest().authenticated()

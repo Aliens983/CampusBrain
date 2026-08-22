@@ -61,4 +61,22 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     /** 统计各服务的有效预约数（排除已取消） */
     @Select("SELECT service_id AS serviceId, COUNT(*) AS bookingCount FROM item WHERE manage_status <> 3 GROUP BY service_id")
     List<ServiceAvailabilityVO> countBookingsByService();
+
+    /**
+     * 乐观锁扣减库存：仅当容量足够时 +1（原子条件更新，防并发超卖）。
+     *
+     * @return 影响行数，0 表示容量已满
+     */
+    int decrementStock(@Param("serviceId") Long serviceId);
+
+    /**
+     * 释放库存：取消/审核拒绝时 -1（最低到 0）。
+     */
+    int releaseStock(@Param("serviceId") Long serviceId);
+
+    /** 查询一批预约单对应的服务 ID（用于回退库存） */
+    List<Long> selectServiceIdsByBookingIds(@Param("bookingIds") List<Long> bookingIds);
+
+    /** 查询单个预约单对应的服务 ID（用于审核拒绝回退） */
+    Long selectServiceIdByOrderId(@Param("orderId") Long orderId);
 }

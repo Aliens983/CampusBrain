@@ -117,6 +117,12 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
             throw new BusinessException(BookErrorCode.AUDIT_FAILED);
         }
 
+        // 审核拒绝：释放该预约占用的库存
+        Long serviceId = bookingRepository.selectServiceIdByOrderId(orderId);
+        if (serviceId != null) {
+            bookingRepository.releaseStock(serviceId);
+        }
+
         String emailContent = "您好！您的预约未通过。\n预约服务：" + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
                 + "\n拒绝原因：" + reason;

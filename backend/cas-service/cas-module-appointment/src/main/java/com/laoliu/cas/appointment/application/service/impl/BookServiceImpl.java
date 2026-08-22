@@ -57,13 +57,17 @@ public class BookServiceImpl implements BookService {
             if (!service.isAvailable()) {
                 throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
             }
+            // 乐观锁扣减库存（同事务）：容量充足才 +1，满则抛异常，事务回滚
+            if (bookingRepository.decrementStock(sid) == 0) {
+                throw new BusinessException(BookErrorCode.BOOKING_CAPACITY_FULL, sid);
+            }
         }
 
         try {
             List<Integer> serviceIdInts = serviceIds.stream()
                     .map(Long::intValue)
                     .collect(Collectors.toList());
-            // 幂等插入：60 秒内同用户同服务（待审核）会被 SQL 去重
+            // 幂等插入：60 秒内同用户同服务（待审核）会被 SQL 去重；重复则抛异常回滚（含库存扣减）
             int inserted = bookingRepository.insertServices(userId, serviceIdInts);
             if (inserted == 0) {
                 throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
@@ -127,6 +131,11 @@ public class BookServiceImpl implements BookService {
         }
         boolean success = bookingRepository.cancelBookings(userId, bookingIds) > 0;
         if (success) {
+            // 取消成功：释放这些预约占用的库存
+            List<Long> serviceIds = bookingRepository.selectServiceIdsByBookingIds(bookingIds);
+            if (serviceIds != null) {
+                serviceIds.forEach(bookingRepository::releaseStock);
+            }
             for (Long id : bookingIds) {
                 bookingEventPublisher.publishChanged(userId, id, "CANCELLED");
             }

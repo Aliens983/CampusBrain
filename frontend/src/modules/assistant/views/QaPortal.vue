@@ -17,7 +17,7 @@
         </div>
       </template>
 
-      <div class="upload-row">
+      <div class="upload-row" v-if="isAdmin">
         <input
           ref="fileInput"
           type="file"
@@ -34,7 +34,7 @@
         >
           上传文档
         </el-button>
-        <span class="upload-tip">支持 Markdown / PDF / Word / TXT / HTML</span>
+        <span class="upload-tip">支持 Markdown / PDF / Word / TXT / HTML（仅管理员可上传）</span>
       </div>
 
       <el-table
@@ -174,7 +174,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/common/stores/user'
 
@@ -188,6 +188,10 @@ interface DocumentItem {
 }
 
 const userStore = useUserStore()
+// 仅管理员可上传/删除知识库文档
+const isAdmin = computed(() =>
+  ['admin', 'super_admin'].includes(userStore.userInfo?.role || ''),
+)
 const query = ref('')
 const answer = ref('')
 const streaming = ref(false)

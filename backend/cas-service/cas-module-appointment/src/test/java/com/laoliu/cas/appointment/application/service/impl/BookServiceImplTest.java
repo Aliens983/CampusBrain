@@ -74,6 +74,7 @@ class BookServiceImplTest {
             UserInfoDTO userInfo = buildUserInfo();
 
             when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(availableService));
+            when(bookingRepository.decrementStock(SERVICE_ID)).thenReturn(1);
             when(bookingRepository.insertServices(eq(USER_ID), anyList())).thenReturn(1);
             when(userInfoApi.getUserById(USER_ID)).thenReturn(userInfo);
 

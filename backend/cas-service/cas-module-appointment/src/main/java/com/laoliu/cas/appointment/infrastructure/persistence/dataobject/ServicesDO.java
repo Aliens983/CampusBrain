@@ -33,10 +33,17 @@ public class ServicesDO {
     /** 服务状态（0-禁用，1-启用） */
     private Integer serviceState;
 
+    /** 可预约容量（-1=不限） */
+    private Integer capacity;
+
+    /** 已预约数 */
+    private Integer bookedCount;
+
     public Service toEntity() {
         return Service.builder()
                 .serviceId(serviceId).serviceName(serviceName)
                 .serviceDescribe(serviceDescribe).serviceState(serviceState)
+                .capacity(capacity).bookedCount(bookedCount)
                 .build();
     }
 
@@ -45,6 +52,7 @@ public class ServicesDO {
         return ServicesDO.builder()
                 .serviceId(entity.getServiceId()).serviceName(entity.getServiceName())
                 .serviceDescribe(entity.getServiceDescribe()).serviceState(entity.getServiceState())
+                .capacity(entity.getCapacity()).bookedCount(entity.getBookedCount())
                 .build();
     }
 }

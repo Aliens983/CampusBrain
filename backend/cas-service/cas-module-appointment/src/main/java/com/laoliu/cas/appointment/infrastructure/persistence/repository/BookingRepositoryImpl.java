@@ -30,6 +30,26 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    public int decrementStock(Long serviceId) {
+        return itemMapper.decrementStock(serviceId);
+    }
+
+    @Override
+    public int releaseStock(Long serviceId) {
+        return itemMapper.releaseStock(serviceId);
+    }
+
+    @Override
+    public List<Long> selectServiceIdsByBookingIds(List<Long> bookingIds) {
+        return itemMapper.selectServiceIdsByBookingIds(bookingIds);
+    }
+
+    @Override
+    public Long selectServiceIdByOrderId(Long orderId) {
+        return itemMapper.selectServiceIdByOrderId(orderId);
+    }
+
+    @Override
     public int cancelBookings(Long userId, List<Long> bookingIds) {
         return itemMapper.setBookingStatusByParts(userId, bookingIds);
     }
