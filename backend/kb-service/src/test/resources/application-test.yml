@@ -75,6 +75,15 @@ qdrant:
   port: 16334
   collection-name: kb_chunks_test
   vector-size: 1024
+  distance: Cosine
+
+# JWT / 内网签名（common-auth 的 JWTUtils/InternalSigner 需要，无默认值）
+jwt:
+  secret: test-jwt-secret
+  expiration: 86400000
+
+auth:
+  internal-sign-secret: test-internal-sign-secret
 
 minio:
   endpoint: http://localhost:19000
