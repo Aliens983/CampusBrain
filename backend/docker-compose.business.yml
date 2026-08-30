@@ -1,0 +1,179 @@
+# ============================================================================
+# 业务服务部署编排 — 配合中间件编排 docker-compose.yml 一起使用
+#
+# 由 Jenkins 流水线构建镜像后执行：
+#   docker compose -f docker-compose.yml -f docker-compose.business.yml up -d
+#
+# 说明：
+#   - docker-compose.yml 负责中间件（Nacos / KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO）
+#   - 本文件负责业务服务（gateway / cas-service / kb-service / frontend）
+#     以及 CAS 专属中间件（cas-mysql / cas-redis，因为 CAS 在开发时用的是宿主机 MySQL/Redis）
+#   - 镜像 tag 通过 ${TAG} 注入（默认 latest），pull_policy: never 保证用本地刚构建的镜像
+#   - 所有密钥从环境变量插值（Jenkins 注入），避免硬编码
+#
+# 端口约定（宿主机）：
+#   网关 8888 → 容器 80；CAS 18080；KB 8081；前端 80；cas-mysql 13306；cas-redis 16379
+# ============================================================================
+
+services:
+  # ---------------- CAS 专属中间件 ----------------
+  cas-mysql:
+    image: mysql:8.0
+    container_name: cas-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: cas_db
+    ports:
+      - "13306:3306"   # 宿主机 13306 仅用于调试，业务服务走容器内网 3306
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - cas-mysql-data:/var/lib/mysql
+      # 首次启动自动初始化 CAS 库：编号 SQL 顺序执行（建库→建表→样例数据）
+      - ./cas-service/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+  cas-redis:
+    image: redis:7.2-alpine
+    container_name: cas-redis
+    restart: unless-stopped
+    ports:
+      - "16379:6379"
+    volumes:
+      - cas-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ---------------- 业务服务 ----------------
+  gateway:
+    image: gateway:${TAG:-latest}
+    pull_policy: never
+    container_name: gateway
+    restart: unless-stopped
+    ports:
+      - "8888:80"            # 宿主机 8888 → 容器 80（前端 nginx 的 proxy_pass 指向 gateway:80）
+    environment:
+      SERVER_PORT: 80        # Spring Boot 环境变量覆盖：让网关在容器内监听 80，与 nginx 约定一致
+      NACOS_ADDR: nacos:8848
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
+    depends_on:
+      nacos:
+        condition: service_healthy
+
+  cas-service:
+    image: cas-service:${TAG:-latest}
+    pull_policy: never
+    container_name: cas-service
+    restart: unless-stopped
+    ports:
+      - "18080:18080"
+    environment:
+      NACOS_ADDR: nacos:8848
+      # Spring Boot 宽松绑定：环境变量覆盖 application.yml 中写死的 localhost 配置
+      SPRING_DATASOURCE_URL: jdbc:mysql://cas-mysql:3306/cas_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: cas-redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_RABBITMQ_HOST: kb-rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: admin
+      SPRING_RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
+      FILE_UPLOAD_PATH: /app/uploads/
+      FILE_UPLOAD_DIR: uploads
+    volumes:
+      - cas-uploads:/app/uploads
+    depends_on:
+      nacos:
+        condition: service_healthy
+      cas-mysql:
+        condition: service_healthy
+      cas-redis:
+        condition: service_healthy
+    networks:
+      default:
+        aliases:
+          - backend   # 前端 nginx.conf 里 /uploads、/doc.html 等代理到 backend:18080
+
+  kb-service:
+    image: kb-service:${TAG:-latest}
+    pull_policy: never
+    container_name: kb-service
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      NACOS_ADDR: nacos:8848
+      DB_HOST: kb-mysql
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: ${KB_MYSQL_ROOT_PASSWORD}
+      REDIS_HOST: kb-redis
+      REDIS_PORT: 6379
+      RABBITMQ_HOST: kb-rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: admin
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      MINIO_ENDPOINT: http://kb-minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      ES_HOST: kb-es
+      ES_PORT: 9200
+      QDRANT_HOST: kb-qdrant
+      QDRANT_PORT: 6334
+      JWT_SECRET: ${JWT_SECRET}
+      INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
+      # 大模型：对话走 DeepSeek（OpenAI 兼容接口），Embedding 走硅基流动
+      OPENAI_API_KEY: ${DEEPSEEK_API_KEY}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+    depends_on:
+      nacos:
+        condition: service_healthy
+      kb-mysql:
+        condition: service_healthy
+      kb-redis:
+        condition: service_healthy
+      kb-es:
+        condition: service_healthy
+      kb-qdrant:
+        condition: service_healthy
+      kb-rabbitmq:
+        condition: service_healthy
+      kb-minio:
+        condition: service_healthy
+
+  frontend:
+    image: frontend:${TAG:-latest}
+    pull_policy: never
+    container_name: frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"   # nginx 托管静态页 + 反向代理到 gateway/cas-service
+    depends_on:
+      - gateway
+      - cas-service
+
+  # ---------------- 给 docker-compose.yml 里的 nacos 补充健康检查（原文件未定义） ----------------
+  nacos:
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8848/nacos/v1/console/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  cas-mysql-data:
+  cas-redis-data:
+  cas-uploads:
