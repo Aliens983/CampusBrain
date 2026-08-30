@@ -12,8 +12,8 @@ import java.util.concurrent.TimeUnit;
 /**
  * 邮箱验证码服务实现
  * <p>
- * 验证码存储在 Redis，Key 格式：verification_code:{email}，TTL 5 分钟。
- * 60 秒内同一邮箱只能发送一次（rate_limit:email:{email}）。
+ * 验证码存储在 Redis，Key 格式：verification_code:{email}，TTL 5 分钟
+ * 60 秒内同一邮箱只能发送一次（rate_limit:email:{email}）
  * </p>
  *
  * @author forever-king

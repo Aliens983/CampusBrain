@@ -11,8 +11,8 @@ import java.util.List;
 /**
  * 内存中的用户模型
  * <p>
- * 每次请求校验 Access Token 后构建，存入 Spring Security 上下文。
- * 后续业务代码通过 SecurityFrameworkUtils.getLoginUser() 获取。
+ * 每次请求校验 Access Token 后构建，存入 Spring Security 上下文
+ * 后续业务代码通过 SecurityFrameworkUtils.getLoginUser() 获取
  * </p>
  *
  * @author forever-king

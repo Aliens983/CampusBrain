@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * Q&A 应用服务接口。
+ * Q&A 应用服务接口
  * @author forever-king
  */
 public interface IQaApplicationService {

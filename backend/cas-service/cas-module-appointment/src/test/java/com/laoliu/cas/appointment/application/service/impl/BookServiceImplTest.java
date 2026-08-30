@@ -29,7 +29,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * BookServiceImpl 单元测试。
+ * BookServiceImpl 单元测试
  *
  * @author forever-king
  */

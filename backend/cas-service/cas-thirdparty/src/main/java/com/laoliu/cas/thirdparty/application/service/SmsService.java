@@ -1,7 +1,7 @@
 package com.laoliu.cas.thirdparty.application.service;
 
 /**
- * 短信应用层服务接口。
+ * 短信应用层服务接口
  *
  * @author forever-king
  */

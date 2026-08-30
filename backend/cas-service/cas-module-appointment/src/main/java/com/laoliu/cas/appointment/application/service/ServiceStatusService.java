@@ -18,7 +18,7 @@ public interface ServiceStatusService {
     List<ServiceStatusResponse> getServiceStatus();
 
     /**
-     * 分页查询所有服务预约状态（支持筛选）。
+     * 分页查询所有服务预约状态（支持筛选）
      */
     IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageReqVO reqVO);
 
@@ -26,7 +26,7 @@ public interface ServiceStatusService {
     List<ServiceStatusResponse> getServiceStatusByUserId(Long userId);
 
     /**
-     * 分页查询用户的预约状态（支持筛选）。
+     * 分页查询用户的预约状态（支持筛选）
      */
     IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageReqVO reqVO);
 
@@ -34,7 +34,7 @@ public interface ServiceStatusService {
     List<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId);
 
     /**
-     * 分页查询用户的预约状态（含状态描述，支持筛选）。
+     * 分页查询用户的预约状态（含状态描述，支持筛选）
      */
     IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageReqVO reqVO);
 
@@ -48,7 +48,7 @@ public interface ServiceStatusService {
     void sendAuditEmail(Long orderId, String title, String content);
 
     /**
-     * 审核通过预约，发送通知邮件。
+     * 审核通过预约，发送通知邮件
      *
      * @param orderId 订单ID
      * @param reason  审核备注（可选）
@@ -56,7 +56,7 @@ public interface ServiceStatusService {
     void auditPass(Long orderId, String reason);
 
     /**
-     * 审核驳回预约，发送通知邮件。
+     * 审核驳回预约，发送通知邮件
      *
      * @param orderId 订单ID
      * @param reason  驳回原因（必填）

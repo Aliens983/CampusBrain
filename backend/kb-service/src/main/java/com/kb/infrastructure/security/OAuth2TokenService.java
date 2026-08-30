@@ -5,8 +5,8 @@ import com.kb.infrastructure.persistence.mysql.dataobject.OAuth2AccessTokenDO;
 /**
  * OAuth2 Token 服务接口
  * <p>
- * 提供双 Token 的创建、校验、刷新、删除功能。
- * 实现为 OAuth2TokenServiceImpl。
+ * 提供双 Token 的创建、校验、刷新、删除功能
+ * 实现为 OAuth2TokenServiceImpl
  * </p>
  *
  * @author forever-king

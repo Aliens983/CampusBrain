@@ -24,7 +24,7 @@ public interface ServiceRepository {
     List<Service> findAll();
 
     /**
-     * 分页查找所有服务（支持按名称模糊搜索、按状态筛选）。
+     * 分页查找所有服务（支持按名称模糊搜索、按状态筛选）
      */
     IPage<Service> findAll(int page, int pageSize, String serviceName, Integer serviceState);
 
@@ -34,7 +34,7 @@ public interface ServiceRepository {
     List<Service> findByUserId(Long userId);
 
     /**
-     * 分页查找用户的服务。
+     * 分页查找用户的服务
      */
     IPage<Service> findByUserId(Long userId, int page, int pageSize);
 

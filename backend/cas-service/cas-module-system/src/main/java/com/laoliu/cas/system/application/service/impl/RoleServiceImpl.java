@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * 角色管理服务实现。
+ * 角色管理服务实现
  *
  * @author forever-king
  */

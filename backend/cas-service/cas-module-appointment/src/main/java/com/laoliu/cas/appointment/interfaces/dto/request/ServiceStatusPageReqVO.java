@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 预约状态分页请求 — 支持按审核状态、服务名称筛选。
+ * 预约状态分页请求 — 支持按审核状态、服务名称筛选
  *
  * @author forever-king
  */

@@ -12,10 +12,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 /**
- * 知识图谱服务 — 管理实体索引和关系构建。
+ * 知识图谱服务 — 管理实体索引和关系构建
  * <p>
  * 当前使用内存存储（ConcurrentHashMap），生产环境应迁移到 Neo4j 或
- * 图数据库。关系基于共现分析构建：同一分块中共同出现的实体之间建立边。
+ * 图数据库。关系基于共现分析构建：同一分块中共同出现的实体之间建立边
  * </p>
  *
  * @author forever-king
@@ -35,7 +35,7 @@ public class KnowledgeGraphService {
             Collections.synchronizedList(new ArrayList<>());
 
     /**
-     * 从文档分块中抽取实体并构建关系图。
+     * 从文档分块中抽取实体并构建关系图
      */
     public void ingestChunk(String text, Long documentId, String chunkId) {
         List<KnowledgeEntity> entities = entityExtractor.extract(text, documentId, chunkId);
@@ -79,8 +79,8 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 根据查询关键词扩展实体 → 返回相关实体名称列表。
-     * 用于检索时扩展 query 的语义覆盖范围。
+     * 根据查询关键词扩展实体 → 返回相关实体名称列表
+     * 用于检索时扩展 query 的语义覆盖范围
      */
     public Set<String> expandQuery(String query) {
         Set<String> expansion = new HashSet<>();
@@ -121,7 +121,7 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 统计信息。
+     * 统计信息
      */
     public Map<String, Object> stats() {
         return Map.of(

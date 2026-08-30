@@ -23,10 +23,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 /**
- * 网关统一鉴权过滤器。
+ * 网关统一鉴权过滤器
  *
- * <p>职责：验签统一 JWT，未登录拦截；把用户身份与内网签名透传给下游服务。
- * 细粒度授权仍由各服务的 {@code @RequireRole} 负责（防御纵深）。
+ * <p>职责：验签统一 JWT，未登录拦截；把用户身份与内网签名透传给下游服务
+ * 细粒度授权仍由各服务的 {@code @RequireRole} 负责（防御纵深）
  *
  * @author forever-king
  */

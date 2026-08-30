@@ -34,14 +34,14 @@ public interface BookingRepository {
     List<ServiceStatusResponse> getServiceStatus();
 
     /**
-     * 分页查询所有服务预约状态（支持按审核状态、服务名称筛选）。
+     * 分页查询所有服务预约状态（支持按审核状态、服务名称筛选）
      */
     IPage<ServiceStatusResponse> getServiceStatus(int page, int pageSize, Integer manageStatus, String serviceName);
 
     List<ServiceStatusResponse> getServiceStatusByUserId(Long userId);
 
     /**
-     * 分页查询用户的预约状态（支持按审核状态、服务名称筛选）。
+     * 分页查询用户的预约状态（支持按审核状态、服务名称筛选）
      */
     IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, int page, int pageSize, Integer manageStatus, String serviceName);
 

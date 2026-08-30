@@ -64,7 +64,7 @@ public interface DocumentRepository {
     void delete(Long id);
 
     /**
-     * 删除某个文档的全部分块（用于重试时清空旧数据，保证幂等）。
+     * 删除某个文档的全部分块（用于重试时清空旧数据，保证幂等）
      */
     void deleteChunksByDocumentId(Long documentId);
 

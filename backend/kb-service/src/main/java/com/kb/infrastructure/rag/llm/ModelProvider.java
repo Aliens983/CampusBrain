@@ -1,9 +1,9 @@
 package com.kb.infrastructure.rag.llm;
 
 /**
- * LLM 提供商枚举，支持多模型运行时切换。
+ * LLM 提供商枚举，支持多模型运行时切换
  * <p>
- * 通过配置项 {@code llm.provider} 指定，默认 {@code deepseek}。
+ * 通过配置项 {@code llm.provider} 指定，默认 {@code deepseek}
  * </p>
  * @author forever-king
  */
@@ -33,7 +33,7 @@ public enum ModelProvider {
     public String getBaseUrl() { return baseUrl; }
 
     /**
-     * 根据名称解析 Provider，不区分大小写。
+     * 根据名称解析 Provider，不区分大小写
      */
     public static ModelProvider fromName(String name) {
         for (ModelProvider p : values()) {

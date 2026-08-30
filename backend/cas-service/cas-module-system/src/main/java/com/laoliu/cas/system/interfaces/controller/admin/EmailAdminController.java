@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 管理员端邮件发送接口。
+ * 管理员端邮件发送接口
  *
  * @author forever-king
  */

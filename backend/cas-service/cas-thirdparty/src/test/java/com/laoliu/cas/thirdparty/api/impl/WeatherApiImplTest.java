@@ -19,7 +19,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * WeatherApiImpl 单元测试。
+ * WeatherApiImpl 单元测试
  *
  * @author forever-king
  */

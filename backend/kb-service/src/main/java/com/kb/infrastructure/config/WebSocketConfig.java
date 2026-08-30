@@ -7,9 +7,9 @@ import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 /**
- * WebSocket + STOMP 配置。
+ * WebSocket + STOMP 配置
  * <p>
- * 用于实时推送文档处理状态、系统通知等。
+ * 用于实时推送文档处理状态、系统通知等
  * 前端通过 SockJS + STOMP 订阅：
  * <pre>
  * const socket = new SockJS('/ws');

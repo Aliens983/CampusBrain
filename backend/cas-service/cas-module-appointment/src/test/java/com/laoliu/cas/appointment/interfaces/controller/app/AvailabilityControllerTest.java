@@ -20,7 +20,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * AvailabilityController 单元测试（重点：/appointments/mine 身份校验）。
+ * AvailabilityController 单元测试（重点：/appointments/mine 身份校验）
  *
  * @author forever-king
  */

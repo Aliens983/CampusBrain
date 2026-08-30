@@ -15,8 +15,8 @@ import java.time.Duration;
 /**
  * LLM & Embedding 模型配置
  * <p>
- * Chat 模型和 Embedding 模型可以分别使用不同的 API 提供商。
- * 例如：Chat 用 DeepSeek，Embedding 用硅基流动或本地模型。
+ * Chat 模型和 Embedding 模型可以分别使用不同的 API 提供商
+ * 例如：Chat 用 DeepSeek，Embedding 用硅基流动或本地模型
  * </p>
  *
  * @author forever-king

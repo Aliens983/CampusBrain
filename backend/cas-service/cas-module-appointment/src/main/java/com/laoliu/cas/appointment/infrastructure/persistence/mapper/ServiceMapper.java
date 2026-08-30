@@ -23,7 +23,7 @@ public interface ServiceMapper extends BaseMapper<ServicesDO> {
     List<ServicesDO> selectAll();
 
     /**
-     * 分页查询所有服务。
+     * 分页查询所有服务
      */
     IPage<ServicesDO> selectAllWithPage(Page<ServicesDO> page);
 
@@ -36,7 +36,7 @@ public interface ServiceMapper extends BaseMapper<ServicesDO> {
     List<ServicesDO> selectUserServices(@Param("userId") Long userId);
 
     /**
-     * 分页查询用户预约的服务。
+     * 分页查询用户预约的服务
      */
     IPage<ServicesDO> selectUserServicesWithPage(@Param("userId") Long userId, Page<ServicesDO> page);
 

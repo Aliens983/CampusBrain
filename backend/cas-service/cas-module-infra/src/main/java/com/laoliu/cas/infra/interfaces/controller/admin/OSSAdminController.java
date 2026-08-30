@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * 管理员端对象存储接口。
+ * 管理员端对象存储接口
  *
  * @author forever-king
  */

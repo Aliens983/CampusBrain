@@ -9,7 +9,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 分页参数基类 — 所有分页请求 VO 继承此类即可获得 pageNo / pageSize 参数。
+ * 分页参数基类 — 所有分页请求 VO 继承此类即可获得 pageNo / pageSize 参数
  *
  * @author forever-king
  */

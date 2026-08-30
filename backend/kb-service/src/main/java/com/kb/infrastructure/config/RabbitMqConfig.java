@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Configuration;
 /**
  * RabbitMQ 消息队列配置
  * <p>
- * 定义文档异步处理的消息队列：上传 → 发消息 → 消费者异步执行解析/分块/Embedding/入库。
+ * 定义文档异步处理的消息队列：上传 → 发消息 → 消费者异步执行解析/分块/Embedding/入库
  * </p>
  *
  * @author forever-king

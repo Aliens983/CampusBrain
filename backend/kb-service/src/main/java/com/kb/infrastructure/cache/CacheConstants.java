@@ -1,9 +1,9 @@
 package com.kb.infrastructure.cache;
 
 /**
- * 统一 Redis Key 前缀常量。
+ * 统一 Redis Key 前缀常量
  * <p>
- * 所有缓存 key 集中管理，避免散落分散和命名冲突。
+ * 所有缓存 key 集中管理，避免散落分散和命名冲突
  * </p>
  * @author forever-king
  */

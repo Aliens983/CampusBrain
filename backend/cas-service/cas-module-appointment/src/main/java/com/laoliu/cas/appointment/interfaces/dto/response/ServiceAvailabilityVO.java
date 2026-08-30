@@ -3,7 +3,7 @@ package com.laoliu.cas.appointment.interfaces.dto.response;
 import lombok.Data;
 
 /**
- * 服务实时可用性（供 KB 智能助手查询）。
+ * 服务实时可用性（供 KB 智能助手查询）
  *
  * @author forever-king
  */

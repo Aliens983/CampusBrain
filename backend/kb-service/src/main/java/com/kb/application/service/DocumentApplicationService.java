@@ -107,7 +107,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * Get document by ID（仅本人可访问）。
+     * Get document by ID（仅本人可访问）
      */
     public Document getDocument(Long id) {
         return getOwnedDocument(id);
@@ -158,7 +158,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * 获取并校验文档归属：仅文档 owner 本人可访问，否则视为不存在。
+     * 获取并校验文档归属：仅文档 owner 本人可访问，否则视为不存在
      */
     private Document getOwnedDocument(Long id) {
         Document doc = documentRepository.findById(id)

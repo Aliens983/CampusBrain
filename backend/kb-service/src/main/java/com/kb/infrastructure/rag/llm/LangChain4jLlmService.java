@@ -46,7 +46,7 @@ public class LangChain4jLlmService implements LlmService {
 
     /** LLM Provider（从配置读取，默认 deepseek）
      *  主模型由 LangChain4j Spring Boot auto-config 通过 yml 构建；
-     *  此字段用于 fallback 路由和启动诊断日志。 */
+     *  此字段用于 fallback 路由和启动诊断日志 */
     @Value("${llm.provider:deepseek}")
     private String llmProvider;
 
@@ -165,9 +165,9 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * Fallback: 使用备选 Provider 重试。
+     * Fallback: 使用备选 Provider 重试
      * 如果主模型不是 DeepSeek，则 fallback 到 DeepSeek；
-     * 如果主模型就是 DeepSeek，则 fallback 到 Qwen。
+     * 如果主模型就是 DeepSeek，则 fallback 到 Qwen
      */
     private String tryFallback(List<dev.langchain4j.data.message.ChatMessage> messages) {
         ModelProvider primary = ModelProvider.fromName(llmProvider);

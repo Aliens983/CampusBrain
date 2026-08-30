@@ -5,7 +5,7 @@ import com.kb.domain.document.Document;
 import java.util.Map;
 
 /**
- * 文档领域对象 → DTO 转换器。
+ * 文档领域对象 → DTO 转换器
  * @author forever-king
  */
 public final class DocumentAssembler {

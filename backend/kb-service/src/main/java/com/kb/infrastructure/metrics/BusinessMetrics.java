@@ -8,9 +8,9 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 自定义业务指标收集器。
+ * 自定义业务指标收集器
  * <p>
- * 通过 Micrometer 暴露给 Prometheus，可在 Grafana 中可视化。
+ * 通过 Micrometer 暴露给 Prometheus，可在 Grafana 中可视化
  * </p>
  * <p>
  * 关键指标：

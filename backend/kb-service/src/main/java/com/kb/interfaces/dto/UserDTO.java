@@ -6,7 +6,7 @@ import lombok.Builder;
 import lombok.Data;
 
 /**
- * 用户信息 DTO — 替代 Map&lt;String, Object&gt; 的强类型响应。
+ * 用户信息 DTO — 替代 Map&lt;String, Object&gt; 的强类型响应
  *
  * @author forever-king
  */

@@ -7,10 +7,10 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 解析器注册中心 — 管理所有 {@link DocumentParserSpi} 实现。
+ * 解析器注册中心 — 管理所有 {@link DocumentParserSpi} 实现
  * <p>
- * Spring 自动发现标注了 {@code @Component} 的解析器实现并注册。
- * 通过扩展名查找时按优先级排序，同扩展名取最高优先级。
+ * Spring 自动发现标注了 {@code @Component} 的解析器实现并注册
+ * 通过扩展名查找时按优先级排序，同扩展名取最高优先级
  * </p>
  *
  * @author forever-king
@@ -27,7 +27,7 @@ public class ParserRegistry {
             Collections.synchronizedList(new ArrayList<>());
 
     /**
-     * 注册解析器（由 Spring 构造函数注入调用）。
+     * 注册解析器（由 Spring 构造函数注入调用）
      */
     public void register(DocumentParserSpi parser) {
         allParsers.add(parser);
@@ -41,7 +41,7 @@ public class ParserRegistry {
     }
 
     /**
-     * 获取支持指定扩展名的最高优先级解析器。
+     * 获取支持指定扩展名的最高优先级解析器
      */
     public Optional<DocumentParserSpi> getParser(String extension) {
         if (extension == null) return Optional.empty();
@@ -51,7 +51,7 @@ public class ParserRegistry {
     }
 
     /**
-     * 获取支持指定扩展名的所有解析器（用于 fallback 链）。
+     * 获取支持指定扩展名的所有解析器（用于 fallback 链）
      */
     public List<DocumentParserSpi> getParserChain(String extension) {
         if (extension == null) return List.of();
@@ -59,7 +59,7 @@ public class ParserRegistry {
     }
 
     /**
-     * 返回所有已注册解析器的统计信息。
+     * 返回所有已注册解析器的统计信息
      */
     public Map<String, Object> stats() {
         Map<String, Object> stats = new LinkedHashMap<>();

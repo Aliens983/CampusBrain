@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * SmsServiceImpl 单元测试。
+ * SmsServiceImpl 单元测试
  *
  * @author forever-king
  */

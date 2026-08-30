@@ -9,7 +9,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * User 实体 ↔ UserResponse VO 转换器（MapStruct）。
+ * User 实体 ↔ UserResponse VO 转换器（MapStruct）
  *
  * @author forever-king
  */

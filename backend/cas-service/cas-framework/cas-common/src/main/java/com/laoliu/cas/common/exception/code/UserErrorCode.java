@@ -5,7 +5,7 @@ import com.laoliu.cas.common.exception.ErrorCode;
 /**
  * 用户/认证/角色 错误码 (20001-20099)
  * <p>
- * 合并了原 LoginErrorCode、EmailErrorCode、RoleErrorCode 的错误码。
+ * 合并了原 LoginErrorCode、EmailErrorCode、RoleErrorCode 的错误码
  *
  * @author forever-king
  */

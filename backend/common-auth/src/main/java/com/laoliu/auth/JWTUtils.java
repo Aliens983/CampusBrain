@@ -21,7 +21,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Date;
 
 /**
- * JWT 工具类（统一认证组件，供网关与各服务复用）。
+ * JWT 工具类（统一认证组件，供网关与各服务复用）
  *
  * @author forever-king
  */

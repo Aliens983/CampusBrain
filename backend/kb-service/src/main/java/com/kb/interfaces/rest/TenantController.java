@@ -13,12 +13,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 租户/工作空间管理 API。
+ * 租户/工作空间管理 API
  * <p>
  * <b>租户切换机制：</b>前端在后续请求中通过 HTTP Header 传递
- * {@code X-Tenant-Id: <tenantId>} 来指定当前工作空间。
- * 后端 {@code TenantFilter} 自动解析并写入 {@code TenantContext}。
- * 不提供服务端 session 级切换——每次请求独立携带租户上下文。
+ * {@code X-Tenant-Id: <tenantId>} 来指定当前工作空间
+ * 后端 {@code TenantFilter} 自动解析并写入 {@code TenantContext}
+ * 不提供服务端 session 级切换——每次请求独立携带租户上下文
  * </p>
  *
  * @author forever-king

@@ -6,7 +6,7 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 
 /**
- * 知识实体 — 从文档中抽取的命名实体（人名、地名、术语、产品名等）。
+ * 知识实体 — 从文档中抽取的命名实体（人名、地名、术语、产品名等）
  *
  * @author forever-king
  */

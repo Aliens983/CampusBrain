@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 /**
- * 更新个人资料请求。
+ * 更新个人资料请求
  *
  * @author forever-king
  */

@@ -29,10 +29,10 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EsDocumentRepository {
 
-    /** Elasticsearch客户端，用于执行索引、搜索、删除等操作。 */
+    /** Elasticsearch客户端，用于执行索引、搜索、删除等操作 */
     private final ElasticsearchClient esClient;
 
-    /** Elasticsearch索引名称，从配置文件注入。 */
+    /** Elasticsearch索引名称，从配置文件注入 */
     @Value("${elasticsearch.index-name}")
     private String indexName;
 

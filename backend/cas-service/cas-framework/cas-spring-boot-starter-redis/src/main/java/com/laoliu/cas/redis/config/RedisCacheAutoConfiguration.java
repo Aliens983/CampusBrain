@@ -13,7 +13,7 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 import java.time.Duration;
 
 /**
- * Redis 缓存自动配置 — 启用 Spring Cache 抽象 + RedisCacheManager。
+ * Redis 缓存自动配置 — 启用 Spring Cache 抽象 + RedisCacheManager
  *
  * @author forever-king
  */

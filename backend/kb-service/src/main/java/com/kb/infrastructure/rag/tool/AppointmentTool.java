@@ -13,10 +13,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 预约实时查询工具（LangChain4j Function Calling）。
+ * 预约实时查询工具（LangChain4j Function Calling）
  * <p>
  * 供 LLM 在用户询问"有哪些服务可预约 / 余量"时调用，返回 CAS 的实时预约数据，
- * 实现"静态 RAG + 实时数据"相结合的闭环。
+ * 实现"静态 RAG + 实时数据"相结合的闭环
  * </p>
  *
  * @author forever-king
@@ -29,7 +29,7 @@ public class AppointmentTool {
     private final CasClient casClient;
 
     /**
-     * 查询当前可预约的校园服务及其实时预约余量。
+     * 查询当前可预约的校园服务及其实时预约余量
      */
     @Tool("查询当前可预约的校园服务列表及其实时预约余量，例如自习室、心理咨询、会议室、设备借用等。返回服务名称、描述与当前预约单数。")
     public String queryAppointmentAvailability() {
@@ -52,8 +52,8 @@ public class AppointmentTool {
     }
 
     /**
-     * 查询当前登录用户自己的预约记录。
-     * userId 由 Feign 拦截器从当前请求的 X-User-Id 动态注入。
+     * 查询当前登录用户自己的预约记录
+     * userId 由 Feign 拦截器从当前请求的 X-User-Id 动态注入
      */
     @Tool("查询当前登录用户自己的预约记录，例如：我预约过哪些服务。返回该用户的预约服务名称与审核状态。")
     public String queryMyBookings() {

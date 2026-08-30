@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * 图形验证码响应 VO。
+ * 图形验证码响应 VO
  *
  * @author forever-king
  */

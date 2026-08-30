@@ -5,7 +5,7 @@ import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import org.springframework.stereotype.Component;
 
 /**
- * 获取当前登录用户ID（系统模块提供，跨模块复用）。
+ * 获取当前登录用户ID（系统模块提供，跨模块复用）
  *
  * @author forever-king
  */

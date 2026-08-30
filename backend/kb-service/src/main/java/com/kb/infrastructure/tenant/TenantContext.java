@@ -1,10 +1,10 @@
 package com.kb.infrastructure.tenant;
 
 /**
- * 租户上下文 — 基于 ThreadLocal 的租户 ID 传递。
+ * 租户上下文 — 基于 ThreadLocal 的租户 ID 传递
  * <p>
- * 在请求入口（{@link TenantFilter}）设置，请求结束自动清除。
- * 异步场景需配合 {@code TaskDecorator} 传递到子线程。
+ * 在请求入口（{@link TenantFilter}）设置，请求结束自动清除
+ * 异步场景需配合 {@code TaskDecorator} 传递到子线程
  * </p>
  *
  * <h3>使用方式</h3>

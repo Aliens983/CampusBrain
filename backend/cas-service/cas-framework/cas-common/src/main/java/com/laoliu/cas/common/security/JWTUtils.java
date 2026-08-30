@@ -15,7 +15,7 @@ import java.util.Date;
 import javax.crypto.SecretKey;
 
 /**
- * JWT 工具类（通用组件，无业务语义）。
+ * JWT 工具类（通用组件，无业务语义）
  *
  * @author forever-king
  */

@@ -3,7 +3,7 @@ package com.kb.infrastructure.client;
 import lombok.Data;
 
 /**
- * CAS 服务实时可用性数据（对应 CAS 的 ServiceAvailabilityVO）。
+ * CAS 服务实时可用性数据（对应 CAS 的 ServiceAvailabilityVO）
  *
  * @author forever-king
  */

@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
 /**
- * 服务响应 VO。
+ * 服务响应 VO
  *
  * @author forever-king
  */

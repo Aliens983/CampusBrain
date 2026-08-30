@@ -19,7 +19,7 @@ public interface ServiceService {
     List<Service> getAllServices();
 
     /**
-     * 分页获取所有服务（支持筛选）。
+     * 分页获取所有服务（支持筛选）
      */
     PageResult<Service> getAllServices(ServicePageReqVO reqVO);
 
@@ -39,7 +39,7 @@ public interface ServiceService {
     List<Service> selectUserServices(Long userId);
 
     /**
-     * 分页获取用户的服务。
+     * 分页获取用户的服务
      */
     PageResult<Service> selectUserServices(Long userId, int page, int pageSize);
 }

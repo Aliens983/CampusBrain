@@ -3,9 +3,9 @@ package com.kb.infrastructure.common;
 import lombok.Getter;
 
 /**
- * 统一业务错误码枚举。
+ * 统一业务错误码枚举
  * <p>
- * 格式：{category}{sequence}，前端可根据 code 做精准错误处理。
+ * 格式：{category}{sequence}，前端可根据 code 做精准错误处理
  * <ul>
  *   <li>A — 认证/授权 (Auth)</li>
  *   <li>U — 用户 (User)</li>

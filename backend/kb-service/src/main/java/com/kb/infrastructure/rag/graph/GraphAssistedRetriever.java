@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 import java.util.*;
 
 /**
- * 图谱辅助检索器 — 在标准混合检索前进行查询扩展。
+ * 图谱辅助检索器 — 在标准混合检索前进行查询扩展
  * <p>
  * 流程：
  * <ol>
@@ -17,7 +17,7 @@ import java.util.*;
  *   <li>扩展后的 keywords 附加到原始 query</li>
  *   <li>委托给标准 {@link SearchService} 执行混合检索</li>
  * </ol>
- * 这解决了「用户用口语化提问，但文档使用专业术语」的语义鸿沟问题。
+ * 这解决了「用户用口语化提问，但文档使用专业术语」的语义鸿沟问题
  * </p>
  *
  * @author forever-king
@@ -31,7 +31,7 @@ public class GraphAssistedRetriever {
     private final KnowledgeGraphService kgService;
 
     /**
-     * 图谱增强检索。
+     * 图谱增强检索
      *
      * @param query 用户原始查询
      * @return 融合后的检索结果

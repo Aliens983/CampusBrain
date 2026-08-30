@@ -5,7 +5,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.ComponentScan;
 
 /**
- * 统一入口网关。
+ * 统一入口网关
  *
  * @author forever-king
  */

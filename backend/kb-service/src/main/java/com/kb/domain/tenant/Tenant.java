@@ -6,10 +6,10 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 租户/工作空间实体 — 实现多租户数据隔离。
+ * 租户/工作空间实体 — 实现多租户数据隔离
  * <p>
- * 每个租户拥有独立的知识库、文档、对话记录。
- * 用户通过 tenant_id 关联到所属组织。
+ * 每个租户拥有独立的知识库、文档、对话记录
+ * 用户通过 tenant_id 关联到所属组织
  * </p>
  *
  * @author forever-king

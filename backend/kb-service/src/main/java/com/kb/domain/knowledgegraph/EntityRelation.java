@@ -4,7 +4,7 @@ import lombok.Builder;
 import lombok.Getter;
 
 /**
- * 实体关系 — 两个知识实体之间的关联边。
+ * 实体关系 — 两个知识实体之间的关联边
  *
  * @author forever-king
  */

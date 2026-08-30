@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 用户端二维码生成接口。
+ * 用户端二维码生成接口
  *
  * @author forever-king
  */

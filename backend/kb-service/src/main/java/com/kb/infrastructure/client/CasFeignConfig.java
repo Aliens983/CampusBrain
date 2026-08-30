@@ -9,10 +9,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * CAS Feign 客户端配置 — 注入内网签名头，标识 KB 为受信服务。
+ * CAS Feign 客户端配置 — 注入内网签名头，标识 KB 为受信服务
  * <p>
  * CAS 的 {@code InternalAuthFilter} 校验 X-Internal-Sign 的 HMAC 签名与时间戳新鲜度，
- * 以此区分"服务间调用"与"伪造身份"，并放行到业务接口。
+ * 以此区分"服务间调用"与"伪造身份"，并放行到业务接口
  * </p>
  *
  * @author forever-king

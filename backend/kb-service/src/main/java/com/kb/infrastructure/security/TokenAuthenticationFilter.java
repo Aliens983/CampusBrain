@@ -16,11 +16,11 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * 网关身份信任过滤器。
+ * 网关身份信任过滤器
  *
  * <p>统一鉴权后，KB 不再自行签发/校验 Token，而是信任网关透传的身份头：
  * 先校验 {@code X-Internal-Sign}（防绕过网关直连伪造），再用
- * {@code X-User-Id}/{@code X-User-Role} 恢复登录态注入 SecurityContext。
+ * {@code X-User-Id}/{@code X-User-Role} 恢复登录态注入 SecurityContext
  *
  * @author forever-king
  */

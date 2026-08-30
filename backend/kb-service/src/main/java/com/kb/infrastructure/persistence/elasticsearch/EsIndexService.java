@@ -26,14 +26,14 @@ import java.io.IOException;
 @RequiredArgsConstructor
 public class EsIndexService {
 
-    /** Elasticsearch客户端，用于索引管理操作。 */
+    /** Elasticsearch客户端，用于索引管理操作 */
     private final ElasticsearchClient esClient;
 
-    /** Elasticsearch索引名称，从配置文件注入。 */
+    /** Elasticsearch索引名称，从配置文件注入 */
     @Value("${elasticsearch.index-name}")
     private String indexName;
 
-    /** 向量维度大小，与Qdrant配置保持一致，从配置文件注入。 */
+    /** 向量维度大小，与Qdrant配置保持一致，从配置文件注入 */
     @Value("${qdrant.vector-size}")
     private int vectorSize;
 

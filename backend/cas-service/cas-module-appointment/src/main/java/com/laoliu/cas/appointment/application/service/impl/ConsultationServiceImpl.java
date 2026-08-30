@@ -14,7 +14,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 咨询查询应用服务实现 — 全部从数据库读取真实数据。
+ * 咨询查询应用服务实现 — 全部从数据库读取真实数据
  *
  * @author forever-king
  */
@@ -42,7 +42,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     /**
-     * 分页查询咨询师，支持按名称/部门筛选。
+     * 分页查询咨询师，支持按名称/部门筛选
      */
     public IPage<ConsultantResponse> getAvailableConsultants(int page, int pageSize, String name, String department) {
         List<Long> consultationServiceIds = getConsultationServiceIds();

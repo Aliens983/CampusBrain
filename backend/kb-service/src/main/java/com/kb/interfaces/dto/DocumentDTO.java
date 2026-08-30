@@ -8,7 +8,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 文档信息 DTO — 替代 Map&lt;String, Object&gt; 的强类型响应。
+ * 文档信息 DTO — 替代 Map&lt;String, Object&gt; 的强类型响应
  *
  * @author forever-king
  */

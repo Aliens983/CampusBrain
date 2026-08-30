@@ -5,7 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * RabbitMQ 队列声明。
+ * RabbitMQ 队列声明
  *
  * @author forever-king
  */

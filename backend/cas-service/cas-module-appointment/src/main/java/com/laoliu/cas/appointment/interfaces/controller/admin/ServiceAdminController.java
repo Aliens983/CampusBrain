@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 
 /**
- * 管理员端服务管理接口。
+ * 管理员端服务管理接口
  *
  * @author forever-king
  */

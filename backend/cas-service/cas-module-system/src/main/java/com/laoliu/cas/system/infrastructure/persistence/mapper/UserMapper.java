@@ -49,7 +49,7 @@ public interface UserMapper extends BaseMapper<UserDO> {
     List<UserDO> getAllUsers();
 
     /**
-     * 分页查询所有用户。MyBatis-Plus 自动拦截 Page 参数添加 LIMIT/OFFSET。
+     * 分页查询所有用户。MyBatis-Plus 自动拦截 Page 参数添加 LIMIT/OFFSET
      */
     @Select("SELECT * FROM user ORDER BY id DESC")
     IPage<UserDO> getAllUsersWithPage(Page<UserDO> page);
@@ -68,7 +68,7 @@ public interface UserMapper extends BaseMapper<UserDO> {
     List<BookingRecordDO> getAllBookings(@Param("userId") Long userId);
 
     /**
-     * 分页查询用户的预约记录。
+     * 分页查询用户的预约记录
      */
     @Select("SELECT i.order_id AS orderId, s.service_name AS serviceName, s.service_describe AS serviceDescribe, " +
             "u.name AS username, i.create_time AS createTime, i.update_time AS updateTime, " +

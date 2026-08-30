@@ -12,10 +12,10 @@ import java.security.MessageDigest;
 import java.util.Base64;
 
 /**
- * 内网调用签名工具。
+ * 内网调用签名工具
  *
  * <p>网关验签 JWT 后，对透传身份头计算 {@code X-Internal-Sign}；
- * 下游服务用同一密钥校验签名，防止绕过网关直连服务伪造身份。
+ * 下游服务用同一密钥校验签名，防止绕过网关直连服务伪造身份
  *
  * @author forever-king
  */
@@ -27,7 +27,7 @@ public class InternalSigner {
     private String secret;
 
     /**
-     * 对若干参与签名的片段生成 HMAC-SHA256 签名（Base64）。
+     * 对若干参与签名的片段生成 HMAC-SHA256 签名（Base64）
      */
     public String sign(String... parts) {
         try {
@@ -42,7 +42,7 @@ public class InternalSigner {
     }
 
     /**
-     * 常量时间比较，校验签名是否匹配。
+     * 常量时间比较，校验签名是否匹配
      */
     public boolean verify(String signature, String... parts) {
         if (signature == null) {
@@ -55,7 +55,7 @@ public class InternalSigner {
     }
 
     /**
-     * 校验签名并检查时间戳新鲜度，防止签名头被重放。
+     * 校验签名并检查时间戳新鲜度，防止签名头被重放
      *
      * @param signature    待校验的签名
      * @param maxAgeSeconds 允许的最大时间偏差（秒）

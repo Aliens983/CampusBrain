@@ -19,11 +19,11 @@ import java.io.IOException;
 import java.util.List;
 
 /**
- * 内网签名校验过滤器。
+ * 内网签名校验过滤器
  *
  * <p>当请求携带 {@code X-Internal-Sign} 时，校验签名与时间戳新鲜度，
  * 防止绕过网关伪造身份或重放签名头。若未携带签名头（例如本地直连），
- * 则交由 {@link JWTFilter} 处理 JWT。
+ * 则交由 {@link JWTFilter} 处理 JWT
  *
  * @author forever-king
  */

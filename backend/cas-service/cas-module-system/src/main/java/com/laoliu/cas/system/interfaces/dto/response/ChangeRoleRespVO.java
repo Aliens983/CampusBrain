@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * 角色变更响应 VO。
+ * 角色变更响应 VO
  *
  * @author forever-king
  */

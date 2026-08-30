@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 咨询查询接口。
+ * 咨询查询接口
  *
  * @author forever-king
  */

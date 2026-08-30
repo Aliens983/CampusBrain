@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * RoleServiceImpl 单元测试。
+ * RoleServiceImpl 单元测试
  *
  * @author forever-king
  */

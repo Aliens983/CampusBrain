@@ -251,14 +251,14 @@ public class QaApplicationService implements IQaApplicationService {
     // ========== Private Helpers ==========
 
     /**
-     * 意图路由（Intent Routing）：判断用户问题是否可能涉及"实时预约数据"。
+     * 意图路由（Intent Routing）：判断用户问题是否可能涉及"实时预约数据"
      *
      * <p>命中关键词的问题会进入带 {@code AppointmentTool} 的 Function Calling 链路；
      * 在工具链路内，<b>是否真正调用工具由 LLM 自主决定</b>（LangChain4j AiServices
      * 会把工具描述交给模型，模型按需触发）。因此这是"意图路由 + LLM 自主调用"两层设计，
-     * 而非应用层强制调用工具。</p>
+     * 而非应用层强制调用工具</p>
      *
-     * <p>关键词覆盖：可预约 / 余量 / 会议室 / 设备借用 / 咨询 / 自习室 / 场地等预约场景。</p>
+     * <p>关键词覆盖：可预约 / 余量 / 会议室 / 设备借用 / 咨询 / 自习室 / 场地等预约场景</p>
      */
     private static final List<String> APPOINTMENT_KEYWORDS = List.of(
             "可预约", "预约", "余量", "会议室", "设备", "咨询", "自习室", "场地", "借用",

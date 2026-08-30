@@ -20,8 +20,8 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * ServiceStatusServiceImpl 单元测试。
- * 使用 Given-When-Then 模式，覆盖审核通过/驳回的所有分支。
+ * ServiceStatusServiceImpl 单元测试
+ * 使用 Given-When-Then 模式，覆盖审核通过/驳回的所有分支
  *
  * @author forever-king
  */

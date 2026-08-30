@@ -17,9 +17,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 管理员端角色管理接口。
+ * 管理员端角色管理接口
  * <p>
- * 业务校验统一交由 Service 层处理，异常由 {@code GlobalExceptionHandler} 统一捕获。
+ * 业务校验统一交由 Service 层处理，异常由 {@code GlobalExceptionHandler} 统一捕获
  *
  * @author forever-king
  */

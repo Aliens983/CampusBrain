@@ -10,7 +10,7 @@ import java.util.Collection;
 import java.util.Collections;
 
 /**
- * Spring Security 上下文工具类（无业务语义，跨模块复用）。
+ * Spring Security 上下文工具类（无业务语义，跨模块复用）
  *
  * @author forever-king
  */

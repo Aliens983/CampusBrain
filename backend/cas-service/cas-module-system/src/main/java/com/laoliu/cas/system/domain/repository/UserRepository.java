@@ -42,14 +42,14 @@ public interface UserRepository {
     List<User> getAllUsers();
 
     /**
-     * 分页查询所有用户（支持按姓名、邮箱模糊搜索，按角色筛选）。
+     * 分页查询所有用户（支持按姓名、邮箱模糊搜索，按角色筛选）
      */
     IPage<User> getAllUsers(int page, int pageSize, String name, String email, Integer role);
 
     List<BookingRecordRespVO> getAllBookings(Long userId);
 
     /**
-     * 分页查询用户的预约记录。
+     * 分页查询用户的预约记录
      */
     IPage<BookingRecordRespVO> getAllBookings(Long userId, int page, int pageSize);
 }

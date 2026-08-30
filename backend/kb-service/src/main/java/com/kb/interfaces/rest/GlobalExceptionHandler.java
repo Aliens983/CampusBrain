@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 /**
- * Global exception handler — 按异常类型分发，统一返回 {@link ApiResponse}。
+ * Global exception handler — 按异常类型分发，统一返回 {@link ApiResponse}
  * <p>
  * 生产环境对 RuntimeException 等未知异常做消息脱敏，只返
- * 回通用提示。
+ * 回通用提示
  * </p>
  * @author forever-king
  */

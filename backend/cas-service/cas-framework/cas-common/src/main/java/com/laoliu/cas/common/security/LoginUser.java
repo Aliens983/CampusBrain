@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * 登录用户上下文载体（通用组件，跨模块复用）。
+ * 登录用户上下文载体（通用组件，跨模块复用）
  *
  * @author forever-king
  */

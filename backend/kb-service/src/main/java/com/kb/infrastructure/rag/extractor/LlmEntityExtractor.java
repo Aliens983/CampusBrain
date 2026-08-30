@@ -15,10 +15,10 @@ import java.util.Map;
 import java.util.UUID;
 
 /**
- * 基于 LLM 的实体抽取实现。
+ * 基于 LLM 的实体抽取实现
  * <p>
  * 通过 Few-Shot Prompt 引导 LLM 提取人名、地名、术语、产品名等实体，
- * 并返回 JSON 结构化结果。适合中文企业文档场景。
+ * 并返回 JSON 结构化结果。适合中文企业文档场景
  * </p>
  *
  * @author forever-king

@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 
 /**
- * 预约记录查询结果 DO — 对应 item JOIN services JOIN user 的查询结果。
+ * 预约记录查询结果 DO — 对应 item JOIN services JOIN user 的查询结果
  *
  * @author forever-king
  */

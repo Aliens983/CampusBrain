@@ -3,7 +3,7 @@ package com.laoliu.cas.common.exception.code;
 import com.laoliu.cas.common.exception.ErrorCode;
 
 /**
- * 登录相关错误码 —— 已废弃，请使用 {@link UserErrorCode}。
+ * 登录相关错误码 —— 已废弃，请使用 {@link UserErrorCode}
  *
  * @author forever-king
  * @deprecated 使用 {@link UserErrorCode} 替代

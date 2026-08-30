@@ -8,10 +8,10 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 
 /**
- * 自定义健康检查指示器。
+ * 自定义健康检查指示器
  * <p>
- * 检查各中间件连通性，通过 Actuator {@code /actuator/health} 端点暴露。
- * 若中间件不可用时返回 {@code DOWN} 状态及错误详情。
+ * 检查各中间件连通性，通过 Actuator {@code /actuator/health} 端点暴露
+ * 若中间件不可用时返回 {@code DOWN} 状态及错误详情
  * </p>
  * @author forever-king
  */

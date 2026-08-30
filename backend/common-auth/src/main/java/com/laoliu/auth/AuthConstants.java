@@ -1,11 +1,11 @@
 package com.laoliu.auth;
 
 /**
- * 认证与内网调用相关的请求头常量。
+ * 认证与内网调用相关的请求头常量
  *
  * <p>网关验签 JWT 后，将用户身份通过以下请求头透传给下游服务；
  * 下游服务通过 {@link InternalSigner} 校验 {@link #HEADER_INTERNAL_SIGN}，
- * 防止绕过网关直连服务伪造身份。
+ * 防止绕过网关直连服务伪造身份
  *
  * @author forever-king
  */

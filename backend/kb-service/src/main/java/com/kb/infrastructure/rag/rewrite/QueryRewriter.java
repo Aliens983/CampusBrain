@@ -8,10 +8,10 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 查询改写服务 — 解决多轮对话中的指代消解问题。
+ * 查询改写服务 — 解决多轮对话中的指代消解问题
  * <p>
  * 当用户在多轮对话中使用代词（如"它"、"这个"、"上面说的"）时，
- * 结合对话历史将模糊指代改写为明确的、独立的查询语句。
+ * 结合对话历史将模糊指代改写为明确的、独立的查询语句
  * </p>
  * <p>
  * 示例：
@@ -34,10 +34,10 @@ public class QueryRewriter {
     private static final int MAX_HISTORY = 4;
 
     /**
-     * 对用户查询进行上下文改写。
+     * 对用户查询进行上下文改写
      * <p>
-     * 如果 conversationHistory 为空或是首轮对话，直接返回原始查询。
-     * 否则调用 LLM 进行指代消解。
+     * 如果 conversationHistory 为空或是首轮对话，直接返回原始查询
+     * 否则调用 LLM 进行指代消解
      * </p>
      *
      * @param query               原始用户查询
@@ -72,7 +72,7 @@ public class QueryRewriter {
     }
 
     /**
-     * 构建指代消解的提示词。
+     * 构建指代消解的提示词
      */
     private String buildRewritePrompt(String query, List<LlmService.ChatMessage> history) {
         StringBuilder sb = new StringBuilder();

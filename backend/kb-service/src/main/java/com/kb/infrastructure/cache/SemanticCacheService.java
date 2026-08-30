@@ -9,10 +9,10 @@ import org.springframework.stereotype.Service;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 语义缓存服务 — 基于向量相似度的问答缓存。
+ * 语义缓存服务 — 基于向量相似度的问答缓存
  * <p>
  * 与精确匹配缓存互补：当用户问题字面不同但语义相似时，
- * 通过向量余弦相似度匹配命中缓存，减少 LLM 重复调用。
+ * 通过向量余弦相似度匹配命中缓存，减少 LLM 重复调用
  * </p>
  * <p>
  * 实现方式：
@@ -40,7 +40,7 @@ public class SemanticCacheService {
     private static final int TTL_HOURS = 24;
 
     /**
-     * 查找语义缓存。
+     * 查找语义缓存
      *
      * @param question 用户问题
      * @return 命中的缓存答案，未命中返回 null
@@ -80,7 +80,7 @@ public class SemanticCacheService {
     }
 
     /**
-     * 存入语义缓存。
+     * 存入语义缓存
      */
     public void store(String question, String answer) {
         try {
@@ -94,7 +94,7 @@ public class SemanticCacheService {
     }
 
     /**
-     * 余弦相似度计算。
+     * 余弦相似度计算
      */
     private double cosineSimilarity(float[] a, float[] b) {
         double dot = 0, normA = 0, normB = 0;

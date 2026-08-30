@@ -22,7 +22,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     void setBookingStatus(@Param("userId") Long userId, @Param("bookingId") Long bookingId);
 
     /**
-     * 幂等插入预约：60 秒内同用户对同一服务（待审核状态）不会重复插入。
+     * 幂等插入预约：60 秒内同用户对同一服务（待审核状态）不会重复插入
      *
      * @return 实际插入的行数（用于判断是否全部为重复提交）
      */
@@ -33,7 +33,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     List<ServiceStatusResponse> getServiceStatus();
 
     /**
-     * 分页查询所有服务预约状态（支持筛选）。
+     * 分页查询所有服务预约状态（支持筛选）
      */
     IPage<ServiceStatusResponse> getServiceStatusWithPage(Page<?> page,
             @Param("manageStatus") Integer manageStatus,
@@ -42,7 +42,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     List<ServiceStatusResponse> getServiceStatusByUserId(@Param("userId") Long userId);
 
     /**
-     * 分页查询用户的预约状态（支持筛选）。
+     * 分页查询用户的预约状态（支持筛选）
      */
     IPage<ServiceStatusResponse> getServiceStatusByUserIdWithPage(@Param("userId") Long userId, Page<?> page,
             @Param("manageStatus") Integer manageStatus,
@@ -63,14 +63,14 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     List<ServiceAvailabilityVO> countBookingsByService();
 
     /**
-     * 乐观锁扣减库存：仅当容量足够时 +1（原子条件更新，防并发超卖）。
+     * 乐观锁扣减库存：仅当容量足够时 +1（原子条件更新，防并发超卖）
      *
      * @return 影响行数，0 表示容量已满
      */
     int decrementStock(@Param("serviceId") Long serviceId);
 
     /**
-     * 释放库存：取消/审核拒绝时 -1（最低到 0）。
+     * 释放库存：取消/审核拒绝时 -1（最低到 0）
      */
     int releaseStock(@Param("serviceId") Long serviceId);
 

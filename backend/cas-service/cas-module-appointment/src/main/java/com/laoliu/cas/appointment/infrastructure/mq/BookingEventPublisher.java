@@ -6,7 +6,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * 预约变更事件发布器，向 RabbitMQ 发布事件，供 KB 服务消费以更新索引/缓存。
+ * 预约变更事件发布器，向 RabbitMQ 发布事件，供 KB 服务消费以更新索引/缓存
  *
  * @author forever-king
  */

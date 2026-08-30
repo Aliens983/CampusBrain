@@ -6,7 +6,7 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * 设备领域实体 — 纯净，不依赖框架注解。
+ * 设备领域实体 — 纯净，不依赖框架注解
  *
  * @author forever-king
  */

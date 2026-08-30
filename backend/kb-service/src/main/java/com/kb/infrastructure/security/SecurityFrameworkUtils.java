@@ -8,7 +8,7 @@ import jakarta.servlet.http.HttpServletRequest;
 /**
  * 安全框架工具类
  * <p>
- * 提供 Token 提取和当前登录用户获取等静态方法。
+ * 提供 Token 提取和当前登录用户获取等静态方法
  * </p>
  *
  * @author forever-king

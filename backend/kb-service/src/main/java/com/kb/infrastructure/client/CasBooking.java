@@ -3,7 +3,7 @@ package com.kb.infrastructure.client;
 import lombok.Data;
 
 /**
- * CAS 用户预约记录（对应 CAS 的 ServiceStatusResponse）。
+ * CAS 用户预约记录（对应 CAS 的 ServiceStatusResponse）
  *
  * @author forever-king
  */

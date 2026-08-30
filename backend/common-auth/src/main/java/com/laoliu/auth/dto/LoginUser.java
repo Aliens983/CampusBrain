@@ -5,7 +5,7 @@ import lombok.Data;
 import java.io.Serializable;
 
 /**
- * 认证后的登录用户上下文（common-auth 自包含，供网关解析 JWT 时使用）。
+ * 认证后的登录用户上下文（common-auth 自包含，供网关解析 JWT 时使用）
  *
  * @author forever-king
  */

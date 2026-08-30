@@ -30,12 +30,12 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * Function Calling 意图路由测试。
+ * Function Calling 意图路由测试
  * <p>
  * 验证：
  * 1. 预约类问题 → 走 {@code generateAnswerWithTools}（Function Calling 链路）；
  * 2. 非预约类问题 → 走 {@code generateAnswerStreaming}（纯 RAG 流式），不触发工具；
- * 3. {@code isAppointmentQuery} 关键词边界。
+ * 3. {@code isAppointmentQuery} 关键词边界
  * </p>
  *
  * @author forever-king

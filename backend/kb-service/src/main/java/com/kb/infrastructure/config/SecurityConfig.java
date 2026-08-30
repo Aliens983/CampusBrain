@@ -24,7 +24,7 @@ import java.util.List;
 /**
  * Spring Security 主配置
  * <p>
- * 无状态 API 认证 + 双 Token 过滤器 + RBAC 权限控制。
+ * 无状态 API 认证 + 双 Token 过滤器 + RBAC 权限控制
  * </p>
  *
  * @author forever-king

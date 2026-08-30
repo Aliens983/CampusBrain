@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 /**
- * EmailVerificationServiceImpl 单元测试。
+ * EmailVerificationServiceImpl 单元测试
  *
  * @author forever-king
  */

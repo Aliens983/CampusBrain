@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 注册接口（扁平路径，供前端直接调用）。
+ * 注册接口（扁平路径，供前端直接调用）
  *
  * @author forever-king
  */

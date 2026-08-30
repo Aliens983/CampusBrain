@@ -10,7 +10,7 @@ import java.util.List;
 /**
  * Redis 滑动窗口限流器
  * <p>
- * 使用 Lua 脚本保证原子性，支持高并发场景。
+ * 使用 Lua 脚本保证原子性，支持高并发场景
  * </p>
  *
  * @author forever-king

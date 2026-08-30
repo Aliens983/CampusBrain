@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 预约实时数据查询接口（只读），供 KB 智能助手查询实时预约数据。
+ * 预约实时数据查询接口（只读），供 KB 智能助手查询实时预约数据
  *
  * @author forever-king
  */
@@ -49,11 +49,11 @@ public class AvailabilityController {
     }
 
     /**
-     * 获取当前用户的预约记录（供 KB 智能助手查询"我的预约"）。
+     * 获取当前用户的预约记录（供 KB 智能助手查询"我的预约"）
      * <p>
      * 身份来源：优先用 JWT 登录用户（{@link SecurityFrameworkUtils#getLoginUserId()}），
      * 忽略前端传入的 {@code X-User-Id}，防止越权；仅当无 JWT 用户（KB 内网签名场景，
-     * 该头经 {@code InternalAuthFilter} 签名校验绑定）时才信任 {@code X-User-Id}。
+     * 该头经 {@code InternalAuthFilter} 签名校验绑定）时才信任 {@code X-User-Id}
      * </p>
      */
     @Operation(summary = "获取当前用户的预约记录", description = "供 KB 智能助手查询用户自己的预约")

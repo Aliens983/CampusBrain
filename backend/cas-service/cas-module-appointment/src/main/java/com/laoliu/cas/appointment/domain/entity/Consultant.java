@@ -7,7 +7,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 
 /**
- * 咨询师领域实体 — 纯净，不依赖框架注解。
+ * 咨询师领域实体 — 纯净，不依赖框架注解
  *
  * @author forever-king
  */

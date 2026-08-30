@@ -35,9 +35,9 @@ public class OpenAiEmbeddingService implements EmbeddingService {
     private String modelName;
 
     /**
-     * 最大批处理大小。
+     * 最大批处理大小
      * text-embedding-3 模型支持每次最多 2048 个 token，
-     * 且 API 接受输入数组。
+     * 且 API 接受输入数组
      */
     private static final int MAX_BATCH_SIZE = 20;
 

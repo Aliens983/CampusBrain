@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 /**
- * UserServiceImpl 单元测试。
+ * UserServiceImpl 单元测试
  *
  * @author forever-king
  */

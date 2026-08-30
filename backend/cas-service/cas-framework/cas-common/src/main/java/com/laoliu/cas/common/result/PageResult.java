@@ -11,7 +11,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 统一分页响应体。
+ * 统一分页响应体
  *
  * @param <T> 分页记录类型
  * @author forever-king
@@ -39,7 +39,7 @@ public class PageResult<T> {
     private long pages;
 
     /**
-     * 快速构造（仅 records + total，其余字段为 0）。
+     * 快速构造（仅 records + total，其余字段为 0）
      */
     public PageResult(List<T> records, long total) {
         this.records = records;
@@ -50,7 +50,7 @@ public class PageResult<T> {
     }
 
     /**
-     * 从 MyBatis-Plus 的 IPage 对象构建 PageResult。
+     * 从 MyBatis-Plus 的 IPage 对象构建 PageResult
      */
     public static <T> PageResult<T> of(IPage<T> page) {
         return PageResult.<T>builder()
@@ -63,7 +63,7 @@ public class PageResult<T> {
     }
 
     /**
-     * 构建空结果。
+     * 构建空结果
      */
     public static <T> PageResult<T> empty(long pageSize, long current) {
         return PageResult.<T>builder()

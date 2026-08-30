@@ -5,7 +5,7 @@ import com.kb.domain.user.KbUser;
 import java.util.Map;
 
 /**
- * 用户领域对象 → DTO 转换器。
+ * 用户领域对象 → DTO 转换器
  * @author forever-king
  */
 public final class UserAssembler {

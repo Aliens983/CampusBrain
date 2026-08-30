@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 预约仓储实现。
+ * 预约仓储实现
  *
  * @author forever-king
  */

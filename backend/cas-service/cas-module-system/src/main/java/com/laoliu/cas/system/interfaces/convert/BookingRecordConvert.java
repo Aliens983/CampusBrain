@@ -10,7 +10,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * BookingRecordDO → BookingRecordRespVO 转换器（MapStruct）。
+ * BookingRecordDO → BookingRecordRespVO 转换器（MapStruct）
  *
  * @author forever-king
  */

@@ -5,7 +5,7 @@ import com.laoliu.cas.common.exception.ErrorCode;
 /**
  * 预约/审核相关错误码 (40001-40099)
  * <p>
- * 合并了原 ServiceStatusErrorCode 的错误码。
+ * 合并了原 ServiceStatusErrorCode 的错误码
  *
  * @author forever-king
  */

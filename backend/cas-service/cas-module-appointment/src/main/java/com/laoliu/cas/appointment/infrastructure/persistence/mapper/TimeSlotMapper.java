@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Select;
 import java.util.List;
 
 /**
- * 咨询可预约时段 Mapper。
+ * 咨询可预约时段 Mapper
  *
  * @author forever-king
  */

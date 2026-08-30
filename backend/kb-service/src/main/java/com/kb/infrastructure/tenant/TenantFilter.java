@@ -13,9 +13,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * 租户拦截过滤器 — 从 HTTP Header 中解析租户上下文。
+ * 租户拦截过滤器 — 从 HTTP Header 中解析租户上下文
  * <p>
- * 优先级仅次于 TraceIdFilter，确保后续所有组件都能访问租户信息。
+ * 优先级仅次于 TraceIdFilter，确保后续所有组件都能访问租户信息
  * </p>
  *
  * <h3>Header 格式</h3>
@@ -24,7 +24,7 @@ import java.io.IOException;
  * # 或
  * X-Tenant-Code: acme-corp
  * </pre>
- * 若两者都不传，默认为 null（全局/个人模式，兼容单租户部署）。
+ * 若两者都不传，默认为 null（全局/个人模式，兼容单租户部署）
  * </p>
  *
  * @author forever-king

@@ -7,9 +7,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * 预约变更事件消费端（来自 CAS）。
+ * 预约变更事件消费端（来自 CAS）
  * <p>
- * CAS 在预约创建/取消时发布事件，KB 消费后可用于更新知识索引或缓存。
+ * CAS 在预约创建/取消时发布事件，KB 消费后可用于更新知识索引或缓存
  *
  * @author forever-king
  */

@@ -22,7 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * ServiceServiceImpl 单元测试。
+ * ServiceServiceImpl 单元测试
  *
  * @author forever-king
  */

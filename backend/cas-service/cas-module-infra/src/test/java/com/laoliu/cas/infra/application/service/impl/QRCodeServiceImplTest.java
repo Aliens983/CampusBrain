@@ -23,7 +23,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * QRCodeServiceImpl 单元测试。
+ * QRCodeServiceImpl 单元测试
  *
  * @author forever-king
  */

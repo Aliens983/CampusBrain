@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 租户仓储接口。
+ * 租户仓储接口
  *
  * @author forever-king
  */

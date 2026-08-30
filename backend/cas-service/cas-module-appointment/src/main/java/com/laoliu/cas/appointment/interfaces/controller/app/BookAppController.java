@@ -21,7 +21,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * 用户端预约接口。
+ * 用户端预约接口
  *
  * @author forever-king
  */

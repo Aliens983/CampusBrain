@@ -19,7 +19,7 @@ import java.util.concurrent.TimeUnit;
  * Access Token Redis 缓存 DAO
  * <p>
  * Key 格式: oauth2_access_token:{token值}
- * TTL = 距离过期时间的秒数，过期自动删除。
+ * TTL = 距离过期时间的秒数，过期自动删除
  * </p>
  *
  * @author forever-king

@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 /**
- * 服务列表分页请求 — 支持按名称模糊搜索、按状态筛选。
+ * 服务列表分页请求 — 支持按名称模糊搜索、按状态筛选
  *
  * @author forever-king
  */

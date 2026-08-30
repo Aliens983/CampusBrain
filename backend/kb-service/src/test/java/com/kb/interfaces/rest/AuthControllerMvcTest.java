@@ -33,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  * <p>
  * 使用 standalone MockMvc（手动装配 Controller + GlobalExceptionHandler + Validator），
  * 避免 {@code @WebMvcTest} 因主类显式 {@code @ComponentScan} / {@code @MapperScan} 而加载
- * 完整应用上下文导致 MyBatis / MQ 等中间件 Bean 缺失。
+ * 完整应用上下文导致 MyBatis / MQ 等中间件 Bean 缺失
  * </p>
  * @author forever-king
  */

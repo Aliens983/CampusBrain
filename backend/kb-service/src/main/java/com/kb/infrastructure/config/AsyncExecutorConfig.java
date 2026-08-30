@@ -7,7 +7,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import java.util.concurrent.ExecutorService;
 
 /**
- * Spring 管理的线程池配置，替代项目中手动创建的 ExecutorService。
+ * Spring 管理的线程池配置，替代项目中手动创建的 ExecutorService
  * @author forever-king
  */
 @Configuration

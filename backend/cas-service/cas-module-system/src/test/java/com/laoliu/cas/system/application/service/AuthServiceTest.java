@@ -24,7 +24,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * AuthService 单元测试。
+ * AuthService 单元测试
  *
  * @author forever-king
  */

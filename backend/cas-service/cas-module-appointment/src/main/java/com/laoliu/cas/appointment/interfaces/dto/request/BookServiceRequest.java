@@ -8,7 +8,7 @@ import lombok.Data;
 import java.util.List;
 
 /**
- * 预约服务请求 — 用于 POST /app/bookings。
+ * 预约服务请求 — 用于 POST /app/bookings
  *
  * @author forever-king
  */

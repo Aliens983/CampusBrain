@@ -6,9 +6,9 @@ import org.springframework.stereotype.Component;
 import java.util.Set;
 
 /**
- * 文档解析器工厂 — 委托给 {@link ParserRegistry} 和 {@link ParserChain}。
+ * 文档解析器工厂 — 委托给 {@link ParserRegistry} 和 {@link ParserChain}
  * <p>
- * 保持向后兼容的 API，内部使用 SPI 注册中心和责任链模式。
+ * 保持向后兼容的 API，内部使用 SPI 注册中心和责任链模式
  * </p>
  *
  * @author forever-king
@@ -20,7 +20,7 @@ public class ParserFactory {
     private final ParserChain chain;
 
     /**
-     * 启动时自动注册所有 {@link DocumentParserSpi} 实现。
+     * 启动时自动注册所有 {@link DocumentParserSpi} 实现
      */
     public ParserFactory(java.util.List<DocumentParserSpi> parsers,
                          ParserRegistry registry, ParserChain chain) {
@@ -32,7 +32,7 @@ public class ParserFactory {
     }
 
     /**
-     * 获取支持指定文件类型的解析器（最高优先级）。
+     * 获取支持指定文件类型的解析器（最高优先级）
      *
      * @throws IllegalArgumentException 无支持的解析器
      */
@@ -56,7 +56,7 @@ public class ParserFactory {
     }
 
     /**
-     * 使用解析器链解析（带 fallback）。
+     * 使用解析器链解析（带 fallback）
      */
     public com.kb.domain.rag.ParsedDocument parseWithFallback(
             java.io.InputStream stream, String fileName) throws ParseException {

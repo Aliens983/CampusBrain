@@ -5,7 +5,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 
 /**
- * 文件存储应用层服务接口。
+ * 文件存储应用层服务接口
  *
  * @author forever-king
  */

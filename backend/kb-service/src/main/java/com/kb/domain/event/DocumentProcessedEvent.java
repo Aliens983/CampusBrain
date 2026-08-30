@@ -5,10 +5,10 @@ import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
 
 /**
- * 文档处理完成事件。
+ * 文档处理完成事件
  * <p>
  * 在文档处理流水线完成（READY 或 FAILED）时发布，
- * 消费者可据此发送通知、更新缓存、写审计日志。
+ * 消费者可据此发送通知、更新缓存、写审计日志
  * </p>
  * @author forever-king
  */

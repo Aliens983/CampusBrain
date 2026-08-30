@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 设备查询接口。
+ * 设备查询接口
  *
  * @author forever-king
  */

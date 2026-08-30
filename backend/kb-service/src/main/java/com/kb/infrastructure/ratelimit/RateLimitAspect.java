@@ -14,7 +14,7 @@ import org.springframework.stereotype.Component;
 /**
  * 限流 AOP 切面
  * <p>
- * 拦截带 @RateLimit 注解的方法，调用 Redis Lua 脚本判断是否限流。
+ * 拦截带 @RateLimit 注解的方法，调用 Redis Lua 脚本判断是否限流
  * </p>
  *
  * @author forever-king

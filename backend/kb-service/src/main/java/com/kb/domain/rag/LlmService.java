@@ -38,7 +38,7 @@ public interface LlmService {
 
     /**
      * Generate an answer with real-time tool (Function Calling) enhancement.
-     * LLM 可在回答时自主调用预约查询工具获取实时数据。
+     * LLM 可在回答时自主调用预约查询工具获取实时数据
      *
      * @param query               the user's question
      * @param retrievedDocs       relevant document chunks from retrieval
@@ -52,7 +52,7 @@ public interface LlmService {
 
     /**
      * 本地资料库未检索到相关内容时的兜底回答：直接用大模型（DeepSeek）对话，
-     * 不携带 RAG 上下文。
+     * 不携带 RAG 上下文
      *
      * @param query               the user's question
      * @param conversationHistory previous messages in this session
@@ -61,7 +61,7 @@ public interface LlmService {
     String generateAnswerDirect(String query, List<ChatMessage> conversationHistory);
 
     /**
-     * 本地资料库未检索到相关内容时的兜底回答（流式版，SSE 逐 token 推送）。
+     * 本地资料库未检索到相关内容时的兜底回答（流式版，SSE 逐 token 推送）
      */
     String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
                                          Consumer<String> tokenConsumer);

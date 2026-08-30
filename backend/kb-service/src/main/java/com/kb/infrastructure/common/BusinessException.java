@@ -3,10 +3,10 @@ package com.kb.infrastructure.common;
 import lombok.Getter;
 
 /**
- * 统一业务异常基类。
+ * 统一业务异常基类
  * <p>
  * 所有业务异常都应继承此类，携带 {@link ErrorCode} 和可选详情，
- * 由 {@code GlobalExceptionHandler} 统一处理并返回标准化响应。
+ * 由 {@code GlobalExceptionHandler} 统一处理并返回标准化响应
  * </p>
  * @author forever-king
  */

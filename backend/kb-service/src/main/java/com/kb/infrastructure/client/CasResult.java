@@ -3,7 +3,7 @@ package com.kb.infrastructure.client;
 import lombok.Data;
 
 /**
- * CAS 统一响应包装（对应 CAS 的 CommonResult<T>）。
+ * CAS 统一响应包装（对应 CAS 的 CommonResult<T>）
  *
  * @author forever-king
  */

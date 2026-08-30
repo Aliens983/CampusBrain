@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * 设备查询应用服务实现 — 全部从数据库读取真实数据。
+ * 设备查询应用服务实现 — 全部从数据库读取真实数据
  *
  * @author forever-king
  */
@@ -34,7 +34,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     /**
-     * 分页查询设备，支持按名称/分类筛选。
+     * 分页查询设备，支持按名称/分类筛选
      */
     public IPage<EquipmentResponse> getAvailableEquipment(int page, int pageSize, String name, String category) {
         IPage<Equipment> equipmentPage = equipmentRepository.findPage(page, pageSize, name, category);

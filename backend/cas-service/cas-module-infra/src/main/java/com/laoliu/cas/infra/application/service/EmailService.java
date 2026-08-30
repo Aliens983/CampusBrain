@@ -1,7 +1,7 @@
 package com.laoliu.cas.infra.application.service;
 
 /**
- * 邮件发送应用层服务接口。
+ * 邮件发送应用层服务接口
  *
  * @author forever-king
  */

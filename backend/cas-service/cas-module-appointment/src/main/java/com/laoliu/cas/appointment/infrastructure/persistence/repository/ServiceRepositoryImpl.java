@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
- * 服务仓库实现 - 基础设施层。
+ * 服务仓库实现 - 基础设施层
  *
  * @author forever-king
  */

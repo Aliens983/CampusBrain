@@ -10,14 +10,14 @@ import java.io.InputStream;
 import java.util.List;
 
 /**
- * 解析器责任链 — 主解析器失败时自动 fallback 到下一个。
+ * 解析器责任链 — 主解析器失败时自动 fallback 到下一个
  * <p>
  * 使用方式：
  * <pre>
  * ParsedDocument result = parserChain.parse(stream, "file.pdf",
  *         registry.getParserChain("pdf"));
  * </pre>
- * 按优先级依次尝试，全部失败则抛出 {@link ParseException}。
+ * 按优先级依次尝试，全部失败则抛出 {@link ParseException}
  * </p>
  *
  * @author forever-king
@@ -30,7 +30,7 @@ public class ParserChain {
     private final ParserRegistry registry;
 
     /**
-     * 使用解析器链解析文档（带 fallback）。
+     * 使用解析器链解析文档（带 fallback）
      *
      * @param stream   文档输入流
      * @param fileName 原始文件名
@@ -71,7 +71,7 @@ public class ParserChain {
     }
 
     /**
-     * 便捷方法：根据扩展名自动获取解析器链并执行。
+     * 便捷方法：根据扩展名自动获取解析器链并执行
      */
     public ParsedDocument parseAuto(InputStream stream, String fileName) throws ParseException {
         String ext = extractExtension(fileName);

@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * 服务管理应用服务实现。
+ * 服务管理应用服务实现
  *
  * @author forever-king
  */

@@ -10,7 +10,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 用户预约记录响应 VO — 替代原来的 Map&lt;String, Object&gt;。
+ * 用户预约记录响应 VO — 替代原来的 Map&lt;String, Object&gt;
  *
  * @author forever-king
  */

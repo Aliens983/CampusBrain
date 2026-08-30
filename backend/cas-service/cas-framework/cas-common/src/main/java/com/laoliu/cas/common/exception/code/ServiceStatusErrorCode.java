@@ -3,7 +3,7 @@ package com.laoliu.cas.common.exception.code;
 import com.laoliu.cas.common.exception.ErrorCode;
 
 /**
- * 预约状态相关错误码 —— 已废弃，请使用 {@link BookErrorCode}。
+ * 预约状态相关错误码 —— 已废弃，请使用 {@link BookErrorCode}
  *
  * @author forever-king
  * @deprecated 使用 {@link BookErrorCode} 替代

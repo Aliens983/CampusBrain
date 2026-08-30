@@ -8,10 +8,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Sentinel 限流演示端点。
+ * Sentinel 限流演示端点
  * <p>
  * 资源 {@code sentinel-demo-limited} 配置 QPS=1 的流控规则，
- * 超过阈值的请求抛出 {@link BlockException}，返回「被限流」。
+ * 超过阈值的请求抛出 {@link BlockException}，返回「被限流」
  *
  * @author forever-king
  */

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 import java.util.Map;
 
 /**
- * 文档状态变更通知 — 监听领域事件并通过 WebSocket 推送给用户。
+ * 文档状态变更通知 — 监听领域事件并通过 WebSocket 推送给用户
  * @author forever-king
  */
 @Slf4j
@@ -22,7 +22,7 @@ public class DocumentStatusNotifier {
     private final SimpMessagingTemplate messagingTemplate;
 
     /**
-     * 异步监听 {@link DocumentProcessedEvent}，推送给文档所属用户。
+     * 异步监听 {@link DocumentProcessedEvent}，推送给文档所属用户
      */
     @Async
     @EventListener

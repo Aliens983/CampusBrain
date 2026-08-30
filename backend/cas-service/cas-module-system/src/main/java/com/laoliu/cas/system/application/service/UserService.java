@@ -12,7 +12,7 @@ public interface UserService {
     UserInfoAndServicesViaMPRespVO getUserInfoAndBookings(Long userId);
 
     /**
-     * 分页获取用户的预约记录。
+     * 分页获取用户的预约记录
      */
     PageResult<BookingRecordRespVO> getUserBookings(Long userId, int page, int pageSize);
 }

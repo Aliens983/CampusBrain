@@ -12,10 +12,10 @@ import java.io.InputStream;
 import java.util.*;
 
 /**
- * Excel 文档解析器（.xlsx / .xls）。
+ * Excel 文档解析器（.xlsx / .xls）
  * <p>
  * 将表格数据转换为结构化 Markdown 表格文本，
- * 保留行列结构以便 LLM 理解和检索。
+ * 保留行列结构以便 LLM 理解和检索
  * </p>
  *
  * @author forever-king

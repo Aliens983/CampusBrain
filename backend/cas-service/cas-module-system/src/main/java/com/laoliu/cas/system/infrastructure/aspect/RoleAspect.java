@@ -18,10 +18,10 @@ import org.springframework.stereotype.Component;
 import java.util.Arrays;
 
 /**
- * 角色权限校验切面。
+ * 角色权限校验切面
  * <p>
- * 拦截所有标注 {@link RequireRole} 的方法，校验当前用户是否具备所需角色。
- * 权限不足时直接抛出异常，由 {@code GlobalExceptionHandler} 统一处理。
+ * 拦截所有标注 {@link RequireRole} 的方法，校验当前用户是否具备所需角色
+ * 权限不足时直接抛出异常，由 {@code GlobalExceptionHandler} 统一处理
  *
  * @author forever-king
  */

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 管理员端文件管理接口。
+ * 管理员端文件管理接口
  *
  * @author forever-king
  */

@@ -19,7 +19,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 管理后台 API — 仅 ADMIN 角色可访问。
+ * 管理后台 API — 仅 ADMIN 角色可访问
  * @author forever-king
  */
 @Tag(name = "管理后台", description = "用户管理、系统统计等管理接口（需要 ADMIN 权限）")
