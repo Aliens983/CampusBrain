@@ -1,0 +1,140 @@
+server:
+  port: 18080
+  servlet:
+    context-path: /api/v1
+
+spring:
+  application:
+    name: cas-service
+  config:
+    import: optional:nacos:cas-service.yaml
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_ADDR:localhost:8848}
+      config:
+        server-addr: ${NACOS_ADDR:localhost:8848}
+        file-extension: yaml
+    sentinel:
+      datasource:
+        flow:
+          nacos:
+            server-addr: ${NACOS_ADDR:localhost:8848}
+            data-id: cas-sentinel-flow-rules
+            group-id: DEFAULT_GROUP
+            data-type: json
+            rule-type: flow
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USERNAME:admin}
+    password: ${RABBITMQ_PASSWORD:admin123}
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 50MB
+  mail:
+    host: ${MAIL_HOST:smtp.163.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+            required: true
+          starttls:
+            enable: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/cas_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USERNAME:root}
+    password: ${MYSQL_ROOT_PASSWORD}
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.laoliu.cas.**.dataobject
+  configuration:
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+
+jwt:
+  secret: ${JWT_SECRET:dXBzZWNyZXR0aGF0aXN2ZXJ5bG9uZ3RoYW5rYXNkZmdoamtscXh6Y3Zibm0xMjM0NTY3OA==}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+auth:
+  internal-sign-secret: ${INTERNAL_SIGN_SECRET:internal-sign-default-secret}
+
+file:
+  upload:
+    dir: uploads
+    path: ./uploads/
+    prefix: /api/files/
+    url-prefix: /uploads
+    server-address: http://localhost:18080
+
+email:
+  subject: 验证码
+  content: 您的验证码是：
+  code:
+    expiration: 300
+  send:
+    frequency:
+      limit: 60
+
+logging:
+  level:
+    com.laoliu: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+weather:
+  api:
+    url: https://cn.apihz.cn/api/tianqi/tqyb.php
+    id: ${WEATHER_API_ID:10015369}
+    key: ${WEATHER_API_KEY}
+
+# ============ AI 大模型配置 ============
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY}
+  api-url: https://api.deepseek.com
+  timeout: 60000
+
+qwen:
+  api-key: ${QWEN_API_KEY:}
+  api-url: https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation
+  timeout: 30000
+
+aliyun:
+  oss:
+    endpoint: https://oss-cn-hangzhou.aliyuncs.com
+    access-key-id: ${ALIYUN_OSS_ACCESS_KEY_ID:}
+    access-key-secret: ${ALIYUN_OSS_ACCESS_KEY_SECRET:}
+    bucket-name: coding-king-liu
+  sms:
+    sign-name: 校园预约系统
+  access-key-id: ${ALIYUN_SMS_ACCESS_KEY_ID:}
+  access-key-secret: ${ALIYUN_SMS_ACCESS_KEY_SECRET:}
+  region-id: cn-hangzhou
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when_authorized
+  health:
+    mail:
+      enabled: true

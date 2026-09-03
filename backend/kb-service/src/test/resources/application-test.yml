@@ -97,6 +97,8 @@ minio:
 langchain4j:
   openai:
     api-key: test-key-not-used
+    embedding-model:
+      api-key: test-embedding-key-not-used
 
 chunking:
   default-size: 512

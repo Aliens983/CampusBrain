@@ -53,12 +53,9 @@ plan.md
 /docs/
 
 # ========== 配置文件 ==========
-# 敏感配置，不提交到 Git
-application.yml
-application-local.yml
-application-prod.yml
-application-*.local.yml
-application-*.yml
+# 应用配置已全环境变量化（无真实密钥），可入库；敏感值走环境变量。
+# 仅 cas-server 是应用模块，放开其 application.yml
+!cas-server/src/main/resources/application.yml
 
 # 但保留示例文件
 !application.yml.example

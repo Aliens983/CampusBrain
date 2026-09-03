@@ -1,0 +1,35 @@
+# ============================================================
+# Development Profile Configuration（敏感值一律走环境变量，见 backend/.env）
+# ============================================================
+
+# datasource 复用主配置 application.yml 的 ${DB_HOST}/${DB_PORT}
+# （默认 localhost:3307，username root / password root123，仅本地开发默认值）。
+# 此处不再覆盖 datasource，避免"本地跑通、容器里却连 localhost"这类不一致。
+
+spring:
+  # 网易 163 邮箱 SMTP（本地发验证码用；需 source scripts/load-env.sh）
+  mail:
+    host: ${MAIL_HOST:smtp.163.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    protocol: smtp
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+            required: true
+
+# Chat / Embedding 的 key 由主配置的 ${OPENAI_API_KEY} / ${EMBEDDING_API_KEY} 提供，
+# dev 不再硬编码真实 key。
+
+# ---------- Security（开发环境开启 Mock 登录） ----------
+app:
+  security:
+    mock-enable: true
+
+logging:
+  level:
+    com.kb: DEBUG

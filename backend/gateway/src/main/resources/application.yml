@@ -25,13 +25,15 @@ spring:
 
 # 与 CAS 共享的 JWT 密钥（网关验签用）
 jwt:
-  secret: ${JWT_SECRET:CHANGE_ME}
+  secret: ${JWT_SECRET:dXBzZWNyZXR0aGF0aXN2ZXJ5bG9uZ3RoYW5rYXNkZmdoamtscXh6Y3Zibm0xMjM0NTY3OA==}
   expiration: ${JWT_EXPIRATION:86400000}
 
 # 内网签名密钥（网关签发、服务端校验）
 auth:
-  internal-sign-secret: ${INTERNAL_SIGN_SECRET:CHANGE_ME}
+  internal-sign-secret: ${INTERNAL_SIGN_SECRET:internal-sign-default-secret}
 
 logging:
   level:
     com.laoliu.gateway: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

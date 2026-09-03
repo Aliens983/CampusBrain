@@ -24,11 +24,8 @@ logs/
 *.pem
 *.key
 
-# ===== 敏感配置文件（用 .example 版本复制后改名，勿提交）=====
-**/application.yml
-**/application-dev.yml
-**/application-docker.yml
-# 保留 .example 与测试配置（application-test.yml 不含真实凭据）
+# ===== 应用配置：已全环境变量化（${VAR}），无真实密钥，可入库 =====
+# 真实密钥只在 backend/.env（gitignore）与部署环境变量里提供
 
 # ===== 运行时上传/临时文件 =====
 uploads/
