@@ -29,23 +29,25 @@
             {{ titleMap[route.path] || '管理后台' }}
           </div>
         </div>
-        <div
-          v-if="weather"
-          class="weather-pill"
-        >
-          <span class="weather-pill__icon">{{ weatherIcon(weather.weather1) }}</span>
-          <span class="weather-pill__text">{{ weather.shi }} {{ weather.weather1 }} {{ weather.temp }}</span>
-        </div>
-        <div class="workspace__actions">
-          <el-button
-            plain
-            @click="router.push('/dashboard')"
+        <div class="workspace__header-right">
+          <div
+            v-if="weather"
+            class="weather-pill"
           >
-            切到用户端
-          </el-button>
-          <el-button @click="logout">
-            退出
-          </el-button>
+            <span class="weather-pill__icon">{{ weatherIcon(weather.weather1) }}</span>
+            <span class="weather-pill__text">{{ weather.shi }} {{ weather.weather1 }} {{ weather.temp }}</span>
+          </div>
+          <div class="workspace__actions">
+            <el-button
+              plain
+              @click="router.push('/dashboard')"
+            >
+              切到用户端
+            </el-button>
+            <el-button @click="logout">
+              退出
+            </el-button>
+          </div>
         </div>
       </header>
 
@@ -178,6 +180,14 @@ function logout() {
   gap: 10px;
 }
 
+/* 右侧一组（天气 + 操作按钮）整体锚定最右，
+   这样标题字数变化不会让中间的天气被 space-between 挤动 */
+.workspace__header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .workspace__content {
   margin-top: 18px;
 }
@@ -201,7 +211,7 @@ function logout() {
   }
 }
 
-.weather-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; background: rgba(20,88,212,.06); border: 1px solid rgba(20,88,212,.1); margin-right: 12px; }
+.weather-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; background: rgba(20,88,212,.06); border: 1px solid rgba(20,88,212,.1); }
 .weather-pill__icon { font-size: 18px; }
 .weather-pill__text { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 @media (max-width: 900px) { .weather-pill { display: none; } }

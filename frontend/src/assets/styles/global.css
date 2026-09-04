@@ -41,6 +41,9 @@ body,
 
 html {
   scroll-behavior: smooth;
+  /* 预留纵向滚动条空间：切换页面时滚动条出现/消失不再挤压内容宽度，
+     避免居中的导航/头部在页面切换时水平抖动 */
+  scrollbar-gutter: stable;
 }
 
 body {

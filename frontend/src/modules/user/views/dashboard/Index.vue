@@ -18,7 +18,7 @@
           </el-button>
           <el-button
             size="large"
-            plain
+            class="hero-action-ghost"
             @click="router.push('/bookings')"
           >
             查看我的预约
@@ -434,6 +434,19 @@ function statusText(status: BookingStatus) {
   display: flex;
   gap: 12px;
   margin-top: 20px;
+}
+
+/* 次要按钮：玻璃白字，适配深色 hero（避免无 type 按钮白字压浅底的"看不清"） */
+.hero-actions .el-button.hero-action-ghost {
+  --el-button-text-color: #fff;
+  --el-button-hover-text-color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: none;
+}
+.hero-actions .el-button.hero-action-ghost:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.7);
 }
 
 .dashboard-hero__panel {
