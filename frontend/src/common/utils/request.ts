@@ -5,9 +5,11 @@ import { useUserStore } from '@/common/stores/user'
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 15000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // 注意：这里不全局设置 Content-Type，让 axios 按 data 类型自动选择：
+  //   普通对象 → application/json
+  //   FormData → multipart/form-data; boundary=...（文件上传必需）
+  // 否则全局锁死 application/json 会导致文件上传报
+  // "Current request is not a multipart request"
 })
 
 request.interceptors.request.use(
