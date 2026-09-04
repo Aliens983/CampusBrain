@@ -1,7 +1,6 @@
 package com.kb.application.service;
 
 import com.kb.domain.document.Document;
-import com.kb.domain.document.DocumentDomainService;
 import com.kb.domain.document.DocumentRepository;
 import com.kb.domain.document.DocumentStatus;
 import com.kb.domain.rag.VectorStoreService;
@@ -9,6 +8,7 @@ import com.kb.infrastructure.common.BusinessException;
 import com.kb.infrastructure.common.ErrorCode;
 import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.mq.DocumentProcessingProducer;
+import com.kb.infrastructure.rag.parser.ParserRegistry;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import com.kb.infrastructure.tenant.TenantContext;
 import com.kb.infrastructure.persistence.elasticsearch.EsDocumentRepository;
@@ -55,8 +55,8 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     /** 业务指标收集器 */
     private final BusinessMetrics metrics;
 
-    /** 文档领域服务（文件类型白名单等） */
-    private final DocumentDomainService documentDomainService = new DocumentDomainService();
+    /** 解析器注册中心（上传文件类型校验以此为准） */
+    private final ParserRegistry parserRegistry;
 
     /** 本地文件存储目录 */
     @Value("${app.file-storage-path:./file}")
@@ -73,9 +73,13 @@ public class DocumentApplicationService implements IDocumentApplicationService {
         String originalFilename = file.getOriginalFilename();
         String fileType = extractFileType(originalFilename);
 
-        // 1. 文件类型白名单校验（防止非法文件进入处理管道）
-        if (!documentDomainService.isSupportedFileType(fileType)) {
-            throw new BusinessException.DocumentException(ErrorCode.DOCUMENT_UNSUPPORTED_TYPE, fileType);
+        // 1. 文件类型校验：以解析器注册表为准（有解析器才能处理），
+        //    避免"上传时白名单放行、异步处理时才报不支持"的错位。
+        if (parserRegistry.getParserChain(fileType).isEmpty()) {
+            String supported = String.join(" / ", parserRegistry.supportedExtensions());
+            throw new BusinessException.DocumentException(
+                    ErrorCode.DOCUMENT_UNSUPPORTED_TYPE,
+                    fileType + "（当前支持：" + supported + "）");
         }
 
         // 2. 安全文件名：仅 UUID + 合法扩展名，避免路径穿越/任意文件写入

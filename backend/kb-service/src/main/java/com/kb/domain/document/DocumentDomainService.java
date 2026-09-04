@@ -11,6 +11,9 @@ public class DocumentDomainService {
 
     /**
      * Validate that the file type is supported.
+     * <p>注意：需与解析器注册表（ParserRegistry）保持一致——
+     * 真实判据是"有没有对应的解析器"。当前实际支持的格式：
+     * pdf / md / markdown / txt / xlsx / xls。</p>
      */
     public boolean isSupportedFileType(String fileType) {
         if (fileType == null) {
@@ -19,8 +22,7 @@ public class DocumentDomainService {
         String lower = fileType.toLowerCase();
         return "pdf".equals(lower) || "md".equals(lower)
                 || "markdown".equals(lower) || "txt".equals(lower)
-                || "docx".equals(lower) || "html".equals(lower)
-                || "htm".equals(lower);
+                || "xlsx".equals(lower) || "xls".equals(lower);
     }
 
     /**

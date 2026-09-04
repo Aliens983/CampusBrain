@@ -29,7 +29,7 @@ public class Document {
     /** 文档标题 */
     private String title;
 
-    /** 文件类型（如 pdf、md、docx 等） */
+    /** 文件类型（如 pdf、md、txt、xlsx 等） */
     private String fileType;
 
     /** 文件大小（字节） */

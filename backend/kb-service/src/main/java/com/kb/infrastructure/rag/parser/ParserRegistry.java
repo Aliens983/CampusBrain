@@ -59,6 +59,14 @@ public class ParserRegistry {
     }
 
     /**
+     * 返回当前所有受支持（可解析）的扩展名集合（已排序副本）。
+     * 上传校验应以这里为准，避免"白名单允许、实际无解析器"的错位。
+     */
+    public Set<String> supportedExtensions() {
+        return new TreeSet<>(registry.keySet());
+    }
+
+    /**
      * 返回所有已注册解析器的统计信息
      */
     public Map<String, Object> stats() {

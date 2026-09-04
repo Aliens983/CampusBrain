@@ -25,7 +25,7 @@
           ref="fileInput"
           type="file"
           multiple
-          accept=".md,.markdown,.pdf,.txt,.docx,.html"
+          accept=".md,.markdown,.pdf,.txt,.xlsx,.xls"
           style="display: none"
           @change="onFileSelected"
         >
@@ -37,7 +37,7 @@
         >
           上传文档
         </el-button>
-        <span class="upload-tip">支持 Markdown / PDF / Word / TXT / HTML（仅管理员可上传）</span>
+        <span class="upload-tip">支持 PDF / Markdown / TXT / Excel（.pdf .md .txt .xlsx .xls，仅管理员可上传）</span>
       </div>
 
       <el-table

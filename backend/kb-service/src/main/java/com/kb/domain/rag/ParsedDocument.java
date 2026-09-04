@@ -25,7 +25,7 @@ public class ParsedDocument {
     /** 解析后的纯文本内容 */
     private String content;
 
-    /** 原始文件类型（如 pdf、md、docx 等） */
+    /** 原始文件类型（如 pdf、md、txt、xlsx 等） */
     private String fileType;
 
     /** 从文档中提取的元数据（作者、页数、创建日期等） */

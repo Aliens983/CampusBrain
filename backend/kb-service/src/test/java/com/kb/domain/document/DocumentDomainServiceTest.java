@@ -45,9 +45,18 @@ class DocumentDomainServiceTest {
         }
 
         @Test
-        @DisplayName("支持 DOCX 格式")
-        void shouldSupportDocx() {
-            assertThat(service.isSupportedFileType("docx")).isTrue();
+        @DisplayName("支持 Excel 格式")
+        void shouldSupportExcel() {
+            assertThat(service.isSupportedFileType("xlsx")).isTrue();
+            assertThat(service.isSupportedFileType("xls")).isTrue();
+        }
+
+        @Test
+        @DisplayName("不支持 DOCX / HTML（当前无对应解析器）")
+        void shouldRejectDocxAndHtml() {
+            assertThat(service.isSupportedFileType("docx")).isFalse();
+            assertThat(service.isSupportedFileType("html")).isFalse();
+            assertThat(service.isSupportedFileType("htm")).isFalse();
         }
 
         @Test
