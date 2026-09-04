@@ -16,7 +16,4 @@ public class NotifyPrefDTO {
 
     /** 是否接收邮件通知 */
     private Boolean emailOn = true;
-
-    /** 是否接收站内通知（预留，消息中心建设后生效） */
-    private Boolean siteOn = true;
 }

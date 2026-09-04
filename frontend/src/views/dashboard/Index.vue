@@ -39,13 +39,6 @@
         </div>
         <div
           class="hero-panel__item"
-          @click="router.push('/messages')"
-        >
-          <strong>16:30 - 17:00</strong>
-          <span>设备借用审核结果已回传，可进入消息中心查看详情。</span>
-        </div>
-        <div
-          class="hero-panel__item"
           @click="router.push('/equipment')"
         >
           <strong>18:00 前</strong>

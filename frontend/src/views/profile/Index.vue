@@ -17,12 +17,6 @@
         </div>
         <div
           class="hero-panel__item"
-          @click="router.push('/messages')"
-        >
-          <strong>消息提醒</strong><span>未读通知 →</span>
-        </div>
-        <div
-          class="hero-panel__item"
           @click="quickVisible = true"
         >
           <strong>快捷操作</strong><span>常用入口 →</span>
@@ -119,12 +113,6 @@
           @click="router.push('/bookings')"
         >
           查看我的预约
-        </el-button>
-        <el-button
-          plain
-          @click="router.push('/messages')"
-        >
-          查看消息中心
         </el-button>
         <el-button
           plain

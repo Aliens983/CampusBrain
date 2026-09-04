@@ -17,12 +17,6 @@
         </div>
         <div
           class="hero-panel__item"
-          @click="router.push('/messages')"
-        >
-          <strong>消息提醒</strong><span>未读通知 →</span>
-        </div>
-        <div
-          class="hero-panel__item"
           @click="quickVisible = true"
         >
           <strong>快捷操作</strong><span>常用入口 →</span>
@@ -119,21 +113,6 @@
         </el-icon>
       </div>
       <div
-        class="action-card span-6"
-        @click="router.push('/messages')"
-      >
-        <div class="action-card__icon">
-          💬
-        </div>
-        <div class="action-card__text">
-          <strong>消息中心</strong>
-          <p>查看审批通知和系统消息</p>
-        </div>
-        <el-icon class="action-card__arrow">
-          <ArrowRight />
-        </el-icon>
-      </div>
-      <div
         class="action-card action-card--danger span-6"
         @click="handleLogout"
       >
@@ -200,12 +179,6 @@
           @click="router.push('/services')"
         >
           服务中心
-        </el-button>
-        <el-button
-          plain
-          @click="router.push('/messages')"
-        >
-          消息中心
         </el-button>
       </div>
     </el-drawer>

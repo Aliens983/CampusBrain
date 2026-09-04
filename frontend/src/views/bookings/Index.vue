@@ -145,12 +145,6 @@
         >
           查看咨询排班
         </el-button>
-        <el-button
-          plain
-          @click="router.push('/messages')"
-        >
-          查看审批消息
-        </el-button>
       </div>
     </el-drawer>
   </div>

@@ -81,17 +81,11 @@ public interface UserMapper extends BaseMapper<UserDO> {
             "ORDER BY i.create_time DESC")
     IPage<BookingRecordDO> getAllBookingsWithPage(@Param("userId") Long userId, Page<?> page);
 
-    // ============ 通知偏好（user.email_notify / site_notify） ============
+    // ============ 通知偏好（user.email_notify） ============
 
     @Select("SELECT email_notify FROM user WHERE id = #{userId}")
     Integer selectEmailNotifyByUserId(@Param("userId") Long userId);
 
-    @Select("SELECT site_notify FROM user WHERE id = #{userId}")
-    Integer selectSiteNotifyByUserId(@Param("userId") Long userId);
-
     @Update("UPDATE user SET email_notify = #{on} WHERE id = #{userId}")
     void updateEmailNotify(@Param("userId") Long userId, @Param("on") boolean on);
-
-    @Update("UPDATE user SET site_notify = #{on} WHERE id = #{userId}")
-    void updateSiteNotify(@Param("userId") Long userId, @Param("on") boolean on);
 }

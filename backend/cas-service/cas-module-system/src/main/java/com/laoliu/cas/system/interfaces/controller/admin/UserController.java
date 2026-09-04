@@ -150,9 +150,7 @@ public class UserController {
         if (userId == null) {
             return CommonResult.unauthorized("用户未登录或登录已过期");
         }
-        NotifyPrefDTO dto = new NotifyPrefDTO(
-                notificationSettings.isEmailOn(userId),
-                notificationSettings.isSiteOn(userId));
+        NotifyPrefDTO dto = new NotifyPrefDTO(notificationSettings.isEmailOn(userId));
         return CommonResult.success(dto);
     }
 
@@ -166,9 +164,6 @@ public class UserController {
         }
         if (dto.getEmailOn() != null) {
             notificationSettings.setEmailOn(userId, dto.getEmailOn());
-        }
-        if (dto.getSiteOn() != null) {
-            notificationSettings.setSiteOn(userId, dto.getSiteOn());
         }
         return CommonResult.success("已保存", null);
     }

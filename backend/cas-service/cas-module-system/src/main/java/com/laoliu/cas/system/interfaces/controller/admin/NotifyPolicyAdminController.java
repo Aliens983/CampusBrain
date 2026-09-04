@@ -37,7 +37,6 @@ public class NotifyPolicyAdminController {
     public CommonResult<NotifyPolicyDTO> getNotifyPolicy() {
         NotifyPolicyDTO dto = new NotifyPolicyDTO(
                 notificationSettings.isEmailEnabled(),
-                notificationSettings.isSiteEnabled(),
                 notificationSettings.isSmsEnabled());
         return CommonResult.success(dto);
     }
@@ -48,9 +47,6 @@ public class NotifyPolicyAdminController {
     public CommonResult<Void> saveNotifyPolicy(@RequestBody NotifyPolicyDTO dto) {
         if (dto.getEmailEnabled() != null) {
             notificationSettings.setEmailEnabled(dto.getEmailEnabled());
-        }
-        if (dto.getSiteEnabled() != null) {
-            notificationSettings.setSiteEnabled(dto.getSiteEnabled());
         }
         if (dto.getSmsEnabled() != null) {
             notificationSettings.setSmsEnabled(dto.getSmsEnabled());

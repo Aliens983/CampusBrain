@@ -60,12 +60,6 @@ export const userRoutes: RouteRecordRaw[] = [
         meta: { title: '预约详情', requiresAuth: true, audience: 'user' },
       },
       {
-        path: 'messages',
-        name: 'messages',
-        component: () => import('@/modules/user/views/messages/Index.vue'),
-        meta: { title: '消息中心', requiresAuth: true },
-      },
-      {
         path: 'profile',
         name: 'profile',
         component: () => import('@/modules/user/views/profile/Index.vue'),
