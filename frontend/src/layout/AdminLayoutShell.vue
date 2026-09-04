@@ -105,7 +105,8 @@ function logout() {
 
 <style scoped lang="scss">
 .admin-shell {
-  min-height: 100vh;
+  height: 100vh;            /* 整页定高，不让 body 滚动，左栏因此固定 */
+  overflow: hidden;
   display: grid;
   grid-template-columns: 272px 1fr;
 }
@@ -114,6 +115,7 @@ function logout() {
   padding: 20px 16px;
   background: linear-gradient(180deg, #0f172a, #132949 52%, #10264e);
   color: #fff;
+  overflow-y: auto;         /* 菜单多时左栏内部自滚，但栏体始终固定 */
 }
 
 .sidebar__brand {
@@ -158,10 +160,15 @@ function logout() {
 }
 
 .workspace {
-  padding: 16px 18px 24px;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 16px 18px 0;
+  overflow: hidden;
 }
 
 .workspace__header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -189,7 +196,11 @@ function logout() {
 }
 
 .workspace__content {
+  flex: 1;
+  min-height: 0;            /* 允许 flex 子项压缩并独立滚动 */
+  overflow-y: auto;         /* 只有右侧内容滚动，左侧面板与顶栏保持不动 */
   margin-top: 18px;
+  padding-bottom: 24px;
 }
 
 @media (max-width: 960px) {
