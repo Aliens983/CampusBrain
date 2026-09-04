@@ -70,24 +70,17 @@
         <div class="setting-stack">
           <div class="setting-item setting-item--switch">
             <div>
-              <strong>站内通知</strong>
-              <p>审批结果、系统公告和预约提醒</p>
-            </div>
-            <el-switch v-model="settings.siteNotice" />
-          </div>
-          <div class="setting-item setting-item--switch">
-            <div>
               <strong>短信提醒</strong>
-              <p>适合时效性更高的审核和即将开始通知</p>
+              <p>未开通短信服务，暂不可用</p>
             </div>
-            <el-switch v-model="settings.smsNotice" />
+            <el-switch v-model="policy.smsEnabled" disabled />
           </div>
           <div class="setting-item setting-item--switch">
             <div>
               <strong>邮件通知</strong>
-              <p>适合留痕和正式通知场景</p>
+              <p>审核通过/拒绝结果邮件；关闭后不再发送</p>
             </div>
-            <el-switch v-model="settings.emailNotice" />
+            <el-switch v-model="policy.emailEnabled" @change="savePolicy" />
           </div>
         </div>
       </el-card>
@@ -96,19 +89,43 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive } from 'vue'
+import { computed, onMounted, reactive } from 'vue'
+import request from '@/common/utils/request'
 
 const settings = reactive({
   advanceDays: '提前 7 天',
   approvalMode: '部门审批',
   autoCancel: true,
-  siteNotice: true,
-  smsNotice: false,
-  emailNotice: true,
 })
 
+// 通知策略（管理端全局，后端 MySQL 存储；邮件开关真实控制审核结果邮件）
+const policy = reactive({
+  emailEnabled: true,
+  smsEnabled: false,
+})
+
+onMounted(async () => {
+  try {
+    const data = await request.get('/admin/settings/notify') as any
+    if (data) {
+      if (typeof data.emailEnabled === 'boolean') policy.emailEnabled = data.emailEnabled
+      if (typeof data.smsEnabled === 'boolean') policy.smsEnabled = data.smsEnabled
+    }
+  } catch {
+    // 加载失败用默认值
+  }
+})
+
+async function savePolicy() {
+  try {
+    await request.put('/admin/settings/notify', { ...policy })
+  } catch {
+    // 保存失败由响应拦截器统一提示
+  }
+}
+
 const enabledNotifications = computed(() =>
-  [settings.siteNotice, settings.smsNotice, settings.emailNotice].filter(Boolean).length
+  [policy.emailEnabled].filter(Boolean).length
 )
 </script>
 

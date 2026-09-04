@@ -9,6 +9,7 @@ import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.infra.application.service.EmailService;
+import com.laoliu.cas.system.application.service.NotificationSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
 
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
+    private final NotificationSettingsService notificationSettings;
 
     @Override
     public List<ServiceStatusResponse> getServiceStatus() {
@@ -98,7 +100,10 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         String emailContent = "您好！您的预约已通过。\n预约服务：" + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
                 + (reason == null || reason.trim().isEmpty() ? "" : "\n备注：" + reason);
-        sendAuditEmail(orderId, "预约审核通过通知", emailContent);
+        // 通知策略门控：管理端邮件策略开启 且 用户邮件偏好开启 才发
+        if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
+            sendAuditEmail(orderId, "预约审核通过通知", emailContent);
+        }
     }
 
     @Override
@@ -126,7 +131,10 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         String emailContent = "您好！您的预约未通过。\n预约服务：" + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
                 + "\n拒绝原因：" + reason;
-        sendAuditEmail(orderId, "预约审核未通过通知", emailContent);
+        // 通知策略门控：管理端邮件策略开启 且 用户邮件偏好开启 才发
+        if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
+            sendAuditEmail(orderId, "预约审核未通过通知", emailContent);
+        }
     }
 
     private void setStatusDescription(ServiceStatusResponse response) {

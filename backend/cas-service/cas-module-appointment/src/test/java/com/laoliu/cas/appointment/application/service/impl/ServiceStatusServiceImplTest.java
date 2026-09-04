@@ -7,6 +7,7 @@ import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.infra.application.service.EmailService;
+import com.laoliu.cas.system.application.service.NotificationSettingsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -35,6 +36,9 @@ class ServiceStatusServiceImplTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private NotificationSettingsService notificationSettings;
+
     private ServiceStatusService serviceStatusService;
 
     private static final Long VALID_ORDER_ID = 1L;
@@ -42,7 +46,9 @@ class ServiceStatusServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        serviceStatusService = new ServiceStatusServiceImpl(bookingRepository, emailService);
+        serviceStatusService = new ServiceStatusServiceImpl(bookingRepository, emailService, notificationSettings);
+        // 默认"允许发送邮件"（策略与偏好都开）；需要验证"关闭后不发送"的用例再单独覆写
+        lenient().when(notificationSettings.isEmailAllowed(any())).thenReturn(true);
     }
 
     // ======================== auditPass 测试 ========================

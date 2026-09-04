@@ -11,9 +11,11 @@ import com.laoliu.cas.common.exception.code.CommonErrorCode;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.result.PageResult;
 import com.laoliu.cas.common.util.PasswordUtils;
+import com.laoliu.cas.system.application.service.NotificationSettingsService;
 import com.laoliu.cas.system.application.service.UserService;
 import com.laoliu.cas.system.domain.repository.UserRepository;
 import com.laoliu.cas.system.interfaces.convert.UserConvert;
+import com.laoliu.cas.system.interfaces.dto.NotifyPrefDTO;
 import com.laoliu.cas.system.interfaces.dto.request.AdminCreateUserRequest;
 import com.laoliu.cas.system.interfaces.dto.request.ChangePasswordRequest;
 import com.laoliu.cas.system.interfaces.dto.request.UpdateProfileRequest;
@@ -48,6 +50,7 @@ public class UserController {
     private final UserRepository userRepository;
     private final GetUserIdViaTokenApi getUserIdViaTokenApi;
     private final UserService userService;
+    private final NotificationSettingsService notificationSettings;
 
     @Operation(summary = "获取当前用户信息", description = "获取当前登录用户的基本信息，包含用户名、邮箱、角色等")
     @GetMapping({"/", "/me"})
@@ -137,6 +140,37 @@ public class UserController {
         }
         userRepository.save(user);
         return CommonResult.success("更新成功", null);
+    }
+
+    @Operation(summary = "获取我的通知偏好", description = "获取当前用户的邮件/站内通知接收偏好")
+    @GetMapping("/me/notify")
+    @RequireRole({UserRoleEnum.USER, UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
+    public CommonResult<NotifyPrefDTO> getMyNotifyPref() {
+        Long userId = getUserIdViaTokenApi.getUserId();
+        if (userId == null) {
+            return CommonResult.unauthorized("用户未登录或登录已过期");
+        }
+        NotifyPrefDTO dto = new NotifyPrefDTO(
+                notificationSettings.isEmailOn(userId),
+                notificationSettings.isSiteOn(userId));
+        return CommonResult.success(dto);
+    }
+
+    @Operation(summary = "保存我的通知偏好", description = "保存当前用户的邮件/站内通知接收偏好")
+    @PutMapping("/me/notify")
+    @RequireRole({UserRoleEnum.USER, UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
+    public CommonResult<Void> saveMyNotifyPref(@RequestBody NotifyPrefDTO dto) {
+        Long userId = getUserIdViaTokenApi.getUserId();
+        if (userId == null) {
+            return CommonResult.unauthorized("用户未登录或登录已过期");
+        }
+        if (dto.getEmailOn() != null) {
+            notificationSettings.setEmailOn(userId, dto.getEmailOn());
+        }
+        if (dto.getSiteOn() != null) {
+            notificationSettings.setSiteOn(userId, dto.getSiteOn());
+        }
+        return CommonResult.success("已保存", null);
     }
 
     @Operation(summary = "修改密码", description = "当前登录用户修改自己的密码，需要提供旧密码和新密码，参数校验由 Bean Validation 自动完成")

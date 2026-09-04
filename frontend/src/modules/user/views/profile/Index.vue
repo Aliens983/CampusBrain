@@ -150,6 +150,33 @@
       </div>
     </section>
 
+    <!-- 通知偏好：点击 action-card 会设 preferenceVisible=true，这里必须有对应弹窗，否则点了没反应 -->
+    <el-dialog
+      v-model="preferenceVisible"
+      title="通知偏好"
+      width="520px"
+      append-to-body
+      :close-on-click-modal="false"
+    >
+      <div style="display:grid;gap:12px;line-height:1.6">
+        <div
+          class="notify-pref"
+          style="display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px;border:1px solid var(--border-soft);border-radius:14px"
+        >
+          <div>
+            <strong>邮件通知</strong>
+            <p style="margin:4px 0 0;color:var(--text-secondary);font-size:13px">
+              审核通过/拒绝结果邮件；需管理员全局邮件策略也开启才生效
+            </p>
+          </div>
+          <el-switch v-model="prefs.emailOn" @change="savePrefs" />
+        </div>
+        <p style="margin:2px 0 0;color:var(--text-secondary);font-size:12px">
+          你的邮件偏好与管理员全局邮件策略都开启时，预约审核结果才会通过邮件通知你；任一关闭即不再发送。
+        </p>
+      </div>
+    </el-dialog>
+
     <el-drawer
       v-model="quickVisible"
       title="快捷操作"
@@ -186,16 +213,41 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowRight } from '@element-plus/icons-vue'
 import { useUserStore } from '@/common/stores/user'
+import request from '@/common/utils/request'
 
 const router = useRouter()
 const userStore = useUserStore()
 const preferenceVisible = ref(false)
 const quickVisible = ref(false)
+
+// 个人通知偏好（与后端 /users/me/notify 同步）
+const prefs = reactive({ emailOn: true })
+
+async function loadPrefs() {
+  try {
+    const d = await request.get('/users/me/notify') as any
+    if (d && typeof d.emailOn === 'boolean') {
+      prefs.emailOn = d.emailOn
+    }
+  } catch {
+    // 加载失败用默认值
+  }
+}
+
+async function savePrefs() {
+  try {
+    await request.put('/users/me/notify', { ...prefs })
+  } catch {
+    // 保存失败由响应拦截器统一提示
+  }
+}
+
+onMounted(loadPrefs)
 
 const user = computed(() => userStore.userInfo)
 
