@@ -99,6 +99,21 @@
       </div>
       <div
         class="action-card span-6"
+        @click="passwordVisible = true"
+      >
+        <div class="action-card__icon">
+          🔒
+        </div>
+        <div class="action-card__text">
+          <strong>修改密码</strong>
+          <p>定期更换密码，保护账号安全</p>
+        </div>
+        <el-icon class="action-card__arrow">
+          <ArrowRight />
+        </el-icon>
+      </div>
+      <div
+        class="action-card span-6"
         @click="router.push('/bookings')"
       >
         <div class="action-card__icon">
@@ -156,6 +171,73 @@
       </div>
     </el-dialog>
 
+    <!-- 修改密码：当前登录用户改自己的密码，PUT /users/password -->
+    <el-dialog
+      v-model="passwordVisible"
+      title="修改密码"
+      width="440px"
+      append-to-body
+      :close-on-click-modal="false"
+      @closed="resetPwdForm"
+    >
+      <el-form
+        ref="pwdFormRef"
+        :model="pwdForm"
+        :rules="pwdRules"
+        label-position="top"
+      >
+        <el-form-item
+          label="当前密码"
+          prop="oldPassword"
+        >
+          <el-input
+            v-model="pwdForm.oldPassword"
+            type="password"
+            show-password
+            placeholder="请输入当前密码"
+            autocomplete="current-password"
+          />
+        </el-form-item>
+        <el-form-item
+          label="新密码"
+          prop="newPassword"
+        >
+          <el-input
+            v-model="pwdForm.newPassword"
+            type="password"
+            show-password
+            placeholder="6 位以上新密码"
+            autocomplete="new-password"
+          />
+        </el-form-item>
+        <el-form-item
+          label="确认新密码"
+          prop="confirmPassword"
+        >
+          <el-input
+            v-model="pwdForm.confirmPassword"
+            type="password"
+            show-password
+            placeholder="再次输入新密码"
+            autocomplete="new-password"
+            @keyup.enter="submitChangePassword"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordVisible = false">
+          取消
+        </el-button>
+        <el-button
+          type="primary"
+          :loading="pwdSubmitting"
+          @click="submitChangePassword"
+        >
+          确认修改
+        </el-button>
+      </template>
+    </el-dialog>
+
     <el-drawer
       v-model="quickVisible"
       title="快捷操作"
@@ -197,6 +279,52 @@ const router = useRouter()
 const userStore = useUserStore()
 const preferenceVisible = ref(false)
 const quickVisible = ref(false)
+
+// 修改密码（PUT /users/password）
+const passwordVisible = ref(false)
+const pwdSubmitting = ref(false)
+const pwdFormRef = ref<{ validate: () => Promise<unknown>; resetFields: () => void }>()
+const pwdForm = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' })
+const pwdRules = {
+  oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '请输入新密码', trigger: 'blur' },
+    { min: 6, message: '新密码至少 6 位', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    { required: true, message: '请再次输入新密码', trigger: 'blur' },
+    {
+      validator: (_rule: unknown, value: string, callback: (e?: Error) => void) => {
+        if (value !== pwdForm.newPassword) callback(new Error('两次输入的新密码不一致'))
+        else callback()
+      },
+      trigger: 'blur',
+    },
+  ],
+}
+
+function resetPwdForm() {
+  pwdFormRef.value?.resetFields()
+  pwdSubmitting.value = false
+}
+
+async function submitChangePassword() {
+  const valid = await pwdFormRef.value?.validate().catch(() => false)
+  if (!valid) return
+  pwdSubmitting.value = true
+  try {
+    await request.put('/users/password', {
+      oldPassword: pwdForm.oldPassword,
+      newPassword: pwdForm.newPassword,
+    })
+    ElMessage.success('密码修改成功')
+    passwordVisible.value = false
+  } catch {
+    // 失败（如旧密码不正确）由响应拦截器统一提示
+  } finally {
+    pwdSubmitting.value = false
+  }
+}
 
 // 个人通知偏好（与后端 /users/me/notify 同步）
 const prefs = reactive({ emailOn: true })
