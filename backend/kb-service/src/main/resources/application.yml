@@ -23,7 +23,7 @@ spring:
 
   # ---------- MySQL Datasource ----------
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/knowledge_base?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3307}/knowledge_base?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true&allowPublicKeyRetrieval=true
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:root123}
     driver-class-name: com.mysql.cj.jdbc.Driver
