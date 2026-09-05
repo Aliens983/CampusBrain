@@ -2,9 +2,9 @@
   <div class="auth-page">
     <div class="auth-shell">
       <section class="auth-hero">
-        <span class="status-pill is-brand">性能已优化</span>
+        <span class="status-pill is-brand">校园预约门户</span>
         <h1>校园预约系统</h1>
-        <p>{{ resetMode ? '通过邮箱验证码重置您的密码。' : '登录后按角色分流到用户端或管理端。' }}</p>
+        <p>{{ resetMode ? '通过邮箱验证码重置您的密码。' : '统一提供空间、设备与咨询等预约服务。' }}</p>
       </section>
 
       <!-- 登录表单 -->
@@ -14,7 +14,7 @@
       >
         <div class="auth-card__head">
           <h2>登录</h2>
-          <p>安全可靠的校园统一身份认证入口，支持邮箱登录与图形验证码校验。</p>
+          <p>使用注册邮箱登录，验证通过后进入系统。</p>
         </div>
 
         <el-form
@@ -313,7 +313,7 @@ onMounted(() => {
 .auth-hero {
   padding: 44px;
   color: #fff;
-  background: linear-gradient(145deg, #0b1e3a, #1458d4 56%, #58a4ff);
+  background: linear-gradient(145deg, #4c1d95, #7c3aed 56%, #8b5cf6);
 }
 
 .auth-hero h1 {

@@ -24,30 +24,23 @@
 
     <div class="workspace">
       <header class="workspace__header glass-panel">
-        <div>
-          <div class="workspace__title">
-            {{ titleMap[route.path] || '管理后台' }}
-          </div>
+        <div
+          v-if="weather"
+          class="weather-pill"
+        >
+          <span class="weather-pill__icon">{{ weatherIcon(weather.weather1) }}</span>
+          <span class="weather-pill__text">{{ weather.shi }} {{ weather.weather1 }} {{ weather.temp }}</span>
         </div>
-        <div class="workspace__header-right">
-          <div
-            v-if="weather"
-            class="weather-pill"
+        <div class="workspace__actions">
+          <el-button
+            plain
+            @click="router.push('/dashboard')"
           >
-            <span class="weather-pill__icon">{{ weatherIcon(weather.weather1) }}</span>
-            <span class="weather-pill__text">{{ weather.shi }} {{ weather.weather1 }} {{ weather.temp }}</span>
-          </div>
-          <div class="workspace__actions">
-            <el-button
-              plain
-              @click="router.push('/dashboard')"
-            >
-              切到用户端
-            </el-button>
-            <el-button @click="logout">
-              退出
-            </el-button>
-          </div>
+            切到用户端
+          </el-button>
+          <el-button @click="logout">
+            退出
+          </el-button>
         </div>
       </header>
 
@@ -79,7 +72,7 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const navItems = [
-  { label: '管理驾驶舱', path: '/admin' },
+  { label: '管理概览', path: '/admin' },
   { label: '服务治理', path: '/admin/services' },
   { label: '预约审核', path: '/admin/bookings' },
   { label: '用户与权限', path: '/admin/users' },
@@ -87,15 +80,6 @@ const navItems = [
   { label: '工具箱', path: '/admin/tools' },
   { label: 'AI 助手', path: '/assistant' },
 ]
-
-const titleMap: Record<string, string> = {
-  '/admin': '管理驾驶舱',
-  '/admin/services': '服务治理',
-  '/admin/bookings': '预约审核',
-  '/admin/users': '用户与权限',
-  '/admin/system': '系统设置',
-  '/admin/tools': '工具箱',
-}
 
 function logout() {
   userStore.logout()
@@ -113,7 +97,7 @@ function logout() {
 
 .sidebar {
   padding: 20px 16px;
-  background: linear-gradient(180deg, #0f172a, #132949 52%, #10264e);
+  background: linear-gradient(180deg, #251048, #341268 55%, #40167e);
   color: #fff;
   overflow-y: auto;         /* 菜单多时左栏内部自滚，但栏体始终固定 */
 }
@@ -132,7 +116,7 @@ function logout() {
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: linear-gradient(135deg, #4d95ff, #1458d4);
+  background: linear-gradient(135deg, #a78bfa, #6d28d9);
   font-weight: 800;
 }
 
@@ -156,7 +140,7 @@ function logout() {
 
 .sidebar__item.is-active {
   color: #fff;
-  background: rgba(84, 160, 255, 0.18);
+  background: rgba(167, 139, 250, 0.18);
 }
 
 .workspace {
@@ -175,11 +159,6 @@ function logout() {
   gap: 16px;
   padding: 16px 18px;
   border-radius: 24px;
-}
-
-.workspace__title {
-  font-size: 20px;
-  font-weight: 700;
 }
 
 .workspace__actions {
@@ -222,8 +201,33 @@ function logout() {
   }
 }
 
-.weather-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; background: rgba(20,88,212,.06); border: 1px solid rgba(20,88,212,.1); }
+.weather-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; background: rgba(124,58,237,.06); border: 1px solid rgba(124,58,237,.1); }
 .weather-pill__icon { font-size: 18px; }
 .weather-pill__text { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 @media (max-width: 900px) { .weather-pill { display: none; } }
+
+/* 顶栏操作按钮：小胶囊，与用户端「管理后台」成套 */
+.workspace__actions .el-button {
+  height: 34px;
+  padding: 0 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  margin-left: 0;
+}
+.workspace__actions .el-button--default {
+  color: #43395e;
+  border-color: #ddd3ef;
+  background: #fff;
+}
+.workspace__actions .el-button--default:hover {
+  color: #6d28d9;
+  border-color: #b49df2;
+  background: #faf8ff;
+  box-shadow: none;
+}
+.workspace__actions .el-button--default:last-child:hover {
+  color: #dc2626;
+  border-color: #fda4af;
+  background: #fff1f2;
+}
 </style>

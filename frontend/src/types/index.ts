@@ -106,6 +106,8 @@ export interface AdminSummary {
   totalServices: number
   activeBookings: number
   approvalRate: string
+  /** 待审核（manageStatus=0）预约数量 */
+  pendingBookings: number
 }
 
 export interface BookingDraft {

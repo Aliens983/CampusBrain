@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --bg-page: #f3f6fb;
-  --bg-page-deep: #e8eef8;
+  --bg-page: #f5f2fb;
+  --bg-page-deep: #eae4f7;
   --bg-surface: rgba(255, 255, 255, 0.84);
   --bg-panel: rgba(255, 255, 255, 0.94);
   --bg-panel-strong: #ffffff;
@@ -12,21 +12,32 @@
   --text-secondary: #5f6b7a;
   --text-tertiary: #8a94a6;
   --border-soft: rgba(33, 56, 82, 0.08);
-  --border-strong: rgba(20, 88, 212, 0.14);
-  --brand-500: #1458d4;
-  --brand-400: #2f73eb;
-  --brand-300: #61a4ff;
+  --border-strong: rgba(124, 58, 237, 0.14);
+  --brand-300: #c4b5fd;
+  --brand-400: #a78bfa;
+  --brand-500: #8b5cf6;
+  --brand-600: #7c3aed;
+  --brand-700: #6d28d9;
   --teal-500: #0f766e;
   --success-500: #16a34a;
   --warning-500: #d97706;
   --danger-500: #dc2626;
-  --shadow-card: 0 18px 40px rgba(20, 33, 61, 0.08);
-  --shadow-card-hover: 0 26px 60px rgba(20, 33, 61, 0.14);
-  --shadow-soft: 0 12px 30px rgba(20, 33, 61, 0.06);
+  --shadow-card: 0 18px 40px rgba(49, 33, 89, 0.09);
+  --shadow-card-hover: 0 26px 60px rgba(49, 33, 89, 0.15);
+  --shadow-soft: 0 12px 30px rgba(49, 33, 89, 0.06);
   --radius-2xl: 30px;
   --radius-xl: 24px;
   --radius-lg: 18px;
   --radius-md: 14px;
+
+  /* Element Plus 主色 → 淡紫紫罗（覆盖默认蓝） */
+  --el-color-primary: #8b5cf6;
+  --el-color-primary-light-3: #a78bfa;
+  --el-color-primary-light-5: #c4b5fd;
+  --el-color-primary-light-7: #ddd6fe;
+  --el-color-primary-light-8: #e8dffd;
+  --el-color-primary-light-9: #f3eefd;
+  --el-color-primary-dark-2: #6d28d9;
 }
 
 * {
@@ -52,10 +63,10 @@ body {
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at top left, rgba(20, 88, 212, 0.08), transparent 28%),
-    radial-gradient(circle at 78% 14%, rgba(15, 118, 110, 0.09), transparent 18%),
-    radial-gradient(circle at bottom right, rgba(22, 163, 74, 0.08), transparent 22%),
-    linear-gradient(180deg, #f8fbff 0%, #eef3fb 46%, #eaf0f8 100%);
+    radial-gradient(circle at top left, rgba(139, 92, 246, 0.09), transparent 28%),
+    radial-gradient(circle at 78% 14%, rgba(244, 114, 182, 0.06), transparent 18%),
+    radial-gradient(circle at bottom right, rgba(196, 181, 253, 0.13), transparent 22%),
+    linear-gradient(180deg, #fbf9ff 0%, #f2edfc 46%, #ece4f9 100%);
 }
 
 body::before,
@@ -72,7 +83,7 @@ body::before {
   right: -140px;
   width: 340px;
   height: 340px;
-  background: radial-gradient(circle, rgba(20, 88, 212, 0.12), rgba(20, 88, 212, 0));
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12), rgba(124, 58, 237, 0));
   filter: blur(8px);
   animation: ambientOrbA 18s ease-in-out infinite;
 }
@@ -82,7 +93,7 @@ body::after {
   left: -120px;
   width: 320px;
   height: 320px;
-  background: radial-gradient(circle, rgba(14, 165, 233, 0.12), rgba(14, 165, 233, 0));
+  background: radial-gradient(circle, rgba(244, 114, 182, 0.12), rgba(244, 114, 182, 0));
   filter: blur(10px);
   animation: ambientOrbB 20s ease-in-out infinite;
 }
@@ -124,7 +135,7 @@ a {
   padding: 36px;
   border-radius: 30px;
   color: #fff;
-  background: linear-gradient(135deg, #0e2647, #1458d4 62%, #52a1ff);
+  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
   box-shadow: var(--shadow-card);
   overflow: hidden;
   isolation: isolate;
@@ -281,8 +292,8 @@ a {
 }
 
 .status-pill.is-brand {
-  color: #1458d4;
-  background: rgba(20, 88, 212, 0.1);
+  color: #7c3aed;
+  background: rgba(124, 58, 237, 0.1);
 }
 
 .status-pill.is-success {
@@ -329,7 +340,7 @@ a {
   width: 180px;
   height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(20, 88, 212, 0.08), rgba(20, 88, 212, 0));
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0));
   transition: transform 0.28s ease, opacity 0.28s ease;
   opacity: 0.5;
   pointer-events: none;
@@ -339,7 +350,7 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(20, 88, 212, 0.06), transparent 55%);
+  background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), transparent 55%);
   opacity: 0;
   transition: opacity 0.28s ease;
   pointer-events: none;
@@ -348,7 +359,7 @@ a {
 .resource-card:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-card-hover);
-  border-color: rgba(20, 88, 212, 0.16);
+  border-color: rgba(124, 58, 237, 0.16);
 }
 
 .resource-card:hover::before {
@@ -361,7 +372,7 @@ a {
 }
 
 .gradient-brand {
-  background: linear-gradient(135deg, #1458d4, #54a0ff);
+  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
 }
 
 .gradient-teal {
@@ -433,10 +444,10 @@ a {
 /* ===== 全局按钮美化 ===== */
 
 .el-button {
-  border-radius: 10px;
-  font-weight: 520;
-  letter-spacing: 0.03em;
-  padding: 10px 28px;
+  border-radius: 12px;
+  font-weight: 540;
+  letter-spacing: 0.02em;
+  padding: 12px 34px;
   font-size: 14px;
   transition: all .25s cubic-bezier(.4,0,.2,1);
 }
@@ -446,17 +457,17 @@ a {
 
 /* Primary */
 .el-button--primary {
-  background: linear-gradient(135deg, #2563eb, #1458d4);
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
   border-color: transparent;
-  box-shadow: 0 2px 10px rgba(20,88,212,.22), inset 0 1px 0 rgba(255,255,255,.12);
+  box-shadow: 0 2px 10px rgba(124,58,237,.22), inset 0 1px 0 rgba(255,255,255,.12);
   color: #fff;
 }
 .el-button--primary:not(.is-disabled):hover {
-  background: linear-gradient(135deg, #1d4ed8, #0f3eb0);
-  box-shadow: 0 8px 26px rgba(20,88,212,.35);
+  background: linear-gradient(135deg, #7c3aed, #6d28d9);
+  box-shadow: 0 8px 26px rgba(124,58,237,.35);
 }
 .el-button--primary:not(.is-disabled):active {
-  box-shadow: 0 2px 8px rgba(20,88,212,.18);
+  box-shadow: 0 2px 8px rgba(124,58,237,.18);
 }
 
 /* Success */
@@ -495,19 +506,19 @@ a {
   box-shadow: 0 8px 24px rgba(217,119,6,.3);
 }
 
-/* Default */
+/* Default（描边次按钮：白底细边，hover 淡紫显色） */
 .el-button--default {
-  border: 1.5px solid #d1d5db;
-  color: #374151;
+  border: 1.5px solid #ddd3ef;
+  color: #43395e;
   background: #fff;
 }
 .el-button--default:hover {
-  border-color: #9ca3af;
-  color: #111827;
-  background: #f9fafb;
-  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+  border-color: #b49df2;
+  color: #6d28d9;
+  background: #faf8ff;
+  box-shadow: 0 2px 8px rgba(109, 40, 217, 0.08);
 }
-.el-button--default:active { background: #f3f4f6; }
+.el-button--default:active { background: #f3eefd; }
 
 /* Plain */
 .el-button.is-plain {
@@ -515,15 +526,15 @@ a {
   border-width: 1.5px;
 }
 .el-button--primary.is-plain {
-  color: #2563eb;
-  border-color: #bfdbfe;
-  background: rgba(239,246,255,.6);
+  color: #8b5cf6;
+  border-color: #c4b5fd;
+  background: rgba(240,236,253,.6);
 }
 .el-button--primary.is-plain:hover {
   color: #fff;
   border-color: transparent;
-  background: linear-gradient(135deg, #2563eb, #1458d4);
-  box-shadow: 0 4px 16px rgba(20,88,212,.25);
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  box-shadow: 0 4px 16px rgba(124,58,237,.25);
 }
 .el-button--success.is-plain { color: #16a34a; border-color: #bbf7d0; }
 .el-button--success.is-plain:hover { color: #fff; border-color: transparent; background: linear-gradient(135deg, #22c55e, #16a34a); }
@@ -541,19 +552,140 @@ a {
 }
 .el-button.is-text:hover {
   color: var(--brand-500);
-  background: rgba(20,88,212,.06);
+  background: rgba(124,58,237,.06);
 }
 
 /* Size */
 .el-button--large {
-  border-radius: 12px;
-  padding: 14px 40px;
+  border-radius: 14px;
+  padding: 16px 52px;
   font-size: 16px;
 }
 .el-button--small {
   border-radius: 8px;
   padding: 7px 18px;
   font-size: 13px;
+}
+
+/* 通用操作行：卡片双按钮排布更“大方” */
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+/* 管理端列表行操作按钮：小号描边，hover 才显色（弱化满屏重按钮） */
+.user-item__action,
+.service-item__action,
+.booking-item__action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.user-item__action .el-button,
+.service-item__action .el-button,
+.booking-item__action .el-button {
+  margin-left: 0;
+  border-radius: 9px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.user-item__action .el-button--primary,
+.service-item__action .el-button--primary,
+.booking-item__action .el-button--primary {
+  color: #6d28d9;
+  border-color: #d6c9f0;
+  background: #f6f2fd;
+  box-shadow: none;
+}
+.user-item__action .el-button--primary:not(.is-disabled):hover,
+.service-item__action .el-button--primary:not(.is-disabled):hover,
+.booking-item__action .el-button--primary:not(.is-disabled):hover {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.22);
+}
+
+/* 卡片底部双按钮：等宽、间距均匀、显大方 */
+.button-row .el-button + .el-button {
+  margin-left: 0;
+}
+.resource-card .button-row {
+  margin-top: auto;
+  padding-top: 14px;
+}
+.resource-card .button-row .el-button {
+  flex: 1;
+  justify-content: center;
+}
+
+/* 空状态：按钮水平居中有呼吸感 */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: 56px 20px;
+  color: var(--text-secondary);
+}
+.empty-state .el-button {
+  min-width: 180px;
+  height: 44px;
+}
+
+/* 渐变 hero 上的主按钮 → 白底深字，避免“紫上紫”看不清 */
+.dashboard-hero .hero-actions .el-button--primary,
+.admin-hero .hero-actions .el-button--primary,
+.page-hero .hero-actions .el-button--primary {
+  color: #6d28d9;
+  background: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(23, 8, 53, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+.dashboard-hero .hero-actions .el-button--primary:not(.is-disabled):hover,
+.admin-hero .hero-actions .el-button--primary:not(.is-disabled):hover,
+.page-hero .hero-actions .el-button--primary:not(.is-disabled):hover {
+  color: #5b21b6;
+  background: #f5f0ff;
+  box-shadow: 0 10px 24px rgba(23, 8, 53, 0.22);
+}
+/* hero 上的描边次按钮 → 半透明白描边，白字清晰 */
+.dashboard-hero .hero-actions .el-button--default,
+.dashboard-hero .hero-actions .hero-action-ghost,
+.admin-hero .hero-actions .el-button--default,
+.page-hero .hero-actions .el-button--default {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.1);
+}
+.dashboard-hero .hero-actions .el-button--default:hover,
+.dashboard-hero .hero-actions .hero-action-ghost:hover,
+.admin-hero .hero-actions .el-button--default:hover,
+.page-hero .hero-actions .el-button--default:hover {
+  color: #fff;
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+}
+.dashboard-hero .hero-actions,
+.admin-hero .hero-actions,
+.page-hero .hero-actions {
+  gap: 16px;
+  margin-top: 26px;
+}
+/* hero 上的大 CTA：拉成舒展的长条按钮，不会被文字长度卡成短块 */
+.dashboard-hero .hero-actions .el-button--large,
+.admin-hero .hero-actions .el-button--large,
+.page-hero .hero-actions .el-button--large {
+  min-width: 232px;
+  height: 50px;
+  padding: 0 60px;
+  font-size: 16px;
+  justify-content: center;
 }
 
 .el-tag,
@@ -569,7 +701,7 @@ a {
 .el-input__wrapper:hover,
 .el-select__wrapper:hover,
 .el-textarea__inner:hover {
-  box-shadow: 0 0 0 1px rgba(20, 88, 212, 0.18);
+  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.18);
 }
 
 .el-dialog,

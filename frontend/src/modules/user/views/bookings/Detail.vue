@@ -100,7 +100,7 @@ function statusText(status: BookingStatus) {
 .detail-hero {
   padding: 28px 32px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #0e2647, #1458d4 62%, #52a1ff);
+  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
   color: #fff;
 }
 .back-btn {

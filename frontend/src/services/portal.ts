@@ -130,13 +130,15 @@ export async function loadAdminUsers() {
 
 export async function loadAdminSummary(): Promise<AdminSummary> {
   const [users, services, bookings] = await Promise.all([loadAdminUsers(), loadServiceCards(), loadBookingRecords()])
+  const total = bookings.length
   const approvedCount = bookings.filter((item) => item.status === 'approved').length
-  const total = bookings.length || 1
+  const pendingBookings = bookings.filter((item) => item.status === 'pending').length
 
   return {
     totalUsers: users.length || 0,
     totalServices: services.length,
     activeBookings: bookings.filter((item) => ['pending', 'approved'].includes(item.status)).length,
-    approvalRate: `${Math.round((approvedCount / total) * 1000) / 10}%`,
+    approvalRate: total ? `${Math.round((approvedCount / total) * 1000) / 10}%` : '—',
+    pendingBookings,
   }
 }

@@ -2,8 +2,7 @@
   <div class="page-shell">
     <section class="dashboard-hero">
       <div class="dashboard-hero__main">
-        <span class="hero-chip">我的预约</span>
-        <h1>预约记录与审批进展</h1>
+        <h1>我的预约</h1>
       </div>
       <div class="dashboard-hero__panel">
         <div class="hero-panel__label">
@@ -107,32 +106,6 @@
       </article>
     </div>
 
-    <el-drawer
-      v-model="quickVisible"
-      title="预约快捷操作"
-      size="420px"
-    >
-      <div class="drawer-stack">
-        <el-button
-          type="primary"
-          @click="router.push('/rooms')"
-        >
-          发起会议室预约
-        </el-button>
-        <el-button
-          plain
-          @click="router.push('/equipment')"
-        >
-          查看设备借用
-        </el-button>
-        <el-button
-          plain
-          @click="router.push('/consultation')"
-        >
-          查看咨询排班
-        </el-button>
-      </div>
-    </el-drawer>
   </div>
 </template>
 
@@ -146,7 +119,6 @@ import type { BookingRecord, BookingStatus } from '@/common/types'
 
 const router = useRouter()
 const filter = ref('all')
-const quickVisible = ref(false)
 const bookings = ref<BookingRecord[]>([])
 const loading = ref(false)
 const filters = [
@@ -185,7 +157,7 @@ function statusText(status: BookingStatus) {
 .dashboard-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0e2647, #1458d4 62%, #52a1ff);
+  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .dashboard-hero::before {
@@ -233,7 +205,7 @@ function statusText(status: BookingStatus) {
 
 .booking-card__body { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; width: 100%; }
 .booking-card__main { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
-.booking-card__icon { width: 40px; height: 40px; display: grid; place-items: center; flex-shrink: 0; border-radius: 10px; background: #eef2ff; color: #4f6ef7; }
+.booking-card__icon { width: 40px; height: 40px; display: grid; place-items: center; flex-shrink: 0; border-radius: 10px; background: #eae3fb; color: #4f6ef7; }
 .booking-card__info { display: grid; gap: 4px; min-width: 0; }
 .booking-card__title { font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.3; }
 .booking-card__row { display: flex; align-items: center; gap: 4px; color: #64748b; font-size: 13px; }
@@ -243,8 +215,6 @@ function statusText(status: BookingStatus) {
 .booking-card__chevron { color: #cbd5e1; font-size: 18px; transition: transform .2s ease, color .2s ease; }
 .booking-card:hover .booking-card__chevron { color: #4f6ef7; transform: translateX(4px); }
 
-.dialog-list, .drawer-stack { display: grid; gap: 12px; }
-.dialog-card { padding: 16px; border-radius: 18px; background: #fff; border: 1px solid var(--border-soft); }
 @keyframes dashHalo { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-20px,-10px,0) scale(1.08); } }
 @media (max-width: 900px) { .dashboard-hero { grid-template-columns: 1fr; } .booking-card__body { flex-direction: column; align-items: flex-start; } }
 </style>

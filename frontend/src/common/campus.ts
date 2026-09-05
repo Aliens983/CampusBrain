@@ -152,14 +152,16 @@ async function fetchAllBookings(): Promise<{ id: number; status: BookingRecord['
 
 export async function fetchAdminSummary(): Promise<AdminSummary> {
   const [users, services, bookings] = await Promise.all([fetchAdminUsers(), fetchServiceCards(), fetchAllBookings()])
+  const total = bookings.length
   const approvedCount = bookings.filter((item) => item.status === 'approved').length
-  const total = bookings.length || 1
+  const pendingBookings = bookings.filter((item) => item.status === 'pending').length
 
   return {
     totalUsers: users.length,
     totalServices: services.length,
     activeBookings: bookings.filter((item) => item.status === 'pending' || item.status === 'approved').length,
-    approvalRate: `${Math.round((approvedCount / total) * 1000) / 10}%`,
+    approvalRate: total ? `${Math.round((approvedCount / total) * 1000) / 10}%` : '—',
+    pendingBookings,
   }
 }
 

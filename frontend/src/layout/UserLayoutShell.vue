@@ -32,6 +32,18 @@
           <span class="weather-pill__text">{{ weather.shi }} {{ weather.weather1 }} {{ weather.temp }}</span>
         </div>
 
+        <el-button
+          v-if="userStore.isAdmin"
+          plain
+          class="admin-switch"
+          @click="router.push('/admin')"
+        >
+          <el-icon style="margin-right: 5px">
+            <Switch />
+          </el-icon>
+          管理后台
+        </el-button>
+
         <el-dropdown
           class="user-dropdown"
           @command="handleCommand"
@@ -42,12 +54,6 @@
           </span>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item
-                v-if="userStore.isAdmin"
-                command="admin"
-              >
-                切换到管理端
-              </el-dropdown-item>
               <el-dropdown-item command="profile">
                 个人中心
               </el-dropdown-item>
@@ -63,17 +69,6 @@
       </div>
     </header>
 
-    <section
-      v-if="route.path === '/dashboard'"
-      class="hero"
-    >
-      <div>
-        <span class="status-pill is-brand">用户端</span>
-        <h1>常用预约与进度回看集中在同一入口</h1>
-        <p>保留校园预约系统的业务结构，同时压缩切页等待感，优化主导航、文案排版和首屏信息密度。</p>
-      </div>
-    </section>
-
     <main class="shell__content">
       <router-view />
     </main>
@@ -83,6 +78,7 @@
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Switch } from '@element-plus/icons-vue'
 import { useUserStore } from '@/common/stores/user'
 import request from '@/common/utils/request'
 
@@ -148,7 +144,7 @@ function handleCommand(command: string) {
 .brand__mark {
   width: 36px; height: 36px; display: grid; place-items: center;
   border-radius: 10px; color: #fff; font-weight: 800; font-size: 14px;
-  background: linear-gradient(135deg, #1458d4, #4c98ff);
+  background: linear-gradient(135deg, #7c3aed, #a78bfa);
 }
 .brand__title { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
 
@@ -158,8 +154,8 @@ function handleCommand(command: string) {
   background: transparent; color: var(--text-secondary); cursor: pointer; white-space: nowrap;
   transition: background .2s, color .2s;
 }
-.nav__item:hover { background: rgba(20,88,212,.06); color: var(--brand-500); }
-.nav__item.is-active { color: #fff; background: linear-gradient(135deg, #1458d4, #3386ff); }
+.nav__item:hover { background: rgba(124,58,237,.06); color: var(--brand-500); }
+.nav__item.is-active { color: #fff; background: linear-gradient(135deg, #7c3aed, #a78bfa); }
 
 .header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .user-dropdown { cursor: pointer; }
@@ -174,7 +170,7 @@ function handleCommand(command: string) {
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
   gap: 20px;
-  background: linear-gradient(135deg, #0d2750, #1458d4 55%, #52a1ff);
+  background: linear-gradient(135deg, #4c1d95, #7c3aed 55%, #a78bfa);
   box-shadow: var(--shadow-card);
 }
 
@@ -206,8 +202,24 @@ function handleCommand(command: string) {
   .nav__item { padding: 6px 12px; font-size: 12px; }
 }
 
-.weather-pill { display: flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 8px; background: rgba(20,88,212,.05); border: 1px solid rgba(20,88,212,.1); }
+.weather-pill { display: flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 8px; background: rgba(124,58,237,.05); border: 1px solid rgba(124,58,237,.1); }
 .weather-pill__icon { font-size: 16px; }
 .weather-pill__text { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 @media (max-width: 860px) { .weather-pill__text { display: none; } }
+
+/* 「管理后台」切换钮：与全局按钮同语言的小胶囊 */
+.header-right .admin-switch {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  border-color: #d6c9f0;
+  color: #6d28d9;
+  background: #fff;
+}
+.header-right .admin-switch:hover {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
 </style>

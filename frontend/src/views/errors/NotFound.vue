@@ -4,7 +4,7 @@
       404
     </div>
     <h1>页面不存在</h1>
-    <p>当前地址未匹配到已交付的前端页面，你可以返回工作台继续查看综合前端结果。</p>
+    <p>您访问的页面不存在或已被调整，请返回工作台继续使用。</p>
     <el-button
       type="primary"
       @click="router.push('/dashboard')"

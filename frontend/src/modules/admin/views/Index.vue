@@ -181,6 +181,7 @@ const adminSummary = ref<AdminSummary>({
   totalServices: 0,
   activeBookings: 0,
   approvalRate: '0%',
+  pendingBookings: 0,
 })
 const pendingCount = ref(0)
 const riskCount = ref(0)

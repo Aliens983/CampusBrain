@@ -2,8 +2,7 @@
   <div class="page-shell">
     <section class="dashboard-hero">
       <div class="dashboard-hero__main">
-        <span class="hero-chip">个人中心</span>
-        <h1>账号信息与偏好设置</h1>
+        <h1>个人中心</h1>
       </div>
       <div class="dashboard-hero__panel">
         <div class="hero-panel__label">
@@ -31,10 +30,6 @@
           <el-avatar :size="72">
             {{ user?.username?.slice(0, 1) || 'U' }}
           </el-avatar>
-          <div
-            class="profile-card__badge"
-            :class="roleBadgeClass"
-          />
         </div>
         <div class="profile-card__info">
           <h2>{{ user?.username || '未登录' }}</h2>
@@ -365,13 +360,6 @@ const roleTagType = computed(() => {
   return 'success'
 })
 
-const roleBadgeClass = computed(() => {
-  const r = user.value?.role
-  if (r === 'super_admin') return 'is-super'
-  if (r === 'admin') return 'is-admin'
-  return 'is-user'
-})
-
 function handleLogout() {
   userStore.logout()
   ElMessage.success('已退出登录')
@@ -383,7 +371,7 @@ function handleLogout() {
 .dashboard-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0e2647, #1458d4 62%, #52a1ff);
+  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .dashboard-hero::before {
@@ -416,14 +404,7 @@ function handleLogout() {
   padding: 28px; border-radius: 20px; background: #fff;
   border: 1px solid var(--border-soft); box-shadow: var(--shadow-card);
 }
-.profile-card__avatar { position: relative; flex-shrink: 0; }
-.profile-card__badge {
-  position: absolute; bottom: 2px; right: 2px; width: 14px; height: 14px; border-radius: 50%;
-  border: 2px solid #fff;
-  &.is-user { background: #22c55e; }
-  &.is-admin { background: #f59e0b; }
-  &.is-super { background: #ef4444; }
-}
+.profile-card__avatar { flex-shrink: 0; }
 .profile-card__info { display: grid; gap: 4px; }
 .profile-card__info h2 { margin: 0; font-size: 22px; font-weight: 700; }
 .profile-card__dept { margin: 2px 0 0; color: var(--text-secondary); font-size: 14px; }

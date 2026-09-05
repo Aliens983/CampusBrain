@@ -10,7 +10,7 @@ export const adminRoutes: RouteRecordRaw[] = [
         path: '',
         name: 'admin-home',
         component: () => import('@/views/admin/Index.vue'),
-        meta: { title: '管理驾驶舱', requiresAuth: true, requiresAdmin: true },
+        meta: { title: '管理概览', requiresAuth: true, requiresAdmin: true },
       },
       {
         path: 'services',

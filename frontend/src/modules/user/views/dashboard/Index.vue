@@ -2,12 +2,7 @@
   <div class="dashboard-page">
     <section class="dashboard-hero">
       <div class="dashboard-hero__main">
-        <span class="hero-chip">User Portal</span>
-        <h1>今天的预约事务，在一个首页里处理清楚</h1>
-        <p>
-          用户端首页被重构为更正式的门户工作台，重点聚合服务入口、个人日程、审批反馈和最近预约，
-          让普通用户进入系统后能更快完成查找、提交、跟进和回看。
-        </p>
+        <h1>工作台</h1>
         <div class="hero-actions">
           <el-button
             type="primary"
@@ -72,7 +67,7 @@
             <div class="card-head">
               <div>
                 <h3>快捷入口</h3>
-                <p>把最常用的预约动作放在首页第一屏，减少路径跳转。</p>
+                <p>常用操作一键直达，无需在菜单中逐级寻找。</p>
               </div>
             </div>
           </template>
@@ -88,7 +83,7 @@
                 class="shortcut-card__icon"
                 :class="item.tone"
               >
-                {{ item.abbr }}
+                {{ item.icon }}
               </div>
               <strong>{{ item.title }}</strong>
               <span>{{ item.desc }}</span>
@@ -101,7 +96,7 @@
             <div class="card-head">
               <div>
                 <h3>常用服务</h3>
-                <p>保留 CAS 的业务结构，同时用更像企业产品的卡片布局呈现。</p>
+                <p>常用校园预约服务，点击卡片即可发起预约。</p>
               </div>
               <el-button
                 text
@@ -317,17 +312,16 @@ const dashboardStats = computed<DashboardStat[]>(() => {
 })
 
 const shortcuts = [
-  { title: '会议室预约', desc: '空间资源与时段申请', path: '/rooms', abbr: 'MR', tone: 'tone-blue' },
-  { title: '设备借用', desc: '借还流程与库存状态', path: '/equipment', abbr: 'EQ', tone: 'tone-teal' },
-  { title: '咨询服务', desc: '顾问资源与时间排班', path: '/consultation', abbr: 'CS', tone: 'tone-amber' },
-  { title: '我的预约', desc: '记录查询与审批进度', path: '/bookings', abbr: 'BK', tone: 'tone-slate' },
+  { title: '发起预约', desc: '前往服务中心挑选服务', path: '/services', icon: '📅', tone: 'tone-blue' },
+  { title: '我的预约', desc: '查看申请与审批进度', path: '/bookings', icon: '📋', tone: 'tone-amber' },
+  { title: 'AI 助手', desc: '基于知识库的智能问答', path: '/assistant', icon: '🤖', tone: 'tone-teal' },
+  { title: '个人中心', desc: '账号资料与通知偏好', path: '/profile', icon: '👤', tone: 'tone-slate' },
 ]
 
 const todoList = computed(() => {
   const pendingBookings = bookings.value.filter((b: BookingRecord) => b.status === 'pending')
   return [
-    { title: '待审核预约', desc: `${pendingBookings.length} 条预约申请等待审核，请及时关注。`, badge: pendingBookings.length > 0 ? '待处理' : '已清空', tone: pendingBookings.length > 0 ? 'is-warning' : 'is-success', path: '/bookings' },
-    { title: '咨询时段提醒', desc: '就业指导新增晚间时段，建议尽快锁定。', badge: '可预约', tone: 'is-brand', path: '/consultation' },
+    { title: '待审核预约', desc: `${pendingBookings.length} 条申请正在等待审核。`, badge: pendingBookings.length > 0 ? '待处理' : '已清空', tone: pendingBookings.length > 0 ? 'is-warning' : 'is-success', path: '/bookings' },
   ]
 })
 
@@ -377,7 +371,7 @@ function statusText(status: BookingStatus) {
   padding: 32px;
   border-radius: 30px;
   color: #fff;
-  background: linear-gradient(135deg, #0e2647, #1458d4 62%, #52a1ff);
+  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
@@ -513,7 +507,7 @@ function statusText(status: BookingStatus) {
   width: 92px;
   height: 92px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(20,88,212,.08), rgba(20,88,212,0));
+  background: radial-gradient(circle, rgba(124,58,237,.08), rgba(124,58,237,0));
 }
 
 .metric-card:hover {
@@ -585,7 +579,7 @@ function statusText(status: BookingStatus) {
   padding: 18px 14px;
   border-radius: 18px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #f8fbff);
+  background: linear-gradient(180deg, #fff, #fbf9ff);
   cursor: pointer;
   transition: transform .24s ease, box-shadow .24s ease;
   overflow: hidden;
@@ -603,7 +597,7 @@ function statusText(status: BookingStatus) {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(20,88,212,.06), transparent);
+  background: linear-gradient(135deg, rgba(124,58,237,.06), transparent);
 }
 
 .shortcut-card__icon {
@@ -614,10 +608,11 @@ function statusText(status: BookingStatus) {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 16px;
+  font-size: 19px;
+  line-height: 1;
 }
 
-.tone-blue { background: linear-gradient(135deg, #e0f2fe, #bae6fd); color: #0284c7; }
+.tone-blue { background: linear-gradient(135deg, #e9e1fd, #ddd6fe); color: #0284c7; }
 .tone-teal { background: linear-gradient(135deg, #ccfbf1, #99f6e4); color: #0d9488; }
 .tone-amber { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
 .tone-slate { background: linear-gradient(135deg, #f1f5f9, #e2e8f0); color: #475569; }
@@ -644,7 +639,7 @@ function statusText(status: BookingStatus) {
   padding: 16px;
   border-radius: 16px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #f8fbff);
+  background: linear-gradient(180deg, #fff, #fbf9ff);
   cursor: pointer;
   transition: transform .24s ease, box-shadow .24s ease;
 }
@@ -667,7 +662,7 @@ function statusText(status: BookingStatus) {
   flex-shrink: 0;
 }
 
-.gradient-brand { background: linear-gradient(135deg, #667eea, #764ba2); }
+.gradient-brand { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
 .gradient-teal { background: linear-gradient(135deg, #11998e, #38ef7d); }
 .gradient-amber { background: linear-gradient(135deg, #f093fb, #f5576c); }
 .gradient-slate { background: linear-gradient(135deg, #4b6cb7, #182848); }
@@ -719,7 +714,7 @@ function statusText(status: BookingStatus) {
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #f8fbff);
+  background: linear-gradient(180deg, #fff, #fbf9ff);
   cursor: pointer;
   transition: transform .2s ease;
 }
@@ -762,7 +757,7 @@ function statusText(status: BookingStatus) {
   padding: 12px;
   border-radius: 12px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #f8fbff);
+  background: linear-gradient(180deg, #fff, #fbf9ff);
   cursor: pointer;
   transition: transform .2s ease;
 }
@@ -790,7 +785,7 @@ function statusText(status: BookingStatus) {
 .detail-dialog__item {
   padding: 12px;
   border-radius: 10px;
-  background: linear-gradient(180deg, #fff, #f8fbff);
+  background: linear-gradient(180deg, #fff, #fbf9ff);
   border: 1px solid var(--border-soft);
   font-size: 13px;
 }
@@ -838,7 +833,7 @@ function statusText(status: BookingStatus) {
   50% { transform: translate(-20px, 20px) scale(1.08); }
 }
 
-.weather-widget { background: linear-gradient(180deg, #f0f9ff, #fff) !important; }
+.weather-widget { background: linear-gradient(180deg, #f4f0fc, #fff) !important; }
 .weather-mini { display: flex; align-items: center; gap: 14px; }
 .weather-mini__icon { font-size: 36px; }
 .weather-mini strong { font-size: 22px; }

@@ -30,24 +30,6 @@ export const userRoutes: RouteRecordRaw[] = [
         meta: { title: '服务详情', requiresAuth: true, audience: 'user' },
       },
       {
-        path: 'rooms',
-        name: 'rooms',
-        component: () => import('@/modules/user/views/rooms/Index.vue'),
-        meta: { title: '会议室预约', requiresAuth: true, audience: 'user' },
-      },
-      {
-        path: 'equipment',
-        name: 'equipment',
-        component: () => import('@/modules/user/views/equipment/Index.vue'),
-        meta: { title: '设备借用', requiresAuth: true, audience: 'user' },
-      },
-      {
-        path: 'consultation',
-        name: 'consultation',
-        component: () => import('@/modules/user/views/consultation/Index.vue'),
-        meta: { title: '咨询服务', requiresAuth: true, audience: 'user' },
-      },
-      {
         path: 'bookings',
         name: 'bookings',
         component: () => import('@/modules/user/views/bookings/Index.vue'),

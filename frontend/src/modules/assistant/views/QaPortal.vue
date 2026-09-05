@@ -105,23 +105,25 @@
         <span>🤖 AI 助手</span>
       </template>
 
-      <el-input
-        v-model="query"
-        size="large"
-        placeholder="问我预约相关的问题，例如：可以预约哪些服务？"
-        :disabled="streaming"
-        @keyup.enter="askQuestion"
-      >
-        <template #append>
-          <el-button
-            type="primary"
-            :loading="streaming"
-            @click="askQuestion"
-          >
-            {{ streaming ? '生成中…' : '提问' }}
-          </el-button>
-        </template>
-      </el-input>
+      <div class="qa-input">
+        <el-input
+          v-model="query"
+          size="large"
+          placeholder="问我预约相关的问题，例如：可以预约哪些服务？"
+          :disabled="streaming"
+          clearable
+          @keyup.enter="askQuestion"
+        />
+        <el-button
+          type="primary"
+          size="large"
+          class="qa-input__btn"
+          :loading="streaming"
+          @click="askQuestion"
+        >
+          {{ streaming ? '生成中…' : '提问' }}
+        </el-button>
+      </div>
 
       <div
         v-if="!answer && !streaming"
@@ -415,6 +417,19 @@ onMounted(refreshDocuments)
 }
 .example-tag {
   cursor: pointer;
+}
+.qa-input {
+  display: flex;
+  gap: 12px;
+}
+.qa-input .el-input {
+  flex: 1;
+}
+.qa-input__btn {
+  flex-shrink: 0;
+  min-width: 128px;
+  margin: 0;
+  font-weight: 600;
 }
 .streaming-hint {
   margin-top: 12px;

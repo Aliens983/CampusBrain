@@ -2,9 +2,7 @@
   <div class="page-shell">
     <section class="admin-hero">
       <div class="admin-hero__main">
-        <span class="hero-chip">工具箱</span>
-        <h1>天气 · 二维码 · 文件存储</h1>
-        <p>实时天气查询、二维码生成与 OSS 文件管理能力。（AI 助手已迁移至导航栏「AI 助手」）</p>
+        <h1>工具箱</h1>
       </div>
       <div class="admin-hero__signal">
         <div
@@ -34,14 +32,17 @@
         <div class="tools-form">
           <el-input
             v-model="weatherSheng"
+            size="large"
             placeholder="省份，如：广东"
           />
           <el-input
             v-model="weatherPlace"
+            size="large"
             placeholder="城市，如：广州"
           />
           <el-button
             type="primary"
+            size="large"
             :loading="weatherLoading"
             @click="fetchWeather"
           >
@@ -82,10 +83,12 @@
         <div class="tools-form">
           <el-input
             v-model="qrContent"
+            size="large"
             placeholder="输入文本或链接地址"
           />
           <el-button
             type="primary"
+            size="large"
             :loading="qrLoading"
             @click="generateQr"
           >
@@ -269,7 +272,7 @@ onMounted(async () => {
 .admin-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #1458d4);
+  background: linear-gradient(135deg, #0f172a, #132949 55%, #7c3aed);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .admin-hero::before {
@@ -279,7 +282,7 @@ onMounted(async () => {
 }
 .admin-hero::after {
   content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(59,130,246,.24), rgba(59,130,246,0));
+  background: radial-gradient(circle, rgba(139,92,246,.24), rgba(139,92,246,0));
   animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
 }
 .admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
@@ -303,7 +306,7 @@ onMounted(async () => {
   display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 18px;
   border-bottom: 1px solid var(--border-soft);
 }
-.tools-card__icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: #f0f4ff; font-size: 24px; flex-shrink: 0; }
+.tools-card__icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: #f4f0fc; font-size: 24px; flex-shrink: 0; }
 .tools-card__head h3 { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
 .tools-card__head p { margin: 0; color: var(--text-secondary); font-size: 13px; }
 
@@ -312,18 +315,18 @@ onMounted(async () => {
 .chat-empty__icon { font-size: 40px; }
 .chat-empty p { color: var(--text-tertiary); margin:0; }
 .chat-hints { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.chat-hints span { padding: 6px 14px; border-radius: 999px; background: #f0f4ff; color: var(--brand-500); font-size: 12px; cursor: pointer; transition: background .2s; }
-.chat-hints span:hover { background: #dbeafe; }
+.chat-hints span { padding: 6px 14px; border-radius: 999px; background: #f4f0fc; color: var(--brand-500); font-size: 12px; cursor: pointer; transition: background .2s; }
+.chat-hints span:hover { background: #e3dbfc; }
 
 .chat-msg { display: flex; gap: 10px; align-items: flex-start; }
 .chat-msg.user { flex-direction: row-reverse; }
-.chat-msg__avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #f0f4ff; font-size: 16px; flex-shrink: 0; }
-.chat-msg.user .chat-msg__avatar { background: #e8f0fe; }
+.chat-msg__avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #f4f0fc; font-size: 16px; flex-shrink: 0; }
+.chat-msg.user .chat-msg__avatar { background: #ebe3f9; }
 .chat-msg__bubble {
   max-width: 70%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.65;
   background: #f3f4f6; color: #1f2937; white-space: pre-wrap; word-break: break-word;
 }
-.chat-msg.user .chat-msg__bubble { background: linear-gradient(135deg, #2563eb, #1458d4); color: #fff; }
+.chat-msg.user .chat-msg__bubble { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff; }
 .typing span { display:inline-block; width:6px; height:6px; border-radius:50%; background:#94a3b8; margin:0 2px; animation: typingBounce 1.4s ease-in-out infinite; }
 .typing span:nth-child(2) { animation-delay: .2s; }
 .typing span:nth-child(3) { animation-delay: .4s; }
@@ -331,10 +334,18 @@ onMounted(async () => {
 
 .chat-input { display: flex; gap: 10px; }
 
-.tools-form { display: flex; gap: 10px; margin-bottom: 16px; }
-.tools-form--wide { flex-direction: column; gap: 16px; }
+.tools-form { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+/* 输入框均分剩余宽度，按钮固定舒展不缩 */
+.tools-form .el-input { flex: 1 1 0; min-width: 0; }
+.tools-form:not(.tools-form--wide) .el-button {
+  flex: 0 0 auto;
+  min-width: 128px;
+  margin: 0;
+  font-weight: 600;
+}
+.tools-form--wide { flex-direction: column; align-items: stretch; gap: 16px; }
 
-.weather-card { display: flex; gap: 18px; align-items: center; padding: 20px; border-radius: 18px; background: linear-gradient(135deg, #f0f9ff, #ecfeff); border: 1px solid #bae6fd; }
+.weather-card { display: flex; gap: 18px; align-items: center; padding: 20px; border-radius: 18px; background: linear-gradient(135deg, #f4f0fc, #ecfeff); border: 1px solid #ddd6fe; }
 .weather-card__icon { font-size: 52px; }
 .weather-card__info strong { font-size: 17px; }
 .weather-card__main { margin: 4px 0; font-size: 15px; color: var(--text-secondary); }

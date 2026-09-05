@@ -78,7 +78,7 @@ function setText(customText: string) {
       width: 20px;
       height: 20px;
       border-radius: 50%;
-      background-color: #409EFF;
+      background-color: #8b5cf6;
       animation: bounce 1.4s infinite ease-in-out both;
       
       &.circle-1 {

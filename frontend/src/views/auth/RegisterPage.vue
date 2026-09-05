@@ -4,7 +4,7 @@
       <div class="auth-head">
         <span class="status-pill is-success">安全注册</span>
         <h1>创建校园预约账号</h1>
-        <p>加入校园预约平台，使用邮箱验证码完成安全注册，即刻享受便捷的预约服务。</p>
+        <p>使用邮箱验证码完成注册；注册后即可预约空间、设备与咨询服务。</p>
       </div>
 
       <el-form
