@@ -79,7 +79,7 @@ services:
     environment:
       NACOS_ADDR: nacos:8848
       # Spring Boot 宽松绑定：环境变量覆盖 application.yml 中写死的 localhost 配置
-      SPRING_DATASOURCE_URL: jdbc:mysql://cas-mysql:3306/cas_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_URL: jdbc:mysql://cas-mysql:3306/cas_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       SPRING_DATA_REDIS_HOST: cas-redis
@@ -92,6 +92,13 @@ services:
       INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
       FILE_UPLOAD_PATH: /app/uploads/
       FILE_UPLOAD_DIR: uploads
+      # 运行所需密钥（对应新配置的无默认值占位符）
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
+      WEATHER_API_KEY: ${WEATHER_API_KEY}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
+      ALIYUN_OSS_ACCESS_KEY_ID: ${ALIYUN_OSS_ACCESS_KEY_ID}
+      ALIYUN_OSS_ACCESS_KEY_SECRET: ${ALIYUN_OSS_ACCESS_KEY_SECRET}
     volumes:
       - cas-uploads:/app/uploads
     depends_on:
@@ -137,6 +144,8 @@ services:
       # 大模型：对话走 DeepSeek（OpenAI 兼容接口），Embedding 走硅基流动
       OPENAI_API_KEY: ${DEEPSEEK_API_KEY}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      MAIL_USERNAME: ${MAIL_USERNAME}
+      MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
       nacos:
         condition: service_healthy
