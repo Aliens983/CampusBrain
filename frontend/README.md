@@ -15,8 +15,10 @@ Vue 3.4 · TypeScript 5.6 · Vite 5 · Element Plus 2.8 · Pinia（+ persistedst
 | `/services` | 服务中心 | **校区切换** + 分类筛选（空闲教室/咨询/设备/活动），服务卡片（封面图） |
 | `/service/:id` | 服务详情 | 按服务类型进入不同预约表单：咨询选人+时段 / 教室选房+时段 / 设备选数量+借用窗口 / 活动申请 |
 | `/bookings` | 我的预约 | 预约列表（校区标签 + 资源×数量明细 + 状态） |
-| `/bookings/:id` | 预约详情 | 单条详情 / 取消 |
-| `/assistant` | AI 助手 | KB 知识库问答（QaPortal）；文档上传仅管理员 |
+| `/bookings/:id` | 预约详情 | 单条详情 / 取消；咨询类提供「联系咨询老师」在线留言 |
+| `/chat` | 咨询消息 | 与咨询教师的会话列表（未读徽标）；也可从选咨询师卡片/预约详情发起 |
+| `/chat/:id` | 咨询沟通 | 单条会话，气泡消息，~3s 轮询接收新消息 |
+| `/assistant` | AI 助手 | KB 知识库问答（QaPortal）；对话按会话持久化，可新建/切换/回看历史；文档上传仅管理员 |
 | `/profile` | 个人中心 | 资料编辑、**修改密码**（旧密码校验）、邮件通知偏好 |
 
 **教师端**（布局 `src/layout/TeacherLayoutShell.vue`，需教师角色，`/teacher/*`，登录即咨询师本人）
@@ -25,6 +27,8 @@ Vue 3.4 · TypeScript 5.6 · Vite 5 · Element Plus 2.8 · Pinia（+ persistedst
 |---|---|---|
 | `/teacher/review` | 待我审核 | 学生申请我名下咨询档期列表，通过/拒绝（拒绝填原因） |
 | `/teacher/consultations` | 我的咨询 | 名下档期被约情况，按状态筛选 |
+| `/teacher/messages` | 咨询消息 | 会话列表（未读徽标）；待我审核/我的咨询每行可「回复」学生 |
+| `/teacher/messages/:id` | 咨询沟通 | 单条会话，气泡消息，~3s 轮询接收 |
 | `/teacher/profile` | 个人中心 | 复用用户个人中心 |
 
 **管理端**（布局 `src/layout/AdminLayoutShell.vue`，需管理员，`/admin/*`）
@@ -95,5 +99,6 @@ npm run lint         # eslint . --fix
 ## 关键说明
 - **主题**：校徽蓝 `#3FB6FF` 收敛在 `src/assets/styles/global.css` 的 `:root` 变量与 `variables.scss`（作为 vite scss `additionalData` 自动注入），改一处全局生效。
 - **AI 助手可用性**：依赖后端配置 LLM Key（KB `OPENAI_API_KEY`/`EMBEDDING_API_KEY`，见 `backend/README.md`）；未配置时登录 / 预约等主流程不受影响，仅问答不可用。
+- **AI 对话持久化**：/assistant 的问答本就逐条写入 KB `conversation` 表（session_id 维度）；此前前端每次提问新建随机会话导致“看着没存”。现改为**稳定会话**：同一会话续聊沿用、进入页面自动从 `GET /kb/qa/conversation/{sessionId}` 载入历史渲染，并支持「历史会话」下拉切换 / 「新会话」。会话索引按用户存于本地 localStorage（服务端会话数据在 KB 库，跨设备历史列表留待后续加 user 维度）。为避免同会话里“换个问题却重复上一轮答案”，KB 回答为**单句独立问答**（不把历史喂给 LLM/改写器，历史仅用于回看落库）。另：CAS 侧 `ai_chat_history` 属于无页面调用的 Qwen `/api/v1/ai/chat` 写入，与 KB 助手是两套存储，勿混淆。
 - **上传**：封面上传走 `/admin/files`（后端本地 `uploads/`，按子目录存放）；轮播图管理在 `/admin/system` 独立上传并落 `carousel` 目录。
-- **服务分类字典**：业务分类（教师咨询/设备借用/教室空间/活动报名）来自后端 `service_category` 表（`GET /app/service-categories`），服务卡片展示名用后端 `categoryName`、新增服务下拉选项与提交 `categoryId` 均为库驱动；卡片上“服务范围/使用说明”等展示文案仍为前端占位（见源码注释）。
+- **服务分类字典**：业务分类（教师咨询/设备借用/教室空间/活动报名）来自后端 `service_category` 表（`GET /app/service-categories`），服务卡片与筛选（业务类别/校区）文案均为库驱动（`categoryName`/校区），新增服务下拉与提交 `categoryId` 同源；已移除前端硬编码的“服务范围=校园统一预约中心 / 使用说明 / 当前可申请”等占位文案，代之以真实服务描述、校区与状态。
