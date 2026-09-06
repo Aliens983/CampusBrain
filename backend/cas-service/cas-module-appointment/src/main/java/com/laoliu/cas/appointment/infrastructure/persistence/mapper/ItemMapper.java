@@ -7,6 +7,7 @@ import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityVO;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import java.time.LocalDate;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -27,6 +28,20 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
      * @return 实际插入的行数（用于判断是否全部为重复提交）
      */
     int insertServices(@Param("userId") Long userId, @Param("serviceId") List<Integer> serviceId);
+
+    /**
+     * 幂等插入咨询时段预约：同一咨询师同一时段 60 秒内（待审核）不会重复插入。
+     * 调用方需在事务内先原子占用时段，插入失败回滚即释放时段。
+     *
+     * @return 实际插入的行数（0 表示重复提交）
+     */
+    int insertConsultationBooking(@Param("userId") Long userId,
+                                  @Param("serviceId") Long serviceId,
+                                  @Param("consultantId") Long consultantId,
+                                  @Param("slotId") Long slotId,
+                                  @Param("slotDate") LocalDate slotDate,
+                                  @Param("startTime") String startTime,
+                                  @Param("endTime") String endTime);
 
     int setBookingStatusByParts(@Param("userId") Long userId, @Param("bookingIds") List<Long> bookingIds);
 
@@ -79,4 +94,10 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
 
     /** 查询单个预约单对应的服务 ID（用于审核拒绝回退） */
     Long selectServiceIdByOrderId(@Param("orderId") Long orderId);
+
+    /** 释放单个预约单占用的咨询时段（审核拒绝时调用，非咨询预约自动跳过） */
+    int releaseSlotByOrderId(@Param("orderId") Long orderId);
+
+    /** 释放当前用户一批预约单占用的咨询时段（取消预约时调用） */
+    int releaseSlotsByBookingIds(@Param("userId") Long userId, @Param("bookingIds") List<Long> bookingIds);
 }

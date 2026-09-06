@@ -18,6 +18,11 @@ type BackendBooking = {
   updateTime?: string
   manageStatus?: number
   statusDescription?: string
+  // 咨询时段预约回显
+  consultantName?: string
+  slotDate?: string
+  startTime?: string
+  endTime?: string
 }
 
 type BackendUser = {
@@ -73,17 +78,24 @@ function mapBooking(item: BackendBooking, index: number): BookingRecord {
   const status =
     item.manageStatus === 1 ? 'approved' : item.manageStatus === 2 ? 'rejected' : item.manageStatus === 3 ? 'completed' : item.manageStatus === 4 ? 'cancelled' : 'pending'
   const dateText = item.createTime ? String(item.createTime).replace('T', ' ') : ''
+  // 咨询时段预约：日期/时段以用户选定的老师排班为准
+  const isConsultation = Boolean(item.consultantName)
+  const date = isConsultation ? String(item.slotDate || '').slice(0, 10) || '待定' : dateText.slice(0, 10) || '待定'
+  const timeRange = isConsultation
+    ? [item.startTime, item.endTime].filter(Boolean).join(' - ') || '待分配时段'
+    : item.updateTime ? `${String(item.createTime || '').slice(11, 16)} - ${String(item.updateTime).slice(11, 16)}` : '待分配时段'
 
   return {
     id: Number(item.orderId || index + 1),
     bookingNo: `BOOK-${String(item.orderId || index + 1).padStart(6, '0')}`,
     serviceName: item.serviceName || '未命名服务',
+    consultantName: item.consultantName,
     type: getServiceType(item.serviceName || ''),
     applicant: item.username || '未知用户',
     department: '未分配部门',
     location: item.serviceDescribe || '校园统一预约中心',
-    date: dateText.slice(0, 10) || '待定',
-    timeRange: item.updateTime ? `${String(item.createTime || '').slice(11, 16)} - ${String(item.updateTime).slice(11, 16)}` : '待分配时段',
+    date,
+    timeRange,
     status,
     createdAt: dateText || '待定',
     remarks: item.statusDescription || item.serviceDescribe || '',

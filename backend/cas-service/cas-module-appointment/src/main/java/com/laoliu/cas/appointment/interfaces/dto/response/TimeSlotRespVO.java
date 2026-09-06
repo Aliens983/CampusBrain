@@ -20,6 +20,9 @@ import java.io.Serializable;
 @Schema(description = "可用时段响应")
 public class TimeSlotRespVO implements Serializable {
 
+    @Schema(description = "时段ID", example = "1")
+    private Long slotId;
+
     @Schema(description = "开始时间", example = "09:00")
     private String startTime;
 

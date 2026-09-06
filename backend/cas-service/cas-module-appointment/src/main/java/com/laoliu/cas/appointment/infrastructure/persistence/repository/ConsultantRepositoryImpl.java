@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -50,13 +51,16 @@ public class ConsultantRepositoryImpl implements ConsultantRepository {
     }
 
     @Override
-    public IPage<Consultant> findPage(int page, int pageSize, String name, String department) {
+    public IPage<Consultant> findPage(int page, int pageSize, String name, String department, Long serviceId) {
         LambdaQueryWrapper<ConsultantDO> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(name)) {
             wrapper.like(ConsultantDO::getName, name);
         }
         if (StringUtils.hasText(department)) {
             wrapper.like(ConsultantDO::getDepartment, department);
+        }
+        if (serviceId != null) {
+            wrapper.eq(ConsultantDO::getServiceId, serviceId);
         }
         wrapper.orderByDesc(ConsultantDO::getRating);
 
@@ -67,8 +71,10 @@ public class ConsultantRepositoryImpl implements ConsultantRepository {
 
     @Override
     public List<TimeSlotRespVO> findTimeSlots(Long consultantId, String date) {
-        return timeSlotMapper.findAvailableByConsultantAndDate(consultantId, date).stream()
+        LocalDate day = (date == null || date.isBlank()) ? LocalDate.now() : LocalDate.parse(date);
+        return timeSlotMapper.findAvailableByConsultantAndDate(consultantId, day).stream()
                 .map(slot -> TimeSlotRespVO.builder()
+                        .slotId(slot.getId())
                         .startTime(slot.getStartTime())
                         .endTime(slot.getEndTime())
                         .available("true")

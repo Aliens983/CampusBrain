@@ -107,6 +107,11 @@ public class BookServiceImpl implements BookService {
         dto.setCreateTime(status.getCreateTime());
         dto.setReason(status.getStatusDescription());
         dto.setStatusDescription(getStatusDescription(status.getManageStatus()));
+        // 咨询时段预约：回显咨询师与时段
+        dto.setConsultantName(status.getConsultantName());
+        dto.setSlotDate(status.getSlotDate());
+        dto.setStartTime(status.getStartTime());
+        dto.setEndTime(status.getEndTime());
         return dto;
     }
 
@@ -136,6 +141,8 @@ public class BookServiceImpl implements BookService {
             if (serviceIds != null) {
                 serviceIds.forEach(bookingRepository::releaseStock);
             }
+            // 咨询时段预约：同时释放占用的老师时段
+            bookingRepository.releaseSlotsByBookingIds(userId, bookingIds);
             for (Long id : bookingIds) {
                 bookingEventPublisher.publishChanged(userId, id, "CANCELLED");
             }

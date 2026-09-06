@@ -72,7 +72,7 @@
             </div>
             <div class="booking-card__info">
               <div class="booking-card__title">
-                {{ item.serviceName }}
+                {{ item.consultantName ? item.serviceName + '（' + item.consultantName + '）' : item.serviceName }}
               </div>
               <div class="booking-card__row">
                 <el-icon :size="14">

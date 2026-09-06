@@ -37,7 +37,7 @@
           <div class="booking-item__main">
             <div class="booking-item__head">
               <div>
-                <strong>{{ item.serviceName }}</strong>
+                <strong>{{ item.consultantName ? item.serviceName + '（' + item.consultantName + '）' : item.serviceName }}</strong>
                 <p>{{ item.bookingNo }} / {{ item.applicant }} / {{ item.department }}</p>
               </div>
               <el-tag :type="statusTag(item.status)">
@@ -133,6 +133,12 @@
             <div class="info-row">
               <span>申请人</span><strong>{{ selectedBooking.applicant }}</strong>
             </div>
+            <div
+              v-if="selectedBooking.consultantName"
+              class="info-row"
+            >
+              <span>咨询师</span><strong>{{ selectedBooking.consultantName }}</strong>
+            </div>
             <div class="info-row">
               <span>部门</span><strong>{{ selectedBooking.department }}</strong>
             </div>
@@ -188,6 +194,10 @@ interface AdminBooking {
   manageStatus: number
   statusDescription?: string
   reason?: string
+  consultantName?: string
+  slotDate?: string
+  startTime?: string
+  endTime?: string
 }
 
 interface BookingItem {
@@ -202,6 +212,7 @@ interface BookingItem {
   status: BookingStatus
   createdAt: string
   remarks?: string
+  consultantName?: string
 }
 
 const filter = ref('all')
@@ -228,15 +239,20 @@ const filters = [
 function mapAdminBooking(item: AdminBooking): BookingItem {
   const statusMap: Record<number, BookingStatus> = { 0: 'pending', 1: 'approved', 2: 'rejected', 3: 'cancelled' }
   const dateTime = String(item.createTime || '').replace('T', ' ')
+  // 咨询时段预约：日期/时段以用户选定的老师排班为准
+  const isConsultation = Boolean(item.consultantName)
   return {
     id: item.orderId,
     bookingNo: `BOOK-${String(item.orderId).padStart(6, '0')}`,
     serviceName: item.serviceName || '未命名服务',
+    consultantName: item.consultantName,
     applicant: item.username || '未知用户',
     department: '校园统一预约中心',
     location: item.serviceDescribe || '',
-    date: dateTime.slice(0, 10) || '待定',
-    timeRange: dateTime.slice(11, 16) || '待分配时段',
+    date: isConsultation ? String(item.slotDate || '').slice(0, 10) || '待定' : dateTime.slice(0, 10) || '待定',
+    timeRange: isConsultation
+      ? [item.startTime, item.endTime].filter(Boolean).join(' - ') || '待分配时段'
+      : dateTime.slice(11, 16) || '待分配时段',
     status: statusMap[item.manageStatus] || 'pending',
     createdAt: dateTime || '待定',
     remarks: item.reason || item.statusDescription || '',

@@ -3,6 +3,7 @@ package com.laoliu.cas.appointment.interfaces.dto.response;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -34,4 +35,16 @@ public class BookingDTO {
 
     @Schema(description = "审核原因/备注")
     private String reason;
+
+    @Schema(description = "咨询师姓名（咨询时段预约时非空）")
+    private String consultantName;
+
+    @Schema(description = "咨询预约日期")
+    private LocalDate slotDate;
+
+    @Schema(description = "咨询时段开始 HH:mm")
+    private String startTime;
+
+    @Schema(description = "咨询时段结束 HH:mm")
+    private String endTime;
 }

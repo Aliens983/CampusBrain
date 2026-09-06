@@ -4,6 +4,7 @@ import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -22,6 +23,16 @@ public interface BookingRepository {
 
     /** 释放库存（取消/审核拒绝时 -1，最低到 0） */
     int releaseStock(Long serviceId);
+
+    /** 幂等插入咨询时段预约（带咨询师/时段链接），返回实际插入行数（0=重复提交） */
+    int insertConsultationBooking(Long userId, Long serviceId, Long consultantId, Long slotId,
+                                  LocalDate slotDate, String startTime, String endTime);
+
+    /** 释放单个预约单占用的咨询时段（审核拒绝时调用；非咨询预约自动跳过） */
+    int releaseSlotByOrderId(Long orderId);
+
+    /** 释放当前用户一批预约单占用的咨询时段（取消预约时调用） */
+    int releaseSlotsByBookingIds(Long userId, List<Long> bookingIds);
 
     /** 查询当前用户一批待审核预约单对应的服务 ID（用于回退库存，防他人/重复释放） */
     List<Long> selectServiceIdsByBookingIds(Long userId, List<Long> bookingIds);

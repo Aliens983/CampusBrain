@@ -20,8 +20,8 @@ public interface ConsultantRepository {
 
     List<Consultant> findAll();
 
-    /** 分页查询咨询师，支持按名称/部门筛选 */
-    IPage<Consultant> findPage(int page, int pageSize, String name, String department);
+    /** 分页查询咨询师，支持按名称/部门/所属服务筛选 */
+    IPage<Consultant> findPage(int page, int pageSize, String name, String department, Long serviceId);
 
     /** 查询咨询师某日可用时段 */
     List<TimeSlotRespVO> findTimeSlots(Long consultantId, String date);

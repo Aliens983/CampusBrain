@@ -53,6 +53,11 @@ CREATE TABLE item
     order_id      INT NOT NULL AUTO_INCREMENT comment 'Order ID',
     user_id       BIGINT NOT NULL comment 'User ID, foreign key to user.id',
     service_id    INT NOT NULL comment 'Services ID, foreign key to services.service_id',
+    consultant_id BIGINT      NULL comment '咨询师ID（咨询时段预约时非空）',
+    slot_id       BIGINT      NULL comment 'time_slot 时段ID（咨询时段预约时非空）',
+    slot_date     DATE        NULL comment '预约日期（咨询时段预约时非空）',
+    start_time    VARCHAR(5)  NULL comment '时段开始 HH:mm',
+    end_time      VARCHAR(5)  NULL comment '时段结束 HH:mm',
     manage_status INT NOT NULL DEFAULT 0 comment 'Manage status: 0-pending,1-pass,2-reject,3-cancelled',
     reason        VARCHAR(255) DEFAULT NULL comment 'Reject reason when audit is rejected',
     create_time   TIMESTAMP DEFAULT CURRENT_TIMESTAMP comment 'Order creation time',
@@ -62,6 +67,7 @@ CREATE TABLE item
     KEY idx_service_id (service_id),
     KEY idx_manage_status (manage_status),
     KEY idx_user_status (user_id, manage_status),
+    KEY idx_item_consultant_slot (consultant_id, slot_date),
     CONSTRAINT fk_item_user FOREIGN KEY (user_id) REFERENCES `user` (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_item_service FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = 'Order table - stores user appointment orders';

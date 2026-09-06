@@ -83,6 +83,8 @@ export interface BookingRecord {
   createdAt: string
   remarks?: string
   orderId?: number
+  /** 咨询时段预约：咨询师姓名（非咨询预约无此字段） */
+  consultantName?: string
 }
 
 export interface MessageItem {

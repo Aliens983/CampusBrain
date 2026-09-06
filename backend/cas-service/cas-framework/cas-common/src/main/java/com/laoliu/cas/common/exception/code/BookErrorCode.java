@@ -23,6 +23,14 @@ public interface BookErrorCode {
 
     ErrorCode BOOKING_CAPACITY_FULL = new ErrorCode(40010, "该服务预约名额已满，请选择其他服务");
 
+    // ========== 咨询时段预约 ==========
+
+    ErrorCode CONSULTANT_NOT_FOUND = new ErrorCode(40011, "咨询师不存在或不可预约");
+
+    ErrorCode SLOT_UNAVAILABLE = new ErrorCode(40012, "该时段不可用或刚被他人预约，请重新选择");
+
+    ErrorCode SLOT_MISMATCH = new ErrorCode(40013, "时段与咨询师不匹配");
+
     // ========== 审核 ==========
 
     ErrorCode STATUS_NOT_FOUND = new ErrorCode(40004, "预约状态不存在");

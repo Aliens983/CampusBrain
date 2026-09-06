@@ -99,6 +99,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
 
         String emailContent = "您好！您的预约已通过。\n预约服务：" + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
+                + slotLine(serviceInfo)
                 + (reason == null || reason.trim().isEmpty() ? "" : "\n备注：" + reason);
         // 通知策略门控：管理端邮件策略开启 且 用户邮件偏好开启 才发
         if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
@@ -127,14 +128,26 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (serviceId != null) {
             bookingRepository.releaseStock(serviceId);
         }
+        // 咨询时段预约：同时释放占用的老师时段
+        bookingRepository.releaseSlotByOrderId(orderId);
 
         String emailContent = "您好！您的预约未通过。\n预约服务：" + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
+                + slotLine(serviceInfo)
                 + "\n拒绝原因：" + reason;
         // 通知策略门控：管理端邮件策略开启 且 用户邮件偏好开启 才发
         if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
             sendAuditEmail(orderId, "预约审核未通过通知", emailContent);
         }
+    }
+
+    /** 咨询时段预约的邮件补充行（非咨询预约返回空串） */
+    private String slotLine(ServiceStatusResponse r) {
+        if (r.getConsultantName() == null) {
+            return "";
+        }
+        return "\n咨询师：" + r.getConsultantName()
+                + "\n咨询时段：" + r.getSlotDate() + " " + r.getStartTime() + "-" + r.getEndTime();
     }
 
     private void setStatusDescription(ServiceStatusResponse response) {

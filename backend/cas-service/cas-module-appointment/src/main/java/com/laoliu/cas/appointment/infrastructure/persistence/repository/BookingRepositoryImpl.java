@@ -9,6 +9,7 @@ import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -37,6 +38,22 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public int releaseStock(Long serviceId) {
         return itemMapper.releaseStock(serviceId);
+    }
+
+    @Override
+    public int insertConsultationBooking(Long userId, Long serviceId, Long consultantId, Long slotId,
+                                         LocalDate slotDate, String startTime, String endTime) {
+        return itemMapper.insertConsultationBooking(userId, serviceId, consultantId, slotId, slotDate, startTime, endTime);
+    }
+
+    @Override
+    public int releaseSlotByOrderId(Long orderId) {
+        return itemMapper.releaseSlotByOrderId(orderId);
+    }
+
+    @Override
+    public int releaseSlotsByBookingIds(Long userId, List<Long> bookingIds) {
+        return itemMapper.releaseSlotsByBookingIds(userId, bookingIds);
     }
 
     @Override

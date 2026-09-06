@@ -28,6 +28,12 @@
         <div class="detail-row">
           <span>服务名称</span><strong>{{ booking.serviceName }}</strong>
         </div>
+        <div
+          v-if="booking.consultantName"
+          class="detail-row"
+        >
+          <span>咨询师</span><strong>{{ booking.consultantName }}</strong>
+        </div>
         <div class="detail-row">
           <span>预约日期</span><strong>{{ booking.date }}</strong>
         </div>
