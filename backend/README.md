@@ -1,118 +1,159 @@
-# 后端 — 智汇校园 · CampusBrain
+# 后端 — CampusBrain 微服务
 
-校园预约系统（CAS）+ 知识库问答平台（KB）合体为 Spring Cloud Alibaba 微服务。
+统一后端仓库，聚合 **gateway（网关）**、**cas-service（校园预约）**、**kb-service（知识库问答）** 三个可运行服务 + **common-auth** 共享认证库。Maven 多模块，单仓 `mvn` 构建；既可本地 IDE / `java -jar` 开发调试，也可 Docker Compose 全栈部署。
 
-## 架构
+## 一、架构与端口
 
 ```
-frontend(统一前端) → gateway(8888，唯一入口)
-                        ├─ /api/v1/**      → cas-service (18080)
-                        └─ /api/v1/kb/**   → kb-service (8081)
-                     Nacos(8848/9848) 注册中心 + 配置中心
-                     Sentinel 限流（Nacos 动态规则）
+frontend(统一前端) → gateway :8888  ← 唯一入口，统一 JWT 鉴权
+                       ├─ /api/v1/**       → cas-service :18080（自身 context-path=/api/v1）
+                       └─ /api/v1/kb/**    → kb-service  :8081 （StripPrefix=2 后命中 /kb/**）
+                    Nacos :8848/9848   注册中心 + 配置中心（cas-service.yaml 热更新）
+                    Sentinel           限流（Nacos 动态规则 cas-sentinel-flow-rules）
 ```
 
 | 模块 | 说明 | 端口 |
 |---|---|---|
-| `common-auth` | 共享认证：JWT + 内网签名（含时间戳新鲜度） | — |
-| `gateway` | Spring Cloud Gateway，统一 JWT 鉴权 + 路由 | 8888（本地）/ 80（docker） |
-| `cas-service` | 校园预约系统（7 个 Maven 子模块，DDD 分层） | 18080 |
-| `kb-service` | 知识库问答平台（扁平化单模块） | 8081 |
+| `common-auth` | 共享认证：JWT 工具 + 内网签名（时间戳防重放） | — |
+| `gateway` | Spring Cloud Gateway：JWT 验签、路由、身份头透传 | 8888 |
+| `cas-service` | 校园预约系统（DDD 多模块，Maven 子模块见下） | 18080 |
+| `kb-service` | 知识库问答 / RAG 平台 | 8081 |
 
-## 依赖中间件
+> 端口均为本地宿主；容器部署内部端口见 `docker-compose.business.yml`（gateway 容器内为 :80，宿主映射 8888；cas/kb 与本地一致）。
 
-| 组件 | 地址 | 说明 |
+### cas-service 内部模块（Maven 结构）
+```
+cas-dependencies         依赖 BOM（版本统一管理）
+cas-framework            框架聚合：cas-common + 各 spring-boot-starter-*（web/security/mybatis/redis/test…）
+cas-module-infra         文件上传(本地/OSS)、二维码、邮件
+cas-module-system        用户/注册登录/验证码/角色/通知策略
+cas-module-appointment   预约核心：服务目录、咨询/教室/设备/活动、审核、轮播图
+cas-thirdparty           天气、AI 模型(Qwen)、阿里云短信/OSS
+cas-server               启动入口(application.yml/@MapperScan)，含 Flyway 迁移脚本
+```
+
+## 二、依赖中间件
+
+**开发模式**（宿主运行，`docker-compose.yml` 只起基础设施）：
+
+| 组件 | 地址 | 归属 / 说明 |
 |---|---|---|
-| Nacos | localhost:8848 / 9848 | 服务注册 + 配置中心 |
-| MySQL（CAS） | localhost:3306 | 宿主机，库 `cas_db` |
-| Redis（CAS） | localhost:6379 | 宿主机 |
-| MySQL（KB） | localhost:3307 | 库 `knowledge_base` |
-| Redis（KB） | localhost:6380 | |
-| ES | localhost:9200 | |
-| Qdrant | localhost:6334 | |
-| RabbitMQ | localhost:5672 | admin/admin123 |
-| MinIO | localhost:9000 | minioadmin/minioadmin123 |
+| Nacos | localhost:8848 / 9848 | 注册中心 + 配置中心（compose `nacos`） |
+| MySQL | localhost:3306 | CAS，库 `cas_db`（**宿主机实例**，需自备） |
+| Redis | localhost:6379 | CAS（宿主机实例） |
+| MySQL | localhost:3307 | KB，库 `knowledge_base`（compose `kb-mysql`） |
+| Redis | localhost:6380 | KB（compose `kb-redis`） |
+| Elasticsearch | localhost:9200 | KB 关键词检索（`kb-es`） |
+| Qdrant | localhost:6334 | KB 向量检索（`kb-qdrant`） |
+| RabbitMQ | localhost:5672 | 事件总线，admin/admin123（`kb-rabbitmq`） |
+| MinIO | localhost:9000 | KB 文档存储，bucket `knowledge-base-docs`（`kb-minio`） |
 
-## 环境变量（必须）
+## 三、环境变量（backend/.env）
 
-> 敏感配置已通过环境变量注入（Docker 部署不含明文真实凭据），以下变量缺失会导致服务无法启动或功能异常。
+> 密钥全部环境变量化并 gitignore；从 `.env.example` 复制 `.env` 填写。下列为**必填 / 常用**项。
 
 | 变量 | 用途 | 默认 |
 |---|---|---|
-| `DB_PASSWORD` | CAS 数据库密码 | 空（必填） |
-| `SMTP_USERNAME` / `SMTP_PASSWORD` | 邮件发送 | 空 |
-| `JWT_SECRET` | JWT 签名密钥 | 内置示例（生产必改） |
-| `INTERNAL_SIGN_SECRET` | 内网签名密钥 | 内置示例（生产必改） |
-| `WEATHER_API_ID` / `WEATHER_API_KEY` | 天气 API | 空 |
-| `DEEPSEEK_API_KEY` | DeepSeek 大模型 | 空 |
-| `ALIYUN_OSS_ACCESS_KEY_ID` / `_SECRET` | 阿里云 OSS | 空 |
+| `MYSQL_ROOT_PASSWORD` | CAS 数据库（root）密码，**必填** | 无 |
+| `JWT_SECRET` / `INTERNAL_SIGN_SECRET` | JWT / 内网签名密钥，生产必改 | 内置示例 |
+| `KB_MYSQL_ROOT_PASSWORD` | KB MySQL 密码 | root123 |
+| `RABBITMQ_PASSWORD` | RabbitMQ | admin123 |
+| `MINIO_ACCESS_KEY` / `MINIO_ROOT_PASSWORD` | MinIO | minioadmin / minioadmin123 |
+| `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP 发信（可选） | smtp.163.com / 465 |
+| `WEATHER_API_ID` / `WEATHER_API_KEY` | 天气 API（可选） | — |
+| `DEEPSEEK_API_KEY` | CAS `/ai`（可选） | — |
+| `OPENAI_API_KEY` | KB Chat（DeepSeek 兼容接口） | — |
+| `EMBEDDING_API_KEY` | KB Embedding（硅基流动 Qwen3-Embedding-0.6B） | — |
+| `ALIYUN_OSS_ACCESS_KEY_ID` / `_SECRET` | 阿里云 OSS（可选） | — |
 
-## 启动步骤
+## 四、本地启动
 
-### 1. 启动基础设施
-
+### 1. 起基础设施（Nacos + KB 中间件）
 ```bash
-docker compose up -d          # Nacos + KB 中间件
-# CAS 的 MySQL/Redis 用宿主机已有实例，确保 cas_db 已建表
+cd backend
+cp .env.example .env      # 填 MYSQL_ROOT_PASSWORD 等
+docker compose up -d      # nacos + kb-mysql/redis/es/qdrant/rabbitmq/minio
 ```
+> CAS 的 MySQL/Redis 用宿主机实例；库 `cas_db` 无需手工建表，**Flyway 会在 CAS 首次启动时自动建表并灌种子**。
 
-### 2. 构建
+### 2. 起三个服务（推荐一键脚本）
+```bash
+./scripts/run-local.sh gateway    # 先起网关，:8888
+./scripts/run-local.sh cas        # :18080  —— 自动执行 Flyway（V1 schema + V2 初始账号）
+./scripts/run-local.sh kb         # :8081
+```
+脚本行为：加载 `.env` → `mvn -DskipTests -pl <模块> -am package` → `java -jar`；`--fast` 跳过打包。
 
+等价手动命令：
 ```bash
 mvn clean package -DskipTests
+java -jar cas-service/cas-server/target/cas-server-1.0.0.jar   # CAS
+java -jar kb-service/target/kb-service-1.0.0.jar                # KB
+java -jar gateway/target/gateway-1.0.0.jar                      # 网关
 ```
 
-### 3. 导出环境变量并启动三个服务
+### 3. 种子账号（V2）
+`admin@campus.com / 123456`（管理员） · `user@campus.com / 123456`（普通用户）。
+
+### 4. 冒烟验证
+```bash
+# Nacos 服务列表应含 gateway / cas-service / kb-service
+curl "http://localhost:8848/nacos/v1/ns/service/list?pageNo=1&pageSize=10"
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/captcha   # →200（图形验证码）
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health # →200（KB）
+```
+
+## 五、数据库与 Flyway 约定
+
+- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图）、`V2__seed_initial_users.sql`（初始账号）。
+- KB 迁移位于 `kb-service/src/main/resources/db/migration/`。
+- **新机器**：CAS/KB 首次启动自动执行全部迁移，零手工 SQL。
+- **已有库**：迁移文件用于全新环境，已上线的库请直接执行 SQL 演进，**不要改写历史 `V*.sql` 去适配旧库**（否则 Flyway checksum 校验失败）；如需调整结构，本地直接对库执行 SQL 即可。
+
+## 六、核心能力（对应当前代码）
+
+### CAS 预约
+- **按校区分流**：仓前(cq)/下沙(xs) 各自服务目录（`services.campus`/`category`），咨询师（`consultant`）、教室（`room`）、设备（`equipment`）挂各自校区服务，用户端按校区隔离。
+- **咨询时段预约**：咨询师在 `time_slot` 维护可约日期时段；选人 + 时段占位，同人同时段冲突被拒，审核/取消释放。
+- **教室时段预约**：`room` 一间教室 + `slot_date/start_time/end_time` 唯一，重复窗口拒绝。
+- **设备窗口借用**：`equipment.total_stock/available_stock` + 时段窗口 + 数量，库存原子扣减，到点自动归还。
+- **活动容量**：`capacity`（-1 不限）+ `booked_count` 原子扣减，超额拒绝。
+- **预约状态机**：`manage_status` 0待审/1通过/2拒绝/3取消/4完成；`BookingAutoCompleteTask`（`@EnableScheduling`，60s 轮询）把已过窗口的预约自动置为完成。
+- **通知**：`notification_policy`（全局）+ `user.email_notify`（用户偏好）双开关，审核结果邮件按开关发送。
+- **轮播图**：`carousel` 表 + 管理端上传/删除/拖拽排序（≤6）+ 用户端列表。
+- **账号**：图形验证码登录、邮箱验证码注册、忘记密码、改密（旧密码校验）、`@RequireRole` 三级 RBAC。
+
+### KB 知识库
+- 文档上传 → 解析 → 分块（sliding_window 512/50）→ Embedding（硅基流动 Qwen3-Embedding-0.6B，1024 维）
+- 检索：ES 关键词（top10）+ Qdrant 向量（top10）→ RRF 融合（top5）→ DeepSeek（`deepseek-chat`）生成，Resilience4j 熔断。
+- Function Calling：Feign + Nacos + 内网签名直连 CAS `/appointments/availability`，LangChain4j `@Tool`。
+- 存储：KB 元数据在 `knowledge_base`(MySQL)，文档正文在 MinIO，关键词索引 ES，向量 Qdrant。
+
+## 七、测试与 CI
 
 ```bash
-export DB_PASSWORD='<你的CAS数据库密码>'
-export SMTP_USERNAME='...' SMTP_PASSWORD='...'
-export JWT_SECRET='<32字节以上随机串>' INTERNAL_SIGN_SECRET='<随机串>'
-
-# 终端 1: CAS
-java -jar cas-service/cas-server/target/cas-server-1.0.0.jar
-
-# 终端 2: KB
-java -jar kb-service/target/kb-service-1.0.0.jar
-
-# 终端 3: 网关（本地用 8888，避免与 MinIO 9000 冲突）
-GATEWAY_PORT=8888 java -jar gateway/target/gateway-1.0.0.jar
+cd backend && mvn -B test
 ```
+- 后端共 **132 个测试方法**（CAS 73 · KB 59），CAS 分布在 appointment/infra/system/thirdparty，KB 集成测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）。
+- GitHub Actions `.github/workflows/ci.yml`：push/PR 自动跑 `mvn -B test` + 前端 type-check/build。
 
-### 4. 验证
+## 八、Docker 部署（服务器）
 
-```bash
-# Nacos 服务列表：应含 gateway / cas-service / kb-service
-curl http://localhost:8848/nacos/v1/ns/service/list?pageNo=1&pageSize=10
+| 文件 | 用途 |
+|---|---|
+| `docker-compose.yml` | 开发用基础设施（Nacos + KB 中间件） |
+| `docker-compose.business.yml` | 服务器全栈：`cas-mysql`(cas_db) + `cas-redis` + `gateway`/`cas-service`/`kb-service`/`frontend` 四服务 + `nacos`；镜像 tag 由 `${TAG:-latest}` 注入，`pull_policy: never` 保证用本地刚构建的镜像 |
 
-# 网关路由 CAS / KB（应 200）
-curl http://localhost:8888/api/v1/captcha
-curl http://localhost:8888/api/v1/kb/health
+部署约束：**必须在 `/opt/campusbrain/backend` 目录内执行 compose**（卷/网络按目录项目名关联，错位会建空 MySQL 卷）。
 
-# Nacos 配置中心热更新（CAS 启动后访问）
-curl http://localhost:18080/api/v1/config-demo/greeting
+常用脚本（`backend/scripts/`）：
+- `load-env.sh`：source 加载 `.env`
+- `run-local.sh`：本地一键起单服务
+- `deploy-server.sh`：服务器按改动增量构建镜像并 compose up（幂等：HEAD 未变直接退出）
+- `publish.sh`：一行发版（推 GitHub + 服务器镜像，触发 CI/Jenkins）
 
-# Sentinel 限流演示（快速连点会触发限流）
-curl http://localhost:18080/api/v1/sentinel-demo/limited
-```
-
-## 关键能力
-
-- **统一 JWT 网关鉴权**：网关验签 JWT、透传身份头 + 内网签名（5 分钟时间戳新鲜度），服务细粒度授权。
-- **KB 智能助手**：问答按「本地资料优先 + DeepSeek 兜底」路由——本地资料有结果走 RAG（引用资料），无结果或 RAG 无法回答则 DeepSeek 直接回答；**问答缓存已全部禁用**，每次实时检索 + LLM 回答（避免答非所问/历史串题）；预约余量通过 OpenFeign + Nacos 服务发现 + 内网签名直连 CAS 只读接口（`/appointments/availability`），LangChain4j `AppointmentTool`（`@Tool`）+ AiServices 实现 Function Calling（**需配置 `DEEPSEEK_API_KEY` 后演示**）。当前 AI 问答为**单轮问答**（前端每次提问独立会话），无资料路径为 SSE 流式，RAG/预约路径一次性返回。
-- **预约乐观锁 + 库存扣减**：services 表含 `capacity`（-1=不限）/`booked_count`；预约时原子条件更新扣减（`WHERE capacity=-1 OR booked_count<capacity`）防并发超卖，容量满返回 `BOOKING_CAPACITY_FULL`；取消/审核拒绝时释放库存（`booked_count-1`），重复预约经幂等 SQL 去重并随事务回滚。
-- **RabbitMQ 预约事件**：CAS 发布 `appointment.changed` 事件，KB 已实现监听并接收（当前仅记录日志，索引/缓存更新为 TODO）。
-- **Nacos 配置中心**：`cas-service.yaml` 托管配置，提供 `/config-demo` 热更新演示。
-- **Sentinel 限流**：已接入并提供 `/sentinel-demo` 演示接口；Nacos 流控规则（`cas-sentinel-flow-rules`）当前为空。
-- **安全加固**：注册提权、IDOR、管理端越权、`/ai` 公开、内网签名防重放均已修复。
-
-## 测试
-
-```bash
-# 全量测试：134 个测试全部通过（CAS 73 + KB 61），kb-service 用 H2 + MockBean 隔离中间件
-cd backend && mvn test
-```
-
-## Docker（仅中间件）
-
-`docker-compose.yml` **只编排中间件**（Nacos + KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO）。三个业务服务（gateway/cas-service/kb-service）在**本地运行**（IDEA 或 `java -jar`），见「启动步骤」。
+## 九、代码约定
+- Controller 统一返回 `CommonResult<T>`；业务异常抛 `BusinessException(ErrorCode)` 由全局处理器兜底。
+- 跨模块调用走 `api/` 接口，模块间不直接依赖 Mapper。
+- `domain/` 纯净实体，无 Spring 注解；应用层编排、基础设施层落实现。
+- 新增密钥不入库，一律经环境变量注入。

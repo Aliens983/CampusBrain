@@ -1,677 +1,105 @@
-# Campus Appointment System（校园预约系统）
+# cas-service — 校园预约服务
 
-> ⚠️ **当前状态（2026-08-21）**：本模块已并入微服务合体项目，作为 `cas-service`（端口 18080）。前端已迁移至根目录 `frontend/`。架构与启动方式见 **`../README.md`** 与 **`CLAUDE.md`**。
+> 本模块是 CampusBrain 微服务体系中的**校园预约系统（CAS）**独立服务，端口 **18080**（servlet context-path `/api/v1`）。
+> 整体架构、端口、启动与部署见 **`../README.md`**；本文件聚焦 cas-service 的模块划分、领域模型与接口。
 
-<p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=32&duration=3000&pause=1000&color=3B82F6&center=true&vCenter=true&width=700&lines=Campus+Appointment+System;%E6%A0%A1%E5%9B%AD%E9%A2%84%E7%BA%A6%E7%AE%A1%E7%90%86%E7%B3%BB%E7%BB%9F;Spring+Boot+3+%2B+Vue+3" alt="Typing SVG" />
-</p>
+CAS 以 **杭州师范大学两校区（仓前 cq / 下沙 xs）** 建模：服务目录、咨询师、教室、设备均按校区分离；覆盖咨询、教室、设备、活动四类预约，全部走 Flyway 自动建表 + 种子数据。
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Java-17-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white" alt="Java 17" />
-  <img src="https://img.shields.io/badge/Spring_Boot-3.3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot" />
-  <img src="https://img.shields.io/badge/MyBatis_Plus-3.5.5-1E90FF?style=for-the-badge&logo=mybatis&logoColor=white" alt="MyBatis-Plus" />
-  <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
-  <img src="https://img.shields.io/badge/Redis-7.0-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" />
-  <img src="https://img.shields.io/badge/Vue-3.4-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white" alt="Vue 3" />
-  <img src="https://img.shields.io/badge/Maven-3.9-C71A36?style=for-the-badge&logo=apachemaven&logoColor=white" alt="Maven" />
-  <img src="https://img.shields.io/badge/Docker-🐳-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
-</p>
+## 技术栈
 
-<p align="center">
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License" />
-  <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=flat-square" alt="Version" />
-  <img src="https://img.shields.io/badge/Architecture-DDD--Multi--Module-ff69b4?style=flat-square" alt="Architecture" />
-  <img src="https://img.shields.io/badge/Auth-JWT--RBAC-green?style=flat-square" alt="Auth" />
-</p>
+| | |
+|---|---|
+| 框架 | Spring Boot 3.3.5 · Spring Cloud Alibaba 2023.0.1.2（Nacos 注册/配置 + Sentinel） |
+| 数据 | MyBatis-Plus 3.5.5 · MySQL 8（库 `cas_db`）· Redis（验证码/限频）· **Flyway**（迁移） |
+| 消息/通知 | RabbitMQ（发布 `appointment.changed`）· JavaMail（审核邮件）· 阿里云短信/OSS（可选） |
+| 结构 | DDD 四层 + Maven 多模块（`com.laoliu.cas`） |
 
-<br />
-
----
-
-## 📖 项目简介
-
-**校园预约管理系统**（Campus Appointment System）是一个面向高校的综合预约管理平台，采用前后端分离架构，支持**自习室预约、心理咨询、学业辅导、考试报名、社团活动**等多种校园服务场景。系统实现了从用户注册登录、服务浏览预约、管理员审核到邮件通知的完整业务流程。
-
-> 🎯 **设计目标**：以领域驱动设计（DDD）为指导，构建高内聚低耦合的企业级 Java 后端，既可部署运行，也可作为 Spring Boot 多模块架构的教学参考项目。
-
-<br />
-
----
-
-## ✨ 功能亮点
-
-<table>
-<tr>
-<td width="50%">
-
-### 👤 用户端
-- 🔐 **邮箱验证码注册** — SMTP 发送 6 位验证码，Redis 限频防刷（60s 间隔）
-- 🧮 **算术验证码** — Hutool 生成数学题 CAPTCHA，防止机器注册
-- 📋 **多类型预约** — 教室 / 设备 / 咨询 / 活动，动态服务目录
-- 📊 **预约状态追踪** — 实时查看审核进度：提交 → 通过 / 拒绝 / 取消
-- 📧 **审核结果邮件通知** — 通过或拒绝均自动发送邮件
-- 🌤️ **校园天气** — 集成第三方天气 API，辅助用户决策
-
-</td>
-<td width="50%">
-
-### 🛡️ 管理端
-- 📝 **服务管理** — 动态上下架服务项，即时生效
-- ✅ **预约审核** — 逐条审批，填写通过/拒绝原因
-- 🔒 **三级 RBAC** — 普通用户 / 管理员 / 超级管理员
-- 📁 **文件上传** — 支持本地存储 & 阿里云 OSS 双模式
-- 📱 **短信通知** — 集成阿里云 SMS（预留接口）
-- 🤖 **AI 对话** — 接入 Qwen 大模型，智能问答（可选）
-
-</td>
-</tr>
-</table>
-
-<br />
-
----
-
-## 🧱 系统架构
+## Maven 模块
 
 ```
-                        +--------------------------+
-                        |       Frontend SPA       |
-                        |  Vue3 + TS + ElementPlus |
-                        |        Port :3000        |
-                        +------------+-------------+
-                                     |
-                      HTTP REST · JWT Bearer Token
-                                     |
-                        +------------+-------------+
-                        |    Backend (Port :18080) |
-                        +------------+-------------+
-                                     |
-                    +----------------+----------------+
-                    |                                  |
-          +--------+----------+              +--------+--------+
-          |   cas-server      |              |  Health · CORS  |
-          | SpringBoot Entry  |              |  Actuator       |
-          +--------+----------+              +-----------------+
-                   |
-          +--------+----------------------------------+
-          |          Business Modules                 |
-          +--------+----------------------------------+
-                   |
-          +--------+----------+
-          | cas-module-       |
-          |   appointment     |  --> booking, audit, email notify
-          +--------+----------+
-                   |  depends on
-          +--------+----------+
-          | cas-module-system |  --> user, auth, role, captcha
-          +--------+----------+
-                   |  depends on
-       +-----------+-----------+
-       |           |           |
-  +----+----+ +----+----+ +---+------+
-  |  infra  | | third-  | |  common  |
-  |  file   | |  party  | |  shared  |
-  |  email  | | AI/OSS  | |  kernel  |
-  |  qrcode | | SMS/Wth | |  utils   |
-  +----+----+ +----+----+ +---+------+
-       |           |           |
-       +-----------+-----------+
-                   |
-          +--------+----------+
-          |  cas-framework    |
-          |  6 Spring Boot    |
-          |     Starters      |  --> Web · Security · MyBatis · Redis · MQ · Test
-          +--------+----------+
-                   |
-          +--------+----------+
-          |  Infrastructure   |
-          |  MySQL · Redis    |
-          |  SMTP · Aliyun    |
-          |  Qwen API         |
-          +-------------------+
+cas-service/
+├── cas-dependencies    依赖 BOM（第三方版本统一）
+├── cas-framework       框架聚合：cas-common + 各 cas-spring-boot-starter-*（web/security/mybatis/redis/test）
+├── cas-module-infra    基础设施服务：本地文件上传(按子目录 uuid 命名)、OSS、二维码、邮件
+├── cas-module-system   用户与账号：登录/注册/图形验证码/邮箱验证码/忘记密码/改密/角色/通知策略
+├── cas-module-appointment  预约核心：服务目录、四类预约、审核、时段/库存防冲突、自动完成、轮播图
+├── cas-thirdparty      第三方集成：天气 / Qwen AI(/ai) / 阿里云
+└── cas-server          启动入口：application.yml、@MapperScan、Demo 控制器、Flyway 脚本
 ```
 
-<br />
+依赖约束：`infra` 只依赖 framework；业务模块经 `api/` 接口互相调用、不直接注入对方 Mapper；`server` 不写业务代码。
 
----
+## DDD 分层
 
-## 🧩 模块说明
+业务模块内统一 `interfaces（controller admin/app + dto）/ application（service + impl）/ domain（entity + repository）/ infrastructure（persistence：dataobject + mapper + repositoryImpl）/ api（跨模块接口）`。`domain/` 保持纯 Java、零框架注解。轮播图（carousel）作为独立子包位于 `cas-module-appointment`。
 
-| 模块 | 层级 | 说明 | 核心功能 |
-|------|------|------|----------|
-| **cas-dependencies** | BOM | 统一依赖管理 | 所有第三方库版本号集中管控 |
-| **cas-framework** | 基础设施 | 6 个 Spring Boot Starter | Web · Security · MyBatis · Redis · MQ · Test |
-| **cas-common** | 共享内核 | 24 个共享类 | 异常体系 · JWT 工具 · 枚举 · 通用响应 · BCrypt |
-| **cas-module-infra** | 基础设施服务 | 文件 / 邮件 / 二维码 | 本地 & OSS 上传 · @Async 邮件 · Hutool QR |
-| **cas-module-system** | 业务模块 | 用户 & 权限管理 | 注册登录 · 角色管理 · @RequireRole AOP 鉴权 |
-| **cas-module-appointment** | 业务模块 | 预约核心业务 | 多类型预约 · 审核流程 · 邮件通知 · 事务管理 |
-| **cas-thirdparty** | 第三方集成 | 外部 API 封装 | 阿里云 OSS/SMS · Qwen AI · 天气查询 |
-| **cas-server** | 入口 | 启动 & 配置 | Spring Boot 入口 · application.yml · CORS |
-
-<br />
-
----
-
-## 🏛️ DDD 四层架构
-
-每个业务模块内部遵循统一的领域驱动设计分层：
+## 预约领域模型（对应 `db/migration/V1` 表）
 
 ```
-📁 cas-module-appointment/
-├── interfaces/       ← 接口层 ── REST Controllers + DTOs
-│   ├── controller/      • admin/ — 管理端接口 (@RequireRole 保护)
-│   │                    • app/   — 用户端接口
-│   ├── dto/             • request/  — 入参 DTO
-│   │                    • response/ — 出参 DTO
-│   └── assembler/       • Entity ↔ DTO 转换器
-│
-├── application/      ← 应用层 ── 业务编排
-│   └── service/         • 协调领域对象，组合业务流程
-│                        • 调用 repository、发送事件
-│
-├── domain/           ← 领域层 ── 纯 POJO，零框架注解
-│   ├── entity/          • 核心业务实体
-│   └── repository/      • 仓储接口（契约）
-│
-├── infrastructure/   ← 基础设施层 ── 技术实现
-│   └── persistence/     • MyBatis Mapper · DO · Repository Impl
-│
-└── api/              ← 跨模块 API ── 模块间契约
-    └── XxxApi.java      • 仅供其他模块注入调用
+user ───────────────┐
+services（服务目录：category/campus/image_url/capacity/booked_count）
+ ├─ consultant     咨询师（挂 心理咨询/学业辅导 服务）
+ │    └─ time_slot 该咨询师某日可约时段
+ ├─ room           教室（挂 空闲教室 服务）
+ ├─ equipment      设备（total_stock / available_stock / unit / location）
+ ├─ item ──────────┘ 预约单：用户 × 服务 × 资源
+carousel            首页轮播图（image_url/sort/enabled）
+notification_policy 全局通知策略（单行，邮件通道开关）
+file_info / ai_chat_history
 ```
 
-> 💡 **核心约束**：`domain/` 层**零框架注解**，保持纯 Java；模块间只能通过 `api/` 接口通信，**禁止直接注入对方 Mapper**。
+`item`（预约单）关键列：`service_id` + 资源列其一 —— 咨询 `consultant_id/slot_id/slot_date/start_time/end_time`；设备 `equipment_id/quantity`；教室 `room_id + slot_date/start_time/end_time`。`manage_status`：`0 待审 → 1 通过 / 2 拒绝 / 3 取消 / 4 完成`，拒绝必有 `reason`。
 
-<br />
+### 四类预约与防冲突
+| 类型 | 数据 | 防冲突/防超卖策略 |
+|---|---|---|
+| 咨询 | `consultant` + `time_slot` | 同一咨询师同时段占用即冲突；`slot_date/start_time/end_time` 重叠查询 + 行锁 |
+| 教室 | `room`（空闲教室服务） | **一间教室同一时间段仅一人可约**，唯一窗口 + 重叠拒绝 |
+| 设备 | `equipment` 窗口借用 | `available_stock` 库存原子扣减 + 时段窗口；取消/拒绝回补 |
+| 活动 | `services.capacity` | `capacity`(-1 不限)/`booked_count` 原子扣减，超额返回 `BOOKING_CAPACITY_FULL` |
 
----
+- **释放**：审核拒绝 / 用户取消自动释放占用的时段与库存。
+- **自动完成**：`BookingAutoCompleteTask`（`@EnableScheduling`，60s 轮询）将已过预约窗口的单自动置为 `完成`（设备到点归还、教室释放）。
 
-## 🔐 安全设计
+## 主要接口
 
-```mermaid
-sequenceDiagram
-    participant User as 👤 用户
-    participant GW as 🌐 Spring Security Filter
-    participant JWT as 🔐 JWT Filter
-    participant AOP as 🛡️ @RequireRole AOP
-    participant API as 📡 Controller
+统一经网关前缀 `/api/v1` 访问（context-path `/api/v1`，gateway 透传；本地直连 18080 也相同）。按控制器分组（网关 8888 校验 JWT → `@RequireRole` 授权）：
 
-    User->>GW: POST /login {email, password}
-    GW->>API: 白名单路径，直接放行
-    API-->>User: JWT Token (HMAC-SHA512, 24h)
+| 分组 | 控制器路径 | 说明 |
+|---|---|---|
+| 账号 | `POST /auth/login|/reset`、`POST /auth/register`、`POST /auth/verification-code`、`GET /captcha`、`GET/PUT /users/*` | 登录/忘记密码/邮箱验证码注册/图形验证码/资料·改密 |
+| 服务目录 | `GET /app/services`（列表/详情/`mine`） | 用户端浏览服务（带分类/校区/封面） |
+| 预约 | `POST /app/bookings/room\|equipment\|consultation`、`GET /app/bookings/{id}` | 三类资源预约；`/app/bookings/mine` 我的预约 |
+| 咨询资源 | `GET /app/consultations`、`GET /app/consultations/{id}/slots` | 咨询师列表 / 可约时段 |
+| 教室/设备资源 | `GET /app/rooms`、`POST /app/rooms/{id}/book`、`GET /app/equipment(/categories)` | 资源浏览（详情含时段/库存） |
+| 余量 | `GET /appointments/availability` | 实时余量（供 KB Function Calling 只读调用，内网签名鉴权） |
+| 轮播图 | `GET /app/carousel`、`GET/POST/DELETE /admin/carousel`、`POST /admin/carousel/reorder` | 用户端启用列表；管理端上传(≤6)/删除/拖拽排序 |
+| 管理端 | `GET /admin/services`(+`PUT`)、`GET/POST /admin/bookings`、`GET/PUT /admin/users`、`GET/PUT /admin/settings/notify`、`POST /admin/files` | 服务治理/预约审核/用户角色/通知策略/封面上传 |
+| 其他 | `GET /weather/local`、`POST /ai/chat`、`GET /app/qr-code`、`GET /config-demo/greeting`、`GET /sentinel-demo/limited` | 天气 / AI / 二维码 / Nacos 热更新与 Sentinel 演示 |
 
-    User->>GW: GET /admin/service (Header: Bearer <token>)
-    GW->>JWT: OncePerRequestFilter 拦截
-    JWT->>JWT: 解析 Token → 校验签名 & 过期 → 设置 SecurityContext
-    JWT->>AOP: 放行到 Controller
-    AOP->>AOP: @RequireRole({ADMIN, SUPER_ADMIN})
-    AOP-->>API: 角色校验通过
-    API-->>User: CommonResult<data>
-```
+## 数据库迁移与种子（Flyway）
 
-| 安全机制 | 实现方式 |
-|----------|----------|
-| **认证** | 无状态 JWT（HMAC-SHA512），24h 过期 |
-| **授权** | `@RequireRole({ADMIN, SUPER_ADMIN})` 注解 + AOP 切面 |
-| **密码** | BCrypt 加密存储 |
-| **防刷** | Redis 记录验证码发送频率，60s 间隔限制 |
-| **验证码** | 算术 CAPTCHA + 邮箱验证码，Redis 5min TTL |
-| **Session** | `STATELESS` 策略，CSRF 已禁用 |
+迁移位于 `cas-server/src/main/resources/db/migration/`：
+- `V1__init_schema.sql` —— 全部建表 + 校区种子：cq/xs 两套服务目录、咨询师（仓前肖/周/刘/石/管、下沙姚/裘/孙/管）、教室（勤园/恕园/A~E 号楼）、设备、初始轮播图 6 张。
+- `V2__seed_initial_users.sql` —— 初始账号：`admin@campus.com` 与 `user@campus.com`，密码均 `123456`（BCrypt，登录后请改密）。
 
-<br />
+新机器首次启动 CAS 自动建库建表；**已有库**不改写历史 `V*.sql`（Flyway checksum），结构演进直接对库执行 SQL（约定见 `../README.md`）。
 
----
-
-## 🗄️ 数据库设计
-
-```sql
--- 核心 ER 关系
-user (id, name, email, password, role)          ← 用户表，role: 0/1/2
-  │
-  ├──< item (order_id, user_id, service_id,     ← 预约记录表
-  │          manage_status, reason)                status: 提交→通过→拒绝→取消
-  │
-services (service_id, service_name,              ← 服务目录表
-           service_describe, service_state)         state: 0 下架 / 1 上架
-
-file_info (file_name, file_uuid,                 ← 文件信息表
-           upload_user, is_deleted)                 is_deleted 逻辑删除
-
-ai_chat_history (user_id, model,                 ← AI 对话历史
-                  user_message, ai_response)
-```
-
-<br />
-
----
-
-## 🚀 快速开始
-
-### 环境要求
-
-| 依赖 | 版本 | 说明 |
-|------|------|------|
-| ☕ JDK | 17+ | 必须 17 以上（Spring Boot 3.3 要求） |
-| 🗄️ MySQL | 8.0+ | 创建数据库 `cas_db`，字符集 `utf8mb4` |
-| 💾 Redis | 7.0+ | 标准端口 6379 |
-| 📧 SMTP | — | 163 邮箱或兼容服务（可选，注册需要） |
-| 🔧 Maven | 3.6+ | 或使用 IDE 内置 |
-
-### ① 初始化数据库
+## 构建 / 运行 / 测试
 
 ```bash
-# 1. 创建数据库
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS cas_db DEFAULT CHARSET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# 本地起服务（backend 目录下，自动加载 .env + 打包）
+cd ../..
+./scripts/run-local.sh cas        # :18080，首次启动执行 Flyway
 
-# 2. 导入表结构 + 示例数据
-mysql -u root -p cas_db < sql/database.sql
-mysql -u root -p cas_db < sql/user.sql
-mysql -u root -p cas_db < sql/services.sql
-mysql -u root -p cas_db < sql/item.sql
-mysql -u root -p cas_db < sql/file.sql
-mysql -u root -p cas_db < sql/ai_chat_history.sql
-mysql -u root -p cas_db < sql/data.sql
-mysql -u root -p cas_db < sql/indexes.sql
+# 构建产物
+mvn clean package -DskipTests     # cas-server/target/cas-server-1.0.0.jar
+
+# 测试（appointment/infra/system/thirdparty 共 73 个测试方法）
+mvn -B -pl cas-service -am test
 ```
 
-### ② 配置环境
-
-```bash
-# 复制配置模板
-cp cas-server/src/main/resources/application.yml.example \
-   cas-server/src/main/resources/application.yml
-
-# 编辑 application.yml，填写你自己的：
-#   - spring.datasource.password        ← MySQL 密码
-#   - spring.mail.username / password   ← 邮箱账号
-#   - jwt.secret                        ← JWT 密钥（至少 64 字符）
-#   - aliyun.*                          ← 阿里云 OSS / SMS 凭证（可选）
-```
-
-### ③ 启动后端
-
-```bash
-# 编译打包
-mvn clean package -DskipTests
-
-# 启动服务（端口 18080）
-java -jar cas-server/target/cas-server-1.0.0.jar
-```
-
-### ④ 启动前端（可选）
-
-```bash
-cd ../frontend
-npm install
-npm run dev
-# 浏览器打开 → http://localhost:3000
-```
-
-### ⑤ 访问验证
-
-| 地址 | 说明 |
-|------|------|
-| 🌐 `http://localhost:18080` | 后端服务 |
-| 📖 `http://localhost:18080/doc.html` | Knife4j API 文档 |
-| 💚 `http://localhost:18080/actuator/health` | 健康检查 |
-| 🖥️ `http://localhost:3000` | 前端页面（需启动前端） |
-
-### ⑥ 测试账号
-
-| 角色 | 邮箱 | 说明 |
-|------|------|------|
-| 👑 超级管理员 | 由数据库直接注册 | role=2，拥有最高权限 |
-| 🛡️ 管理员 | 由数据库直接注册 | role=1，可审核预约 |
-| 👤 普通用户 | 通过注册接口注册 | role=0，注册后可得 |
-
-<br />
-
----
-
-## 🔌 API 接口一览
-
-> 完整文档在启动后访问 `http://localhost:18080/doc.html` 查看交互式 Swagger。
-
-<details>
-<summary><b>📋 点击展开 API 接口列表</b></summary>
-
-### 认证模块
-| Method | Path | Auth | 说明 |
-|--------|------|------|------|
-| POST | `/login` | ❌ | 邮箱 + 密码登录 |
-| POST | `/email` | ❌ | 发送邮箱验证码 |
-| POST | `/register/verify-code` | ❌ | 验证码注册 |
-| GET | `/graphic/get` | ❌ | 获取算术验证码 |
-
-### 用户端
-| Method | Path | Auth | 说明 |
-|--------|------|------|------|
-| GET | `/service` | ✅ | 获取所有可用服务 |
-| POST | `/book` | ✅ | 预约服务 |
-| POST | `/book/room` | ✅ | 预约教室 |
-| POST | `/book/equipment` | ✅ | 预约设备 |
-| POST | `/book/consultation` | ✅ | 预约咨询 |
-| GET | `/service-status/user` | ✅ | 查看预约记录 |
-| GET | `/weather` | ✅ | 查询天气 |
-
-### 管理端
-| Method | Path | Auth | 说明 |
-|--------|------|------|------|
-| GET | `/admin/service` | 🔒 ADMIN+ | 管理服务列表 |
-| POST | `/admin/service` | 🔒 ADMIN+ | 新增服务 |
-| POST | `/admin/service-status/audit/pass` | 🔒 ADMIN+ | 通过预约 |
-| POST | `/admin/service-status/audit/reject` | 🔒 ADMIN+ | 拒绝预约 |
-| POST | `/admin/file/upload` | 🔒 ADMIN+ | 上传文件 |
-| GET | `/admin/users` | 🔒 SUPER_ADMIN | 用户管理 |
-
-</details>
-
-<br />
-
----
-
-## 🛠️ 技术栈
-
-<table>
-<tr>
-<th>分类</th>
-<th>技术</th>
-<th>版本</th>
-<th>用途</th>
-</tr>
-<tr>
-<td rowspan="4">核心框架</td>
-<td><img src="https://img.shields.io/badge/Spring_Boot-3.3.5-6DB33F?logo=springboot&logoColor=white" /></td>
-<td>3.3.5</td>
-<td>应用框架 + 自动配置</td>
-</tr>
-<tr>
-<td><img src="https://img.shields.io/badge/Java-17-ED8B00?logo=openjdk&logoColor=white" /></td>
-<td>17</td>
-<td>运行环境</td>
-</tr>
-<tr>
-<td><img src="https://img.shields.io/badge/Maven-3.9-C71A36?logo=apachemaven&logoColor=white" /></td>
-<td>3.9</td>
-<td>多模块项目构建</td>
-</tr>
-<tr>
-<td>Spring Security</td>
-<td>6.3</td>
-<td>安全框架 + Filter 链</td>
-</tr>
-<tr>
-<td rowspan="3">数据访问</td>
-<td>MyBatis-Plus</td>
-<td>3.5.5</td>
-<td>ORM + 代码生成</td>
-</tr>
-<tr>
-<td>MySQL Connector</td>
-<td>8.0</td>
-<td>数据库驱动</td>
-</tr>
-<tr>
-<td>Spring Data Redis</td>
-<td>3.3</td>
-<td>缓存 + 验证码存储</td>
-</tr>
-<tr>
-<td rowspan="4">工具库</td>
-<td>Hutool</td>
-<td>5.8.32</td>
-<td>Java 工具集（验证码 / 二维码）</td>
-</tr>
-<tr>
-<td>jjwt</td>
-<td>0.12.6</td>
-<td>JWT 令牌创建 & 解析</td>
-</tr>
-<tr>
-<td>MapStruct</td>
-<td>1.6.3</td>
-<td>对象映射转换</td>
-</tr>
-<tr>
-<td>Lombok</td>
-<td>1.18</td>
-<td>简化 POJO 代码</td>
-</tr>
-<tr>
-<td rowspan="2">API 文档</td>
-<td>Knife4j</td>
-<td>4.5.0</td>
-<td>Swagger 增强文档</td>
-</tr>
-<tr>
-<td>OpenAPI 3</td>
-<td>—</td>
-<td>API 规范描述</td>
-</tr>
-<tr>
-<td rowspan="3">第三方服务</td>
-<td>阿里云 OSS</td>
-<td>—</td>
-<td>对象存储</td>
-</tr>
-<tr>
-<td>阿里云 SMS</td>
-<td>2.0.2</td>
-<td>短信发送</td>
-</tr>
-<tr>
-<td>通义千问</td>
-<td>—</td>
-<td>AI 对话（DashScope API）</td>
-</tr>
-</table>
-
-<br />
-
----
-
-## 📁 项目结构
-
-<details open>
-<summary><b>🌲 点击展开完整目录树</b></summary>
-
-```
-CampusAppointmentSystem/
-│
-├── cas-dependencies/              📦 BOM — 统一版本管控
-│   └── pom.xml
-│
-├── cas-framework/                 🏗️ 框架层 — 6 个 Spring Boot Starter
-│   ├── cas-common/                   🧰 共享内核 (24 files)
-│   │   ├── annotation/RequireRole.java     # 角色注解
-│   │   ├── enums/                          # 用户角色 · 审核状态
-│   │   ├── exception/                      # 异常体系 (8 类)
-│   │   ├── result/CommonResult.java        # 统一响应体
-│   │   ├── security/                       # JWT · SecurityUtils
-│   │   └── util/                           # BCrypt · CodeGenerator
-│   ├── cas-spring-boot-starter-web/        # 🌐 全局异常处理
-│   ├── cas-spring-boot-starter-security/   # 🔐 JWT Filter · CORS
-│   ├── cas-spring-boot-starter-mybatis/    # 🗄️ MyBatis-Plus 配置
-│   ├── cas-spring-boot-starter-redis/      # 💾 RedisTemplate · RedisUtil
-│   ├── cas-spring-boot-starter-mq/         # 📨 消息队列 (预留)
-│   └── cas-spring-boot-starter-test/       # 🧪 测试基类
-│
-├── cas-module-infra/               📧 基础设施服务
-│   └── src/main/java/.../
-│       ├── interfaces/controller/admin/   # 文件 / OSS 上传接口
-│       ├── application/service/           # EmailService · FileService · QRCodeService
-│       └── infrastructure/                # JavaMailSender · 本地存储
-│
-├── cas-module-system/              👥 用户 & 权限模块
-│   └── src/main/java/.../
-│       ├── interfaces/                     # Login / Register / Email 控制器
-│       ├── application/                    # AuthService · UserService · RoleService
-│       ├── domain/                         # User 实体 · UserRepository 接口
-│       ├── infrastructure/                 # MyBatis Mapper · RoleAspect AOP
-│       └── api/                            # UserInfoApi (供其他模块调用)
-│
-├── cas-module-appointment/         📅 预约核心模块
-│   └── src/main/java/.../
-│       ├── interfaces/                     # 7 个控制器（admin + app）
-│       ├── application/                    # BookService · ServiceStatusService
-│       ├── domain/                         # AppointmentRecord · Service 实体
-│       ├── infrastructure/                 # 预约 / 服务 Mapper
-│       └── (通过 api/ 接口向其他模块暴露能力)
-│
-├── cas-thirdparty/                 🌍 第三方集成
-│   └── src/main/java/.../
-│       ├── config/                         # AliyunConfig · DeepSeekConfig · QwenConfig
-│       ├── controller/                     # AI 对话 · 天气查询
-│       ├── service/                        # OSS · SMS · Weather · CallModel
-│       └── domain/                         # AiChatHistory 实体
-│
-├── cas-server/                     🚀 启动入口
-│   └── src/main/
-│       ├── java/.../CampusAppointmentApplication.java
-│       └── resources/
-│           ├── application.yml             # 完整配置
-│           └── application.yml.example     # 配置模板（安全）
-│
-└── sql/                            🗄️ 数据库脚本
-    ├── database.sql                # 建库
-    ├── user.sql / services.sql / item.sql / file.sql   # 建表
-    ├── data.sql                    # 示例数据 (5 种服务)
-    └── indexes.sql                 # 索引优化
-```
-
-</details>
-
-<br />
-
----
-
-## 🔄 业务流程
-
-### 📝 预约完整生命周期
-
-```
-  [用户注册]                              [管理员]
-      |                                      |
-      v                                      v
-  +--------+   POST /book   +--------+   audit    +----------+   邮件
-  |  提交   | -------------> |  待审   | --------> | 通过/拒绝  | -------> 📧
-  +--------+                +--------+            +----------+
-                                 |                      |
-                                 v                      v
-                             也可取消              邮件内容:
-                             (用户自行)            服务名称、审核结果、
-                                                   原因说明、操作时间
-```
-
-### 🔐 注册流程
-
-```
-  Step 1:  POST /email {email}
-           |
-           +--> 生成 6 位数字验证码
-           +--> Redis SET "verification_code:{email}"  TTL=300s
-           +--> @Async 发送邮件到用户邮箱
-           +--> Redis SET "rate_limit:email:{email}"   TTL=60s 防刷
-
-  Step 2:  POST /register/verify-code
-           { email, code, password, name, ... }
-           |
-           +--> Redis GET "verification_code:{email}"
-           +--> 校验验证码 --> 检查邮箱唯一性
-           +--> BCrypt 加密密码 --> 保存用户记录
-           +--> 删除 Redis 验证码 --> 返回 JWT Token
-```
-
-<br />
-
----
-
-## 🧪 单元测试
-
-项目已为预约核心模块编写了单元测试，使用 **JUnit 5 + Mockito** 框架，遵循 Given-When-Then 模式。
-
-### 测试概况
-
-| 测试类 | 模块 | 测试数 | 覆盖内容 |
-|--------|------|--------|----------|
-| `BookServiceImplTest` | cas-module-appointment | 11 | 创建预约、空ID校验、服务不存在、服务已禁用、取消预约、查询预约 |
-| `ServiceStatusServiceImplTest` | cas-module-appointment | 9 | 审核通过（有/无备注）、审核驳回（含原因校验）、订单不存在、更新失败 |
-| **合计** | | **20** | 覆盖预约核心业务 & 审核流程的所有正常/异常分支 |
-
-### 测试基础设施
-
-- `cas-spring-boot-starter-test` — 提供 `BaseApplicationTest` 抽象基类（`@SpringBootTest`）
-- `cas-module-appointment/pom.xml` — 引入 `spring-boot-starter-test`（含 JUnit 5 + Mockito）
-
-### 运行测试
-
-```bash
-# 运行所有测试
-mvn test
-
-# 只运行 appointment 模块的测试
-mvn -pl cas-module-appointment -am test
-
-# 运行单个测试类
-mvn -pl cas-module-appointment -am test -Dtest=BookServiceImplTest
-
-# 运行单个测试方法
-mvn -pl cas-module-appointment -am test -Dtest=ServiceStatusServiceImplTest#testAuditPass
-```
-
-<br />
-
----
-
-## 🧪 开发计划
-
-> ⚠️ 当前项目为功能可用的 **WIP（Work In Progress）** 状态，以下是待完善的方向：
-
-| 优先级 | 计划 | 说明 |
-|--------|------|------|
-| 🟡 中 | 补充测试覆盖 | system 模块、infra 模块、Controller 层及集成测试待补全 |
-| 🔴 高 | 分页查询 | 所有列表接口目前返回全量数据 |
-| 🔴 高 | Bean Validation | DTO 批量添加校验注解 |
-| 🟡 中 | Docker Compose 部署 | 一键启动 MySQL + Redis + 应用 |
-| 🟡 中 | 幂等性设计 | 防止重复提交 |
-| 🟡 中 | 前端路由守卫完善 | Token 过期自动刷新 |
-| 🟢 低 | 消息队列集成 | cas-spring-boot-starter-mq 待实现 |
-| 🟢 低 | CI/CD Pipeline | GitHub Actions 自动化构建 |
-
-<br />
-
----
-
-## 🤝 贡献指南
-
-1. Fork 本项目
-2. 创建特性分支：`git checkout -b feature/amazing-feature`
-3. 提交修改：`git commit -m 'feat: add amazing feature'`
-4. 推送分支：`git push origin feature/amazing-feature`
-5. 提交 Pull Request
-
-### 代码规范
-- ✅ Controller 返回 `CommonResult<T>`
-- ✅ 使用 `SecurityFrameworkUtils` 获取当前用户，**不要**注入 `HttpServletRequest`
-- ✅ 使用 `@RequireRole` 注解控制权限
-- ✅ 跨模块调用通过 `api/` 接口
-- ✅ Domain 层保持纯 Java，**不加** Spring 注解
-- ✅ 异常交给 `GlobalExceptionHandler` 统一处理
-
-<br />
-
----
-
-## 📄 许可证
-
-本项目基于 **MIT License** 开源。
-
-<br />
-
----
-
-<p align="center">
-  <sub>Built with ❤️ using Spring Boot · MyBatis-Plus · Redis · MySQL · Vue 3</sub>
-  <br />
-  <sub>© 2026 Campus Appointment System</sub>
-</p>
+## 代码约定
+- Controller 返回 `CommonResult<T>`；业务异常抛 `BusinessException(ErrorCode)`。
+- 当前用户取 `SecurityFrameworkUtils.getLoginUser()`；权限用 `@RequireRole` 注解。
+- 密钥一律经环境变量注入（`.env`），不入库。

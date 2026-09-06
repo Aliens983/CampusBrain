@@ -1,76 +1,90 @@
-# 统一前端 — 智汇校园 · CampusBrain
+# 前端 — CampusBrain 统一前端
 
-基于 **Vue 3 + TypeScript + Vite + Element Plus + Pinia** 的统一单页应用，整合校园预约系统（CAS）与知识库 AI 助手（KB）。
+面向 **校园预约（CAS）+ 知识库 AI 助手（KB）** 的统一单页应用。Vue 3 `<script setup>` + TypeScript + Vite + Element Plus + Pinia。主题采用杭师大 **HZNU 校徽蓝 `#3FB6FF`**。
 
-## 功能概览
+## 技术栈
+Vue 3.4 · TypeScript 5.6 · Vite 5 · Element Plus 2.8 · Pinia（+ persistedstate）· Vue Router 4 · SCSS · ECharts · dayjs
 
-- **CAS 用户端**：工作台 / 服务中心 / 会议室 / 设备借用 / 咨询服务 / 我的预约 / 消息 / 个人中心
-- **CAS 管理端**：管理驾驶舱 / 服务治理 / 预约审核 / 用户管理 / 系统管理
-- **KB AI 助手**（`/assistant`）：知识库问答 + 文档上传/管理，基于 RAG + Function Calling，可实时查询预约数据（**需后端配置 `DEEPSEEK_API_KEY` 后问答可用**）
+## 路由 / 页面（对应 `src/router/index.ts` + 各模块 router）
 
-## 目录结构
+**用户端**（布局 `src/layout/UserLayoutShell.vue`，需登录）
 
+| 路径 | 页面 | 说明 |
+|---|---|---|
+| `/dashboard` | 工作台 | 两栏：标题 + **首页轮播图**（鼠标按住左右拖动切图）/ 今日安排 + 预约入口；按校区展示 |
+| `/services` | 服务中心 | **校区切换** + 分类筛选（空闲教室/咨询/设备/活动），服务卡片（封面图） |
+| `/service/:id` | 服务详情 | 按服务类型进入不同预约表单：咨询选人+时段 / 教室选房+时段 / 设备选数量+借用窗口 / 活动申请 |
+| `/bookings` | 我的预约 | 预约列表（校区标签 + 资源×数量明细 + 状态） |
+| `/bookings/:id` | 预约详情 | 单条详情 / 取消 |
+| `/assistant` | AI 助手 | KB 知识库问答（QaPortal）；文档上传仅管理员 |
+| `/profile` | 个人中心 | 资料编辑、**修改密码**（旧密码校验）、邮件通知偏好 |
+
+**管理端**（布局 `src/layout/AdminLayoutShell.vue`，需管理员，`/admin/*`）
+
+| 路径 | 页面 | 说明 |
+|---|---|---|
+| `/admin` | 管理概览 | 驾驶舱：平台用户数、服务模块数等指标卡片 |
+| `/admin/services` | 服务治理 | 服务上下架、编辑 / 新增、封面上传 |
+| `/admin/bookings` | 预约审核 | 逐条通过 / 拒绝（拒绝必填原因），按校区查看 |
+| `/admin/users` | 用户与权限 | 用户搜索、角色管理 |
+| `/admin/system` | 系统设置 | **轮播图管理**（上传/删除/拖拽排序，≤6 张）、**通知策略** |
+| `/admin/tools` | 工具箱 | 天气查询、二维码生成 |
+
+**公共**：`/login` 登录（图形验证码）、`/register` 邮箱注册、404。
+
+## 目录结构（活跃代码）
 ```
 frontend/
 ├── src/
+│   ├── router/index.ts        # 根路由：/login /register + userRoutes + adminRoutes
 │   ├── modules/
-│   │   ├── user/          # CAS 用户端（路由 + 视图）
-│   │   ├── admin/         # CAS 管理端（路由 + 视图）
-│   │   └── assistant/     # KB AI 助手（QaPortal 等）
-│   ├── common/            # 统一基础设施
-│   │   ├── stores/user.ts # 用户 store（pinia + persist）
-│   │   ├── utils/request.ts  # axios 封装（统一 401/错误处理）
-│   │   ├── utils/auth.ts  # 角色/登录工具
-│   │   └── types.ts       # 共享类型
-│   ├── services/          # API 调用层（api/index/portal/campus）
-│   ├── views/             # 页面组件（auth/dashboard/bookings/admin 等）
-│   ├── router/index.ts    # 路由 + 守卫
-│   ├── layout/            # 用户/管理端布局
-│   └── types/             # 类型定义
-├── vite.config.ts         # 代理：/api/v1/kb→网关8888透传，/api→网关8888补/v1前缀
+│   │   ├── user/              # 用户端：router + views/{dashboard,services,bookings,profile}
+│   │   ├── admin/             # 管理端：router（视图在 src/views/admin/*）
+│   │   └── assistant/views/QaPortal.vue   # AI 助手
+│   ├── views/
+│   │   ├── auth/              # LoginPage / RegisterPage / 404
+│   │   └── admin/             # 管理概览/服务治理/预约审核/用户权限/系统设置/工具箱
+│   ├── layout/                # UserLayoutShell / AdminLayoutShell
+│   ├── common/                # stores/user、utils/request、utils/auth、campus 映射等
+│   ├── assets/styles/         # global.css（主题变量）+ variables.scss（自动注入）
+│   └── services/              # API 调用层（campus 等）
+├── vite.config.ts
 └── package.json
 ```
-
-> API 层正在收敛中：新代码统一使用 `@/common/utils/request` 与 `@/common/stores/user`；旧的 `@/utils/request`、`@/stores/user` 仍有部分视图引用，尚未完全删除。
+> 早期曾并存一套 `src/views/{dashboard,services,bookings,consultation,rooms,equipment,profile}` 页面；主路由已全部迁到 `src/modules/*`，旧目录仅登录/注册/管理端等仍在使用，其余为遗留副本。
 
 ## 快速开始
 
-### 环境要求
-
-- Node.js >= 18, npm >= 9
-
-### 安装与开发
+### 环境
+Node.js ≥ 18、npm ≥ 9。开发时后端需按 `backend/README.md` 起好 gateway/cas/kb 与基础设施。
 
 ```bash
 npm install
-npm run dev         # http://localhost:3000
+npm run dev          # http://localhost:3000（vite 自动打开）
 ```
 
 ### 构建 / 检查
-
 ```bash
-npm run build        # vue-tsc && vite build
+npm run build        # vue-tsc && vite build（产物 dist/）
 npm run type-check   # vue-tsc --noEmit
-npm run lint         # eslint
+npm run lint         # eslint . --fix
 ```
 
-## 代理配置（vite.config.ts）
-
-所有请求统一走网关（`localhost:8888`，本地开发时 GatewayApplication 端口；Docker 部署为 `localhost:80`）：
+## 代理（vite.config.ts）
+所有请求统一打到网关 `localhost:8888`：
 
 | 路径 | 目标 | 说明 |
 |---|---|---|
-| `/api/v1/kb` | `http://localhost:8888` | KB 路径已带 `/v1`，直接透传网关 |
-| `/api` | `http://localhost:8888` | CAS 路径补 `/v1` 前缀（rewrite `/api` → `/api/v1`）后转发网关 |
+| `/api/v1/kb` | `http://localhost:8888` | KB 路径已带 `/v1`，直接透传 |
+| `/api` | `http://localhost:8888` | CAS 路径补 `/v1` 前缀后转发（rewrite `/api` → `/api/v1`） |
 
-> 网关按 `/api/v1/kb/**` → kb-service、其余 → cas-service 路由。生产 nginx 与 vite 代理保持一致（拆两条 `location`）。
+网关按 `/api/v1/kb/**` → kb-service、其余 → cas-service 路由。图片静态资源 `/uploads/**`（含轮播图、封面、验证码）同样经 `/api` 前缀代理到网关放行。生产 `frontend/nginx.conf` 保持两条同构的 `location`。
 
 ## 登录与账号
-
-- 统一登录走 CAS 认证接口（`/api/v1/auth/login`），token 存 `localStorage`（persist key `enterprise_frontend_user`）。
-- 后端离线时前端按用户名关键字分流演示角色，见 **`DEMO_ACCOUNTS.md`**。
+- 统一走 CAS 认证（`/api/v1/auth/login`，图形验证码）；token 由 Pinia persistedstate 持久化到 localStorage，路由守卫按角色决定首页/管理端准入。
+- 初始种子账号（Flyway V2）：管理员 `admin@campus.com`、普通用户 `user@campus.com`，密码均 `123456`。
 
 ## 关键说明
-
-- **AI 助手 SSE**：问答走 `EventSource /api/v1/kb/qa/ask/stream?token=...`，网关已支持从 query 读 token（EventSource 无法设 header）。后端用 `ServerSentEvent` 结构化编码：回答文本为默认 message 事件（界面显示），`messageId`（点赞/点踩反馈）与 `citations`（引用来源）为命名事件，由 `addEventListener` 单独接收，**不会显示到回答框**。
-- **token 统一**：前端只维护一套 token（CAS JWT），经网关透传身份；KB 的 AI 问答需后端配置 `DEEPSEEK_API_KEY`，否则 LLM 调用失败。
+- **主题**：校徽蓝 `#3FB6FF` 收敛在 `src/assets/styles/global.css` 的 `:root` 变量与 `variables.scss`（作为 vite scss `additionalData` 自动注入），改一处全局生效。
+- **AI 助手可用性**：依赖后端配置 LLM Key（KB `OPENAI_API_KEY`/`EMBEDDING_API_KEY`，见 `backend/README.md`）；未配置时登录 / 预约等主流程不受影响，仅问答不可用。
+- **上传**：封面上传走 `/admin/files`（后端本地 `uploads/`，按子目录存放）；轮播图管理在 `/admin/system` 独立上传并落 `carousel` 目录。

@@ -1,58 +1,41 @@
-# README.md - cas-module-appointment
+# cas-module-appointment — 预约核心业务模块
 
-## 模块职责
-
-cas-module-appointment 是预约业务模块，提供服务预约等业务功能。
+DDD 业务模块，承载预约全流程：服务目录、四类预约（咨询/教室/设备/活动）、审核、时段与库存防冲突、自动完成，以及首页轮播图。
 
 ## 核心功能
-
-- **服务管理**: 获取可用的服务列表
-- **预约功能**: 用户预约服务
+- **服务目录**：按分类（`teacher/equipment/space/activity`）与校区（`cq/xs`）提供服务列表/详情，含封面图 `image_url` 与容量。
+- **四类预约**：
+  - 咨询：选咨询师 + 可约时段（`time_slot` 落库），时段冲突防重；
+  - 教室：选教室 + 时段窗口，**一间教室同一时间段仅一人可约**；
+  - 设备：窗口借用 + 数量，`available_stock` 库存原子扣减，到点自动归还；
+  - 活动：`capacity` 容量扣减（-1 不限），超额拒绝。
+- **审核 / 取消**：通过/拒绝（拒绝必填原因），自动释放时段与库存；`BookingAutoCompleteTask` 定时把已过窗口的单置为「完成」。
+- **轮播图**：`carousel` 独立子包（controller/admin + app、service、mapper、dataobject），管理端上传/删除/拖拽排序（≤6 张）+ 用户端启用列表。
 
 ## 目录结构
-
-采用 DDD 四层架构：
-
 ```
-cas-module-appointment/
-├── interfaces/                    # 接口层
-│   └── controller/              # REST控制器
-│
-├── application/                   # 应用层
-│   └── service/                 # 应用服务
-│
-├── domain/                      # 领域层
-│   ├── entity/                  # 实体
-│   └── repository/              # 仓储接口
-│
-├── infrastructure/              # 基础设施层
-│   └── persistence/             # 持久化（Mapper, DO）
-│
-└── api/                        # 跨模块API
+com.laoliu.cas.appointment
+├── carousel/                    # 轮播图子域
+├── interfaces/controller/       # admin（/admin/services /admin/bookings）· app（/app/services /app/bookings …）
+├── interfaces/dto/              # request / response
+├── application/service/         # 应用编排（impl），含 @EnableScheduling 自动完成任务
+├── domain/                      # 纯实体 + repository 接口（零框架注解）
+└── infrastructure/              # persistence：dataobject / mapper / repositoryImpl
 ```
 
-## 核心类说明
+## 主要 REST 分组（经网关前缀 `/api/v1`）
+| 路径 | 说明 |
+|---|---|
+| `GET /app/services`、`/{id}`、`/mine` | 服务目录浏览 |
+| `POST /app/bookings/room\|equipment\|consultation`、`GET /app/bookings/{id}` | 资源预约 / 详情 |
+| `GET /app/consultations`、`/{id}/slots`、`GET /app/rooms`、`GET /app/equipment` | 资源与可约数据 |
+| `GET /appointments/availability` | 实时余量（供 KB 只读查询） |
+| `GET /app/carousel` | 用户端轮播列表 |
+| `GET/PUT /admin/services`、`GET/POST /admin/bookings` | 服务治理 / 预约审核 |
+| `GET/POST/DELETE /admin/carousel`、`POST /admin/carousel/reorder` | 轮播图管理 |
 
-| 类名 | 包路径 | 说明 |
-|------|--------|------|
-| ServiceController | com.laoliu.cas.appointment.interfaces.controller.admin | 服务REST接口 |
-| ServicesService | com.laoliu.cas.appointment.application.service | 服务应用服务接口 |
-| ServicesServiceImpl | com.laoliu.cas.appointment.application.service.impl | 服务应用服务实现 |
+## 核心数据表（Flyway V1）
+`services`（目录：category/campus/image_url/capacity/booked_count）→ `item`（预约单：service_id + 资源列其一；`manage_status` 0待审/1通过/2拒绝/3取消/4完成）→ 资源 `consultant`+`time_slot`、`room`、`equipment`；独立 `carousel`。
 
-## 依赖关系
-
-```
-依赖层级:
-cas-server ─────────────────────────────────────────┐
-                                                   │
-cas-module-appointment ──> cas-module-system ───────┤
-                         ──> cas-module-infra ───────┤
-                                                   ├──> cas-framework
-cas-thirdparty-aliyun ─────────────────────────────┘
-```
-
-## API接口
-
-| 接口 | 方法 | 说明 |
-|------|------|------|
-| /service | GET | 获取所有可用服务 |
+## 依赖
+依赖 `cas-module-system`（用户/角色）、`cas-module-infra`（邮件/文件）；测试 4 个测试类（预约/审核流程，Mockito）。

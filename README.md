@@ -3,7 +3,7 @@
 # 智汇校园 · CampusBrain
 
 <p align="center">
-  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=32&duration=2800&pause=1200&color=3B82F6&center=true&vCenter=true&width=780&lines=CampusBrain+%C2%B7+Smart+Campus+Platform;Campus+Appointment+%C3%97+RAG+Knowledge+Q%26A;Spring+Cloud+Alibaba+Microservices;Unified+JWT+Gateway+Auth+%2B+SSO" alt="Typing SVG" />
+  <img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=700&size=32&duration=2800&pause=1200&color=3FB6FF&center=true&vCenter=true&width=780&lines=CampusBrain+%C2%B7+Smart+Campus+Platform;Campus+Appointment+%C3%97+RAG+Knowledge+Q%26A;Spring+Cloud+Alibaba+Microservices;HZNU+%E6%A0%A1%E5%BE%BD%E8%93%9D+%C2%B7+%E9%A2%84%E7%BA%A6%E6%8C%89%E6%A0%A1%E5%8C%BA" alt="Typing SVG" />
 </p>
 
 <p align="center">
@@ -12,16 +12,16 @@
   <img src="https://img.shields.io/badge/Spring_Cloud_Alibaba-2023.0.1.2-1677FF?style=for-the-badge&logo=spring&logoColor=white" alt="Spring Cloud Alibaba" />
   <img src="https://img.shields.io/badge/Spring_Cloud_Gateway-3.3-3DDC84?style=for-the-badge&logo=spring&logoColor=white" alt="Gateway" />
   <img src="https://img.shields.io/badge/Nacos-2.3.2-1E88E5?style=for-the-badge&logo=nacos&logoColor=white" alt="Nacos" />
-  <img src="https://img.shields.io/badge/Sentinel-1.8-E64A19?style=for-the-badge&logo=sentinel&logoColor=white" alt="Sentinel" />
+  <img src="https://img.shields.io/badge/Flyway-10.x-CC0200?style=for-the-badge&logo=flyway&logoColor=white" alt="Flyway" />
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Vue-3.4-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white" alt="Vue 3" />
   <img src="https://img.shields.io/badge/TypeScript-5.6-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Element_Plus-2.9-409EFF?style=for-the-badge&logo=element&logoColor=white" alt="Element Plus" />
+  <img src="https://img.shields.io/badge/Element_Plus-2.8-409EFF?style=for-the-badge&logo=element&logoColor=white" alt="Element Plus" />
   <img src="https://img.shields.io/badge/MyBatis_Plus-3.5.5-1E90FF?style=for-the-badge&logo=mybatis&logoColor=white" alt="MyBatis-Plus" />
   <img src="https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white" alt="MySQL" />
-  <img src="https://img.shields.io/badge/Redis-7.0-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" />
+  <img src="https://img.shields.io/badge/Redis-7.x-DC382D?style=for-the-badge&logo=redis&logoColor=white" alt="Redis" />
 </p>
 
 <p align="center">
@@ -29,194 +29,177 @@
   <img src="https://img.shields.io/badge/Qdrant-1.9-DC244C?style=for-the-badge&logo=qdrant&logoColor=white" alt="Qdrant" />
   <img src="https://img.shields.io/badge/RabbitMQ-3.13-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white" alt="RabbitMQ" />
   <img src="https://img.shields.io/badge/MinIO-latest-C72E49?style=for-the-badge&logo=minio&logoColor=white" alt="MinIO" />
-  <img src="https://img.shields.io/badge/Docker-🐳-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
+  <img src="https://img.shields.io/badge/Docker-%F0%9F%90%B3-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
 </p>
 
 <p align="center">
+  <img src="https://img.shields.io/badge/CI-GitHub_Actions-2088FF?style=flat-square" alt="GitHub Actions" />
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=flat-square" alt="License" />
-  <img src="https://img.shields.io/badge/Version-1.0.0-blue?style=flat-square" alt="Version" />
-  <img src="https://img.shields.io/badge/Architecture-Microservices_·_DDD-ff69b4?style=flat-square" alt="Architecture" />
-  <img src="https://img.shields.io/badge/Auth-Gateway_JWT_·_RBAC-green?style=flat-square" alt="Auth" />
-  <img src="https://img.shields.io/badge/Retrieval-RAG_Hybrid-9b59b6?style=flat-square" alt="RAG" />
-  <img src="https://img.shields.io/badge/Deploy-Docker_Compose-2496ED?style=flat-square" alt="Docker" />
+  <img src="https://img.shields.io/badge/Architecture-Microservices_%C2%B7_DDD-ff69b4?style=flat-square" alt="Architecture" />
+  <img src="https://img.shields.io/badge/Auth-Gateway_JWT_%C2%B7_RBAC-green?style=flat-square" alt="Auth" />
+  <img src="https://img.shields.io/badge/Booking-Slot%2FStock_Anti--conflict-9b59b6?style=flat-square" alt="Booking" />
 </p>
 
 </div>
 
-> **CampusBrain 校园大脑** —— 基于 Spring Cloud Alibaba 微服务架构的智慧校园平台，将**校园预约系统（CAS）**与**知识库问答平台（KB）**合为一体：统一 Vue 前端、统一网关 JWT 鉴权，KB 作为 CAS 的专属 AI 助手，提供知识库 RAG 问答，并已实现基于 Function Calling 的预约数据实时查询。
+**CampusBrain 智汇校园** —— 面向高校的智慧校园预约平台（毕设 / 简历项目）。以 Spring Cloud Alibaba 微服务将**校园预约系统（CAS）**与**知识库问答平台（KB）**合为一体：统一 Vue 前端、统一网关 JWT 鉴权；KB 作为专属 AI 助手，提供知识库 RAG 问答，并可 **Function Calling 实时查询预约数据**。
+
+平台围绕**杭州师范大学两校区**场景建模（仓前 / 下沙），预约服务、咨询师、教室、设备均**按校区分离**；界面采用 **HZNU 校徽蓝 `#3FB6FF`** 主题。
 
 ---
 
-## 一、功能状态总览（如实）
+## 一、功能状态（对应当前代码）
 
-> 下表为当前代码的真实状态（`mvn test` 134 个测试全绿验证）。**标注 ⚠️ 的项依赖外部配置或尚未端到端验证**。
+### 校园预约（CAS）—— 主体业务
 
 | 能力 | 状态 | 说明 |
 |---|---|---|
-| 校园预约（CAS） | ✅ 完整 | 服务/会议室/设备/咨询预约、审核、取消；**乐观锁库存扣减防超卖 + 取消/审核回退**，DDD 分层 |
-| 知识库问答（KB） | ✅ 完整 | 文档上传 → 分块 → 向量化 → RAG 检索 → LLM 回答（无资料路径 SSE 流式，RAG/预约路径一次性返回）；**本地资料优先 + 无资料 DeepSeek 兜底；缓存已禁用，每次实时回答** |
-| 微服务架构 | ✅ 完整 | Gateway + Nacos 注册/配置 + CAS/KB 两服务，Docker Compose 编排 |
-| 网关统一鉴权 | ✅ 完整 | JWT 验签 + 内网签名 `X-Internal-Sign` + 时间戳防重放 |
-| 预约实时查询（Function Calling） | ⚠️ 已实现 | Feign + Nacos 直连 CAS + LangChain4j `@Tool`；**需配置 `DEEPSEEK_API_KEY` 并重启两端后演示** |
-| RabbitMQ 预约事件 | ⚠️ 部分 | CAS 已发布 `appointment.changed` 事件；KB 收到仅记录日志，**索引/缓存更新为 TODO** |
-| 安全修复 | ✅ 已修复 | 注册提权、IDOR、管理端越权、`/ai` 公开均已修复 |
-| Nacos 配置中心 | ✅ 已接入 | 提供 `/config-demo` 热更新演示；`cas-service.yaml` 为占位 |
-| Sentinel 限流 | ⚠️ 演示 | 已接入 + `/sentinel-demo` 演示接口；Nacos 流控规则当前为空 |
+| 按校区分流 | ✅ | 仓前(cq)/下沙(xs) 各自一套服务目录与资源（咨询师/教室/设备）；用户端可切校区，工作台区分 |
+| 服务目录 | ✅ | 多分类：`space` 空闲教室 · `teacher` 咨询/辅导 · `equipment` 设备 · `activity` 活动；支持服务上下架、封面图 |
+| 咨询时段预约 | ✅ | 咨询师 + 日期可约时段（`time_slot` 落库）；预约占用时段，冲突被拒；审核/取消/到点自动释放 |
+| 教室时段预约 | ✅ | **一间教室同一时间段仅一人可约**（唯一性约束 + 冲突检测），按 `slot_date + start/end` 排他 |
+| 设备窗口借用 | ✅ | 固定时段窗口 + 库存扣减（`available_stock`）；到点自动归还（转 COMPLETED） |
+| 活动容量预约 | ✅ | `capacity` 容量扣减，-1 不限；超额返回 `BOOKING_CAPACITY_FULL` |
+| 预约审核/取消 | ✅ | 0待审→1通过/2拒绝/3取消/4完成；拒绝必填原因；审核/取消自动释放占用的时段与库存 |
+| 自动完成调度 | ✅ | `@Scheduled` 定时扫描，窗口过期自动置 COMPLETED（设备到点归还、教室释放） |
+| 邮件通知 | ✅ | 审核结果邮件（受**全局通知策略** + **用户邮件偏好**开关控制） |
+| 首页轮播图 | ✅ | 管理端上传 / 删除 / 拖拽排序（最多 6 张），用户端工作台渲染；默认 6 张校区/校园图 |
+| 账号体系 | ✅ | 图形验证码登录、邮箱验证码注册、忘记密码、个人中心改密（旧密码校验）；三级角色 RBAC |
+| 通知设置 | ✅ | 管理端策略（邮件通道开关）+ 用户偏好联动 |
 
----
+### 知识库问答（KB）与工程能力
 
-## 二、架构总览
+| 能力 | 状态 | 说明 |
+|---|---|---|
+| RAG 知识库问答 | ✅ | 文档上传 → 解析分块 → Embedding(Qwen3) → **ES 关键词 + Qdrant 向量双路召回 → RRF 融合** → DeepSeek 生成 |
+| AI 助手入口 | ✅ | 前端 `/assistant`（QaPortal），知识库资料优先回答；文档上传仅管理员 |
+| 预约实时查询 | ⚠️ 需 Key | KB 经 Feign + Nacos + 内网签名直连 CAS 只读余量接口；LangChain4j `@Tool` 实现 Function Calling（需配 `OPENAI_API_KEY`/`EMBEDDING_API_KEY`） |
+| RabbitMQ 预约事件 | ⚠️ 部分 | CAS 发布 `appointment.changed`；KB 已监听接收，仅记录日志（索引更新为 TODO） |
+| CI 质量门禁 | ✅ | GitHub Actions：后端 `mvn -B test` + 前端 type-check/build，push 自动触发 |
+| 交付脚本 | ✅ | `backend/scripts/run-local.sh`（本地一键起服务）/ `publish.sh`（一行发版）/ `deploy-server.sh`（服务器部署） |
+| 数据库迁移 | ✅ | CAS 与 KB 均启用 **Flyway**，启动自动建表 + 种子数据（校区、咨询师、教室、设备、轮播图、初始账号） |
+
+## 二、架构
 
 ```
-                    ┌──────────────────────────────────────┐
-   浏览器 / 单页应用  │ frontend/ 统一 Vue 前端（CAS + AI 助手）│
-                    └─────────────────┬────────────────────┘
-                                      │ /api
-                    ┌─────────────────▼────────────────────┐
-                    │  gateway（Spring Cloud Gateway）      │  ← 唯一入口
-                    │  · 统一 JWT 鉴权                       │
-                    │  · 透传 X-User-Id / X-User-Role       │
-                    │  · 内网签名 X-Internal-Sign + 时间戳    │
-                    └───────┬──────────────┬───────────────┘
-               /api/v1/**   │              │  /api/v1/kb/**
-                    ┌───────▼──────┐  ┌────▼─────────────┐
-                    │ cas-service  │  │ kb-service       │
-                    │ :18080       │  │ :8081            │
-                    │ 预约/用户/审核 │  │ RAG 问答/文档管理 │
-                    └──────┬───────┘  └────┬─────────────┘
-                           │ 实时查询(Feign+内网签名)│
-                           └────────►──────┘
-                           │  RabbitMQ 事件（KB 已接收，索引更新 TODO）
-                           └────────►──────┘
-        Nacos(8848/9848) 注册中心 + 配置中心（config-demo 热更新演示）
-        Sentinel 限流（Nacos 动态规则，当前为空）
-        MySQL · Redis · ES · Qdrant · RabbitMQ · MinIO
+                    ┌───────────────────────────────────────┐
+  浏览器 / 单页应用   │  frontend/ 统一 Vue 前端（预约 + AI 助手） │  :3000(dev) / nginx(:80)
+                    └─────────────────┬─────────────────────┘
+                                      │ /api（vite 代理补 /v1）
+                    ┌─────────────────▼─────────────────────┐
+                    │  gateway（Spring Cloud Gateway）:8888   │ ← 唯一入口
+                    │  · 统一 JWT 验签 · @RequireRole RBAC 授权 │
+                    │  · 内网签名 X-Internal-Sign + 时间戳防重放 │
+                    └────────┬──────────────┬───────────────┘
+              /api/v1/**    │              │   /api/v1/kb/**
+                    ┌───────▼───────┐  ┌────▼─────────────┐
+                    │ cas-service   │  │ kb-service       │
+                    │ :18080 /api/v1│  │ :8081            │
+                    │ 预约·用户·审核 │  │ RAG 问答·文档管理 │
+                    └───────┬───────┘  └────┬─────────────┘
+                            │ 余量实时查询(Feign+内网签名) │
+                            └───────────►──────┘
+                            │ RabbitMQ appointment.changed（KB 监听）
+                            └───────────►──────┘
+   Nacos(8848) 注册/配置  ·  MySQL(cas_db / knowledge_base)  ·  Redis
+   Elasticsearch + Qdrant（KB 检索）· RabbitMQ · MinIO（KB 文档存储）
 ```
 
-**两个业务服务之间的数据关联**：
+**服务间协作**
+- **预约余量实时查询**：KB 经 OpenFeign + Nacos 服务发现调用 CAS 只读接口（`/appointments/availability`），以内网签名头标识受信服务；LangChain4j `AppointmentTool` + AiServices 在识别到预约问题时返回实时数据。
+- **预约变更事件**：CAS 预约创建/取消后发布 RabbitMQ `appointment.changed`，KB 监听消费。
 
-- **预约余量实时查询**：KB 通过 OpenFeign + Nacos 服务发现直连 CAS 只读接口（`/appointments/availability`），以内网签名头鉴权；LangChain4j `AppointmentTool`（`@Tool`）+ AiServices 实现 Function Calling，AI 助手在识别到预约类问题时可返回实时数据。
-- **预约变更事件**：CAS 预约创建/取消后发布 RabbitMQ `appointment.changed` 事件，KB 已实现监听并接收，当前仅记录日志（索引/缓存更新为 TODO）。
-
-## 三、目录结构
+## 三、目录结构（git 追踪范围）
 
 ```
 CampusBrain/
-├── README.md                  ← 本文档
-├── docs/                      ← 架构设计/实施计划/审计报告（本地笔记，gitignore）
+├── README.md                ← 本文档
+├── Jenkinsfile              ← 服务器 Jenkins 流水线定义
+├── .github/workflows/ci.yml ← GitHub Actions CI（后端测试 + 前端构建）
 │
-├── backend/                   ← 微服务后端（Maven 多模块）
-│   ├── pom.xml                ← 顶层聚合 POM（含 Spring Cloud 版本管理）
-│   ├── common-auth/           ← 共享认证：JWT + 内网签名
-│   ├── gateway/               ← 网关（唯一入口）
-│   ├── cas-service/           ← 校园预约（7 个 Maven 子模块，DDD 分层）
-│   ├── kb-service/            ← 知识库问答（RAG + Feign + Tool）
-│   ├── docker-compose.yml     ← 基础设施编排（Nacos + KB 中间件）
-│   └── README.md              ← 后端启动指南
+├── backend/                 ← Maven 多模块微服务后端
+│   ├── common-auth/         ← 共享认证：JWT 工具 + 内网签名
+│   ├── gateway/             ← Spring Cloud Gateway（统一鉴权入口，:8888）
+│   ├── cas-service/         ← 校园预约（DDD 多模块，:18080）
+│   ├── kb-service/          ← 知识库问答 / RAG（:8081）
+│   ├── docker-compose.yml        ← 开发：基础设施（Nacos + KB 中间件）
+│   ├── docker-compose.business.yml ← 服务器：全栈编排（含 cas-mysql/redis + 四服务 + 前端）
+│   ├── scripts/             ← load-env / run-local / deploy-server / publish
+│   └── README.md            ← 后端启动 / 模块 / 环境变量详解
 │
-└── frontend/                  ← 统一前端（Vue 3 + TS + Element Plus）
-    ├── README.md              ← 前端开发指南
-    └── src/
-        ├── modules/user/      ← CAS 用户端页面（工作台/服务/预约/个人中心/AI 助手）
-        ├── modules/admin/     ← CAS 管理端页面（驾驶舱/服务/审核/用户/系统/工具箱）
-        ├── modules/assistant/ ← KB AI 助手页（QaPortal）
-        ├── common/            ← 统一 store + request
-        └── services/          ← API 调用层（正在收敛至 common）
+└── frontend/                ← 统一前端（Vue 3 + TS + Element Plus + Pinia）
+    ├── src/modules/user/    ← 预约用户端（工作台/服务/预约/个人中心/AI 助手）
+    ├── src/modules/admin/   ← 预约管理端（概览/服务治理/审核/用户/系统设置/工具箱）
+    ├── src/modules/assistant/← KB AI 助手页（QaPortal）
+    └── README.md            ← 前端开发指南
 ```
 
-## 四、快速开始
+> 仓库根目录的 `docs/`、`logs/`、`uploads/`、`.env` 等为个人笔记 / 运行产物 / 密钥，已 gitignore，不入库。
+
+## 四、快速开始（本地开发）
 
 ### 1. 前置条件
+JDK 17 · Maven 3.9 · Node ≥ 18 · Docker；本地 MySQL 与 Redis（CAS 用宿主实例）。
 
-```bash
-# 环境变量（后端依赖）—— 在 shell 中导出，或在 docker-compose .env 中设置
-export DEEPSEEK_API_KEY='<DeepSeek 密钥>'   # AI 问答必需，否则 LLM 调用失败
-export DB_PASSWORD='<CAS 数据库密码>'        # CAS 宿主机 MySQL
-export JWT_SECRET='<32字节以上随机串>'
-export INTERNAL_SIGN_SECRET='<随机串>'
-```
-
-### 2. 启动中间件（Docker，只含 Nacos + KB 中间件）
-
+### 2. 配置环境变量
 ```bash
 cd backend
-cp .env.example .env              # 按需修改：中间件密码、JWT/内网签名密钥等
-docker compose up -d              # Nacos + MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO
+cp .env.example .env        # 至少填 MYSQL_ROOT_PASSWORD；JWT_SECRET / INTERNAL_SIGN_SECRET 建议自定义
 ```
+> 密钥已全部环境变量化，`application.yml` 不含真实凭据（生产必须覆盖内置示例默认值）。
 
-> 三个业务服务（gateway/cas-service/kb-service）**在本地运行**，不占用 Docker。
-> CAS 依赖宿主机 MySQL(3306)/Redis(6379)，需确保 `cas_db` 已建表。
-
-### 3. 启动三个业务服务（本地）
-
+### 3. 启动基础设施 + 三个服务
 ```bash
-# 导出环境变量（三个服务共用）
-export DEEPSEEK_API_KEY='<DeepSeek 密钥>'
-export DB_PASSWORD='<CAS 数据库密码>'
-export JWT_SECRET='<32字节以上随机串>' INTERNAL_SIGN_SECRET='<随机串>'
-
-# IDEA 分别启动，或 java -jar 依次启动：
-#   GatewayApplication → 8888
-#   CampusAppointmentApplication → 18080
-#   KbApplication → 8081
+cd backend
+docker compose up -d                                  # Nacos + KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO
+./scripts/run-local.sh gateway   # :8888  （网关）
+./scripts/run-local.sh cas       # :18080 （预约 CAS，Flyway 自动建表 + 种子）
+./scripts/run-local.sh kb        # :8081  （知识库 KB）
 ```
+`run-local.sh` 自动加载 `.env` → `mvn package`（跳过测试）→ `java -jar`；代码没改可加 `--fast` 直接起 jar。
 
 ### 4. 启动前端
-
 ```bash
 cd frontend
 npm install
 npm run dev        # http://localhost:3000
 ```
 
-### 5. 验证
+### 5. 登录账号（Flyway V2 种子）
+| 角色 | 邮箱 | 密码 |
+|---|---|---|
+| 管理员 | `admin@campus.com` | `123456` |
+| 普通用户 | `user@campus.com` | `123456` |
 
+### 6. 验证
+- 浏览器登录后：工作台 → 服务中心（切校区、按分类选服务）→ 咨询/教室/设备预约 → 我的预约；
+- 管理端（admin 账号）：服务治理 / 预约审核 / 系统设置（轮播图、通知策略）；
+- AI 助手 `/assistant`：配置好 LLM Key 后可 RAG 问答。
+
+## 五、测试与 CI
 ```bash
-# Nacos 三个服务注册
-curl http://localhost:8848/nacos/v1/ns/service/list?pageNo=1&pageSize=10
-# 网关路由到 KB
-curl http://localhost:8888/api/v1/kb/health
+cd backend && mvn -B test     # 132 个测试方法：CAS 73 + KB 59（KB 用 H2 + @MockBean 隔离中间件）
+cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 ```
-
-浏览器访问 http://localhost:3000，登录后：
-- CAS 功能：工作台 / 服务预约 / 我的预约 / 个人中心
-- **AI 助手**（导航栏"AI 助手"）：上传文档后提问，走 RAG 问答；问"有哪些服务可预约"触发 Function Calling 返回实时数据
-
-## 五、测试
-
-```bash
-cd backend && mvn test     # 134 个测试全绿（CAS 73 + KB 61）
-cd frontend && npm run type-check && npm run lint   # 前端类型检查 + lint
-```
+推送到 GitHub 自动触发 `ci.yml`（后端 test + 前端 type-check/build）作为质量门禁。
 
 ## 六、关键设计
+- **统一网关鉴权**：网关验签 JWT → 透传身份头；服务内 `@RequireRole` 细粒度授权；服务间用 `X-Internal-Sign` 内网签名。
+- **预约防冲突**：时段类预约（咨询/教室）行级加锁 + 重叠查询保证唯一；设备/活动库存 `available_stock` / `capacity` 原子扣减防超卖，取消/拒绝释放。
+- **两校区数据模型**：服务、咨询师、教室、设备均带 `campus`/挂校区服务，用户端按校区隔离浏览。
+- **Flyway 迁移**：启动自动建库建表并灌入校区种子与初始账号（新机器零手工 SQL）。
+- **RAG 混合检索**：ES 关键词 + Qdrant 向量双路召回 → RRF 融合 → LLM（Resilience4j 熔断）。
 
-- **统一 JWT 网关鉴权**：网关验签 JWT，透传身份头 + 内网签名（5 分钟时间戳新鲜度）；服务内 `@RequireRole` 做细粒度授权。
-- **服务间调用**：KB 用 OpenFeign + Nacos 服务发现直连 CAS 只读接口，`X-Internal-Sign` 内网签名标识受信服务（CAS `InternalAuthFilter` 校验后放行）。
-- **Function Calling**：LangChain4j `AppointmentTool`（`@Tool`）+ AiServices，`QaApplicationService` 按意图分流，预约类问题走实时数据链路。
-- **RAG 混合检索**：KB 文档解析 → 分块 → Embedding → ES 关键词 + Qdrant 向量双路召回 → RRF 融合 → LLM 生成（Resilience4j 熔断）。
-- **安全加固**：注册提权、IDOR、管理端越权、`/ai` 公开、内网签名防重放均已修复。
-
-## 七、已知限制（如实）
-
-- **AI 问答依赖 `DEEPSEEK_API_KEY`**：未配置则 LLM 调用失败，AI 助手不可用。
-- **缓存已全部禁用**：每次提问实时检索 + LLM 回答（避免答非所问/历史串题），代价是每次调用 LLM 有延迟与费用，见 `docs/为什么不用缓存.md`。
-- **RabbitMQ 事件消费不完整**：KB 已接收预约变更事件但仅记录日志，索引/缓存更新尚未实现。
-- **Sentinel 流控规则为空**：已接入并演示接口，但未配置真实限流规则。
-- **响应模型跨服务不统一**：CAS 用 `CommonResult`，KB 用 `ApiResponse`。
-- **Maven 治理不统一**：CAS（`com.laoliu`）与 KB（`com.kb`）groupId 不同。
-- **咨询时段硬编码**：可用时段仍为固定 6 个，未落库。
+## 七、已知限制
+- **AI 问答依赖外部 Key**：KB 需 `OPENAI_API_KEY`（DeepSeek 兼容）+ `EMBEDDING_API_KEY`（硅基流动），缺省时 AI 助手不可用（登录/预约不受影响）。
+- **RabbitMQ 消费不完整**：KB 收到预约事件仅记录日志，索引/缓存更新仍为 TODO。
+- **响应模型 / Maven 治理不统一**：CAS 用 `CommonResult`（`com.laoliu`），KB 用 `ApiResponse`（`com.kb`），属历史演进结果，未强统。
+- **Sentinel 已接入但流控规则为空**（Nacos `cas-sentinel-flow-rules`），预留生产调优。
+- **邮件 / 短信 / 天气 / OSS** 为可选外部集成，未配对应 Key 时相应能力降级。
 
 ## 八、文档索引
-
-| 文档 | 用途 |
+| 文档 | 内容 |
 |---|---|
-| `backend/README.md` | 后端模块/启动/环境变量详解 |
-| `frontend/README.md` | 前端开发指南 |
-| `docs/秋招简历项目审查报告.md` | 简历视角审查 + 修复进度追踪 |
-| `docs/项目问题审计报告.md` | 安全/契约审计 |
-| `docs/当前项目遗留问题清单.md` | 当前遗留问题与低成本建议 |
-| `docs/为什么不用缓存.md` | AI 问答禁用缓存的原因与权衡 |
-| `docs/微服务合体方案.md` | 架构决策与演进 |
-| `docs/待办清单.md` | 剩余功能与技术债 |
-| `docs/FunctionCalling演示记录.md` | Function Calling 实时查询的可复现演示步骤 |
+| `backend/README.md` | 后端模块、端口、中间件、环境变量、启动与部署 |
+| `frontend/README.md` | 前端技术栈、路由、开发 / 构建、代理、账号 |
+| `backend/cas-service/README.md` | cas-service 模块级说明（DDD 分层、预约领域模型） |

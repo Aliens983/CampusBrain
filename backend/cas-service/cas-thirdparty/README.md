@@ -1,52 +1,29 @@
-# README.md - cas-thirdparty-aliyun
+# cas-thirdparty — 第三方集成模块
 
-## 模块职责
-
-cas-thirdparty-aliyun 是第三方集成模块，隔离阿里云等第三方系统接口调用，保持业务模块的独立性。
+隔离外部 API（天气、AI 大模型、阿里云 OSS/SMS），保持业务模块与外部系统解耦。仅依赖 `cas-common`，不依赖任何业务模块。
 
 ## 核心功能
-
-- **短信服务**: 阿里云SMS短信发送
-- **配置隔离**: 第三方配置集中管理
+- **天气查询**：`GET /weather/local`（RestTemplate → cn.apihz.cn），按经纬度/城市返回天气。
+- **AI 对话**：`POST /ai/chat`（WebClient → DashScope/Qwen，`qwen.api-key`）；预留 DeepSeek 配置。
+- **阿里云 OSS / SMS**：`OSSService`（对象存储，供 infra 的 `/admin/files/oss` 调用）、`SmsService`（短信）。
+- **对话历史**：`ai_chat_history` 持久化（entity/repository/mapper）。
 
 ## 目录结构
-
 ```
-cas-thirdparty-aliyun/
-├── service/                      # 服务接口和实现
-│   ├── SmsService.java         # 短信服务接口
-│   └── impl/                   # 实现类
-└── config/                      # 配置类
-```
-
-## 核心类说明
-
-| 类名 | 包路径 | 说明 |
-|------|--------|------|
-| SmsService | com.laoliu.cas.thirdparty.aliyun.service | 短信服务接口 |
-| SmsServiceImpl | com.laoliu.cas.thirdparty.aliyun.service.impl | 短信服务实现 |
-
-## 依赖关系
-
-```
-cas-module-system ───────────────────────────────────────┐
-                                                         │
-cas-thirdparty-aliyun ─────────────────────────> cas-framework
+com.laoliu.cas.thirdparty
+├── config/             # AliyunConfig、QwenConfig、DeepSeekConfig
+├── controller/         # WeatherController（/weather）、CallTheModelController（/ai）
+├── service/            # WeatherApi、CallModelService、OSSService、SmsService（+ impl）
+├── dto/                # 请求/响应 DTO
+├── domain/entity + repository/        # AiChatHistory
+└── infrastructure/persistence/        # AiChatHistoryDO / Mapper / RepositoryImpl
 ```
 
-## 配置示例
+## 主要接口
+| 路径 | 说明 |
+|---|---|
+| `GET /weather/local` | 天气查询（需 `WEATHER_API_ID/KEY`） |
+| `POST /ai/chat` | AI 对话（需 Qwen/DeepSeek Key） |
 
-```yaml
-aliyun:
-  sms:
-    region-id: cn-hangzhou
-    domain: dysysmsapi.aliyuncs.com
-    access-key-id: your-access-key-id
-    access-key-secret: your-access-key-secret
-```
-
-## 注意事项
-
-1. 本模块保持轻量，只依赖 cas-common
-2. 不依赖任何业务模块
-3. 配置敏感信息时建议使用加密或环境变量
+## 配置
+外部凭证经环境变量注入（`WEATHER_API_*`、`DEEPSEEK_API_KEY`、`QWEN_API_KEY`、`ALIYUN_OSS_*`、`ALIYUN_SMS_*`），`application.yml` 不含明文密钥；未配置对应 Key 时功能降级（不影响预约主流程）。

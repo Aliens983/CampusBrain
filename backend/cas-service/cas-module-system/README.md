@@ -1,77 +1,43 @@
-# README.md - cas-module-system
+# cas-module-system — 用户与账号模块
 
-## 模块职责
-
-cas-module-system 是系统管理模块，提供用户、角色、权限等系统管理功能。
+提供注册登录、验证码、密码管理、角色权限与通知策略等账号体系能力。
 
 ## 核心功能
-
-- **用户管理**: 用户注册、登录、信息查询
-- **权限控制**: 基于角色的访问控制
-- **认证授权**: JWT Token 认证
+- **认证**：登录（图形验证码）、注册（邮箱验证码）、忘记密码；`/auth` 分组。
+- **验证码**：算术 CAPTCHA（Hutool，Redis 存答案 TTL）、邮箱 6 位验证码（Redis 限频 60s）。
+- **密码**：BCrypt 存储；个人中心改密 `PUT /users/password`（校验旧密码）。
+- **角色权限**：`@RequireRole` 注解 + `RoleAspect` AOP 拦截，三级角色 USER/ADMIN/SUPER_ADMIN。
+- **通知偏好**：`notification_policy`（全局单行）+ `user.email_notify` 用户开关。
+- **文件上传集成**：验证码图片经 `infra.FileService` 落 `uploads/captcha/`。
 
 ## 目录结构
-
-采用 DDD 四层架构：
-
 ```
-cas-module-system/
-├── interfaces/                    # 接口层
-│   ├── controller/               # REST控制器
-│   ├── dto/                      # 数据传输对象
-│   └── assembler/                # DTO转换器
-│
-├── application/                   # 应用层
-│   └── service/                  # 应用服务
-│
-├── domain/                       # 领域层
-│   ├── entity/                   # 实体
-│   └── repository/               # 仓储接口
-│
-├── infrastructure/               # 基础设施层
-│   └── persistence/              # 持久化（Mapper, DO）
-│
-└── api/                         # 跨模块API
+com.laoliu.cas.system
+├── interfaces/controller/
+│   ├── app/          # LoginController、RegisterController、EmailController、GraphicController（/auth /captcha）
+│   └── admin/        # UserController、RoleAdminController（/admin/users）、NotifyPolicyAdminController（/admin/settings）、EmailAdminController（/admin/email）
+├── interfaces/dto/   # request（登录/注册/重置/改密/验证码）/ response / assembler
+├── application/service/        # AuthService、CaptchaService、EmailVerificationService、RoleService、UserService（+ impl）
+├── domain/                     # User 实体 + UserRepository（纯 Java）
+├── infrastructure/
+│   ├── aspect/                 # RoleAspect（@RequireRole 拦截）
+│   └── persistence/            # UserDO / UserMapper / UserRepositoryImpl
+└── api/                        # UserInfoApi、GetUserIdViaTokenApi（供其他模块调用）
 ```
 
-## 核心类说明
+## 主要 REST 分组（网关前缀 `/api/v1`）
+| 路径 | 说明 |
+|---|---|
+| `POST /auth/login` · `POST /auth/register` · `POST /auth/reset` | 登录 / 注册 / 忘记密码 |
+| `POST /auth/verification-code` | 发送邮箱验证码 |
+| `GET /captcha` | 算术图形验证码 |
+| `GET/PUT /users`、`PUT /users/password` | 资料 / 改密 |
+| `GET/PUT /admin/users`、`GET/PUT /admin/users/role` | 用户列表 / 角色 |
+| `GET/PUT /admin/settings/notify` | 全局通知策略 |
+| `POST /admin/email` | 管理端邮件接口（用途见 `EmailAdminController`） |
 
-| 类名 | 包路径 | 说明 |
-|------|--------|------|
-| UserController | com.laoliu.cas.system.interfaces.controller.admin | 用户REST接口 |
-| UserService | com.laoliu.cas.system.application.service | 用户服务接口 |
-| UserServiceImpl | com.laoliu.cas.system.application.service.impl | 用户服务实现 |
-| UserMapper | com.laoliu.cas.system.infrastructure.persistence.mapper | MyBatis Mapper |
-| GetUserIdViaTokenApi | com.laoliu.cas.system.api | 跨模块获取用户ID接口 |
+## 数据表（Flyway V1）
+`user`（role 0/1/2 · email_notify）、`notification_policy`（单行策略）。
 
-## 依赖关系
-
-```
-依赖层级:
-cas-module-appointment ──────────────────┐
-                                        │
-cas-module-system ──> cas-module-infra ─┤
-                                        ├──> cas-framework
-cas-thirdparty-aliyun ──────────────────┘
-```
-
-## 使用示例
-
-### 引入依赖
-
-```xml
-<dependency>
-    <groupId>com.laoliu</groupId>
-    <artifactId>cas-module-system</artifactId>
-    <version>1.0.0</version>
-</dependency>
-```
-
-### API接口
-
-| 接口 | 方法 | 说明 |
-|------|------|------|
-| /user | GET | 获取当前用户信息 |
-| /user/all_users | GET | 获取所有用户（需管理员权限） |
-| /user/create | POST | 创建用户（需超级管理员权限） |
-| /user/get_all_bookings | GET | 获取用户预约信息 |
+## 依赖
+依赖 `cas-module-infra`（邮件/文件）；被 `cas-module-appointment` 依赖（经 `UserInfoApi` 取用户）。
