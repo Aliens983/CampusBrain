@@ -89,13 +89,11 @@ public class QaApplicationService implements IQaApplicationService {
         metrics.recordCacheMiss();
 
         try {
-            // Step 1: Load conversation history for context
-            List<Conversation> history = conversationRepository.getRecentMessages(sid, 10);
-            List<LlmService.ChatMessage> chatHistory = history.stream()
-                    .map(c -> new LlmService.ChatMessage(c.getRole(), c.getContent()))
-                    .toList();
+            // Step 1: 单句独立问答 —— 不把历史（尤其上一轮完整回答）喂给 LLM/改写器，
+            // 避免“换个问题却重复上一轮答案”；对话仍逐条按 session_id 落库供前端回看。
+            List<LlmService.ChatMessage> chatHistory = List.of();
 
-            // Step 2: Query rewrite (coreference resolution)
+            // Step 2: Query rewrite (coreference resolution，空历史下不误改写)
             String rewrittenQuery = queryRewriter.rewrite(query, chatHistory);
             if (!rewrittenQuery.equals(query)) {
                 log.debug("Query rewritten: [{}] -> [{}]", query, rewrittenQuery);
@@ -191,11 +189,8 @@ public class QaApplicationService implements IQaApplicationService {
         }
         metrics.recordCacheMiss();
 
-        // Load history and rewrite query
-        List<Conversation> history = conversationRepository.getRecentMessages(sid, 10);
-        List<LlmService.ChatMessage> chatHistory = history.stream()
-                .map(c -> new LlmService.ChatMessage(c.getRole(), c.getContent()))
-                .toList();
+        // 单句独立问答 —— 不携带历史（避免重复上一轮答案），对话仍逐条按 session_id 落库
+        List<LlmService.ChatMessage> chatHistory = List.of();
         String rewrittenQuery = queryRewriter.rewrite(query, chatHistory);
 
         // Retrieve + rerank
