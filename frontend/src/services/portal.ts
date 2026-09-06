@@ -36,6 +36,7 @@ function getServiceType(name: string): ServiceCard['type'] {
 }
 
 function mapUserRole(role: string | number | undefined): UserInfo['role'] {
+  if (role === 3 || role === '3') return 'teacher'
   if (role === 2 || role === '2') return 'super_admin'
   if (role === 1 || role === '1') return 'admin'
   return normalizeRole(role)

@@ -77,6 +77,15 @@ public interface BookingRepository {
     /** 按用户与订单 ID 查询预约详情（用户端越权防护） */
     ServiceStatusResponse getServiceStatusByOrderIdAndUserId(Long userId, Long orderId);
 
+    /** 分页查询教师名下咨询师档期的申请（manageStatus 可空=全部） */
+    IPage<ServiceStatusResponse> getTeacherBookings(Long teacherId, int page, int pageSize, Integer manageStatus);
+
+    /** 查询预约单归属的咨询师绑定教师账号ID（无归属返回 null） */
+    Long selectConsultantOwnerByOrderId(Long orderId);
+
+    /** 免审直通：把刚提交的活动预约置为已通过 */
+    int approveActivityBookings(Long userId, List<Integer> serviceIds);
+
     boolean auditService(Long orderId, Integer status, String reason);
 
     String getUserEmailByOrderId(Long orderId);

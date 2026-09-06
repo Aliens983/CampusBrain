@@ -41,4 +41,7 @@ public class ServiceRespVO implements Serializable {
     @Schema(description = "服务封面图URL")
     private String imageUrl;
 
+    @Schema(description = "可预约容量（-1=不限）", example = "-1")
+    private Integer capacity;
+
 }

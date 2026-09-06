@@ -45,6 +45,9 @@ public interface UserMapper extends BaseMapper<UserDO> {
     @Update("UPDATE user SET role = 1 WHERE id = #{userId}")
     void updateRoleToAdmin(@Param("userId") Long userId);
 
+    @Update("UPDATE user SET role = #{role} WHERE id = #{userId}")
+    void updateRole(@Param("userId") Long userId, @Param("role") Integer role);
+
     @Select("SELECT * FROM user")
     List<UserDO> getAllUsers();
 

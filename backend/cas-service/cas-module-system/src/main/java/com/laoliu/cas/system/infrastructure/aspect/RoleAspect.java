@@ -81,6 +81,10 @@ public class RoleAspect {
             if (role.getCode() == currentRoleCode) {
                 return true;
             }
+            // 教师 = 登录用户的一种：凡开放给「普通用户 USER」的通用接口，教师同样可用（教师专属接口则显式列出 TEACHER）
+            if (role == UserRoleEnum.USER && currentRoleCode == UserRoleEnum.TEACHER.getCode()) {
+                return true;
+            }
         }
         return false;
     }

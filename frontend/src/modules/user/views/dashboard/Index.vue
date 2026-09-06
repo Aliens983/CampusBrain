@@ -369,7 +369,7 @@ const dashboardStats = computed<DashboardStat[]>(() => {
 
   return [
     { label: '本月预约量', value: String(total), trend: total > 0 ? '正增长' : '暂无数据', tone: total > 0 ? 'success' : 'warning' },
-    { label: '待审核事项', value: String(pending), trend: pending > 0 ? '待处理' : '已清空', tone: pending > 0 ? 'warning' : 'success' },
+    { label: '我的申请', value: String(pending), trend: pending > 0 ? '处理中' : '已处理完', tone: pending > 0 ? 'warning' : 'success' },
     { label: '已完成', value: String(completed), trend: completed > 0 ? '已完成' : '暂无', tone: 'brand' },
     { label: '资源完单率', value: total > 0 ? `${Math.round((completed / total) * 100)}%` : '0%', trend: '本月表现', tone: 'brand' },
   ]
@@ -386,7 +386,7 @@ const shortcuts = [
 const todoList = computed(() => {
   const pendingBookings = bookings.value.filter((b: BookingRecord) => b.status === 'pending')
   return [
-    { title: '待审核预约', desc: `${pendingBookings.length} 条申请正在等待审核。`, badge: pendingBookings.length > 0 ? '待处理' : '已清空', tone: pendingBookings.length > 0 ? 'is-warning' : 'is-success', path: '/bookings' },
+    { title: '我的申请', desc: `${pendingBookings.length} 条申请处理中（教室/设备等需老师或管理员确认）。`, badge: pendingBookings.length > 0 ? '处理中' : '已处理完', tone: pendingBookings.length > 0 ? 'is-warning' : 'is-success', path: '/bookings' },
   ]
 })
 
@@ -400,7 +400,7 @@ const serviceDrawerVisible = computed({
 function openMetricDetail(label: string) {
   const mapping: Record<string, string[]> = {
     本月预约量: [`总预约 ${bookings.value.length} 单`, `已完成 ${bookings.value.filter(b => b.status === 'completed').length} 单`, `进行中 ${bookings.value.filter(b => b.status === 'approved').length} 单`],
-    待审核事项: [`${bookings.value.filter(b => b.status === 'pending').length} 条待审核`, '请及时关注审批进度'],
+    我的申请: [`${bookings.value.filter(b => b.status === 'pending').length} 条处理中`, '需咨询师或管理员确认，请留意状态变化'],
     已完成: [`本月完成 ${bookings.value.filter(b => b.status === 'completed').length} 单`],
     资源完单率: ['根据实际预约完成情况统计', '持续优化使用体验'],
   }
@@ -418,7 +418,7 @@ function bookingTag(status: BookingStatus) {
 }
 
 function statusText(status: BookingStatus) {
-  return { pending: '待审核', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
+  return { pending: '处理中', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
 }
 </script>
 

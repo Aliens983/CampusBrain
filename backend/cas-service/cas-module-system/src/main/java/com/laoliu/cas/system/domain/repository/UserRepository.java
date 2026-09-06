@@ -39,6 +39,8 @@ public interface UserRepository {
 
     void updateRoleToAdmin(Long userId);
 
+    void updateRole(Long userId, Integer role);
+
     List<User> getAllUsers();
 
     /**

@@ -162,15 +162,18 @@
         WHERE i.user_id = #{userId}
     </select>
 
+    <!-- 取消：待审核单可直接取消；已通过的活动(category='activity')开始前可自助取消，其它已通过单不可自助取消 -->
     <update id="setBookingStatusByParts">
         UPDATE item
-        SET manage_status = 3
-        WHERE user_id = #{userId}
-        AND manage_status = 0
-        AND order_id IN
+        JOIN services s ON item.service_id = s.service_id
+        SET item.manage_status = 3
+        WHERE item.user_id = #{userId}
+          AND item.order_id IN
         <foreach collection="bookingIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+          AND ( item.manage_status = 0
+                OR (item.manage_status = 1 AND s.category = 'activity') )
     </update>
 
     <update id="auditService">
@@ -290,13 +293,16 @@
     </select>
 
     <select id="selectServiceIdsByBookingIds" resultType="long">
-        SELECT DISTINCT service_id FROM item
-        WHERE user_id = #{userId}
-          AND manage_status = 0
-          AND order_id IN
+        SELECT DISTINCT item.service_id
+        FROM item
+        JOIN services s ON item.service_id = s.service_id
+        WHERE item.user_id = #{userId}
+          AND item.order_id IN
         <foreach collection="bookingIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+          AND ( item.manage_status = 0
+                OR (item.manage_status = 1 AND s.category = 'activity') )
     </select>
 
     <select id="selectServiceIdByOrderId" resultType="long">
@@ -360,5 +366,49 @@
         </if>
         ORDER BY i.create_time DESC
     </select>
+
+    <!-- 教师：其名下咨询师(c.user_id=教师账号)档期的申请列表（可仅看某状态） -->
+    <select id="getTeacherBookingsWithPage" resultMap="ServiceStatusResultMap">
+        SELECT i.order_id, i.user_id, u.name AS username,
+               s.service_name, s.service_describe, s.campus AS campus, i.reason,
+               i.create_time, i.update_time, i.manage_status,
+               c.name AS consultantName, i.slot_date AS slotDate,
+               i.start_time AS startTime, i.end_time AS endTime,
+               e.name AS equipmentName, i.quantity AS quantity,
+               r.name AS roomName
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        JOIN services s ON i.service_id = s.service_id
+        JOIN consultant c ON i.consultant_id = c.id
+        LEFT JOIN equipment e ON i.equipment_id = e.id
+        LEFT JOIN room r ON i.room_id = r.id
+        WHERE c.user_id = #{teacherId}
+        <if test="manageStatus != null">
+            AND i.manage_status = #{manageStatus}
+        </if>
+        ORDER BY i.create_time DESC
+    </select>
+
+    <!-- 预约单归属：返回该单所约咨询师绑定的教师账号ID（无归属为 null） -->
+    <select id="selectConsultantOwnerByOrderId" resultType="long">
+        SELECT c.user_id
+        FROM item i
+        JOIN consultant c ON i.consultant_id = c.id
+        WHERE i.order_id = #{orderId}
+        LIMIT 1
+    </select>
+
+    <!-- 免审直通：活动预约提交成功后，把 60 秒内刚落库的待审核活动单置为已通过 -->
+    <update id="approveRecentActivityBookings">
+        UPDATE item
+        SET manage_status = 1
+        WHERE user_id = #{userId}
+          AND manage_status = 0
+          AND service_id IN
+        <foreach collection="serviceIds" item="sid" open="(" separator="," close=")">
+            #{sid}
+        </foreach>
+          AND create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+    </update>
 
 </mapper>

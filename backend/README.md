@@ -121,7 +121,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 - **预约状态机**：`manage_status` 0待审/1通过/2拒绝/3取消/4完成；`BookingAutoCompleteTask`（`@EnableScheduling`，60s 轮询）把已过窗口的预约自动置为完成。
 - **通知**：`notification_policy`（全局）+ `user.email_notify`（用户偏好）双开关，审核结果邮件按开关发送。
 - **轮播图**：`carousel` 表 + 管理端上传/删除/拖拽排序（≤6）+ 用户端列表。
-- **账号**：图形验证码登录、邮箱验证码注册、忘记密码、改密（旧密码校验）、`@RequireRole` 三级 RBAC。
+- **账号**：图形验证码登录、邮箱验证码注册、忘记密码、改密（旧密码校验）、`@RequireRole` 四级 RBAC（普通用户/教师/管理员/超管；教师审「自己名下咨询档期」）。
 
 ### KB 知识库
 - 文档上传 → 解析 → 分块（sliding_window 512/50）→ Embedding（硅基流动 Qwen3-Embedding-0.6B，1024 维）

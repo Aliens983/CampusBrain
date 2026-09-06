@@ -3,9 +3,10 @@ import type { UserInfo, UserRole } from '@/types'
 type AnyRecord = Record<string, any>
 
 export function normalizeRole(input: unknown): UserRole {
-  const value = String(input || '').toLowerCase()
+  const value = String(input ?? '').toLowerCase()
   if (['super_admin', 'superadmin', 'root'].includes(value)) return 'super_admin'
   if (['admin', 'administrator'].includes(value)) return 'admin'
+  if (['teacher', '3'].includes(value)) return 'teacher'
   return 'user'
 }
 
@@ -14,8 +15,14 @@ export function isAdminRole(role: unknown) {
   return normalized === 'admin' || normalized === 'super_admin'
 }
 
+export function isTeacherRole(role: unknown) {
+  return normalizeRole(role) === 'teacher'
+}
+
 export function resolveHomeByRole(role: unknown) {
-  return isAdminRole(role) ? '/admin' : '/dashboard'
+  if (isAdminRole(role)) return '/admin'
+  if (isTeacherRole(role)) return '/teacher'
+  return '/dashboard'
 }
 
 export function extractToken(payload: unknown): string {

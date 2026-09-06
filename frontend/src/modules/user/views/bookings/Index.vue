@@ -12,7 +12,7 @@
           <strong>{{ bookings.length }}</strong><span>全部预约</span>
         </div>
         <div class="hero-panel__item">
-          <strong>{{ pendingCount }}</strong><span>待审核</span>
+          <strong>{{ pendingCount }}</strong><span>处理中</span>
         </div>
         <div class="hero-panel__item">
           <strong>{{ approvedCount }}</strong><span>已通过</span>
@@ -135,7 +135,7 @@ const bookings = ref<BookingRecord[]>([])
 const loading = ref(false)
 const filters = [
   { label: '全部', value: 'all' },
-  { label: '待审核', value: 'pending' },
+  { label: '处理中', value: 'pending' },
   { label: '已通过', value: 'approved' },
   { label: '已完成', value: 'completed' },
 ]
@@ -161,7 +161,7 @@ function statusTag(status: BookingStatus) {
 }
 
 function statusText(status: BookingStatus) {
-  return { pending: '待审核', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
+  return { pending: '处理中', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
 }
 
 function campusName(c?: string) {

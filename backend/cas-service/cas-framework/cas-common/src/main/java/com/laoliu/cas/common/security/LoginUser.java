@@ -65,6 +65,7 @@ public class LoginUser implements Serializable {
             case 0 -> "普通用户";
             case 1 -> "管理员";
             case 2 -> "超级管理员";
+            case 3 -> "教师";
             default -> "未知";
         };
     }

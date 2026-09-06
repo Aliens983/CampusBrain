@@ -14,7 +14,7 @@ spring:
         - id: cas-service
           uri: lb://cas-service
           predicates:
-            - Path=/api/v1/auth/**, /api/v1/captcha, /api/v1/users/**, /api/v1/admin/**, /api/v1/app/**, /api/v1/appointments/**, /api/v1/weather/**, /api/v1/ai/**, /api/v1/uploads/**
+            - Path=/api/v1/auth/**, /api/v1/captcha, /api/v1/users/**, /api/v1/admin/**, /api/v1/app/**, /api/v1/appointments/**, /api/v1/teacher/**, /api/v1/weather/**, /api/v1/ai/**, /api/v1/uploads/**
         # KB 服务：统一走 /api/v1/kb/**，StripPrefix=2 后 KB 收到 /kb/**
         - id: kb-service
           uri: lb://kb-service

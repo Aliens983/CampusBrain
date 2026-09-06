@@ -29,22 +29,24 @@ public class RoleServiceImpl implements RoleService {
             throw new ForbiddenException(403, "不能修改超级管理员的角色");
         }
 
-        if (newRole == 1) {
-            userRepository.updateRoleToAdmin(userId);
-        } else {
-            userRepository.updateRoleToCommonUser(userId);
+        // 允许的目标角色：0 普通用户 / 1 管理员 / 3 教师；不可设 2（超管需库内特殊处理，防提权）
+        if (newRole == null || newRole < 0 || newRole > 3 || newRole == 2) {
+            throw new ForbiddenException(403, "角色仅支持 0 普通用户 / 1 管理员 / 3 教师");
         }
+        userRepository.updateRole(userId, newRole);
     }
 
     @Override
     public String getRoleByUserId(Long userId) {
         String role = userRepository.getRoleByUserId(userId);
         if (role != null) {
-            if ("1".equals(role)) {
-                return "管理员";
-            } else if ("0".equals(role)) {
-                return "普通用户";
-            }
+            return switch (role) {
+                case "0" -> "普通用户";
+                case "1" -> "管理员";
+                case "2" -> "超级管理员";
+                case "3" -> "教师";
+                default -> role;
+            };
         }
         return role;
     }

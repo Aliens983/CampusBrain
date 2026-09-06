@@ -160,10 +160,43 @@
           />
         </el-form-item>
         <el-form-item label="服务分类">
-          <el-input
+          <el-select
             v-model="createForm.category"
-            placeholder="如：空间资源、设备资源、咨询服务"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="opt in categoryOptions"
+              :key="opt.value"
+              :label="opt.label"
+              :value="opt.value"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="所属校区">
+          <el-select
+            v-model="createForm.campus"
+            style="width: 100%"
+          >
+            <el-option
+              label="仓前校区"
+              value="cq"
+            />
+            <el-option
+              label="下沙校区"
+              value="xs"
+            />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="预约容量">
+          <el-input-number
+            v-model="createForm.capacity"
+            :min="-1"
+            :step="1"
+            style="width: 100%"
           />
+          <div class="field-tip">
+            -1 表示不限名额；活动/教室等先到先得类建议设具体人数。
+          </div>
         </el-form-item>
         <el-form-item label="服务说明">
           <el-input
@@ -226,7 +259,15 @@ const loading = ref(false)
 const saving = ref(false)
 
 const editForm = reactive({ name: '', category: '', description: '', image: '' })
-const createForm = reactive({ name: '', category: '', description: '', location: '', image: '' })
+const createForm = reactive({ name: '', category: 'space', campus: 'cq', capacity: -1, description: '', location: '', image: '' })
+
+const categoryOptions = [
+  { value: 'space', label: '教室空间（选教室/时段）' },
+  { value: 'teacher', label: '教师咨询（咨询师档期）' },
+  { value: 'equipment', label: '设备借用（库存+窗口）' },
+  { value: 'activity', label: '活动报名（容量够即直通）' },
+  { value: 'other', label: '其他服务' },
+]
 
 const filteredServices = computed(() =>
   services.value.filter((item) => {
@@ -325,11 +366,16 @@ async function saveCreate() {
       serviceName: createForm.name,
       serviceDescribe: createForm.description,
       imageUrl: createForm.image || null,
+      category: createForm.category,
+      campus: createForm.campus,
+      capacity: createForm.capacity,
     })
     ElMessage.success('服务创建成功')
     createDrawer.value = false
     createForm.name = ''
-    createForm.category = ''
+    createForm.category = 'space'
+    createForm.campus = 'cq'
+    createForm.capacity = -1
     createForm.description = ''
     createForm.location = ''
     createForm.image = ''
@@ -375,6 +421,7 @@ async function saveCreate() {
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .toolbar { display: flex; gap: 12px; }
 .cover-prev { display: block; width: 100%; max-height: 150px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-soft); }
+.field-tip { margin-top: 4px; font-size: 12px; line-height: 1.6; color: var(--text-tertiary); }
 .service-stack, .dialog-list { display: grid; gap: 14px; }
 .service-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
 .service-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }

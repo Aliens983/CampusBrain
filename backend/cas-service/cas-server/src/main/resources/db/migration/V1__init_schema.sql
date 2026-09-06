@@ -127,10 +127,13 @@ CREATE TABLE consultant
     review_count INT DEFAULT 0 comment '评价数量',
     avatar_url   VARCHAR(255) DEFAULT '' comment '头像URL',
     service_id   INT NOT NULL comment '关联服务ID',
+    user_id      BIGINT NULL comment '绑定的教师账号ID（该咨询师=该账号本人，审自己档期）',
     create_time  DATETIME DEFAULT CURRENT_TIMESTAMP comment '创建时间',
     update_time  DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP comment '更新时间',
     INDEX idx_consultant_service (service_id),
-    CONSTRAINT fk_consultant_service FOREIGN KEY (service_id) REFERENCES services (service_id)
+    INDEX idx_consultant_user (user_id),
+    CONSTRAINT fk_consultant_service FOREIGN KEY (service_id) REFERENCES services (service_id),
+    CONSTRAINT fk_consultant_user FOREIGN KEY (user_id) REFERENCES `user` (id) ON DELETE SET NULL
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = '咨询师信息表';
 
 -- ---------- 设备表 ----------

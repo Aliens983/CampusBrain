@@ -128,6 +128,21 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    public IPage<ServiceStatusResponse> getTeacherBookings(Long teacherId, int page, int pageSize, Integer manageStatus) {
+        return itemMapper.getTeacherBookingsWithPage(teacherId, new Page<>(page, pageSize), manageStatus);
+    }
+
+    @Override
+    public Long selectConsultantOwnerByOrderId(Long orderId) {
+        return itemMapper.selectConsultantOwnerByOrderId(orderId);
+    }
+
+    @Override
+    public int approveActivityBookings(Long userId, List<Integer> serviceIds) {
+        return itemMapper.approveRecentActivityBookings(userId, serviceIds);
+    }
+
+    @Override
     public boolean auditService(Long orderId, Integer status, String reason) {
         return itemMapper.auditService(orderId, status, reason) > 0;
     }

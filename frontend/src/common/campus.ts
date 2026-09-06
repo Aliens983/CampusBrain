@@ -58,6 +58,7 @@ function getServiceType(name: string): ServiceCard['type'] {
   if (name.includes('会议') || name.includes('教室') || name.includes('场地')) return 'room'
   if (name.includes('设备') || name.includes('投影') || name.includes('相机')) return 'equipment'
   if (name.includes('咨询')) return 'consultation'
+  if (name.includes('活动')) return 'activity'
   return 'printing'
 }
 
@@ -65,7 +66,7 @@ const categoryToType: Record<string, ServiceCard['type']> = {
   teacher: 'consultation',
   equipment: 'equipment',
   space: 'room',
-  activity: 'printing',
+  activity: 'activity',
   exam: 'printing',
   other: 'printing',
 }

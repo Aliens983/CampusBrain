@@ -40,6 +40,8 @@ public class Consultant implements Serializable {
     private String avatarUrl;
     /** 关联服务ID */
     private Long serviceId;
+    /** 绑定的教师账号ID（该咨询师 = 该账号本人） */
+    private Long userId;
 
     public boolean hasRatings() {
         return reviewCount != null && reviewCount > 0;

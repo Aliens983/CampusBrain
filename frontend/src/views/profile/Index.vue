@@ -155,6 +155,7 @@ const roleLabel = computed(() => {
   const role = user.value?.role
   if (role === 'super_admin') return '超级管理员'
   if (role === 'admin') return '管理员'
+  if (role === 'teacher') return '教师'
   return '普通用户'
 })
 </script>

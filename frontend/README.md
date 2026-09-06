@@ -19,6 +19,14 @@ Vue 3.4 · TypeScript 5.6 · Vite 5 · Element Plus 2.8 · Pinia（+ persistedst
 | `/assistant` | AI 助手 | KB 知识库问答（QaPortal）；文档上传仅管理员 |
 | `/profile` | 个人中心 | 资料编辑、**修改密码**（旧密码校验）、邮件通知偏好 |
 
+**教师端**（布局 `src/layout/TeacherLayoutShell.vue`，需教师角色，`/teacher/*`，登录即咨询师本人）
+
+| 路径 | 页面 | 说明 |
+|---|---|---|
+| `/teacher/review` | 待我审核 | 学生申请我名下咨询档期列表，通过/拒绝（拒绝填原因） |
+| `/teacher/consultations` | 我的咨询 | 名下档期被约情况，按状态筛选 |
+| `/teacher/profile` | 个人中心 | 复用用户个人中心 |
+
 **管理端**（布局 `src/layout/AdminLayoutShell.vue`，需管理员，`/admin/*`）
 
 | 路径 | 页面 | 说明 |

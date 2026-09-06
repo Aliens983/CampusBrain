@@ -4,7 +4,12 @@ export function isAdminRole(role?: UserRole): boolean {
   return role === 'admin' || role === 'super_admin'
 }
 
+export function isTeacherRole(role?: UserRole): boolean {
+  return role === 'teacher'
+}
+
 export function normalizeRole(role: string | number | undefined): UserRole {
+  if (role === 'teacher' || role === 3) return 'teacher'
   if (role === 'admin' || role === 1) return 'admin'
   if (role === 'super_admin' || role === 2) return 'super_admin'
   return 'user'
@@ -12,6 +17,7 @@ export function normalizeRole(role: string | number | undefined): UserRole {
 
 export function resolveHomeByRole(role?: UserRole): string {
   if (isAdminRole(role)) return '/admin'
+  if (isTeacherRole(role)) return '/teacher'
   return '/dashboard'
 }
 

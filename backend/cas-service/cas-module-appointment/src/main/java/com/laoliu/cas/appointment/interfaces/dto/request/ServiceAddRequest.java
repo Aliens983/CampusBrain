@@ -27,11 +27,20 @@ public class ServiceAddRequest {
     @Schema(description = "服务描述", requiredMode = Schema.RequiredMode.REQUIRED, example = "预约图书馆座位或图书")
     private String serviceDescribe;
 
-    @NotNull(message = "服务状态不能为空")
     @Min(value = 0, message = "服务状态必须为0(禁用)或1(启用)")
     @Max(value = 1, message = "服务状态必须为0(禁用)或1(启用)")
-    @Schema(description = "服务状态（0-禁用，1-启用）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @Schema(description = "服务状态（0-禁用，1-启用；缺省默认启用）", example = "1")
     private Integer serviceState;
+
+    @Schema(description = "业务分类（teacher/equipment/space/activity/other；缺省 other）")
+    private String category;
+
+    @Schema(description = "校区（cq=仓前 / xs=下沙；缺省 cq）")
+    private String campus;
+
+    @Min(value = -1, message = "容量不能小于 -1（-1=不限）")
+    @Schema(description = "可预约容量（-1=不限，缺省 -1）", example = "-1")
+    private Integer capacity;
 
     @Schema(description = "服务封面图URL（上传返回的相对路径，可空）")
     private String imageUrl;

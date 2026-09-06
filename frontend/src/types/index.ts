@@ -1,8 +1,8 @@
-export type UserRole = 'user' | 'admin' | 'super_admin'
+export type UserRole = 'user' | 'teacher' | 'admin' | 'super_admin'
 
 export type ServiceStatus = 'available' | 'busy' | 'maintenance'
 export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled'
-export type BookingType = 'room' | 'equipment' | 'consultation' | 'printing'
+export type BookingType = 'room' | 'equipment' | 'consultation' | 'activity' | 'printing'
 
 export interface UserInfo {
   id: number
@@ -28,7 +28,7 @@ export interface ServiceCard {
   tags: string[]
   image: string
   capacity?: number
-  /** 后端服务分类 key: teacher/equipment/space/exam/other */
+  /** 后端服务分类 key: teacher/equipment/space/activity/other */
   catKey?: string
   /** 校区: cq仓前 / xs下沙 */
   campus?: string

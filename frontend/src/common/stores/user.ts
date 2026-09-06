@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { UserInfo } from '@/common/types'
-import { isAdminRole } from '@/common/utils/auth'
+import { isAdminRole, isTeacherRole } from '@/common/utils/auth'
 
 export const useUserStore = defineStore(
   'user',
@@ -11,6 +11,7 @@ export const useUserStore = defineStore(
 
     const isLogin = computed(() => Boolean(token.value))
     const isAdmin = computed(() => isAdminRole(userInfo.value?.role))
+    const isTeacher = computed(() => isTeacherRole(userInfo.value?.role))
 
     function setToken(value: string) {
       token.value = value
@@ -30,6 +31,7 @@ export const useUserStore = defineStore(
       userInfo,
       isLogin,
       isAdmin,
+      isTeacher,
       setToken,
       setUserInfo,
       logout,

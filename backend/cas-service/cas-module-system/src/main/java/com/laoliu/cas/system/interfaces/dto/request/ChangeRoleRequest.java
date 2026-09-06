@@ -20,8 +20,8 @@ public class ChangeRoleRequest {
     private Long userId;
 
     @NotNull(message = "角色不能为空")
-    @Min(value = 0, message = "角色值必须为0或1")
-    @Max(value = 1, message = "角色值必须为0或1")
-    @Schema(description = "新角色（0=普通用户, 1=管理员）", requiredMode = Schema.RequiredMode.REQUIRED)
+    @Min(value = 0, message = "角色值仅支持 0/1/3（普通用户/管理员/教师）")
+    @Max(value = 3, message = "角色值仅支持 0/1/3（普通用户/管理员/教师）")
+    @Schema(description = "新角色（0=普通用户, 1=管理员, 3=教师；不可设 2 超管）", requiredMode = Schema.RequiredMode.REQUIRED)
     private Integer role;
 }

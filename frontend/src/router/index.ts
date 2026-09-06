@@ -1,8 +1,9 @@
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useUserStore } from '@/common/stores/user'
-import { resolveHomeByRole } from '@/common/utils/auth'
+import { isAdminRole, isTeacherRole, resolveHomeByRole } from '@/common/utils/auth'
 import { userRoutes } from '@/modules/user/router'
 import { adminRoutes } from '@/modules/admin/router'
+import { teacherRoutes } from '@/modules/teacher/router'
 
 const lazyModules = import.meta.glob(['../modules/**/*.vue', '../layout/*.vue'])
 let prefetched = false
@@ -48,6 +49,7 @@ const routes: RouteRecordRaw[] = [
   },
   ...userRoutes,
   ...adminRoutes,
+  ...teacherRoutes,
   {
     path: '/:pathMatch(.*)*',
     component: () => import('@/views/errors/NotFound.vue'),
@@ -86,7 +88,19 @@ router.beforeEach((to, _from, next) => {
   }
 
   if (userStore.isLogin && !userStore.isAdmin && String(to.path).startsWith('/admin')) {
-    next('/dashboard')
+    next(resolveHomeByRole(userStore.userInfo?.role))
+    return
+  }
+
+  const role = userStore.userInfo?.role
+  // 教师只进教师端（独立工作台），看不到学生/管理页面
+  if (userStore.isLogin && isTeacherRole(role) && !String(to.path).startsWith('/teacher')) {
+    next('/teacher/review')
+    return
+  }
+  // /teacher/* 仅教师 / 管理员 / 超管可进
+  if (String(to.path).startsWith('/teacher') && userStore.isLogin && !isTeacherRole(role) && !isAdminRole(role)) {
+    next(resolveHomeByRole(role))
     return
   }
 

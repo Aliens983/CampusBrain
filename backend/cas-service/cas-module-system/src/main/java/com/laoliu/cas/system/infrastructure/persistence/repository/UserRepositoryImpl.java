@@ -104,6 +104,11 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
+    public void updateRole(Long userId, Integer role) {
+        userMapper.updateRole(userId, role);
+    }
+
+    @Override
     public List<User> getAllUsers() {
         return userMapper.getAllUsers().stream()
                 .map(UserDO::toEntity)

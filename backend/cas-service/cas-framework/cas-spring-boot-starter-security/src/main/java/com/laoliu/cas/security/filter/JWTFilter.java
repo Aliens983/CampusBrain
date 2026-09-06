@@ -68,6 +68,7 @@ public class JWTFilter extends OncePerRequestFilter {
         return switch (role) {
             case 1 -> "ROLE_ADMIN";
             case 2 -> "ROLE_SUPER_ADMIN";
+            case 3 -> "ROLE_TEACHER";
             default -> "ROLE_USER";
         };
     }

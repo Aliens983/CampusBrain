@@ -41,12 +41,16 @@ public class RoleAdminController {
         return CommonResult.success("获取用户角色成功", role);
     }
 
-    @Operation(summary = "修改用户角色", description = "管理员修改指定用户的角色（0=普通用户, 1=管理员）")
+    @Operation(summary = "修改用户角色", description = "管理员修改指定用户的角色（0=普通用户, 1=管理员, 3=教师；不可设 2 超管）")
     @PutMapping("/role")
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
     public CommonResult<String> changeRole(@Valid @RequestBody ChangeRoleRequest request) {
         roleService.setRoleById(request.getUserId(), request.getRole());
-        String roleName = request.getRole() == 1 ? "管理员" : "普通用户";
+        String roleName = switch (request.getRole() == null ? 0 : request.getRole()) {
+            case 1 -> "管理员";
+            case 3 -> "教师";
+            default -> "普通用户";
+        };
         return CommonResult.success("角色修改成功", roleName);
     }
 }

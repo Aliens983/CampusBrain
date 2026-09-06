@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,6 +48,7 @@ public class BookServiceImpl implements BookService {
             throw new BusinessException(ServiceErrorCode.SERVICE_ID_EMPTY);
         }
 
+        List<Integer> activityServiceIds = new ArrayList<>();
         for (Long sid : serviceIds) {
             // 防止 Long→Integer 转换溢出（service_id 为 INT）
             if (sid == null || sid > Integer.MAX_VALUE) {
@@ -56,6 +58,10 @@ public class BookServiceImpl implements BookService {
                     .orElseThrow(() -> new BusinessException(ServiceErrorCode.SERVICE_NOT_EXIST, sid));
             if (!service.isAvailable()) {
                 throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
+            }
+            // 活动预约：容量够即直通，不走人工审核
+            if ("activity".equals(service.getCategory())) {
+                activityServiceIds.add(sid.intValue());
             }
             // 乐观锁扣减库存（同事务）：容量充足才 +1，满则抛异常，事务回滚
             if (bookingRepository.decrementStock(sid) == 0) {
@@ -71,6 +77,10 @@ public class BookServiceImpl implements BookService {
             int inserted = bookingRepository.insertServices(userId, serviceIdInts);
             if (inserted == 0) {
                 throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
+            }
+            // 免审直通：刚落库的活动预约置为「已通过」，不产生待审核
+            if (!activityServiceIds.isEmpty()) {
+                bookingRepository.approveActivityBookings(userId, activityServiceIds);
             }
             for (Long sid : serviceIds) {
                 bookingEventPublisher.publishChanged(userId, sid, "BOOKED");

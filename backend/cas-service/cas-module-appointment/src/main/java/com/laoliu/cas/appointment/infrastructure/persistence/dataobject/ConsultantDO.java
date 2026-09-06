@@ -33,12 +33,14 @@ public class ConsultantDO {
     private Integer reviewCount;
     private String avatarUrl;
     private Long serviceId;
+    /** 绑定的教师账号ID（该咨询师 = 该账号本人，审自己的咨询档期） */
+    private Long userId;
 
     public Consultant toEntity() {
         return Consultant.builder()
                 .id(id).name(name).department(department).title(title)
                 .description(description).rating(rating).reviewCount(reviewCount)
-                .avatarUrl(avatarUrl).serviceId(serviceId)
+                .avatarUrl(avatarUrl).serviceId(serviceId).userId(userId)
                 .build();
     }
 
@@ -49,6 +51,7 @@ public class ConsultantDO {
                 .title(entity.getTitle()).description(entity.getDescription())
                 .rating(entity.getRating()).reviewCount(entity.getReviewCount())
                 .avatarUrl(entity.getAvatarUrl()).serviceId(entity.getServiceId())
+                .userId(entity.getUserId())
                 .build();
     }
 }

@@ -60,6 +60,13 @@ class RoleServiceImplTest {
         }
 
         @Test
+        @DisplayName("role=3 时应当返回\"教师\"")
+        void shouldReturnTeacherWhenRoleIs3() {
+            when(userRepository.getRoleByUserId(USER_ID)).thenReturn("3");
+            assertEquals("教师", roleService.getRoleByUserId(USER_ID));
+        }
+
+        @Test
         @DisplayName("role 为 null 时应当返回 null")
         void shouldReturnNullWhenRoleIsNull() {
             when(userRepository.getRoleByUserId(USER_ID)).thenReturn(null);
@@ -81,8 +88,30 @@ class RoleServiceImplTest {
 
             roleService.setRoleById(USER_ID, 1);
 
-            verify(userRepository).updateRoleToAdmin(USER_ID);
-            verify(userRepository, never()).updateRoleToCommonUser(anyLong());
+            verify(userRepository).updateRole(USER_ID, 1);
+        }
+
+        @Test
+        @DisplayName("newRole=3 时应当设置为教师")
+        void shouldSetToTeacherWhenNewRoleIs3() {
+            User user = User.builder().id(USER_ID).role(0).build();
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+            roleService.setRoleById(USER_ID, 3);
+
+            verify(userRepository).updateRole(USER_ID, 3);
+        }
+
+        @Test
+        @DisplayName("newRole=2（超管）不可通过接口设置，应当抛出 ForbiddenException")
+        void shouldThrowForbiddenWhenNewRoleIsSuperAdmin() {
+            User user = User.builder().id(USER_ID).role(0).build();
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+            assertThrows(ForbiddenException.class,
+                    () -> roleService.setRoleById(USER_ID, 2));
+
+            verify(userRepository, never()).updateRole(anyLong(), anyInt());
         }
 
         @Test
@@ -93,8 +122,7 @@ class RoleServiceImplTest {
 
             roleService.setRoleById(USER_ID, 0);
 
-            verify(userRepository).updateRoleToCommonUser(USER_ID);
-            verify(userRepository, never()).updateRoleToAdmin(anyLong());
+            verify(userRepository).updateRole(USER_ID, 0);
         }
 
         @Test
@@ -105,8 +133,7 @@ class RoleServiceImplTest {
             assertThrows(ResourceNotFoundException.class,
                     () -> roleService.setRoleById(USER_ID, 1));
 
-            verify(userRepository, never()).updateRoleToAdmin(anyLong());
-            verify(userRepository, never()).updateRoleToCommonUser(anyLong());
+            verify(userRepository, never()).updateRole(anyLong(), anyInt());
         }
 
         @Test
@@ -118,8 +145,7 @@ class RoleServiceImplTest {
             assertThrows(ForbiddenException.class,
                     () -> roleService.setRoleById(USER_ID, 0));
 
-            verify(userRepository, never()).updateRoleToAdmin(anyLong());
-            verify(userRepository, never()).updateRoleToCommonUser(anyLong());
+            verify(userRepository, never()).updateRole(anyLong(), anyInt());
         }
     }
 }

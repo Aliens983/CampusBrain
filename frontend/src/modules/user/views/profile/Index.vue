@@ -9,6 +9,14 @@
           快捷入口
         </div>
         <div
+          v-if="userStore.isTeacher"
+          class="hero-panel__item"
+          @click="router.push('/teacher/review')"
+        >
+          <strong>待我审核</strong><span>学生申请处理 →</span>
+        </div>
+        <div
+          v-else
           class="hero-panel__item"
           @click="router.push('/bookings')"
         >
@@ -108,6 +116,23 @@
         </el-icon>
       </div>
       <div
+        v-if="userStore.isTeacher"
+        class="action-card span-6"
+        @click="router.push('/teacher/review')"
+      >
+        <div class="action-card__icon">
+          📋
+        </div>
+        <div class="action-card__text">
+          <strong>待我审核</strong>
+          <p>学生申请我名下咨询档期</p>
+        </div>
+        <el-icon class="action-card__arrow">
+          <ArrowRight />
+        </el-icon>
+      </div>
+      <div
+        v-else
         class="action-card span-6"
         @click="router.push('/bookings')"
       >
@@ -238,7 +263,32 @@
       title="快捷操作"
       size="420px"
     >
-      <div class="drawer-stack">
+      <template v-if="userStore.isTeacher">
+        <div class="drawer-stack">
+          <el-button
+            type="primary"
+            @click="router.push('/teacher/review')"
+          >
+            待我审核
+          </el-button>
+          <el-button
+            plain
+            @click="router.push('/teacher/consultations')"
+          >
+            我的咨询
+          </el-button>
+          <el-button
+            plain
+            @click="router.push('/teacher')"
+          >
+            返回教师端工作台
+          </el-button>
+        </div>
+      </template>
+      <div
+        v-else
+        class="drawer-stack"
+      >
         <el-button
           type="primary"
           @click="router.push('/dashboard')"
@@ -351,12 +401,14 @@ const roleLabel = computed(() => {
   const r = user.value?.role
   if (r === 'super_admin') return '超级管理员'
   if (r === 'admin') return '管理员'
+  if (r === 'teacher') return '教师'
   return '普通用户'
 })
 
 const roleTagType = computed(() => {
   const r = user.value?.role
   if (r === 'super_admin' || r === 'admin') return 'danger'
+  if (r === 'teacher') return 'warning'
   return 'success'
 })
 

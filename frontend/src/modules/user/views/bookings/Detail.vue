@@ -85,22 +85,52 @@
         </div>
       </div>
     </el-card>
+
+    <div
+      v-if="booking && canCancel"
+      class="detail-actions"
+    >
+      <el-button
+        type="danger"
+        plain
+        :loading="cancelling"
+        @click="cancelBooking"
+      >
+        取消{{ booking.type === 'activity' && booking.status === 'approved' ? '报名' : '预约' }}
+      </el-button>
+      <span
+        v-if="booking.type === 'activity' && booking.status === 'approved'"
+        class="detail-actions__tip"
+      >活动为先到先得，取消后名额即时释放，可被他人再约。</span>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft } from '@element-plus/icons-vue'
 import { fetchBookingRecords } from '@/common/campus'
+import request from '@/common/utils/request'
 import type { BookingRecord, BookingStatus } from '@/common/types'
 
 const router = useRouter()
 const route = useRoute()
 const booking = ref<BookingRecord | null>(null)
+const cancelling = ref(false)
 
-onMounted(async () => {
+// 可取消：待确认(处理中)可取消；已通过的活动（先到先得）开始前可自助取消
+const canCancel = computed(() => {
+  const b = booking.value
+  if (!b) return false
+  if (b.status === 'pending') return true
+  return b.status === 'approved' && b.type === 'activity'
+})
+
+onMounted(load)
+
+async function load() {
   const id = Number(route.params.id)
   try {
     const records = await fetchBookingRecords()
@@ -110,13 +140,33 @@ onMounted(async () => {
     const err = error as { message?: string }
     ElMessage.error(err.message || '获取预约详情失败')
   }
-})
+}
+
+async function cancelBooking() {
+  if (!booking.value) return
+  try {
+    await ElMessageBox.confirm('确定取消该预约吗？取消后如需再约请重新申请。', '取消确认', { type: 'warning' })
+  } catch {
+    return
+  }
+  cancelling.value = true
+  try {
+    await request.patch(`/app/bookings/${booking.value.id}/cancel`)
+    ElMessage.success('已取消')
+    await load()
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '取消失败')
+  } finally {
+    cancelling.value = false
+  }
+}
 
 function statusTag(status: BookingStatus) {
   return { pending: 'warning', approved: 'success', rejected: 'danger', completed: 'info', cancelled: 'info' }[status]
 }
 function statusText(status: BookingStatus) {
-  return { pending: '待审核', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
+  return { pending: '处理中', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
 }
 function campusName(c?: string) {
   return c === 'cq' ? '仓前' : c === 'xs' ? '下沙' : ''
@@ -140,4 +190,7 @@ function campusName(c?: string) {
 .detail-row:last-child { border-bottom: none; }
 .detail-row span { width: 90px; color: var(--text-secondary); font-size: 13px; flex-shrink: 0; }
 .detail-row strong { flex: 1; font-size: 14px; }
+
+.detail-actions { display: flex; align-items: center; gap: 14px; padding: 6px 4px; }
+.detail-actions__tip { font-size: 12px; color: var(--text-tertiary); }
 </style>

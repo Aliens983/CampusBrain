@@ -112,10 +112,20 @@
               value="user"
             />
             <el-option
+              label="教师（咨询师账号）"
+              value="teacher"
+            />
+            <el-option
               label="管理员"
               value="admin"
             />
           </el-select>
+          <p
+            v-if="selectedRole === 'teacher'"
+            class="field-tip"
+          >
+            设为教师后，需把该账号绑定到对应咨询师（consultant.user_id）才会出现在“待我审核”里。
+          </p>
           <el-button
             type="primary"
             style="width: 100%"
@@ -164,7 +174,8 @@ const userDrawerVisible = computed({
 // 打开抽屉时初始化角色选择
 watch(selectedUser, (user) => {
   if (user) {
-    selectedRole.value = user.role === 'super_admin' || user.role === 'admin' ? 'admin' : 'user'
+    selectedRole.value =
+      user.role === 'super_admin' || user.role === 'admin' ? 'admin' : user.role === 'teacher' ? 'teacher' : 'user'
   }
 })
 
@@ -190,13 +201,14 @@ async function saveRole() {
   if (!selectedUser.value) return
   roleSaving.value = true
   try {
-    const newRole = selectedRole.value === 'admin' ? 1 : 0
-    const newRoleLabel = selectedRole.value === 'admin' ? 'admin' : 'user'
+    const newRole = selectedRole.value === 'admin' ? 1 : selectedRole.value === 'teacher' ? 3 : 0
+    const newRoleLabel = selectedRole.value === 'admin' ? 'admin' : selectedRole.value === 'teacher' ? 'teacher' : 'user'
     await request.put('/admin/users/role', {
       userId: selectedUser.value.id,
       role: newRole,
     })
-    ElMessage.success(`已将 ${selectedUser.value.username} 的角色修改为 ${selectedRole.value === 'admin' ? '管理员' : '普通用户'}`)
+    const label = selectedRole.value === 'admin' ? '管理员' : selectedRole.value === 'teacher' ? '教师' : '普通用户'
+    ElMessage.success(`已将 ${selectedUser.value.username} 的角色修改为 ${label}`)
     // 先关闭抽屉，再本地更新数据避免闪烁
     const updated = selectedUser.value
     selectedUser.value = null
@@ -216,6 +228,7 @@ async function saveRole() {
 function roleText(role: UserRole) {
   const map: Record<UserRole, string> = {
     user: '普通用户',
+    teacher: '教师',
     admin: '管理员',
     super_admin: '超级管理员',
   }
@@ -224,6 +237,8 @@ function roleText(role: UserRole) {
 </script>
 
 <style scoped lang="scss">
+.field-tip { margin-top: 6px; font-size: 12px; line-height: 1.6; color: var(--text-tertiary); }
+
 .admin-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;

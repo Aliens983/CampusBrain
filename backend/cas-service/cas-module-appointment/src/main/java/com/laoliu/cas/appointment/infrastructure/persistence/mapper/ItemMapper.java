@@ -69,6 +69,21 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
 
     ServiceStatusResponse getServiceStatusByOrderIdAndUserId(@Param("userId") Long userId, @Param("orderId") Long orderId);
 
+    /**
+     * 分页查询某教师（咨询师绑定账号）名下咨询档期的申请
+     */
+    IPage<ServiceStatusResponse> getTeacherBookingsWithPage(@Param("teacherId") Long teacherId, Page<?> page,
+            @Param("manageStatus") Integer manageStatus);
+
+    /** 查询某预约单对应的咨询师绑定账号ID（无归属返回 null，用于教师越权校验） */
+    Long selectConsultantOwnerByOrderId(@Param("orderId") Long orderId);
+
+    /**
+     * 免审直通：把当前用户刚提交的「活动」预约由待审核置为已通过
+     * （限 60 秒内刚插入的待审核单，避免误翻历史 pending）
+     */
+    int approveRecentActivityBookings(@Param("userId") Long userId, @Param("serviceIds") List<Integer> serviceIds);
+
     String getUserEmailByOrderId(@Param("orderId") Long orderId);
 
     List<ServicesDO> selectUserServices(Long userId);

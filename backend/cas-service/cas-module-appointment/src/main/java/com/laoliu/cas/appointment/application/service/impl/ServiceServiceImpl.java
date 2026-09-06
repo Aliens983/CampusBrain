@@ -52,13 +52,19 @@ public class ServiceServiceImpl implements ServiceService {
         return serviceRepository.findById(id);
     }
 
+    private static final java.util.Set<String> CATEGORIES =
+            java.util.Set.of("teacher", "equipment", "space", "activity", "other");
+
     @Override
     @CacheEvict(value = "services", allEntries = true)
     public boolean addService(ServiceAddRequest request) {
         Service service = Service.builder()
                 .serviceName(request.getServiceName())
                 .serviceDescribe(request.getServiceDescribe())
-                .serviceState(request.getServiceState())
+                .serviceState(request.getServiceState() == null ? 1 : request.getServiceState())
+                .category(normalizeCategory(request.getCategory()))
+                .campus(normalizeCampus(request.getCampus()))
+                .capacity(request.getCapacity() == null ? -1 : request.getCapacity())
                 .imageUrl(request.getImageUrl())
                 .build();
         serviceRepository.save(service);
@@ -73,9 +79,24 @@ public class ServiceServiceImpl implements ServiceService {
         existing.setServiceName(request.getServiceName());
         existing.setServiceDescribe(request.getServiceDescribe());
         if (request.getServiceState() != null) existing.setServiceState(request.getServiceState());
+        // 分类、校区创建后不可改（避免资源归属错位）；容量、封面可更新
+        if (request.getCapacity() != null) existing.setCapacity(request.getCapacity());
         if (request.getImageUrl() != null) existing.setImageUrl(request.getImageUrl());
         serviceRepository.save(existing);
         return true;
+    }
+
+    /** 分类白名单，非法分类回退 other */
+    private String normalizeCategory(String category) {
+        if (category != null && CATEGORIES.contains(category)) {
+            return category;
+        }
+        return "other";
+    }
+
+    /** 校区仅支持 cq/xs，非法回退 cq */
+    private String normalizeCampus(String campus) {
+        return "xs".equals(campus) ? "xs" : "cq";
     }
 
     @Override
