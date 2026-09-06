@@ -8,6 +8,8 @@ type BackendService = {
   serviceDescribe?: string
   serviceState?: number
   category?: string
+  campus?: string
+  imageUrl?: string
 }
 
 type BackendBooking = {
@@ -24,6 +26,7 @@ type BackendBooking = {
   equipmentName?: string
   quantity?: number
   roomName?: string
+  campus?: string
   slotDate?: string
   startTime?: string
   endTime?: string
@@ -99,6 +102,8 @@ function mapService(item: BackendService, index: number): ServiceCard {
     description: item.serviceDescribe || '暂无服务说明，后续可由后台补充完整描述。',
     type,
     catKey,
+    campus: item.campus,
+    imageUrl: item.imageUrl,
     category: categoryLabel[catKey] || '其他服务',
     location: '校园统一预约中心',
     priceLabel: item.serviceState === 1 ? '当前可申请' : '暂不可申请',
@@ -127,6 +132,7 @@ function mapBooking(item: BackendBooking, index: number): BookingRecord {
     equipmentName: item.equipmentName,
     quantity: item.quantity,
     roomName: item.roomName,
+    campus: item.campus,
     type: getServiceType(item.serviceName || ''),
     applicant: item.username || '未知用户',
     department: '未分配部门',

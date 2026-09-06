@@ -313,7 +313,7 @@ onMounted(() => {
 .auth-hero {
   padding: 44px;
   color: #fff;
-  background: linear-gradient(145deg, #4c1d95, #7c3aed 56%, #8b5cf6);
+  background: linear-gradient(145deg, #0E6CD6, #3FB6FF 56%, #7BD0FF);
 }
 
 .auth-hero h1 {

@@ -633,13 +633,13 @@ async function handleBook() {
 .consult-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .consult-card {
   display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; text-align: left;
-  border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #fbf9ff);
+  border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF);
   cursor: pointer; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
 }
 .consult-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,33,61,.08); }
-.consult-card.is-active { border-color: #7c3aed; background: #faf7ff; box-shadow: 0 0 0 1px #7c3aed; }
+.consult-card.is-active { border-color: #3FB6FF; background: #F6FAFF; box-shadow: 0 0 0 1px #3FB6FF; }
 .consult-card:disabled { opacity: .55; cursor: not-allowed; }
-.consult-card__avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #a78bfa, #8b5cf6); color: #fff; font-weight: 700; }
+.consult-card__avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #ADE2FF, #7BD0FF); color: #fff; font-weight: 700; }
 .consult-card__avatar.equipment { border-radius: 12px; background: linear-gradient(135deg, #5eead4, #0d9488); }
 .consult-card__avatar.room { border-radius: 12px; background: linear-gradient(135deg, #fcd34d, #d97706); font-size: 18px; }
 .consult-card__body { flex: 1; min-width: 0; }
@@ -655,11 +655,11 @@ async function handleBook() {
 .slot-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .slot-chip {
   padding: 8px 14px; border-radius: 999px; font-size: 13px; cursor: pointer;
-  border: 1px solid #ddd3ef; background: #fff; color: #43395e;
+  border: 1px solid #E2ECFC; background: #fff; color: #3E4C66;
   transition: all .18s ease;
 }
-.slot-chip:hover { border-color: #a78bfa; color: #6d28d9; }
-.slot-chip.is-active { background: linear-gradient(135deg, #8b5cf6, #6d28d9); color: #fff; border-color: transparent; }
+.slot-chip:hover { border-color: #ADE2FF; color: #1E98F2; }
+.slot-chip.is-active { background: linear-gradient(135deg, #7BD0FF, #1E98F2); color: #fff; border-color: transparent; }
 .slot-submit { justify-self: start; margin-top: 4px; }
 
 .borrow-panel { gap: 14px; }

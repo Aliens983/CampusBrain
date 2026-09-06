@@ -57,11 +57,31 @@
       v-if="!loading"
       class="cat-bar"
     >
-      <el-segmented
-        v-model="activeCat"
-        :options="catOptions"
-        @change="syncCategoryRoute"
-      />
+      <div class="campus-toggle">
+        <button
+          v-for="c in campusOptions"
+          :key="c.value"
+          type="button"
+          class="campus-card"
+          :class="{ 'is-active': activeCampus === c.value }"
+          :style="campusBg(c.value)"
+          @click="activeCampus = c.value"
+        >
+          <span
+            v-if="activeCampus === c.value"
+            class="campus-check"
+          >当前校区</span>
+          <strong>{{ c.label }}</strong>
+          <span>{{ c.desc }}</span>
+        </button>
+      </div>
+      <div class="cat-row">
+        <el-segmented
+          v-model="activeCat"
+          :options="catOptions"
+          @change="syncCategoryRoute"
+        />
+      </div>
     </section>
 
     <section
@@ -83,7 +103,14 @@
         class="resource-card"
       >
         <div class="resource-card__pulse" />
+        <img
+          v-if="item.imageUrl"
+          :src="assetUrl(item.imageUrl)"
+          class="service-cover"
+          alt="封面"
+        >
         <div
+          v-else
           class="cover-badge"
           :class="item.image"
         >
@@ -141,6 +168,8 @@ import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
+import cqImg from '@/assets/images/campus/cq.jpg'
+import xsImg from '@/assets/images/campus/xs.jpg'
 import { fetchServiceCards } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
 
@@ -148,9 +177,28 @@ const router = useRouter()
 const route = useRoute()
 const keyword = ref('')
 const status = ref('')
+const activeCampus = ref('cq')
 const activeCat = ref('')
 const services = ref<ServiceCard[]>([])
 const loading = ref(false)
+
+const campusOptions = [
+  { value: 'cq', label: '仓前校区', desc: '勤园 · 恕园教学楼' },
+  { value: 'xs', label: '下沙校区', desc: 'A–E 教学楼' },
+]
+
+/** 左蓝右图的校区卡：左侧蓝底保证文字清晰，右侧实景图，向右渐淡 */
+const campusBgs: Record<string, string> = { cq: cqImg, xs: xsImg }
+function campusBg(value: string) {
+  return {
+    backgroundImage: `linear-gradient(90deg, rgba(12, 63, 150, 0.92) 0%, rgba(20, 106, 214, 0.78) 34%, rgba(63, 182, 255, 0.25) 62%, rgba(63, 182, 255, 0) 100%), url(${campusBgs[value]})`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center right',
+  }
+}
+
+/** 当前校区下的服务 */
+const campusServices = computed(() => services.value.filter(s => !s.campus || s.campus === activeCampus.value))
 
 const catLabel: Record<string, string> = {
   teacher: '教师咨询',
@@ -162,9 +210,9 @@ const catLabel: Record<string, string> = {
 }
 const catOrder = ['teacher', 'equipment', 'space', 'activity', 'other']
 
-/** 只列出库里真实存在的分类 */
+/** 当前校区里真实存在的分类 */
 const catOptions = computed(() => {
-  const present = new Set(services.value.map(s => s.catKey).filter((k): k is string => Boolean(k)))
+  const present = new Set(campusServices.value.map(s => s.catKey).filter((k): k is string => Boolean(k)))
   return [
     { label: '全部', value: '' },
     ...catOrder.filter(k => present.has(k)).map(k => ({ label: catLabel[k] || k, value: k })),
@@ -172,7 +220,7 @@ const catOptions = computed(() => {
 })
 
 const filteredServices = computed(() =>
-  services.value.filter((item) => {
+  campusServices.value.filter((item) => {
     const searchTarget = [item.name, item.category, item.description, ...item.tags].join('|')
     const matchKeyword = !keyword.value || searchTarget.toLowerCase().includes(keyword.value.toLowerCase())
     const matchStatus = !status.value || item.status === status.value
@@ -181,8 +229,8 @@ const filteredServices = computed(() =>
   }),
 )
 
-const availableCount = computed(() => services.value.filter((item) => item.status === 'available').length)
-const categoryCount = computed(() => new Set(services.value.map(s => s.catKey).filter(Boolean)).size)
+const availableCount = computed(() => campusServices.value.filter((item) => item.status === 'available').length)
+const categoryCount = computed(() => new Set(campusServices.value.map(s => s.catKey).filter(Boolean)).size)
 
 onMounted(async () => {
   loading.value = true
@@ -209,13 +257,21 @@ function syncCategoryRoute(value: string | number | boolean) {
 function goService(id: number) {
   router.push(`/service/${id}`)
 }
+
+/** /uploads/xx → /api/uploads/xx（走 vite 代理） */
+function assetUrl(path?: string) {
+  if (!path) return ''
+  if (/^https?:/.test(path)) return path
+  if (path.startsWith('/uploads')) return `/api${path}`
+  return path
+}
 </script>
 
 <style scoped lang="scss">
 .dashboard-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
+  background: linear-gradient(135deg, #0E6CD6, #3FB6FF 62%, #ADE2FF);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .dashboard-hero::before {
@@ -280,9 +336,37 @@ function goService(id: number) {
 .loading-state { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 40px; color: var(--text-secondary); }
 .resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
 .resource-card { position: relative; padding: 22px; border-radius: 22px; background: rgba(255,255,255,.92); border: 1px solid var(--border-soft); box-shadow: var(--shadow-card); }
-.resource-card__pulse { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 22px 22px 0 0; background: linear-gradient(90deg, #a78bfa, #8b5cf6); }
-.cat-bar { display: flex; margin: 20px 0 0; }
-.cat-bar .el-segmented { background: #f3eefb; border: 1px solid #e5daf6; border-radius: 12px; }
+.resource-card__pulse { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 22px 22px 0 0; background: linear-gradient(90deg, #ADE2FF, #7BD0FF); }
+.service-cover { width: 100%; height: 150px; object-fit: cover; border-radius: 14px; border: 1px solid var(--border-soft); }
+.cat-bar { display: grid; gap: 18px; margin: 22px 0 0; }
+.campus-toggle { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+.campus-card {
+  position: relative;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; align-items: flex-start;
+  min-height: 138px; padding: 22px; border-radius: 18px; text-align: left; cursor: pointer; overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.35); color: #fff;
+  box-shadow: var(--shadow-card); transition: transform .2s ease, box-shadow .2s ease, outline-color .2s ease;
+}
+.campus-card::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(7, 41, 102, 0.05), rgba(7, 41, 102, 0.28));
+}
+.campus-card strong { position: relative; font-size: 19px; font-weight: 800; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.18); }
+.campus-card span { position: relative; font-size: 12px; color: rgba(255, 255, 255, 0.92); }
+.campus-card:not(.is-active) { filter: saturate(0.72) brightness(0.82); }
+.campus-card:not(.is-active):hover { filter: saturate(0.9) brightness(0.92); transform: translateY(-2px); }
+.campus-card.is-active {
+  outline: 3px solid #fff; outline-offset: -3px;
+  box-shadow: 0 0 0 4px rgba(63, 182, 255, 0.9), 0 14px 30px rgba(30, 152, 242, 0.42);
+  transform: translateY(-2px);
+}
+.campus-card .campus-check {
+  position: absolute; top: 10px; right: 12px;
+  background: rgba(255, 255, 255, 0.94); color: #1560C4;
+  font-size: 11px; font-weight: 700; border-radius: 999px; padding: 3px 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+.cat-row .el-segmented { background: #ECF8FF; border: 1px solid #D9F1FF; border-radius: 12px; }
 
 @keyframes dashHalo { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-20px,-10px,0) scale(1.08); } }
 @media (max-width: 900px) { .dashboard-hero { grid-template-columns: 1fr; } }

@@ -39,6 +39,12 @@ public class Service implements Serializable {
     /** 业务分类: teacher/equipment/space/exam/other */
     private String category;
 
+    /** 校区: cq仓前 / xs下沙 */
+    private String campus;
+
+    /** 服务封面图URL */
+    private String imageUrl;
+
     /**
      * 领域行为：检查服务是否可用
      */

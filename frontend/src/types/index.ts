@@ -30,6 +30,10 @@ export interface ServiceCard {
   capacity?: number
   /** 后端服务分类 key: teacher/equipment/space/exam/other */
   catKey?: string
+  /** 校区: cq仓前 / xs下沙 */
+  campus?: string
+  /** 封面图URL */
+  imageUrl?: string
 }
 
 export interface RoomResource {
@@ -92,6 +96,8 @@ export interface BookingRecord {
   quantity?: number
   /** 教室预约：教室名称 */
   roomName?: string
+  /** 所属校区: cq仓前 / xs下沙 */
+  campus?: string
 }
 
 export interface MessageItem {

@@ -374,7 +374,7 @@ function statusText(status: BookingStatus) {
   padding: 32px;
   border-radius: 30px;
   color: #fff;
-  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
+  background: linear-gradient(135deg, #0E6CD6, #3FB6FF 62%, #ADE2FF);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
@@ -506,11 +506,11 @@ function statusText(status: BookingStatus) {
 .metric-card::after {
   content: '';
   position: absolute;
-  inset: auto -24px -24px auto;
-  width: 92px;
-  height: 92px;
+  inset: auto -16px -16px auto;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(124,58,237,.08), rgba(124,58,237,0));
+  background: radial-gradient(circle, rgba(30, 152, 242, 0.06), rgba(30, 152, 242, 0));
 }
 
 .metric-card:hover {
@@ -582,7 +582,7 @@ function statusText(status: BookingStatus) {
   padding: 18px 14px;
   border-radius: 18px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, #fff, #F9FCFF);
   cursor: pointer;
   transition: transform .24s ease, box-shadow .24s ease;
   overflow: hidden;
@@ -600,7 +600,7 @@ function statusText(status: BookingStatus) {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(124,58,237,.06), transparent);
+  background: linear-gradient(135deg, rgba(63,182,255,.06), transparent);
 }
 
 .shortcut-card__icon {
@@ -615,7 +615,7 @@ function statusText(status: BookingStatus) {
   line-height: 1;
 }
 
-.tone-blue { background: linear-gradient(135deg, #e9e1fd, #ddd6fe); color: #0284c7; }
+.tone-blue { background: linear-gradient(135deg, #EDF5FF, #E1ECFE); color: #0284c7; }
 .tone-teal { background: linear-gradient(135deg, #ccfbf1, #99f6e4); color: #0d9488; }
 .tone-amber { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #d97706; }
 .tone-slate { background: linear-gradient(135deg, #f1f5f9, #e2e8f0); color: #475569; }
@@ -642,7 +642,7 @@ function statusText(status: BookingStatus) {
   padding: 16px;
   border-radius: 16px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, #fff, #F9FCFF);
   cursor: pointer;
   transition: transform .24s ease, box-shadow .24s ease;
 }
@@ -665,7 +665,7 @@ function statusText(status: BookingStatus) {
   flex-shrink: 0;
 }
 
-.gradient-brand { background: linear-gradient(135deg, #a78bfa, #8b5cf6); }
+.gradient-brand { background: linear-gradient(135deg, #ADE2FF, #7BD0FF); }
 .gradient-teal { background: linear-gradient(135deg, #11998e, #38ef7d); }
 .gradient-amber { background: linear-gradient(135deg, #f093fb, #f5576c); }
 .gradient-slate { background: linear-gradient(135deg, #4b6cb7, #182848); }
@@ -717,7 +717,7 @@ function statusText(status: BookingStatus) {
   padding: 14px;
   border-radius: 14px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, #fff, #F9FCFF);
   cursor: pointer;
   transition: transform .2s ease;
 }
@@ -760,7 +760,7 @@ function statusText(status: BookingStatus) {
   padding: 12px;
   border-radius: 12px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, #fff, #F9FCFF);
   cursor: pointer;
   transition: transform .2s ease;
 }
@@ -788,7 +788,7 @@ function statusText(status: BookingStatus) {
 .detail-dialog__item {
   padding: 12px;
   border-radius: 10px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, #fff, #F9FCFF);
   border: 1px solid var(--border-soft);
   font-size: 13px;
 }
@@ -836,7 +836,7 @@ function statusText(status: BookingStatus) {
   50% { transform: translate(-20px, 20px) scale(1.08); }
 }
 
-.weather-widget { background: linear-gradient(180deg, #f4f0fc, #fff) !important; }
+.weather-widget { background: linear-gradient(180deg, #F1F7FF, #fff) !important; }
 .weather-mini { display: flex; align-items: center; gap: 14px; }
 .weather-mini__icon { font-size: 36px; }
 .weather-mini strong { font-size: 22px; }

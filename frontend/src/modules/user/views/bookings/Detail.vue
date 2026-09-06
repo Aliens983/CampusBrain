@@ -29,6 +29,12 @@
           <span>服务名称</span><strong>{{ booking.serviceName }}</strong>
         </div>
         <div
+          v-if="booking.campus"
+          class="detail-row"
+        >
+          <span>校区</span><strong>{{ campusName(booking.campus) }}</strong>
+        </div>
+        <div
           v-if="booking.consultantName"
           class="detail-row"
         >
@@ -112,13 +118,16 @@ function statusTag(status: BookingStatus) {
 function statusText(status: BookingStatus) {
   return { pending: '待审核', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
 }
+function campusName(c?: string) {
+  return c === 'cq' ? '仓前' : c === 'xs' ? '下沙' : ''
+}
 </script>
 
 <style scoped lang="scss">
 .detail-hero {
   padding: 28px 32px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
+  background: linear-gradient(135deg, #0E6CD6, #3FB6FF 62%, #ADE2FF);
   color: #fff;
 }
 .back-btn { margin-bottom: 20px; } /* 样式来自全局 .back-btn，仅保留间距 */

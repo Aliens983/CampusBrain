@@ -32,4 +32,7 @@ public class ServiceAddRequest {
     @Max(value = 1, message = "服务状态必须为0(禁用)或1(启用)")
     @Schema(description = "服务状态（0-禁用，1-启用）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer serviceState;
+
+    @Schema(description = "服务封面图URL（上传返回的相对路径，可空）")
+    private String imageUrl;
 }

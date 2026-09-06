@@ -35,4 +35,10 @@ public class ServiceRespVO implements Serializable {
     @Schema(description = "业务分类: teacher/equipment/space/exam/other", example = "teacher")
     private String category;
 
+    @Schema(description = "校区: cq仓前 / xs下沙", example = "cq")
+    private String campus;
+
+    @Schema(description = "服务封面图URL")
+    private String imageUrl;
+
 }

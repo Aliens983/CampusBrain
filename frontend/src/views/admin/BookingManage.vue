@@ -48,9 +48,17 @@
                 }}</strong>
                 <p>{{ item.bookingNo }} / {{ item.applicant }} / {{ item.department }}</p>
               </div>
-              <el-tag :type="statusTag(item.status)">
-                {{ statusText(item.status) }}
-              </el-tag>
+              <div class="head-tags">
+                <el-tag
+                  v-if="item.campus"
+                  size="small"
+                  type="info"
+                  effect="plain"
+                >{{ campusName(item.campus) }}</el-tag>
+                <el-tag :type="statusTag(item.status)">
+                  {{ statusText(item.status) }}
+                </el-tag>
+              </div>
             </div>
             <div class="booking-item__meta">
               <span>{{ item.location }}</span>
@@ -138,6 +146,12 @@
             <div class="info-row">
               <span>编号</span><strong>{{ selectedBooking.bookingNo }}</strong>
             </div>
+            <div
+              v-if="selectedBooking.campus"
+              class="info-row"
+            >
+              <span>校区</span><strong>{{ campusName(selectedBooking.campus) }}</strong>
+            </div>
             <div class="info-row">
               <span>申请人</span><strong>{{ selectedBooking.applicant }}</strong>
             </div>
@@ -218,6 +232,7 @@ interface AdminBooking {
   equipmentName?: string
   quantity?: number
   roomName?: string
+  campus?: string
   slotDate?: string
   startTime?: string
   endTime?: string
@@ -239,6 +254,7 @@ interface BookingItem {
   equipmentName?: string
   quantity?: number
   roomName?: string
+  campus?: string
 }
 
 const filter = ref('all')
@@ -276,6 +292,7 @@ function mapAdminBooking(item: AdminBooking): BookingItem {
     equipmentName: item.equipmentName,
     quantity: item.quantity,
     roomName: item.roomName,
+    campus: item.campus,
     applicant: item.username || '未知用户',
     department: '校园统一预约中心',
     location: item.serviceDescribe || '',
@@ -394,13 +411,16 @@ function statusTag(status: BookingStatus) {
 function statusText(status: BookingStatus) {
   return { pending: '待审核', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
 }
+function campusName(c?: string) {
+  return c === 'cq' ? '仓前' : c === 'xs' ? '下沙' : ''
+}
 </script>
 
 <style scoped lang="scss">
 .admin-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #7c3aed);
+  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .admin-hero::before {
@@ -410,7 +430,7 @@ function statusText(status: BookingStatus) {
 }
 .admin-hero::after {
   content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(139,92,246,.24), rgba(139,92,246,0));
+  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
   animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
 }
 .admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
@@ -426,13 +446,14 @@ function statusText(status: BookingStatus) {
 
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .booking-stack, .dialog-list, .drawer-stack { display: grid; gap: 14px; }
-.booking-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #fbf9ff); cursor: pointer; transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
-.booking-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(124,58,237,.14); }
+.booking-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); cursor: pointer; transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
+.booking-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
 .booking-item__main { flex: 1; display: grid; gap: 10px; }
 .booking-item__head { display: flex; justify-content: space-between; gap: 12px; }
+.head-tags { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .booking-item__head p { margin: 4px 0 0; color: var(--text-tertiary); font-size: 12px; }
 .booking-item__meta { display: flex; flex-wrap: wrap; gap: 12px; color: var(--text-secondary); font-size: 13px; }
 .booking-item__action, .button-row { display: flex; gap: 10px; }
-.dialog-card { padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #fff, #fbf9ff); border: 1px solid var(--border-soft); }
+.dialog-card { padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #fff, #F9FCFF); border: 1px solid var(--border-soft); }
 @media (max-width: 960px) { .admin-hero { grid-template-columns: 1fr; } .booking-item, .booking-item__head, .booking-item__action, .button-row { flex-direction: column; align-items: stretch; } }
 </style>

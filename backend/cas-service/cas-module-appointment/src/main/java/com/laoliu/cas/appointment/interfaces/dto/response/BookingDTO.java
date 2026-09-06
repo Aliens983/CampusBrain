@@ -24,6 +24,9 @@ public class BookingDTO {
     @Schema(description = "服务名称")
     private String serviceName;
 
+    @Schema(description = "校区: cq仓前 / xs下沙")
+    private String campus;
+
     @Schema(description = "预约状态（0=待审核, 1=通过, 2=拒绝, 3=取消）")
     private Integer status;
 

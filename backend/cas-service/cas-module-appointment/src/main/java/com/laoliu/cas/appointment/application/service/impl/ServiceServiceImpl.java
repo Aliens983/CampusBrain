@@ -59,6 +59,7 @@ public class ServiceServiceImpl implements ServiceService {
                 .serviceName(request.getServiceName())
                 .serviceDescribe(request.getServiceDescribe())
                 .serviceState(request.getServiceState())
+                .imageUrl(request.getImageUrl())
                 .build();
         serviceRepository.save(service);
         return true;
@@ -72,6 +73,7 @@ public class ServiceServiceImpl implements ServiceService {
         existing.setServiceName(request.getServiceName());
         existing.setServiceDescribe(request.getServiceDescribe());
         if (request.getServiceState() != null) existing.setServiceState(request.getServiceState());
+        if (request.getImageUrl() != null) existing.setImageUrl(request.getImageUrl());
         serviceRepository.save(existing);
         return true;
     }

@@ -227,7 +227,7 @@ function roleText(role: UserRole) {
 .admin-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #7c3aed);
+  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .admin-hero::before {
@@ -237,7 +237,7 @@ function roleText(role: UserRole) {
 }
 .admin-hero::after {
   content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(139,92,246,.24), rgba(139,92,246,0));
+  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
   animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
 }
 .admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
@@ -253,14 +253,14 @@ function roleText(role: UserRole) {
 
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .user-stack, .dialog-list, .drawer-stack { display: grid; gap: 14px; }
-.user-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #fbf9ff); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
-.user-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(124,58,237,.14); }
-.user-item__avatar { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(135deg, #7c3aed, #a78bfa); color: #fff; font-size: 22px; font-weight: 700; }
+.user-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
+.user-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
+.user-item__avatar { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(135deg, #3FB6FF, #ADE2FF); color: #fff; font-size: 22px; font-weight: 700; }
 .user-item__main { display: grid; gap: 10px; }
 .user-item__head { display: flex; justify-content: space-between; gap: 12px; }
 .user-item__head p { margin: 4px 0 0; color: var(--text-tertiary); font-size: 12px; }
 .user-item__meta { display: flex; flex-wrap: wrap; gap: 12px; color: var(--text-secondary); font-size: 13px; }
 .user-item__action { display: flex; align-items: center; gap: 10px; }
-.dialog-card { padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #fff, #fbf9ff); border: 1px solid var(--border-soft); }
+.dialog-card { padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #fff, #F9FCFF); border: 1px solid var(--border-soft); }
 @media (max-width: 960px) { .admin-hero { grid-template-columns: 1fr; } .user-item, .user-item__head, .user-item__action { display: flex; flex-direction: column; align-items: stretch; } }
 </style>

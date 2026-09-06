@@ -272,7 +272,7 @@ onMounted(async () => {
 .admin-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #7c3aed);
+  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .admin-hero::before {
@@ -282,7 +282,7 @@ onMounted(async () => {
 }
 .admin-hero::after {
   content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(139,92,246,.24), rgba(139,92,246,0));
+  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
   animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
 }
 .admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
@@ -306,7 +306,7 @@ onMounted(async () => {
   display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 18px;
   border-bottom: 1px solid var(--border-soft);
 }
-.tools-card__icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: #f4f0fc; font-size: 24px; flex-shrink: 0; }
+.tools-card__icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: #F1F7FF; font-size: 24px; flex-shrink: 0; }
 .tools-card__head h3 { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
 .tools-card__head p { margin: 0; color: var(--text-secondary); font-size: 13px; }
 
@@ -315,18 +315,18 @@ onMounted(async () => {
 .chat-empty__icon { font-size: 40px; }
 .chat-empty p { color: var(--text-tertiary); margin:0; }
 .chat-hints { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.chat-hints span { padding: 6px 14px; border-radius: 999px; background: #f4f0fc; color: var(--brand-500); font-size: 12px; cursor: pointer; transition: background .2s; }
-.chat-hints span:hover { background: #e3dbfc; }
+.chat-hints span { padding: 6px 14px; border-radius: 999px; background: #F1F7FF; color: var(--brand-500); font-size: 12px; cursor: pointer; transition: background .2s; }
+.chat-hints span:hover { background: #E0ECFD; }
 
 .chat-msg { display: flex; gap: 10px; align-items: flex-start; }
 .chat-msg.user { flex-direction: row-reverse; }
-.chat-msg__avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #f4f0fc; font-size: 16px; flex-shrink: 0; }
+.chat-msg__avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #F1F7FF; font-size: 16px; flex-shrink: 0; }
 .chat-msg.user .chat-msg__avatar { background: #ebe3f9; }
 .chat-msg__bubble {
   max-width: 70%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.65;
   background: #f3f4f6; color: #1f2937; white-space: pre-wrap; word-break: break-word;
 }
-.chat-msg.user .chat-msg__bubble { background: linear-gradient(135deg, #8b5cf6, #7c3aed); color: #fff; }
+.chat-msg.user .chat-msg__bubble { background: linear-gradient(135deg, #7BD0FF, #3FB6FF); color: #fff; }
 .typing span { display:inline-block; width:6px; height:6px; border-radius:50%; background:#94a3b8; margin:0 2px; animation: typingBounce 1.4s ease-in-out infinite; }
 .typing span:nth-child(2) { animation-delay: .2s; }
 .typing span:nth-child(3) { animation-delay: .4s; }
@@ -345,7 +345,7 @@ onMounted(async () => {
 }
 .tools-form--wide { flex-direction: column; align-items: stretch; gap: 16px; }
 
-.weather-card { display: flex; gap: 18px; align-items: center; padding: 20px; border-radius: 18px; background: linear-gradient(135deg, #f4f0fc, #ecfeff); border: 1px solid #ddd6fe; }
+.weather-card { display: flex; gap: 18px; align-items: center; padding: 20px; border-radius: 18px; background: linear-gradient(135deg, #F1F7FF, #ecfeff); border: 1px solid #E1ECFE; }
 .weather-card__icon { font-size: 52px; }
 .weather-card__info strong { font-size: 17px; }
 .weather-card__main { margin: 4px 0; font-size: 15px; color: var(--text-secondary); }

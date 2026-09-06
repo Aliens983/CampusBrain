@@ -20,6 +20,7 @@
         <result property="username" column="username"/>
         <result property="serviceName" column="service_name"/>
         <result property="serviceDescribe" column="service_describe"/>
+        <result property="campus" column="campus"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="manageStatus" column="manage_status"/>
@@ -79,7 +80,7 @@
 
     <select id="getServiceStatus" resultMap="ServiceStatusResultMap">
         SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, i.reason,
+               s.service_name, s.service_describe, s.campus AS campus, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
@@ -96,7 +97,7 @@
 
     <select id="getServiceStatusByUserId" resultMap="ServiceStatusResultMap">
         SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, i.reason,
+               s.service_name, s.service_describe, s.campus AS campus, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
@@ -114,7 +115,7 @@
 
     <select id="getServiceStatusByOrderId" resultMap="ServiceStatusResultMap">
         SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, i.reason,
+               s.service_name, s.service_describe, s.campus AS campus, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
@@ -131,7 +132,7 @@
 
     <select id="getServiceStatusByOrderIdAndUserId" resultMap="ServiceStatusResultMap">
         SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, i.reason,
+               s.service_name, s.service_describe, s.campus AS campus, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
@@ -312,7 +313,7 @@
     <!-- 分页查询所有服务预约状态（支持按审核状态、服务名称筛选） -->
     <select id="getServiceStatusWithPage" resultMap="ServiceStatusResultMap">
         SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, i.reason,
+               s.service_name, s.service_describe, s.campus AS campus, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
@@ -338,7 +339,7 @@
     <!-- 分页查询用户的预约状态（支持按审核状态、服务名称筛选） -->
     <select id="getServiceStatusByUserIdWithPage" resultMap="ServiceStatusResultMap">
         SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, i.reason,
+               s.service_name, s.service_describe, s.campus AS campus, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,

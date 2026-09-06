@@ -89,6 +89,10 @@
                 <span>{{ item.date }}  {{ item.timeRange }}</span>
               </div>
               <div class="booking-card__row booking-card__row--muted">
+                <span
+                  v-if="item.campus"
+                  class="campus-chip"
+                >{{ campusName(item.campus) }}</span>
                 <el-icon :size="14">
                   <Location />
                 </el-icon>
@@ -159,13 +163,17 @@ function statusTag(status: BookingStatus) {
 function statusText(status: BookingStatus) {
   return { pending: '待审核', approved: '已通过', rejected: '已驳回', completed: '已完成', cancelled: '已取消' }[status]
 }
+
+function campusName(c?: string) {
+  return c === 'cq' ? '仓前' : c === 'xs' ? '下沙' : ''
+}
 </script>
 
 <style scoped lang="scss">
 .dashboard-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
+  background: linear-gradient(135deg, #0E6CD6, #3FB6FF 62%, #ADE2FF);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .dashboard-hero::before {
@@ -224,5 +232,9 @@ function statusText(status: BookingStatus) {
 .booking-card:hover .booking-card__chevron { color: #4f6ef7; transform: translateX(4px); }
 
 @keyframes dashHalo { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-20px,-10px,0) scale(1.08); } }
+.campus-chip {
+  color: #1E6FB8; background: #E1ECFE; border: 1px solid #C8EBFF;
+  border-radius: 6px; padding: 1px 6px; font-size: 11px; font-weight: 600;
+}
 @media (max-width: 900px) { .dashboard-hero { grid-template-columns: 1fr; } .booking-card__body { flex-direction: column; align-items: flex-start; } }
 </style>

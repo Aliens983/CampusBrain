@@ -42,12 +42,18 @@ public class ServicesDO {
     /** 业务分类: teacher/equipment/space/exam/other */
     private String category;
 
+    /** 校区: cq仓前 / xs下沙 */
+    private String campus;
+
+    /** 服务封面图URL */
+    private String imageUrl;
+
     public Service toEntity() {
         return Service.builder()
                 .serviceId(serviceId).serviceName(serviceName)
                 .serviceDescribe(serviceDescribe).serviceState(serviceState)
                 .capacity(capacity).bookedCount(bookedCount)
-                .category(category)
+                .category(category).campus(campus).imageUrl(imageUrl)
                 .build();
     }
 
@@ -57,7 +63,7 @@ public class ServicesDO {
                 .serviceId(entity.getServiceId()).serviceName(entity.getServiceName())
                 .serviceDescribe(entity.getServiceDescribe()).serviceState(entity.getServiceState())
                 .capacity(entity.getCapacity()).bookedCount(entity.getBookedCount())
-                .category(entity.getCategory())
+                .category(entity.getCategory()).campus(entity.getCampus()).imageUrl(entity.getImageUrl())
                 .build();
     }
 }

@@ -97,7 +97,7 @@ function logout() {
 
 .sidebar {
   padding: 20px 16px;
-  background: linear-gradient(180deg, #251048, #341268 55%, #40167e);
+  background: linear-gradient(180deg, #143A78, #1A4C92 55%, #1F63B8);
   color: #fff;
   overflow-y: auto;         /* 菜单多时左栏内部自滚，但栏体始终固定 */
 }
@@ -116,7 +116,7 @@ function logout() {
   display: grid;
   place-items: center;
   border-radius: 14px;
-  background: linear-gradient(135deg, #a78bfa, #6d28d9);
+  background: linear-gradient(135deg, #ADE2FF, #1E98F2);
   font-weight: 800;
 }
 
@@ -201,7 +201,7 @@ function logout() {
   }
 }
 
-.weather-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; background: rgba(124,58,237,.06); border: 1px solid rgba(124,58,237,.1); }
+.weather-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; background: rgba(63,182,255,.06); border: 1px solid rgba(63,182,255,.1); }
 .weather-pill__icon { font-size: 18px; }
 .weather-pill__text { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 @media (max-width: 900px) { .weather-pill { display: none; } }
@@ -215,13 +215,13 @@ function logout() {
   margin-left: 0;
 }
 .workspace__actions .el-button--default {
-  color: #43395e;
-  border-color: #ddd3ef;
+  color: #3E4C66;
+  border-color: #E2ECFC;
   background: #fff;
 }
 .workspace__actions .el-button--default:hover {
-  color: #6d28d9;
-  border-color: #b49df2;
+  color: #1E98F2;
+  border-color: #CBEBFF;
   background: #faf8ff;
   box-shadow: none;
 }

@@ -139,6 +139,24 @@
               :rows="5"
             />
           </el-form-item>
+          <el-form-item label="服务封面">
+            <el-upload
+              :show-file-list="false"
+              accept="image/*"
+              :http-request="(o: any) => uploadImage(o.file, 'edit')"
+            >
+              <img
+                v-if="editForm.image"
+                :src="assetUrl(editForm.image)"
+                class="cover-prev"
+                alt="封面"
+              >
+              <el-button
+                v-else
+                size="small"
+              >上传封面图片</el-button>
+            </el-upload>
+          </el-form-item>
         </el-form>
         <el-button
           type="primary"
@@ -183,6 +201,24 @@
             placeholder="如：全校师生"
           />
         </el-form-item>
+        <el-form-item label="服务封面">
+          <el-upload
+            :show-file-list="false"
+            accept="image/*"
+            :http-request="(o: any) => uploadImage(o.file, 'create')"
+          >
+            <img
+              v-if="createForm.image"
+              :src="assetUrl(createForm.image)"
+              class="cover-prev"
+              alt="封面"
+            >
+            <el-button
+              v-else
+              size="small"
+            >上传封面图片</el-button>
+          </el-upload>
+        </el-form-item>
       </el-form>
       <el-button
         type="primary"
@@ -214,8 +250,8 @@ const services = ref<ServiceCard[]>([])
 const loading = ref(false)
 const saving = ref(false)
 
-const editForm = reactive({ name: '', category: '', description: '' })
-const createForm = reactive({ name: '', category: '', description: '', location: '' })
+const editForm = reactive({ name: '', category: '', description: '', image: '' })
+const createForm = reactive({ name: '', category: '', description: '', location: '', image: '' })
 
 const filteredServices = computed(() =>
   services.value.filter((item) => {
@@ -238,8 +274,33 @@ watch(selectedService, (item) => {
     editForm.name = item.name
     editForm.category = item.category
     editForm.description = item.description
+    editForm.image = item.imageUrl || ''
   }
 })
+
+/** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
+function assetUrl(path?: string) {
+  if (!path) return ''
+  if (/^https?:/.test(path)) return path
+  if (path.startsWith('/uploads')) return `/api${path}`
+  return path
+}
+
+/** 封面上传：POST /admin/files，返回相对 URL */
+async function uploadImage(file: File, kind: 'edit' | 'create') {
+  if (!file) return
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    const url = await request.post('/admin/files', fd) as string
+    if (kind === 'edit') editForm.image = url
+    else createForm.image = url
+    ElMessage.success('封面上传成功')
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '封面上传失败')
+  }
+}
 
 onMounted(async () => {
   loading.value = true
@@ -269,6 +330,7 @@ async function saveEdit() {
     await request.put(`/admin/services/${selectedService.value.id}`, {
       serviceName: editForm.name,
       serviceDescribe: editForm.description,
+      imageUrl: editForm.image || null,
     })
     ElMessage.success('服务修改成功')
     // 先关闭抽屉，再本地更新数据避免闪烁
@@ -296,6 +358,7 @@ async function saveCreate() {
     await request.post('/admin/services', {
       serviceName: createForm.name,
       serviceDescribe: createForm.description,
+      imageUrl: createForm.image || null,
     })
     ElMessage.success('服务创建成功')
     createDrawer.value = false
@@ -303,6 +366,7 @@ async function saveCreate() {
     createForm.category = ''
     createForm.description = ''
     createForm.location = ''
+    createForm.image = ''
     services.value = await fetchServiceCards()
   } catch (error: unknown) {
     const err = error as { message?: string }
@@ -317,7 +381,7 @@ async function saveCreate() {
 .admin-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #7c3aed);
+  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .admin-hero::before {
@@ -327,7 +391,7 @@ async function saveCreate() {
 }
 .admin-hero::after {
   content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(139,92,246,.24), rgba(139,92,246,0));
+  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
   animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
 }
 .admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
@@ -344,15 +408,16 @@ async function saveCreate() {
 
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .toolbar { display: flex; gap: 12px; }
+.cover-prev { display: block; width: 100%; max-height: 150px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-soft); }
 .service-stack, .dialog-list { display: grid; gap: 14px; }
-.service-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #fbf9ff); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
-.service-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(124,58,237,.14); }
+.service-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
+.service-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
 .service-item__cover { width: 72px; min-height: 72px; display: grid; place-items: center; border-radius: 18px; color: #fff; font-weight: 700; }
 .service-item__main { display: grid; gap: 10px; }
 .service-item__head { display: flex; justify-content: space-between; gap: 12px; }
 .service-item__head p { margin: 4px 0 0; color: var(--text-tertiary); font-size: 12px; }
 .service-item__meta { display: grid; gap: 6px; color: var(--text-secondary); font-size: 13px; }
 .service-item__action { display: flex; align-items: center; gap: 10px; }
-.dialog-card { padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #fff, #fbf9ff); border: 1px solid var(--border-soft); }
+.dialog-card { padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #fff, #F9FCFF); border: 1px solid var(--border-soft); }
 @media (max-width: 960px) { .admin-hero { grid-template-columns: 1fr; } .toolbar, .service-item, .service-item__head, .service-item__action { display: flex; flex-direction: column; align-items: stretch; } }
 </style>

@@ -39,6 +39,8 @@ CREATE TABLE services
     service_describe VARCHAR(100) DEFAULT NULL comment 'Services description',
     service_state   TINYINT(1) NOT NULL DEFAULT 1 comment 'Services status: 0-disabled,1-enabled',
     category        VARCHAR(20) NOT NULL DEFAULT 'other' comment '业务分类: teacher/equipment/space/activity/exam/other',
+    campus          VARCHAR(8)  NOT NULL DEFAULT 'cq' comment '校区: cq仓前 / xs下沙',
+    image_url       VARCHAR(255) NOT NULL DEFAULT '' comment '服务封面图URL',
     capacity        INT NOT NULL DEFAULT -1 comment '可预约容量，-1=不限',
     booked_count    INT NOT NULL DEFAULT 0 comment '已预约数（乐观锁扣减）',
     create_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP comment 'Record creation time',
@@ -167,36 +169,44 @@ CREATE TABLE time_slot
 -- ============================================================
 -- 样例/参考数据
 -- ============================================================
-INSERT INTO services (service_id, service_name, service_describe, service_state, capacity, category) VALUES
-(1, '空闲教室', '为学生提供空闲教室自习', 1, -1, 'space'),
-(2, '心理咨询', '提供专业的心理咨询服务', 1, -1, 'teacher'),
-(3, '学业辅导', '提供各学科的学业辅导服务', 1, -1, 'teacher'),
-(6, '活动预约', '预约校园活动场地和资源（活动时间由发布方发布）', 1, 60, 'activity'),
-(7, '设备借用', '借用校园公共设备，按时间段预约，到点自动归还', 1, -1, 'equipment');
+INSERT INTO services (service_id, service_name, service_describe, service_state, capacity, category, campus) VALUES
+(1, '空闲教室', '为学生提供空闲教室自习', 1, -1, 'space', 'cq'),
+(2, '心理咨询', '提供专业的心理咨询服务', 1, -1, 'teacher', 'cq'),
+(3, '学业辅导', '提供各学科的学业辅导服务', 1, -1, 'teacher', 'cq'),
+(6, '活动预约', '预约校园活动场地和资源（活动时间由发布方发布）', 1, 60, 'activity', 'cq'),
+(7, '设备借用', '借用校园公共设备，按时间段预约，到点自动归还', 1, -1, 'equipment', 'cq'),
+(8, '空闲教室', '为学生提供空闲教室自习', 1, -1, 'space', 'xs'),
+(9, '心理咨询', '提供专业的心理咨询服务', 1, -1, 'teacher', 'xs'),
+(10, '学业辅导', '提供各学科的学业辅导服务', 1, -1, 'teacher', 'xs'),
+(11, '活动预约', '预约校园活动场地和资源（活动时间由发布方发布）', 1, 60, 'activity', 'xs'),
+(12, '设备借用', '借用校园公共设备，按时间段预约，到点自动归还', 1, -1, 'equipment', 'xs');
 
-INSERT INTO consultant (name, department, title, description, rating, review_count, service_id) VALUES
-('张老师', '学生咨询中心', '资深心理咨询师', '从事学生心理咨询工作10年，擅长学业压力、人际关系、情绪管理等领域', 4.8, 128, 2),
-('李老师', '学生咨询中心', '高级职业规划师', '专注于大学生职业规划与就业指导，帮助学生明确职业方向', 4.9, 95, 2),
-('王老师', '学生咨询中心', '心理咨询师', '擅长青少年心理辅导、学业规划、时间管理', 4.7, 86, 2),
-('赵老师', '学业辅导中心', '高级学业导师', '擅长高等数学、线性代数等理工科课程的辅导', 4.6, 72, 3);
+INSERT INTO consultant (id, name, department, title, description, rating, review_count, service_id) VALUES
+(1, '肖老师', '心理咨询中心', '咨询师', '擅长学业压力与情绪管理', 4.8, 100, 2),
+(2, '周老师', '心理咨询中心', '咨询师', '擅长人际关系与职业规划', 4.8, 90, 2),
+(3, '刘老师', '心理咨询中心', '咨询师', '擅长焦虑疏导与睡眠问题', 4.7, 85, 2),
+(4, '石老师', '学业辅导中心', '学业导师', '擅长高等数学与线性代数', 4.7, 80, 3),
+(5, '管老师', '学业辅导中心', '学业导师', '擅长物理与工程类课程', 4.6, 70, 3),
+(6, '姚老师', '心理咨询中心', '咨询师', '擅长情绪管理与压力疏导', 4.8, 90, 9),
+(7, '裘老师', '心理咨询中心', '咨询师', '擅长人际关系咨询', 4.7, 80, 9),
+(8, '孙老师', '心理咨询中心', '咨询师', '擅长学习动力与时间管理', 4.6, 75, 9),
+(9, '管老师', '学业辅导中心', '学业导师', '擅长英语与论文写作', 4.6, 60, 10);
 
 INSERT INTO equipment (name, category, description, total_stock, available_stock, unit, location, service_id) VALUES
-('投影仪', '投影设备', '高清投影仪，支持HDMI/VGA接口，适用于教学和会议', 10, 5, '台', '校园设备管理中心A区', 7),
-('笔记本电脑', '计算机设备', 'ThinkPad T14，i7处理器，16GB内存，适合办公和编程', 20, 12, '台', '校园设备管理中心B区', 7),
-('录音笔', '音频设备', '专业录音笔，支持远距离录音，适合课堂记录', 30, 22, '支', '校园设备管理中心C区', 7),
-('摄像机', '摄影摄像', 'SONY 4K摄像机，适用于活动拍摄和课程录制', 8, 3, '台', '校园设备管理中心A区', 7);
+('投影仪', '投影设备', '高清投影仪，支持HDMI/VGA接口，适用于教学和会议', 10, 5, '台', '仓前设备中心', 7),
+('笔记本电脑', '计算机设备', 'ThinkPad T14，i7处理器，16GB内存，适合办公和编程', 20, 12, '台', '仓前设备中心', 7),
+('录音笔', '音频设备', '专业录音笔，支持远距离录音，适合课堂记录', 30, 22, '支', '下沙设备中心', 12),
+('摄像机', '摄影摄像', 'SONY 4K摄像机，适用于活动拍摄和课程录制', 8, 3, '台', '下沙设备中心', 12);
 
 INSERT INTO time_slot (consultant_id, slot_date, start_time, end_time, available) VALUES
 (1, CURDATE(), '09:00', '10:00', 1),
 (1, CURDATE(), '10:00', '11:00', 1),
-(1, CURDATE(), '11:00', '12:00', 1),
 (1, CURDATE(), '14:00', '15:00', 1),
-(1, CURDATE(), '15:00', '16:00', 1),
-(1, CURDATE(), '16:00', '17:00', 0),
 (2, CURDATE(), '09:00', '10:00', 1),
-(2, CURDATE(), '10:00', '11:00', 1),
-(2, CURDATE(), '14:00', '15:00', 1),
-(2, CURDATE(), '15:00', '16:00', 1);
+(2, CURDATE(), '15:00', '16:00', 1),
+(6, CURDATE(), '09:00', '10:00', 1),
+(6, CURDATE(), '10:00', '11:00', 1),
+(6, CURDATE(), '14:00', '15:00', 1);
 
 -- ---------- 教室表 ----------
 CREATE TABLE room
@@ -212,7 +222,13 @@ CREATE TABLE room
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = '教室表 - 一间教室同一时间段仅一人预约';
 
 INSERT INTO room (name, location, seats, service_id) VALUES
-('A栋 201 教室', 'A栋2层', 30, 1),
-('A栋 203 教室', 'A栋2层', 40, 1),
-('B栋 301 教室', 'B栋3层', 60, 1),
-('C栋 101 教室', 'C栋1层', 80, 1);
+('勤园7号楼', '仓前校区', 40, 1),
+('勤园8号楼', '仓前校区', 50, 1),
+('勤园6号楼', '仓前校区', 40, 1),
+('勤园13号楼', '仓前校区', 60, 1),
+('恕园13号楼', '仓前校区', 60, 1),
+('A号楼', '下沙校区', 40, 8),
+('B号楼', '下沙校区', 50, 8),
+('C号楼', '下沙校区', 40, 8),
+('D号楼', '下沙校区', 60, 8),
+('E号楼', '下沙校区', 60, 8);

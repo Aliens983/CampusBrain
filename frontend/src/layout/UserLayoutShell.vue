@@ -144,7 +144,7 @@ function handleCommand(command: string) {
 .brand__mark {
   width: 36px; height: 36px; display: grid; place-items: center;
   border-radius: 10px; color: #fff; font-weight: 800; font-size: 14px;
-  background: linear-gradient(135deg, #7c3aed, #a78bfa);
+  background: linear-gradient(135deg, #3FB6FF, #ADE2FF);
 }
 .brand__title { font-size: 14px; font-weight: 600; color: var(--text-primary); white-space: nowrap; }
 
@@ -154,8 +154,8 @@ function handleCommand(command: string) {
   background: transparent; color: var(--text-secondary); cursor: pointer; white-space: nowrap;
   transition: background .2s, color .2s;
 }
-.nav__item:hover { background: rgba(124,58,237,.06); color: var(--brand-500); }
-.nav__item.is-active { color: #fff; background: linear-gradient(135deg, #7c3aed, #a78bfa); }
+.nav__item:hover { background: rgba(63,182,255,.06); color: var(--brand-500); }
+.nav__item.is-active { color: #fff; background: linear-gradient(135deg, #3FB6FF, #ADE2FF); }
 
 .header-right { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
 .user-dropdown { cursor: pointer; }
@@ -170,7 +170,7 @@ function handleCommand(command: string) {
   display: grid;
   grid-template-columns: 1.25fr 0.75fr;
   gap: 20px;
-  background: linear-gradient(135deg, #4c1d95, #7c3aed 55%, #a78bfa);
+  background: linear-gradient(135deg, #0E6CD6, #3FB6FF 55%, #ADE2FF);
   box-shadow: var(--shadow-card);
 }
 
@@ -202,7 +202,7 @@ function handleCommand(command: string) {
   .nav__item { padding: 6px 12px; font-size: 12px; }
 }
 
-.weather-pill { display: flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 8px; background: rgba(124,58,237,.05); border: 1px solid rgba(124,58,237,.1); }
+.weather-pill { display: flex; align-items: center; gap: 5px; padding: 4px 12px; border-radius: 8px; background: rgba(63,182,255,.05); border: 1px solid rgba(63,182,255,.1); }
 .weather-pill__icon { font-size: 16px; }
 .weather-pill__text { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
 @media (max-width: 860px) { .weather-pill__text { display: none; } }
@@ -214,12 +214,12 @@ function handleCommand(command: string) {
   border-radius: 999px;
   font-size: 13px;
   border-color: #d6c9f0;
-  color: #6d28d9;
+  color: #1E98F2;
   background: #fff;
 }
 .header-right .admin-switch:hover {
   color: #fff;
   border-color: transparent;
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+  background: linear-gradient(135deg, #7BD0FF, #1E98F2);
 }
 </style>

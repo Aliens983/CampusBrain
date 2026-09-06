@@ -109,7 +109,7 @@ const quickActions = [
   padding: 32px;
   border-radius: 30px;
   color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #7c3aed);
+  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
   box-shadow: var(--shadow-card);
   overflow: hidden;
 }
@@ -270,7 +270,7 @@ const quickActions = [
   padding: 20px 22px;
   border: 1px solid var(--border-soft);
   border-radius: 18px;
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, #fff, #F9FCFF);
   cursor: pointer;
   transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
 }

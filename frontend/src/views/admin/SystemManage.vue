@@ -131,7 +131,7 @@ const enabledNotifications = computed(() =>
 .admin-hero {
   position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
   padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #7c3aed);
+  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
   box-shadow: var(--shadow-card); overflow: hidden;
 }
 .admin-hero::before {
@@ -141,7 +141,7 @@ const enabledNotifications = computed(() =>
 }
 .admin-hero::after {
   content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(139,92,246,.24), rgba(139,92,246,0));
+  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
   animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
 }
 .admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
@@ -172,7 +172,7 @@ const enabledNotifications = computed(() =>
   padding: 18px;
   border-radius: 20px;
   border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #fbf9ff);
+  background: linear-gradient(180deg, #fff, #F9FCFF);
   transition: transform 0.24s ease, box-shadow 0.24s ease;
 }
 

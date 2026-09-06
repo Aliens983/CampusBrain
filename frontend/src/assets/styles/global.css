@@ -3,8 +3,8 @@
 @tailwind utilities;
 
 :root {
-  --bg-page: #f5f2fb;
-  --bg-page-deep: #eae4f7;
+  --bg-page: #f2f7fe;
+  --bg-page-deep: #e6f0fd;
   --bg-surface: rgba(255, 255, 255, 0.84);
   --bg-panel: rgba(255, 255, 255, 0.94);
   --bg-panel-strong: #ffffff;
@@ -12,32 +12,32 @@
   --text-secondary: #5f6b7a;
   --text-tertiary: #8a94a6;
   --border-soft: rgba(33, 56, 82, 0.08);
-  --border-strong: rgba(124, 58, 237, 0.14);
-  --brand-300: #c4b5fd;
-  --brand-400: #a78bfa;
-  --brand-500: #8b5cf6;
-  --brand-600: #7c3aed;
-  --brand-700: #6d28d9;
+  --border-strong: rgba(63, 182, 255, 0.14);
+  --brand-300: #D3EEFF;
+  --brand-400: #ADE2FF;
+  --brand-500: #7BD0FF;
+  --brand-600: #3FB6FF;
+  --brand-700: #1E98F2;
   --teal-500: #0f766e;
   --success-500: #16a34a;
   --warning-500: #d97706;
   --danger-500: #dc2626;
-  --shadow-card: 0 18px 40px rgba(49, 33, 89, 0.09);
-  --shadow-card-hover: 0 26px 60px rgba(49, 33, 89, 0.15);
-  --shadow-soft: 0 12px 30px rgba(49, 33, 89, 0.06);
+  --shadow-card: 0 18px 40px rgba(25, 55, 90, 0.09);
+  --shadow-card-hover: 0 26px 60px rgba(25, 55, 90, 0.15);
+  --shadow-soft: 0 12px 30px rgba(25, 55, 90, 0.06);
   --radius-2xl: 30px;
   --radius-xl: 24px;
   --radius-lg: 18px;
   --radius-md: 14px;
 
-  /* Element Plus 主色 → 淡紫紫罗（覆盖默认蓝） */
-  --el-color-primary: #8b5cf6;
-  --el-color-primary-light-3: #a78bfa;
-  --el-color-primary-light-5: #c4b5fd;
-  --el-color-primary-light-7: #ddd6fe;
-  --el-color-primary-light-8: #e8dffd;
-  --el-color-primary-light-9: #f3eefd;
-  --el-color-primary-dark-2: #6d28d9;
+  /* Element Plus 主色 → 杭师大校徽蓝 #3FB6FF 系 */
+  --el-color-primary: #3FB6FF;
+  --el-color-primary-light-3: #7BCCFF;
+  --el-color-primary-light-5: #A6DDFF;
+  --el-color-primary-light-7: #C8EBFF;
+  --el-color-primary-light-8: #D9F1FF;
+  --el-color-primary-light-9: #ECF8FF;
+  --el-color-primary-dark-2: #1E9CF0;
 }
 
 * {
@@ -63,10 +63,10 @@ body {
   font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   overflow-x: hidden;
   background:
-    radial-gradient(circle at top left, rgba(139, 92, 246, 0.09), transparent 28%),
+    radial-gradient(circle at top left, rgba(123, 208, 255, 0.09), transparent 28%),
     radial-gradient(circle at 78% 14%, rgba(244, 114, 182, 0.06), transparent 18%),
-    radial-gradient(circle at bottom right, rgba(196, 181, 253, 0.13), transparent 22%),
-    linear-gradient(180deg, #fbf9ff 0%, #f2edfc 46%, #ece4f9 100%);
+    radial-gradient(circle at bottom right, rgba(181, 214, 255, 0.13), transparent 22%),
+    linear-gradient(180deg, #F9FCFF 0%, #eaf3ff 46%, #e1efff 100%);
 }
 
 body::before,
@@ -83,7 +83,7 @@ body::before {
   right: -140px;
   width: 340px;
   height: 340px;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.12), rgba(124, 58, 237, 0));
+  background: radial-gradient(circle, rgba(63, 182, 255, 0.12), rgba(63, 182, 255, 0));
   filter: blur(8px);
   animation: ambientOrbA 18s ease-in-out infinite;
 }
@@ -135,7 +135,7 @@ a {
   padding: 36px;
   border-radius: 30px;
   color: #fff;
-  background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
+  background: linear-gradient(135deg, #0E6CD6, #3FB6FF 62%, #ADE2FF);
   box-shadow: var(--shadow-card);
   overflow: hidden;
   isolation: isolate;
@@ -292,8 +292,8 @@ a {
 }
 
 .status-pill.is-brand {
-  color: #7c3aed;
-  background: rgba(124, 58, 237, 0.1);
+  color: #3FB6FF;
+  background: rgba(63, 182, 255, 0.1);
 }
 
 .status-pill.is-success {
@@ -340,7 +340,7 @@ a {
   width: 180px;
   height: 180px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0));
+  background: radial-gradient(circle, rgba(63, 182, 255, 0.08), rgba(63, 182, 255, 0));
   transition: transform 0.28s ease, opacity 0.28s ease;
   opacity: 0.5;
   pointer-events: none;
@@ -350,7 +350,7 @@ a {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(124, 58, 237, 0.06), transparent 55%);
+  background: linear-gradient(135deg, rgba(63, 182, 255, 0.06), transparent 55%);
   opacity: 0;
   transition: opacity 0.28s ease;
   pointer-events: none;
@@ -359,7 +359,7 @@ a {
 .resource-card:hover {
   transform: translateY(-6px);
   box-shadow: var(--shadow-card-hover);
-  border-color: rgba(124, 58, 237, 0.16);
+  border-color: rgba(63, 182, 255, 0.16);
 }
 
 .resource-card:hover::before {
@@ -372,7 +372,7 @@ a {
 }
 
 .gradient-brand {
-  background: linear-gradient(135deg, #7c3aed, #8b5cf6);
+  background: linear-gradient(135deg, #3FB6FF, #7BD0FF);
 }
 
 .gradient-teal {
@@ -457,17 +457,17 @@ a {
 
 /* Primary */
 .el-button--primary {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  background: linear-gradient(135deg, #7BD0FF, #3FB6FF);
   border-color: transparent;
-  box-shadow: 0 2px 10px rgba(124,58,237,.22), inset 0 1px 0 rgba(255,255,255,.12);
+  box-shadow: 0 2px 10px rgba(63,182,255,.22), inset 0 1px 0 rgba(255,255,255,.12);
   color: #fff;
 }
 .el-button--primary:not(.is-disabled):hover {
-  background: linear-gradient(135deg, #7c3aed, #6d28d9);
-  box-shadow: 0 8px 26px rgba(124,58,237,.35);
+  background: linear-gradient(135deg, #3FB6FF, #1E98F2);
+  box-shadow: 0 8px 26px rgba(63,182,255,.35);
 }
 .el-button--primary:not(.is-disabled):active {
-  box-shadow: 0 2px 8px rgba(124,58,237,.18);
+  box-shadow: 0 2px 8px rgba(63,182,255,.18);
 }
 
 /* Success */
@@ -508,17 +508,17 @@ a {
 
 /* Default（描边次按钮：白底细边，hover 淡紫显色） */
 .el-button--default {
-  border: 1.5px solid #ddd3ef;
-  color: #43395e;
+  border: 1.5px solid #E2ECFC;
+  color: #3E4C66;
   background: #fff;
 }
 .el-button--default:hover {
-  border-color: #b49df2;
-  color: #6d28d9;
+  border-color: #CBEBFF;
+  color: #1E98F2;
   background: #faf8ff;
   box-shadow: 0 2px 8px rgba(109, 40, 217, 0.08);
 }
-.el-button--default:active { background: #f3eefd; }
+.el-button--default:active { background: #ECF8FF; }
 
 /* Plain */
 .el-button.is-plain {
@@ -526,15 +526,15 @@ a {
   border-width: 1.5px;
 }
 .el-button--primary.is-plain {
-  color: #8b5cf6;
-  border-color: #c4b5fd;
+  color: #7BD0FF;
+  border-color: #D3EEFF;
   background: rgba(240,236,253,.6);
 }
 .el-button--primary.is-plain:hover {
   color: #fff;
   border-color: transparent;
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  box-shadow: 0 4px 16px rgba(124,58,237,.25);
+  background: linear-gradient(135deg, #7BD0FF, #3FB6FF);
+  box-shadow: 0 4px 16px rgba(63,182,255,.25);
 }
 .el-button--success.is-plain { color: #16a34a; border-color: #bbf7d0; }
 .el-button--success.is-plain:hover { color: #fff; border-color: transparent; background: linear-gradient(135deg, #22c55e, #16a34a); }
@@ -552,7 +552,7 @@ a {
 }
 .el-button.is-text:hover {
   color: var(--brand-500);
-  background: rgba(124,58,237,.06);
+  background: rgba(63,182,255,.06);
 }
 
 /* Size */
@@ -596,7 +596,7 @@ a {
 .user-item__action .el-button--primary,
 .service-item__action .el-button--primary,
 .booking-item__action .el-button--primary {
-  color: #6d28d9;
+  color: #1E98F2;
   border-color: #d6c9f0;
   background: #f6f2fd;
   box-shadow: none;
@@ -606,8 +606,8 @@ a {
 .booking-item__action .el-button--primary:not(.is-disabled):hover {
   color: #fff;
   border-color: transparent;
-  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
-  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.22);
+  background: linear-gradient(135deg, #7BD0FF, #1E98F2);
+  box-shadow: 0 4px 14px rgba(63, 182, 255, 0.22);
 }
 
 /* 卡片底部双按钮：等宽、间距均匀、显大方 */
@@ -642,7 +642,7 @@ a {
 .dashboard-hero .hero-actions .el-button--primary,
 .admin-hero .hero-actions .el-button--primary,
 .page-hero .hero-actions .el-button--primary {
-  color: #6d28d9;
+  color: #1E98F2;
   background: #fff;
   border-color: transparent;
   box-shadow: 0 8px 20px rgba(23, 8, 53, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.6);
@@ -650,7 +650,7 @@ a {
 .dashboard-hero .hero-actions .el-button--primary:not(.is-disabled):hover,
 .admin-hero .hero-actions .el-button--primary:not(.is-disabled):hover,
 .page-hero .hero-actions .el-button--primary:not(.is-disabled):hover {
-  color: #5b21b6;
+  color: #11509F;
   background: #f5f0ff;
   box-shadow: 0 10px 24px rgba(23, 8, 53, 0.22);
 }
@@ -701,7 +701,7 @@ a {
 .el-input__wrapper:hover,
 .el-select__wrapper:hover,
 .el-textarea__inner:hover {
-  box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.18);
+  box-shadow: 0 0 0 1px rgba(63, 182, 255, 0.18);
 }
 
 .el-dialog,

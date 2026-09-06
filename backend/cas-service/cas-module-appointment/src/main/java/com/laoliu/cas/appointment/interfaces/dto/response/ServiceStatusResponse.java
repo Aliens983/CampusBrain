@@ -27,6 +27,9 @@ public class ServiceStatusResponse {
     @Schema(description = "服务描述")
     private String serviceDescribe;
 
+    @Schema(description = "校区: cq仓前 / xs下沙")
+    private String campus;
+
     @Schema(description = "创建时间")
     private LocalDateTime createTime;
 

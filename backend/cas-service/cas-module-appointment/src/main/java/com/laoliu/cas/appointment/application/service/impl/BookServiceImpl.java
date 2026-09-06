@@ -103,6 +103,7 @@ public class BookServiceImpl implements BookService {
         dto.setOrderId(status.getOrderId());
         dto.setUserId(status.getUserId());
         dto.setServiceName(status.getServiceName());
+        dto.setCampus(status.getCampus());
         dto.setStatus(status.getManageStatus());
         dto.setCreateTime(status.getCreateTime());
         dto.setReason(status.getStatusDescription());
