@@ -120,4 +120,18 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
 
     /** 到点自动归还：已过结束时间且"已通过"的单置为已完成 */
     int autoCompleteExpired();
+
+    /** 幂等插入教室时段预约（一间教室同一时段仅一人），返回实际插入行数（0=重复提交） */
+    int insertRoomBooking(@Param("userId") Long userId,
+                          @Param("serviceId") Long serviceId,
+                          @Param("roomId") Long roomId,
+                          @Param("date") LocalDate date,
+                          @Param("startTime") String startTime,
+                          @Param("endTime") String endTime);
+
+    /** 统计某教室某日某时段已被占用条数（待审+已通过；>0 表示已被他人预约） */
+    int countRoomOverlap(@Param("roomId") Long roomId,
+                         @Param("date") LocalDate date,
+                         @Param("startTime") String startTime,
+                         @Param("endTime") String endTime);
 }

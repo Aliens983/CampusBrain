@@ -38,6 +38,7 @@ CREATE TABLE services
     service_name    VARCHAR(20)  DEFAULT NULL comment 'Services name',
     service_describe VARCHAR(100) DEFAULT NULL comment 'Services description',
     service_state   TINYINT(1) NOT NULL DEFAULT 1 comment 'Services status: 0-disabled,1-enabled',
+    category        VARCHAR(20) NOT NULL DEFAULT 'other' comment '业务分类: teacher/equipment/space/activity/exam/other',
     capacity        INT NOT NULL DEFAULT -1 comment '可预约容量，-1=不限',
     booked_count    INT NOT NULL DEFAULT 0 comment '已预约数（乐观锁扣减）',
     create_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP comment 'Record creation time',
@@ -58,7 +59,10 @@ CREATE TABLE item
     slot_date     DATE        NULL comment '预约日期（咨询时段预约时非空）',
     start_time    VARCHAR(5)  NULL comment '时段开始 HH:mm',
     end_time      VARCHAR(5)  NULL comment '时段结束 HH:mm',
-    manage_status INT NOT NULL DEFAULT 0 comment 'Manage status: 0-pending,1-pass,2-reject,3-cancelled',
+    equipment_id  BIGINT      NULL comment '设备ID（设备借用时非空）',
+    quantity      INT         NULL DEFAULT 1 comment '借用数量',
+    room_id       BIGINT      NULL comment '教室ID（教室时段预约时非空）',
+    manage_status INT NOT NULL DEFAULT 0 comment 'Manage status: 0-pending,1-pass,2-reject,3-cancelled,4-completed',
     reason        VARCHAR(255) DEFAULT NULL comment 'Reject reason when audit is rejected',
     create_time   TIMESTAMP DEFAULT CURRENT_TIMESTAMP comment 'Order creation time',
     update_time   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP comment 'Order update time',
@@ -68,6 +72,7 @@ CREATE TABLE item
     KEY idx_manage_status (manage_status),
     KEY idx_user_status (user_id, manage_status),
     KEY idx_item_consultant_slot (consultant_id, slot_date),
+    KEY idx_item_room (room_id),
     CONSTRAINT fk_item_user FOREIGN KEY (user_id) REFERENCES `user` (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_item_service FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = 'Order table - stores user appointment orders';
@@ -162,12 +167,12 @@ CREATE TABLE time_slot
 -- ============================================================
 -- 样例/参考数据
 -- ============================================================
-INSERT INTO services (service_id, service_name, service_describe, service_state) VALUES
-(1, '空闲教室', '为学生提供空闲教室自习', 1),
-(2, '心理咨询', '提供专业的心理咨询服务', 1),
-(3, '学业辅导', '提供各学科的学业辅导服务', 1),
-(5, '考试安排', '提供各类考试报名和安排服务', 1),
-(6, '活动预约', '预约校园活动场地和资源', 1);
+INSERT INTO services (service_id, service_name, service_describe, service_state, capacity, category) VALUES
+(1, '空闲教室', '为学生提供空闲教室自习', 1, -1, 'space'),
+(2, '心理咨询', '提供专业的心理咨询服务', 1, -1, 'teacher'),
+(3, '学业辅导', '提供各学科的学业辅导服务', 1, -1, 'teacher'),
+(6, '活动预约', '预约校园活动场地和资源（活动时间由发布方发布）', 1, 60, 'activity'),
+(7, '设备借用', '借用校园公共设备，按时间段预约，到点自动归还', 1, -1, 'equipment');
 
 INSERT INTO consultant (name, department, title, description, rating, review_count, service_id) VALUES
 ('张老师', '学生咨询中心', '资深心理咨询师', '从事学生心理咨询工作10年，擅长学业压力、人际关系、情绪管理等领域', 4.8, 128, 2),
@@ -176,10 +181,10 @@ INSERT INTO consultant (name, department, title, description, rating, review_cou
 ('赵老师', '学业辅导中心', '高级学业导师', '擅长高等数学、线性代数等理工科课程的辅导', 4.6, 72, 3);
 
 INSERT INTO equipment (name, category, description, total_stock, available_stock, unit, location, service_id) VALUES
-('投影仪', '投影设备', '高清投影仪，支持HDMI/VGA接口，适用于教学和会议', 10, 5, '台', '校园设备管理中心A区', 1),
-('笔记本电脑', '计算机设备', 'ThinkPad T14，i7处理器，16GB内存，适合办公和编程', 20, 12, '台', '校园设备管理中心B区', 1),
-('录音笔', '音频设备', '专业录音笔，支持远距离录音，适合课堂记录', 30, 22, '支', '校园设备管理中心C区', 1),
-('摄像机', '摄影摄像', 'SONY 4K摄像机，适用于活动拍摄和课程录制', 8, 3, '台', '校园设备管理中心A区', 1);
+('投影仪', '投影设备', '高清投影仪，支持HDMI/VGA接口，适用于教学和会议', 10, 5, '台', '校园设备管理中心A区', 7),
+('笔记本电脑', '计算机设备', 'ThinkPad T14，i7处理器，16GB内存，适合办公和编程', 20, 12, '台', '校园设备管理中心B区', 7),
+('录音笔', '音频设备', '专业录音笔，支持远距离录音，适合课堂记录', 30, 22, '支', '校园设备管理中心C区', 7),
+('摄像机', '摄影摄像', 'SONY 4K摄像机，适用于活动拍摄和课程录制', 8, 3, '台', '校园设备管理中心A区', 7);
 
 INSERT INTO time_slot (consultant_id, slot_date, start_time, end_time, available) VALUES
 (1, CURDATE(), '09:00', '10:00', 1),
@@ -192,3 +197,22 @@ INSERT INTO time_slot (consultant_id, slot_date, start_time, end_time, available
 (2, CURDATE(), '10:00', '11:00', 1),
 (2, CURDATE(), '14:00', '15:00', 1),
 (2, CURDATE(), '15:00', '16:00', 1);
+
+-- ---------- 教室表 ----------
+CREATE TABLE room
+(
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY comment '教室ID',
+    name        VARCHAR(100) NOT NULL comment '教室名称',
+    location    VARCHAR(200) NOT NULL DEFAULT '' comment '位置',
+    seats       INT NOT NULL DEFAULT 0 comment '容纳人数',
+    service_id  INT NOT NULL comment '所属服务ID（空闲教室）',
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_room_service (service_id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = '教室表 - 一间教室同一时间段仅一人预约';
+
+INSERT INTO room (name, location, seats, service_id) VALUES
+('A栋 201 教室', 'A栋2层', 30, 1),
+('A栋 203 教室', 'A栋2层', 40, 1),
+('B栋 301 教室', 'B栋3层', 60, 1),
+('C栋 101 教室', 'C栋1层', 80, 1);

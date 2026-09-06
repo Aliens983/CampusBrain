@@ -44,6 +44,12 @@ public interface BookingRepository {
     /** 到点自动归还：把已过结束时间且"已通过"的单置为已完成，返回处理条数 */
     int autoCompleteExpired();
 
+    /** 幂等插入教室时段预约，返回实际插入行数（0=重复提交） */
+    int insertRoomBooking(Long userId, Long serviceId, Long roomId, LocalDate date, String startTime, String endTime);
+
+    /** 统计某教室某日某时段已被占用条数（>0=已被预约） */
+    int countRoomOverlap(Long roomId, LocalDate date, String startTime, String endTime);
+
     /** 查询当前用户一批待审核预约单对应的服务 ID（用于回退库存，防他人/重复释放） */
     List<Long> selectServiceIdsByBookingIds(Long userId, List<Long> bookingIds);
 

@@ -90,6 +90,8 @@ export interface BookingRecord {
   /** 设备借用：设备名称与数量 */
   equipmentName?: string
   quantity?: number
+  /** 教室预约：教室名称 */
+  roomName?: string
 }
 
 export interface MessageItem {

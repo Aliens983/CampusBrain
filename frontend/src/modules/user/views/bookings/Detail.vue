@@ -40,6 +40,12 @@
         >
           <span>借用设备</span><strong>{{ booking.equipmentName }} × {{ booking.quantity || 1 }}</strong>
         </div>
+        <div
+          v-if="booking.roomName"
+          class="detail-row"
+        >
+          <span>教室</span><strong>{{ booking.roomName }}</strong>
+        </div>
         <div class="detail-row">
           <span>预约日期</span><strong>{{ booking.date }}</strong>
         </div>

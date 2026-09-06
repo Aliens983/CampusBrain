@@ -39,6 +39,14 @@ public interface BookErrorCode {
 
     ErrorCode BORROW_TIME_INVALID = new ErrorCode(40016, "借用时间不合法，请检查日期与起止时段");
 
+    // ========== 教室时段预约 ==========
+
+    ErrorCode BOOK_TIME_INVALID = new ErrorCode(40017, "预约时间段不合法，请检查日期与起止时间");
+
+    ErrorCode ROOM_NOT_FOUND = new ErrorCode(40018, "教室不存在或不可预约");
+
+    ErrorCode ROOM_OCCUPIED = new ErrorCode(40019, "该教室此时间段已被预约，请换教室或时段");
+
     // ========== 审核 ==========
 
     ErrorCode STATUS_NOT_FOUND = new ErrorCode(40004, "预约状态不存在");

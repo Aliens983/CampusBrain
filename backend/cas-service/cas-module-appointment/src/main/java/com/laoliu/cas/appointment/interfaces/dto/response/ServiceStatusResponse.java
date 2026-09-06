@@ -59,4 +59,7 @@ public class ServiceStatusResponse {
 
     @Schema(description = "设备借用数量")
     private Integer quantity;
+
+    @Schema(description = "教室名称（教室时段预约时非空）")
+    private String roomName;
 }

@@ -19,10 +19,11 @@ type BackendBooking = {
   updateTime?: string
   manageStatus?: number
   statusDescription?: string
-  // 咨询时段/设备借用回显
+  // 咨询时段/设备借用/教室预约 回显
   consultantName?: string
   equipmentName?: string
   quantity?: number
+  roomName?: string
   slotDate?: string
   startTime?: string
   endTime?: string
@@ -61,6 +62,7 @@ const categoryToType: Record<string, ServiceCard['type']> = {
   teacher: 'consultation',
   equipment: 'equipment',
   space: 'room',
+  activity: 'printing',
   exam: 'printing',
   other: 'printing',
 }
@@ -69,6 +71,7 @@ const categoryLabel: Record<string, string> = {
   teacher: '教师咨询',
   equipment: '设备借用',
   space: '教室空间',
+  activity: '活动报名',
   exam: '考试报名',
   other: '其他服务',
 }
@@ -77,7 +80,7 @@ const categoryLabel: Record<string, string> = {
 function resolveCategory(serviceName: string, raw: string | undefined, type: ServiceCard['type']): string {
   if (raw && categoryToType[raw]) return raw
   if (serviceName.includes('考试')) return 'exam'
-  if (serviceName.includes('活动')) return 'space'
+  if (serviceName.includes('活动')) return 'activity'
   if (type === 'room') return 'space'
   if (type === 'consultation') return 'teacher'
   if (type === 'equipment') return 'equipment'
@@ -110,7 +113,7 @@ function mapBooking(item: BackendBooking, index: number): BookingRecord {
     item.manageStatus === 1 ? 'approved' : item.manageStatus === 2 ? 'rejected' : item.manageStatus === 3 ? 'cancelled' : item.manageStatus === 4 ? 'completed' : 'pending'
   const dateText = item.createTime ? String(item.createTime).replace('T', ' ') : ''
   // 咨询时段 / 设备借用：日期时段以用户选定为准（否则按提交时间回显）
-  const hasWindow = Boolean(item.consultantName || item.equipmentName)
+  const hasWindow = Boolean(item.consultantName || item.equipmentName || item.roomName)
   const date = hasWindow ? String(item.slotDate || '').slice(0, 10) || '待定' : dateText.slice(0, 10) || '待定'
   const timeRange = hasWindow
     ? [item.startTime, item.endTime].filter(Boolean).join(' - ') || '待分配时段'
@@ -123,6 +126,7 @@ function mapBooking(item: BackendBooking, index: number): BookingRecord {
     consultantName: item.consultantName,
     equipmentName: item.equipmentName,
     quantity: item.quantity,
+    roomName: item.roomName,
     type: getServiceType(item.serviceName || ''),
     applicant: item.username || '未知用户',
     department: '未分配部门',

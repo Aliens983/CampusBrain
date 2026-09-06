@@ -30,6 +30,7 @@
         <result property="endTime" column="endTime"/>
         <result property="equipmentName" column="equipmentName"/>
         <result property="quantity" column="quantity"/>
+        <result property="roomName" column="roomName"/>
     </resultMap>
 
     <resultMap id="ServicesDOResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
@@ -82,12 +83,14 @@
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity
+               e.name AS equipmentName, i.quantity AS quantity,
+               r.name AS roomName
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
         LEFT JOIN equipment e ON i.equipment_id = e.id
+        LEFT JOIN room r ON i.room_id = r.id
         ORDER BY i.create_time DESC
     </select>
 
@@ -97,12 +100,14 @@
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity
+               e.name AS equipmentName, i.quantity AS quantity,
+               r.name AS roomName
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
         LEFT JOIN equipment e ON i.equipment_id = e.id
+        LEFT JOIN room r ON i.room_id = r.id
         WHERE i.user_id = #{userId}
         ORDER BY i.create_time DESC
     </select>
@@ -113,12 +118,14 @@
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity
+               e.name AS equipmentName, i.quantity AS quantity,
+               r.name AS roomName
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
         LEFT JOIN equipment e ON i.equipment_id = e.id
+        LEFT JOIN room r ON i.room_id = r.id
         WHERE i.order_id = #{orderId}
     </select>
 
@@ -128,12 +135,14 @@
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity
+               e.name AS equipmentName, i.quantity AS quantity,
+               r.name AS roomName
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
         LEFT JOIN equipment e ON i.equipment_id = e.id
+        LEFT JOIN room r ON i.room_id = r.id
         WHERE i.order_id = #{orderId}
         AND i.user_id = #{userId}
     </select>
@@ -249,6 +258,36 @@
           AND (slot_date &lt; CURDATE() OR (slot_date = CURDATE() AND end_time &lt; DATE_FORMAT(NOW(), '%H:%i')))
     </update>
 
+    <!-- 教室时段预约：幂等插入（同一用户同一教室同一窗口 60 秒内待审核不重复） -->
+    <insert id="insertRoomBooking">
+        INSERT INTO item(user_id, service_id, room_id, slot_date, start_time, end_time)
+        SELECT #{userId}, #{serviceId}, #{roomId}, #{date}, #{startTime}, #{endTime}
+        WHERE NOT EXISTS (
+            SELECT 1 FROM item i
+            WHERE i.user_id = #{userId}
+              AND i.room_id = #{roomId}
+              AND i.slot_date = #{date}
+              AND i.start_time = #{startTime}
+              AND i.end_time = #{endTime}
+              AND i.manage_status = 0
+              AND i.create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+        )
+    </insert>
+
+    <!-- 某教室某日某时段已占用条数（待审+已通过；>0 即时段被占） -->
+    <select
+        id="countRoomOverlap"
+        resultType="int"
+    >
+        SELECT COUNT(*)
+        FROM item
+        WHERE room_id = #{roomId}
+          AND slot_date = #{date}
+          AND manage_status IN (0, 1)
+          AND start_time &lt; #{endTime}
+          AND end_time &gt; #{startTime}
+    </select>
+
     <select id="selectServiceIdsByBookingIds" resultType="long">
         SELECT DISTINCT service_id FROM item
         WHERE user_id = #{userId}
@@ -277,12 +316,14 @@
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity
+               e.name AS equipmentName, i.quantity AS quantity,
+               r.name AS roomName
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
         LEFT JOIN equipment e ON i.equipment_id = e.id
+        LEFT JOIN room r ON i.room_id = r.id
         <where>
             <if test="manageStatus != null">
                 AND i.manage_status = #{manageStatus}
@@ -301,12 +342,14 @@
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
                i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity
+               e.name AS equipmentName, i.quantity AS quantity,
+               r.name AS roomName
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
         LEFT JOIN equipment e ON i.equipment_id = e.id
+        LEFT JOIN room r ON i.room_id = r.id
         WHERE i.user_id = #{userId}
         <if test="manageStatus != null">
             AND i.manage_status = #{manageStatus}

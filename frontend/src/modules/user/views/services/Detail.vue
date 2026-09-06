@@ -230,6 +230,96 @@
           </div>
         </template>
 
+        <!-- 模式二·教室：选教室 + 自选时段（一间教室一时段仅一人） -->
+        <template v-else-if="roomMode">
+          <el-divider content-position="left">
+            选择教室与预约时段
+          </el-divider>
+
+          <div class="consult-grid">
+            <button
+              v-for="r in rooms"
+              :key="r.id"
+              class="consult-card"
+              :class="{ 'is-active': selectedRoom?.id === r.id }"
+              @click="selectRoom(r)"
+            >
+              <div class="consult-card__avatar room">
+                🏫
+              </div>
+              <div class="consult-card__body">
+                <strong>{{ r.name }}</strong>
+                <p>{{ r.location || '教学楼' }} · 容纳 {{ r.seats || '-' }} 人</p>
+              </div>
+            </button>
+          </div>
+          <p
+            v-if="!rooms.length"
+            class="muted"
+          >
+            该服务暂未登记教室。
+          </p>
+
+          <div
+            v-if="selectedRoom"
+            class="slot-panel borrow-panel"
+          >
+            <div class="borrow-grid">
+              <label class="borrow-full">
+                <span>预约日期</span>
+                <el-date-picker
+                  v-model="borrowDate"
+                  type="date"
+                  value-format="YYYY-MM-DD"
+                  :disabled-date="disablePastDate"
+                  placeholder="选择日期"
+                  size="large"
+                />
+              </label>
+              <label>
+                <span>开始时间</span>
+                <el-select
+                  v-model="borrowStart"
+                  size="large"
+                >
+                  <el-option
+                    v-for="h in hourOptions"
+                    :key="h"
+                    :label="h"
+                    :value="h"
+                  />
+                </el-select>
+              </label>
+              <label>
+                <span>结束时间</span>
+                <el-select
+                  v-model="borrowEnd"
+                  size="large"
+                >
+                  <el-option
+                    v-for="h in hourOptions"
+                    :key="h"
+                    :label="h"
+                    :value="h"
+                  />
+                </el-select>
+              </label>
+            </div>
+            <el-button
+              type="primary"
+              size="large"
+              class="slot-submit"
+              :loading="submitting"
+              @click="submitRoom"
+            >
+              提交预约
+            </el-button>
+            <p class="borrow-tip">
+              一间教室同一时段仅可被一人预约；审核通过后占用该时段，到点自动结束。
+            </p>
+          </div>
+        </template>
+
         <!-- 模式三：普通服务 —— 通用预约 -->
         <el-button
           v-else
@@ -278,6 +368,12 @@ interface EquipmentLite {
   unit?: string
   location?: string
 }
+interface RoomLite {
+  id: number
+  name: string
+  location?: string
+  seats?: number
+}
 
 const router = useRouter()
 const route = useRoute()
@@ -296,6 +392,10 @@ const equipmentMode = computed(() => Boolean(service.value && service.value.catK
 const equipment = ref<EquipmentLite[]>([])
 const selectedEquipment = ref<EquipmentLite | null>(null)
 const borrowQty = ref(1)
+// 教室预约态
+const roomMode = computed(() => Boolean(service.value && service.value.catKey === 'space'))
+const rooms = ref<RoomLite[]>([])
+const selectedRoom = ref<RoomLite | null>(null)
 const borrowDate = ref(localDate())
 const borrowStart = ref('09:00')
 const borrowEnd = ref('18:00')
@@ -314,6 +414,8 @@ onMounted(async () => {
     }
     if (service.value.catKey === 'equipment') {
       await loadEquipment(service.value.id)
+    } else if (service.value.catKey === 'space') {
+      await loadRooms(service.value.id)
     } else {
       await loadConsultants(service.value.id)
     }
@@ -404,6 +506,45 @@ async function submitBorrow() {
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '借用申请失败，请重试')
+  } finally {
+    submitting.value = false
+  }
+}
+
+/** 教室目录：读取该服务（空闲教室）下的真库教室 */
+async function loadRooms(serviceId: number) {
+  try {
+    const res = await request.get('/app/rooms', { params: { serviceId } }) as RoomLite[] | unknown
+    rooms.value = (Array.isArray(res) ? res : []) as RoomLite[]
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '获取教室列表失败')
+    rooms.value = []
+  }
+}
+
+function selectRoom(r: RoomLite) {
+  selectedRoom.value = r
+}
+
+async function submitRoom() {
+  if (!selectedRoom.value) return
+  if (borrowStart.value >= borrowEnd.value) {
+    ElMessage.warning('结束时间需晚于开始时间')
+    return
+  }
+  submitting.value = true
+  try {
+    await request.post(`/app/rooms/${selectedRoom.value.id}/book`, {
+      date: borrowDate.value,
+      startTime: borrowStart.value,
+      endTime: borrowEnd.value,
+    })
+    ElMessage.success('教室预约已提交，等待管理员审核')
+    router.push('/bookings')
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '教室预约失败，请重试')
   } finally {
     submitting.value = false
   }
@@ -500,6 +641,7 @@ async function handleBook() {
 .consult-card:disabled { opacity: .55; cursor: not-allowed; }
 .consult-card__avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #a78bfa, #8b5cf6); color: #fff; font-weight: 700; }
 .consult-card__avatar.equipment { border-radius: 12px; background: linear-gradient(135deg, #5eead4, #0d9488); }
+.consult-card__avatar.room { border-radius: 12px; background: linear-gradient(135deg, #fcd34d, #d97706); font-size: 18px; }
 .consult-card__body { flex: 1; min-width: 0; }
 .consult-card__body strong { font-size: 14px; }
 .consult-card__body p { margin: 2px 0; color: var(--text-secondary); font-size: 12px; }
@@ -522,6 +664,7 @@ async function handleBook() {
 
 .borrow-panel { gap: 14px; }
 .borrow-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+.borrow-grid .borrow-full { grid-column: 1 / -1; }
 .borrow-grid label { display: grid; gap: 6px; font-size: 13px; color: var(--text-secondary); }
 .borrow-grid em { font-style: normal; font-size: 12px; color: var(--text-tertiary); }
 .borrow-tip { margin: 0; font-size: 12px; color: var(--text-tertiary); }

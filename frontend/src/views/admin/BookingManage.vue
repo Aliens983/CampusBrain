@@ -40,9 +40,11 @@
                 <strong>{{
                   item.equipmentName
                     ? item.serviceName + '（' + item.equipmentName + ' × ' + (item.quantity || 1) + '）'
-                    : item.consultantName
-                      ? item.serviceName + '（' + item.consultantName + '）'
-                      : item.serviceName
+                    : item.roomName
+                      ? item.serviceName + '（' + item.roomName + '）'
+                      : item.consultantName
+                        ? item.serviceName + '（' + item.consultantName + '）'
+                        : item.serviceName
                 }}</strong>
                 <p>{{ item.bookingNo }} / {{ item.applicant }} / {{ item.department }}</p>
               </div>
@@ -151,6 +153,12 @@
             >
               <span>借用设备</span><strong>{{ selectedBooking.equipmentName }} × {{ selectedBooking.quantity || 1 }}</strong>
             </div>
+            <div
+              v-if="selectedBooking.roomName"
+              class="info-row"
+            >
+              <span>教室</span><strong>{{ selectedBooking.roomName }}</strong>
+            </div>
             <div class="info-row">
               <span>部门</span><strong>{{ selectedBooking.department }}</strong>
             </div>
@@ -209,6 +217,7 @@ interface AdminBooking {
   consultantName?: string
   equipmentName?: string
   quantity?: number
+  roomName?: string
   slotDate?: string
   startTime?: string
   endTime?: string
@@ -229,6 +238,7 @@ interface BookingItem {
   consultantName?: string
   equipmentName?: string
   quantity?: number
+  roomName?: string
 }
 
 const filter = ref('all')
@@ -257,7 +267,7 @@ function mapAdminBooking(item: AdminBooking): BookingItem {
   const statusMap: Record<number, BookingStatus> = { 0: 'pending', 1: 'approved', 2: 'rejected', 3: 'cancelled', 4: 'completed' }
   const dateTime = String(item.createTime || '').replace('T', ' ')
   // 咨询时段 / 设备借用：日期时段以用户选定为准
-  const hasWindow = Boolean(item.consultantName || item.equipmentName)
+  const hasWindow = Boolean(item.consultantName || item.equipmentName || item.roomName)
   return {
     id: item.orderId,
     bookingNo: `BOOK-${String(item.orderId).padStart(6, '0')}`,
@@ -265,6 +275,7 @@ function mapAdminBooking(item: AdminBooking): BookingItem {
     consultantName: item.consultantName,
     equipmentName: item.equipmentName,
     quantity: item.quantity,
+    roomName: item.roomName,
     applicant: item.username || '未知用户',
     department: '校园统一预约中心',
     location: item.serviceDescribe || '',

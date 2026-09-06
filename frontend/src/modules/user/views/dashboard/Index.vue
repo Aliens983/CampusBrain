@@ -317,8 +317,8 @@ const dashboardStats = computed<DashboardStat[]>(() => {
 const shortcuts = [
   { title: '教师咨询', desc: '心理咨询 / 学业辅导', path: '/services', query: { category: 'teacher' }, icon: '🧑‍🏫', tone: 'tone-blue' },
   { title: '设备借用', desc: '按时间段借用设备', path: '/services', query: { category: 'equipment' }, icon: '🖨️', tone: 'tone-teal' },
-  { title: '教室空间', desc: '教室与活动场地', path: '/services', query: { category: 'space' }, icon: '🏫', tone: 'tone-amber' },
-  { title: '考试报名', desc: '考试类预约服务', path: '/services', query: { category: 'exam' }, icon: '📝', tone: 'tone-slate' },
+  { title: '教室空间', desc: '选教室 · 自选时段', path: '/services', query: { category: 'space' }, icon: '🏫', tone: 'tone-amber' },
+  { title: '活动报名', desc: '校园活动报名', path: '/services', query: { category: 'activity' }, icon: '📣', tone: 'tone-slate' },
 ]
 
 const todoList = computed(() => {

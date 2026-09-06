@@ -75,9 +75,11 @@
                 {{
                   item.equipmentName
                     ? item.serviceName + '（' + item.equipmentName + ' × ' + (item.quantity || 1) + '）'
-                    : item.consultantName
-                      ? item.serviceName + '（' + item.consultantName + '）'
-                      : item.serviceName
+                    : item.roomName
+                      ? item.serviceName + '（' + item.roomName + '）'
+                      : item.consultantName
+                        ? item.serviceName + '（' + item.consultantName + '）'
+                        : item.serviceName
                 }}
               </div>
               <div class="booking-card__row">

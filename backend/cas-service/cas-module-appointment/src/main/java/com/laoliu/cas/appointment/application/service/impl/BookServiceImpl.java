@@ -115,6 +115,8 @@ public class BookServiceImpl implements BookService {
         // 设备借用：回显设备与数量
         dto.setEquipmentName(status.getEquipmentName());
         dto.setQuantity(status.getQuantity());
+        // 教室预约：回显教室名
+        dto.setRoomName(status.getRoomName());
         return dto;
     }
 

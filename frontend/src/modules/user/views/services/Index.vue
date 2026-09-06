@@ -156,10 +156,11 @@ const catLabel: Record<string, string> = {
   teacher: '教师咨询',
   equipment: '设备借用',
   space: '教室空间',
+  activity: '活动报名',
   exam: '考试报名',
   other: '其他服务',
 }
-const catOrder = ['teacher', 'equipment', 'space', 'exam', 'other']
+const catOrder = ['teacher', 'equipment', 'space', 'activity', 'other']
 
 /** 只列出库里真实存在的分类 */
 const catOptions = computed(() => {
