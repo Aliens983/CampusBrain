@@ -58,8 +58,8 @@ class QaAppServiceToolRoutingTest {
     @InjectMocks private QaApplicationService service;
 
     private void stubPipeline(String query) {
-        // 缓存已全部禁用，不 stub qaCacheService/semanticCache
-        when(conversationRepository.getRecentMessages(anyString(), anyInt())).thenReturn(List.of());
+        // 缓存已全部禁用，不 stub qaCacheService/semanticCache；
+        // 单句独立问答不再读取会话历史，故不 stub getRecentMessages
         when(queryRewriter.rewrite(query, List.of())).thenReturn(query);
         when(graphRetriever.retrieve(query)).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank(query, List.of())).thenReturn(List.<RetrievalResult>of());
@@ -104,7 +104,6 @@ class QaAppServiceToolRoutingTest {
         void shouldRouteNonAppointmentToRagWhenDocsExist() {
             String query = "什么是向量检索？";
             // 单独 stub（有检索结果；缓存已禁用）
-            when(conversationRepository.getRecentMessages(anyString(), anyInt())).thenReturn(List.of());
             when(queryRewriter.rewrite(query, List.of())).thenReturn(query);
             RetrievalResult doc = RetrievalResult.builder()
                     .chunkId("c1").documentId("d1").documentTitle("文档")
