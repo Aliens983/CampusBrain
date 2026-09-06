@@ -33,6 +33,12 @@ public class EquipmentRepositoryImpl implements EquipmentRepository {
     }
 
     @Override
+    public Optional<Equipment> findByIdForUpdate(Long id) {
+        return Optional.ofNullable(equipmentMapper.selectByIdForUpdate(id))
+                .map(EquipmentDO::toEntity);
+    }
+
+    @Override
     public List<Equipment> findByServiceId(Long serviceId) {
         return equipmentMapper.findByServiceId(serviceId).stream()
                 .map(EquipmentDO::toEntity)
@@ -47,13 +53,16 @@ public class EquipmentRepositoryImpl implements EquipmentRepository {
     }
 
     @Override
-    public IPage<Equipment> findPage(int page, int pageSize, String name, String category) {
+    public IPage<Equipment> findPage(int page, int pageSize, String name, String category, Long serviceId) {
         LambdaQueryWrapper<EquipmentDO> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(name)) {
             wrapper.like(EquipmentDO::getName, name);
         }
         if (StringUtils.hasText(category)) {
             wrapper.eq(EquipmentDO::getCategory, category);
+        }
+        if (serviceId != null) {
+            wrapper.eq(EquipmentDO::getServiceId, serviceId);
         }
         wrapper.orderByAsc(EquipmentDO::getId);
 

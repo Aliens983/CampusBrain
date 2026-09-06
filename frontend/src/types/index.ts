@@ -28,6 +28,8 @@ export interface ServiceCard {
   tags: string[]
   image: string
   capacity?: number
+  /** 后端服务分类 key: teacher/equipment/space/exam/other */
+  catKey?: string
 }
 
 export interface RoomResource {
@@ -85,6 +87,9 @@ export interface BookingRecord {
   orderId?: number
   /** 咨询时段预约：咨询师姓名（非咨询预约无此字段） */
   consultantName?: string
+  /** 设备借用：设备名称与数量 */
+  equipmentName?: string
+  quantity?: number
 }
 
 export interface MessageItem {

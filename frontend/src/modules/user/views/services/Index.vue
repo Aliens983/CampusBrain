@@ -54,6 +54,17 @@
     </section>
 
     <section
+      v-if="!loading"
+      class="cat-bar"
+    >
+      <el-segmented
+        v-model="activeCat"
+        :options="catOptions"
+        @change="syncCategoryRoute"
+      />
+    </section>
+
+    <section
       v-if="loading"
       class="loading-state"
     >
@@ -114,16 +125,10 @@
         </div>
         <div class="button-row">
           <el-button
-            plain
-            @click="router.push(`/service/${item.id}`)"
-          >
-            查看详情
-          </el-button>
-          <el-button
             type="primary"
             @click="goService(item.id)"
           >
-            进入服务
+            查看详情
           </el-button>
         </div>
       </article>
@@ -133,34 +138,60 @@
 
 <script setup lang="ts">
 import { computed, ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import { fetchServiceCards } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
 
 const router = useRouter()
+const route = useRoute()
 const keyword = ref('')
 const status = ref('')
+const activeCat = ref('')
 const services = ref<ServiceCard[]>([])
 const loading = ref(false)
+
+const catLabel: Record<string, string> = {
+  teacher: '教师咨询',
+  equipment: '设备借用',
+  space: '教室空间',
+  exam: '考试报名',
+  other: '其他服务',
+}
+const catOrder = ['teacher', 'equipment', 'space', 'exam', 'other']
+
+/** 只列出库里真实存在的分类 */
+const catOptions = computed(() => {
+  const present = new Set(services.value.map(s => s.catKey).filter((k): k is string => Boolean(k)))
+  return [
+    { label: '全部', value: '' },
+    ...catOrder.filter(k => present.has(k)).map(k => ({ label: catLabel[k] || k, value: k })),
+  ]
+})
 
 const filteredServices = computed(() =>
   services.value.filter((item) => {
     const searchTarget = [item.name, item.category, item.description, ...item.tags].join('|')
     const matchKeyword = !keyword.value || searchTarget.toLowerCase().includes(keyword.value.toLowerCase())
     const matchStatus = !status.value || item.status === status.value
-    return matchKeyword && matchStatus
+    const matchCat = !activeCat.value || item.catKey === activeCat.value
+    return matchKeyword && matchStatus && matchCat
   }),
 )
 
 const availableCount = computed(() => services.value.filter((item) => item.status === 'available').length)
-const categoryCount = computed(() => new Set(services.value.map(item => item.type)).size)
+const categoryCount = computed(() => new Set(services.value.map(s => s.catKey).filter(Boolean)).size)
 
 onMounted(async () => {
   loading.value = true
   try {
     services.value = await fetchServiceCards()
+    // 支持从分类磁贴 /services?category=xxx 直达
+    const q = String(route.query.category || '')
+    if (q && catOptions.value.some(o => o.value === q)) {
+      activeCat.value = q
+    }
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '获取服务列表失败')
@@ -168,6 +199,11 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+function syncCategoryRoute(value: string | number | boolean) {
+  const cat = String(value)
+  router.replace({ query: cat ? { category: cat } : {} })
+}
 
 function goService(id: number) {
   router.push(`/service/${id}`)
@@ -244,6 +280,8 @@ function goService(id: number) {
 .resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
 .resource-card { position: relative; padding: 22px; border-radius: 22px; background: rgba(255,255,255,.92); border: 1px solid var(--border-soft); box-shadow: var(--shadow-card); }
 .resource-card__pulse { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 22px 22px 0 0; background: linear-gradient(90deg, #a78bfa, #8b5cf6); }
+.cat-bar { display: flex; margin: 20px 0 0; }
+.cat-bar .el-segmented { background: #f3eefb; border: 1px solid #e5daf6; border-radius: 12px; }
 
 @keyframes dashHalo { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-20px,-10px,0) scale(1.08); } }
 @media (max-width: 900px) { .dashboard-hero { grid-template-columns: 1fr; } }

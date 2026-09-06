@@ -31,6 +31,14 @@ public interface BookErrorCode {
 
     ErrorCode SLOT_MISMATCH = new ErrorCode(40013, "时段与咨询师不匹配");
 
+    // ========== 设备借用 ==========
+
+    ErrorCode EQUIPMENT_NOT_FOUND = new ErrorCode(40014, "设备不存在或不可借用");
+
+    ErrorCode EQUIPMENT_STOCK_NOT_ENOUGH = new ErrorCode(40015, "该时段设备库存不足，请减少数量或换时段");
+
+    ErrorCode BORROW_TIME_INVALID = new ErrorCode(40016, "借用时间不合法，请检查日期与起止时段");
+
     // ========== 审核 ==========
 
     ErrorCode STATUS_NOT_FOUND = new ErrorCode(40004, "预约状态不存在");

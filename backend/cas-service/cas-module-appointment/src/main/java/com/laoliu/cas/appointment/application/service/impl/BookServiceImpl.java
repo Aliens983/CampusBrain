@@ -112,6 +112,9 @@ public class BookServiceImpl implements BookService {
         dto.setSlotDate(status.getSlotDate());
         dto.setStartTime(status.getStartTime());
         dto.setEndTime(status.getEndTime());
+        // 设备借用：回显设备与数量
+        dto.setEquipmentName(status.getEquipmentName());
+        dto.setQuantity(status.getQuantity());
         return dto;
     }
 
@@ -124,6 +127,7 @@ public class BookServiceImpl implements BookService {
             case 1 -> "通过";
             case 2 -> "拒绝";
             case 3 -> "取消";
+            case 4 -> "已完成";
             default -> "未知状态";
         };
     }

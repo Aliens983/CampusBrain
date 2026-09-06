@@ -11,7 +11,8 @@ public enum ManageStatus {
     SUBMIT(0, "已提交,待审核"),
     APPROVED(1, "审核通过"),
     REJECTED(2, "审核未通过"),
-    CANCELLED(3, "已取消");
+    CANCELLED(3, "已取消"),
+    COMPLETED(4, "已完成");
 
     private final int code;
     private final String message;

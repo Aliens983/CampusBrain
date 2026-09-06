@@ -37,7 +37,13 @@
           <div class="booking-item__main">
             <div class="booking-item__head">
               <div>
-                <strong>{{ item.consultantName ? item.serviceName + '（' + item.consultantName + '）' : item.serviceName }}</strong>
+                <strong>{{
+                  item.equipmentName
+                    ? item.serviceName + '（' + item.equipmentName + ' × ' + (item.quantity || 1) + '）'
+                    : item.consultantName
+                      ? item.serviceName + '（' + item.consultantName + '）'
+                      : item.serviceName
+                }}</strong>
                 <p>{{ item.bookingNo }} / {{ item.applicant }} / {{ item.department }}</p>
               </div>
               <el-tag :type="statusTag(item.status)">
@@ -139,6 +145,12 @@
             >
               <span>咨询师</span><strong>{{ selectedBooking.consultantName }}</strong>
             </div>
+            <div
+              v-if="selectedBooking.equipmentName"
+              class="info-row"
+            >
+              <span>借用设备</span><strong>{{ selectedBooking.equipmentName }} × {{ selectedBooking.quantity || 1 }}</strong>
+            </div>
             <div class="info-row">
               <span>部门</span><strong>{{ selectedBooking.department }}</strong>
             </div>
@@ -195,6 +207,8 @@ interface AdminBooking {
   statusDescription?: string
   reason?: string
   consultantName?: string
+  equipmentName?: string
+  quantity?: number
   slotDate?: string
   startTime?: string
   endTime?: string
@@ -213,6 +227,8 @@ interface BookingItem {
   createdAt: string
   remarks?: string
   consultantName?: string
+  equipmentName?: string
+  quantity?: number
 }
 
 const filter = ref('all')
@@ -233,24 +249,27 @@ const filters = [
   { label: '全部', value: 'all' },
   { label: '待审核', value: 'pending' },
   { label: '已通过', value: 'approved' },
+  { label: '已完成', value: 'completed' },
   { label: '已驳回', value: 'rejected' },
 ]
 
 function mapAdminBooking(item: AdminBooking): BookingItem {
-  const statusMap: Record<number, BookingStatus> = { 0: 'pending', 1: 'approved', 2: 'rejected', 3: 'cancelled' }
+  const statusMap: Record<number, BookingStatus> = { 0: 'pending', 1: 'approved', 2: 'rejected', 3: 'cancelled', 4: 'completed' }
   const dateTime = String(item.createTime || '').replace('T', ' ')
-  // 咨询时段预约：日期/时段以用户选定的老师排班为准
-  const isConsultation = Boolean(item.consultantName)
+  // 咨询时段 / 设备借用：日期时段以用户选定为准
+  const hasWindow = Boolean(item.consultantName || item.equipmentName)
   return {
     id: item.orderId,
     bookingNo: `BOOK-${String(item.orderId).padStart(6, '0')}`,
     serviceName: item.serviceName || '未命名服务',
     consultantName: item.consultantName,
+    equipmentName: item.equipmentName,
+    quantity: item.quantity,
     applicant: item.username || '未知用户',
     department: '校园统一预约中心',
     location: item.serviceDescribe || '',
-    date: isConsultation ? String(item.slotDate || '').slice(0, 10) || '待定' : dateTime.slice(0, 10) || '待定',
-    timeRange: isConsultation
+    date: hasWindow ? String(item.slotDate || '').slice(0, 10) || '待定' : dateTime.slice(0, 10) || '待定',
+    timeRange: hasWindow
       ? [item.startTime, item.endTime].filter(Boolean).join(' - ') || '待分配时段'
       : dateTime.slice(11, 16) || '待分配时段',
     status: statusMap[item.manageStatus] || 'pending',

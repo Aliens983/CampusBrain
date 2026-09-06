@@ -53,4 +53,10 @@ public class ServiceStatusResponse {
 
     @Schema(description = "咨询时段结束 HH:mm")
     private String endTime;
+
+    @Schema(description = "设备名称（设备借用时非空）")
+    private String equipmentName;
+
+    @Schema(description = "设备借用数量")
+    private Integer quantity;
 }

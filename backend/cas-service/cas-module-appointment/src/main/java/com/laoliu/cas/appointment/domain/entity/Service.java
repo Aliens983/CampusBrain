@@ -36,6 +36,9 @@ public class Service implements Serializable {
     /** 已预约数 */
     private Integer bookedCount;
 
+    /** 业务分类: teacher/equipment/space/exam/other */
+    private String category;
+
     /**
      * 领域行为：检查服务是否可用
      */

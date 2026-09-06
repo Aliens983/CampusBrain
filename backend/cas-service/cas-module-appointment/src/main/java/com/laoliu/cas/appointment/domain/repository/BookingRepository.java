@@ -34,6 +34,16 @@ public interface BookingRepository {
     /** 释放当前用户一批预约单占用的咨询时段（取消预约时调用） */
     int releaseSlotsByBookingIds(Long userId, List<Long> bookingIds);
 
+    /** 幂等插入设备借用（带设备/数量/窗口），返回实际插入行数（0=重复提交） */
+    int insertEquipmentBooking(Long userId, Long serviceId, Long equipmentId, Integer quantity,
+                               LocalDate date, String startTime, String endTime);
+
+    /** 统计某设备某日时间段内已占用的台数（待审+已通过，用于防超借） */
+    int sumEquipmentOverlap(Long equipmentId, LocalDate date, String startTime, String endTime);
+
+    /** 到点自动归还：把已过结束时间且"已通过"的单置为已完成，返回处理条数 */
+    int autoCompleteExpired();
+
     /** 查询当前用户一批待审核预约单对应的服务 ID（用于回退库存，防他人/重复释放） */
     List<Long> selectServiceIdsByBookingIds(Long userId, List<Long> bookingIds);
 

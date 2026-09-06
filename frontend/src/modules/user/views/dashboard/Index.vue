@@ -76,7 +76,7 @@
               v-for="item in shortcuts"
               :key="item.title"
               class="shortcut-card"
-              @click="router.push(item.path)"
+              @click="router.push({ path: item.path, query: item.query })"
             >
               <div class="shortcut-card__orb" />
               <div
@@ -311,11 +311,12 @@ const dashboardStats = computed<DashboardStat[]>(() => {
   ]
 })
 
+// 按资源类别组织的预约入口（指向真实分类，配合服务中心分类 Tab）
 const shortcuts = [
-  { title: '发起预约', desc: '前往服务中心挑选服务', path: '/services', icon: '📅', tone: 'tone-blue' },
-  { title: '我的预约', desc: '查看申请与审批进度', path: '/bookings', icon: '📋', tone: 'tone-amber' },
-  { title: 'AI 助手', desc: '基于知识库的智能问答', path: '/assistant', icon: '🤖', tone: 'tone-teal' },
-  { title: '个人中心', desc: '账号资料与通知偏好', path: '/profile', icon: '👤', tone: 'tone-slate' },
+  { title: '教师咨询', desc: '心理咨询 / 学业辅导', path: '/services', query: { category: 'teacher' }, icon: '🧑‍🏫', tone: 'tone-blue' },
+  { title: '设备借用', desc: '按时间段借用设备', path: '/services', query: { category: 'equipment' }, icon: '🖨️', tone: 'tone-teal' },
+  { title: '教室空间', desc: '教室与活动场地', path: '/services', query: { category: 'space' }, icon: '🏫', tone: 'tone-amber' },
+  { title: '考试报名', desc: '考试类预约服务', path: '/services', query: { category: 'exam' }, icon: '📝', tone: 'tone-slate' },
 ]
 
 const todoList = computed(() => {

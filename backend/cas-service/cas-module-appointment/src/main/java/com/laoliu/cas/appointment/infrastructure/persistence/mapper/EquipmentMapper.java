@@ -21,6 +21,10 @@ public interface EquipmentMapper extends BaseMapper<EquipmentDO> {
     @Select("SELECT * FROM equipment WHERE service_id = #{serviceId}")
     List<EquipmentDO> findByServiceId(@Param("serviceId") Long serviceId);
 
+    /** 行锁读取设备（借用事务内防并发超借） */
+    @Select("SELECT * FROM equipment WHERE id = #{id} FOR UPDATE")
+    EquipmentDO selectByIdForUpdate(@Param("id") Long id);
+
     /** 分页查询所有设备，支持按名称模糊搜索 */
     IPage<EquipmentDO> selectPage(Page<EquipmentDO> page,
                                   @Param("name") String name,

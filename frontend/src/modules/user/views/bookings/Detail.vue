@@ -34,6 +34,12 @@
         >
           <span>咨询师</span><strong>{{ booking.consultantName }}</strong>
         </div>
+        <div
+          v-if="booking.equipmentName"
+          class="detail-row"
+        >
+          <span>借用设备</span><strong>{{ booking.equipmentName }} × {{ booking.quantity || 1 }}</strong>
+        </div>
         <div class="detail-row">
           <span>预约日期</span><strong>{{ booking.date }}</strong>
         </div>
@@ -109,14 +115,7 @@ function statusText(status: BookingStatus) {
   background: linear-gradient(135deg, #4c1d95, #7c3aed 62%, #a78bfa);
   color: #fff;
 }
-.back-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border: 1px solid rgba(255,255,255,.2); border-radius: 8px;
-  background: rgba(255,255,255,.08); color: rgba(255,255,255,.9);
-  font-size: 13px; cursor: pointer; margin-bottom: 20px;
-  transition: background .2s, border-color .2s;
-}
-.back-btn:hover { background: rgba(255,255,255,.16); border-color: rgba(255,255,255,.35); }
+.back-btn { margin-bottom: 20px; } /* 样式来自全局 .back-btn，仅保留间距 */
 .detail-hero__chip { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; letter-spacing: .06em; background: rgba(255,255,255,.14); margin-bottom: 10px; }
 .detail-hero h1 { margin: 0 0 6px; font-size: 28px; font-weight: 700; }
 .detail-hero p { margin: 0; color: rgba(255,255,255,.7); font-size: 14px; }

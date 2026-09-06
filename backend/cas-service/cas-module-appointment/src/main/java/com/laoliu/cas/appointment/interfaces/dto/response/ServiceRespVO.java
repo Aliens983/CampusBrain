@@ -32,4 +32,7 @@ public class ServiceRespVO implements Serializable {
     @Schema(description = "服务状态（0=禁用, 1=启用）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer serviceState;
 
+    @Schema(description = "业务分类: teacher/equipment/space/exam/other", example = "teacher")
+    private String category;
+
 }

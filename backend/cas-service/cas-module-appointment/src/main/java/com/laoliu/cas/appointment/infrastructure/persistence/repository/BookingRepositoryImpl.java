@@ -57,6 +57,22 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    public int insertEquipmentBooking(Long userId, Long serviceId, Long equipmentId, Integer quantity,
+                                      LocalDate date, String startTime, String endTime) {
+        return itemMapper.insertEquipmentBooking(userId, serviceId, equipmentId, quantity, date, startTime, endTime);
+    }
+
+    @Override
+    public int sumEquipmentOverlap(Long equipmentId, LocalDate date, String startTime, String endTime) {
+        return itemMapper.sumEquipmentOverlap(equipmentId, date, startTime, endTime);
+    }
+
+    @Override
+    public int autoCompleteExpired() {
+        return itemMapper.autoCompleteExpired();
+    }
+
+    @Override
     public List<Long> selectServiceIdsByBookingIds(Long userId, List<Long> bookingIds) {
         return itemMapper.selectServiceIdsByBookingIds(userId, bookingIds);
     }

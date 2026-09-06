@@ -28,6 +28,8 @@
         <result property="slotDate" column="slotDate"/>
         <result property="startTime" column="startTime"/>
         <result property="endTime" column="endTime"/>
+        <result property="equipmentName" column="equipmentName"/>
+        <result property="quantity" column="quantity"/>
     </resultMap>
 
     <resultMap id="ServicesDOResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
@@ -79,11 +81,13 @@
                s.service_name, s.service_describe, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime
+               i.start_time AS startTime, i.end_time AS endTime,
+               e.name AS equipmentName, i.quantity AS quantity
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
+        LEFT JOIN equipment e ON i.equipment_id = e.id
         ORDER BY i.create_time DESC
     </select>
 
@@ -92,11 +96,13 @@
                s.service_name, s.service_describe, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime
+               i.start_time AS startTime, i.end_time AS endTime,
+               e.name AS equipmentName, i.quantity AS quantity
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
+        LEFT JOIN equipment e ON i.equipment_id = e.id
         WHERE i.user_id = #{userId}
         ORDER BY i.create_time DESC
     </select>
@@ -106,11 +112,13 @@
                s.service_name, s.service_describe, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime
+               i.start_time AS startTime, i.end_time AS endTime,
+               e.name AS equipmentName, i.quantity AS quantity
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
+        LEFT JOIN equipment e ON i.equipment_id = e.id
         WHERE i.order_id = #{orderId}
     </select>
 
@@ -119,11 +127,13 @@
                s.service_name, s.service_describe, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime
+               i.start_time AS startTime, i.end_time AS endTime,
+               e.name AS equipmentName, i.quantity AS quantity
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
+        LEFT JOIN equipment e ON i.equipment_id = e.id
         WHERE i.order_id = #{orderId}
         AND i.user_id = #{userId}
     </select>
@@ -200,6 +210,45 @@
         </foreach>
     </update>
 
+    <!-- 设备借用：幂等插入（同一用户同一设备同一窗口 60 秒内待审核不重复） -->
+    <insert id="insertEquipmentBooking">
+        INSERT INTO item(user_id, service_id, equipment_id, quantity, slot_date, start_time, end_time)
+        SELECT #{userId}, #{serviceId}, #{equipmentId}, #{quantity}, #{date}, #{startTime}, #{endTime}
+        WHERE NOT EXISTS (
+            SELECT 1 FROM item i
+            WHERE i.user_id = #{userId}
+              AND i.equipment_id = #{equipmentId}
+              AND i.slot_date = #{date}
+              AND i.start_time = #{startTime}
+              AND i.end_time = #{endTime}
+              AND i.manage_status = 0
+              AND i.create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+        )
+    </insert>
+
+    <!-- 设备某日某时段已占用台数（待审+已通过；起止为 HH:mm，字典序即时间序） -->
+    <select
+        id="sumEquipmentOverlap"
+        resultType="int"
+    >
+        SELECT IFNULL(SUM(quantity), 0)
+        FROM item
+        WHERE equipment_id = #{equipmentId}
+          AND slot_date = #{date}
+          AND manage_status IN (0, 1)
+          AND start_time &lt; #{endTime}
+          AND end_time &gt; #{startTime}
+    </select>
+
+    <!-- 到点自动归还：已过结束时间且已通过的单置为已完成 -->
+    <update id="autoCompleteExpired">
+        UPDATE item
+        SET manage_status = 4
+        WHERE manage_status = 1
+          AND end_time IS NOT NULL
+          AND (slot_date &lt; CURDATE() OR (slot_date = CURDATE() AND end_time &lt; DATE_FORMAT(NOW(), '%H:%i')))
+    </update>
+
     <select id="selectServiceIdsByBookingIds" resultType="long">
         SELECT DISTINCT service_id FROM item
         WHERE user_id = #{userId}
@@ -227,11 +276,13 @@
                s.service_name, s.service_describe, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime
+               i.start_time AS startTime, i.end_time AS endTime,
+               e.name AS equipmentName, i.quantity AS quantity
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
+        LEFT JOIN equipment e ON i.equipment_id = e.id
         <where>
             <if test="manageStatus != null">
                 AND i.manage_status = #{manageStatus}
@@ -249,11 +300,13 @@
                s.service_name, s.service_describe, i.reason,
                i.create_time, i.update_time, i.manage_status,
                c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime
+               i.start_time AS startTime, i.end_time AS endTime,
+               e.name AS equipmentName, i.quantity AS quantity
         FROM item i
         JOIN user u ON i.user_id = u.id
         JOIN services s ON i.service_id = s.service_id
         LEFT JOIN consultant c ON i.consultant_id = c.id
+        LEFT JOIN equipment e ON i.equipment_id = e.id
         WHERE i.user_id = #{userId}
         <if test="manageStatus != null">
             AND i.manage_status = #{manageStatus}

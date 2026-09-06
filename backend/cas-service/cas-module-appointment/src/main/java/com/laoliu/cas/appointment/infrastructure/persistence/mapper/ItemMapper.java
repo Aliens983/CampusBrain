@@ -100,4 +100,24 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
 
     /** 释放当前用户一批预约单占用的咨询时段（取消预约时调用） */
     int releaseSlotsByBookingIds(@Param("userId") Long userId, @Param("bookingIds") List<Long> bookingIds);
+
+    /**
+     * 幂等插入设备借用（带设备/数量/窗口），返回实际插入行数（0=重复提交）
+     */
+    int insertEquipmentBooking(@Param("userId") Long userId,
+                               @Param("serviceId") Long serviceId,
+                               @Param("equipmentId") Long equipmentId,
+                               @Param("quantity") Integer quantity,
+                               @Param("date") LocalDate date,
+                               @Param("startTime") String startTime,
+                               @Param("endTime") String endTime);
+
+    /** 统计某设备某日时间段内已占用的台数（待审+已通过） */
+    int sumEquipmentOverlap(@Param("equipmentId") Long equipmentId,
+                            @Param("date") LocalDate date,
+                            @Param("startTime") String startTime,
+                            @Param("endTime") String endTime);
+
+    /** 到点自动归还：已过结束时间且"已通过"的单置为已完成 */
+    int autoCompleteExpired();
 }

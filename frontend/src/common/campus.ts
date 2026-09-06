@@ -7,6 +7,7 @@ type BackendService = {
   serviceName?: string
   serviceDescribe?: string
   serviceState?: number
+  category?: string
 }
 
 type BackendBooking = {
@@ -18,8 +19,10 @@ type BackendBooking = {
   updateTime?: string
   manageStatus?: number
   statusDescription?: string
-  // 咨询时段预约回显
+  // 咨询时段/设备借用回显
   consultantName?: string
+  equipmentName?: string
+  quantity?: number
   slotDate?: string
   startTime?: string
   endTime?: string
@@ -54,9 +57,37 @@ function getServiceType(name: string): ServiceCard['type'] {
   return 'printing'
 }
 
+const categoryToType: Record<string, ServiceCard['type']> = {
+  teacher: 'consultation',
+  equipment: 'equipment',
+  space: 'room',
+  exam: 'printing',
+  other: 'printing',
+}
+
+const categoryLabel: Record<string, string> = {
+  teacher: '教师咨询',
+  equipment: '设备借用',
+  space: '教室空间',
+  exam: '考试报名',
+  other: '其他服务',
+}
+
+/** 后端没返回 category 时的兜底归类 */
+function resolveCategory(serviceName: string, raw: string | undefined, type: ServiceCard['type']): string {
+  if (raw && categoryToType[raw]) return raw
+  if (serviceName.includes('考试')) return 'exam'
+  if (serviceName.includes('活动')) return 'space'
+  if (type === 'room') return 'space'
+  if (type === 'consultation') return 'teacher'
+  if (type === 'equipment') return 'equipment'
+  return 'other'
+}
+
 function mapService(item: BackendService, index: number): ServiceCard {
   const serviceName = item.serviceName || `服务 ${index + 1}`
-  const type = getServiceType(serviceName)
+  const type = item.category && categoryToType[item.category] ? categoryToType[item.category] : getServiceType(serviceName)
+  const catKey = resolveCategory(serviceName, item.category, type)
 
   return {
     id: Number(item.serviceId || index + 1),
@@ -64,8 +95,8 @@ function mapService(item: BackendService, index: number): ServiceCard {
     name: serviceName,
     description: item.serviceDescribe || '暂无服务说明，后续可由后台补充完整描述。',
     type,
-    category:
-      type === 'room' ? '空间资源' : type === 'equipment' ? '设备资源' : type === 'consultation' ? '咨询服务' : '综合服务',
+    catKey,
+    category: categoryLabel[catKey] || '其他服务',
     location: '校园统一预约中心',
     priceLabel: item.serviceState === 1 ? '当前可申请' : '暂不可申请',
     status: item.serviceState === 1 ? 'available' : 'maintenance',
@@ -76,12 +107,12 @@ function mapService(item: BackendService, index: number): ServiceCard {
 
 function mapBooking(item: BackendBooking, index: number): BookingRecord {
   const status =
-    item.manageStatus === 1 ? 'approved' : item.manageStatus === 2 ? 'rejected' : item.manageStatus === 3 ? 'completed' : item.manageStatus === 4 ? 'cancelled' : 'pending'
+    item.manageStatus === 1 ? 'approved' : item.manageStatus === 2 ? 'rejected' : item.manageStatus === 3 ? 'cancelled' : item.manageStatus === 4 ? 'completed' : 'pending'
   const dateText = item.createTime ? String(item.createTime).replace('T', ' ') : ''
-  // 咨询时段预约：日期/时段以用户选定的老师排班为准
-  const isConsultation = Boolean(item.consultantName)
-  const date = isConsultation ? String(item.slotDate || '').slice(0, 10) || '待定' : dateText.slice(0, 10) || '待定'
-  const timeRange = isConsultation
+  // 咨询时段 / 设备借用：日期时段以用户选定为准（否则按提交时间回显）
+  const hasWindow = Boolean(item.consultantName || item.equipmentName)
+  const date = hasWindow ? String(item.slotDate || '').slice(0, 10) || '待定' : dateText.slice(0, 10) || '待定'
+  const timeRange = hasWindow
     ? [item.startTime, item.endTime].filter(Boolean).join(' - ') || '待分配时段'
     : item.updateTime ? `${String(item.createTime || '').slice(11, 16)} - ${String(item.updateTime).slice(11, 16)}` : '待分配时段'
 
@@ -90,6 +121,8 @@ function mapBooking(item: BackendBooking, index: number): BookingRecord {
     bookingNo: `BOOK-${String(item.orderId || index + 1).padStart(6, '0')}`,
     serviceName: item.serviceName || '未命名服务',
     consultantName: item.consultantName,
+    equipmentName: item.equipmentName,
+    quantity: item.quantity,
     type: getServiceType(item.serviceName || ''),
     applicant: item.username || '未知用户',
     department: '未分配部门',

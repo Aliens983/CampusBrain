@@ -141,13 +141,21 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         }
     }
 
-    /** 咨询时段预约的邮件补充行（非咨询预约返回空串） */
+    /** 咨询/设备预约的邮件补充行（无资源明细返回空串） */
     private String slotLine(ServiceStatusResponse r) {
-        if (r.getConsultantName() == null) {
-            return "";
+        StringBuilder sb = new StringBuilder();
+        if (r.getConsultantName() != null) {
+            sb.append("\n咨询师：").append(r.getConsultantName())
+                    .append("\n咨询时段：").append(r.getSlotDate()).append(" ")
+                    .append(r.getStartTime()).append("-").append(r.getEndTime());
         }
-        return "\n咨询师：" + r.getConsultantName()
-                + "\n咨询时段：" + r.getSlotDate() + " " + r.getStartTime() + "-" + r.getEndTime();
+        if (r.getEquipmentName() != null) {
+            sb.append("\n借用设备：").append(r.getEquipmentName())
+                    .append(" × ").append(r.getQuantity() == null ? 1 : r.getQuantity())
+                    .append("\n借用时段：").append(r.getSlotDate()).append(" ")
+                    .append(r.getStartTime()).append("-").append(r.getEndTime());
+        }
+        return sb.toString();
     }
 
     private void setStatusDescription(ServiceStatusResponse response) {
@@ -157,6 +165,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
                 case 1 -> response.setStatusDescription(ManageStatus.APPROVED.getMessage());
                 case 2 -> response.setStatusDescription(ManageStatus.REJECTED.getMessage());
                 case 3 -> response.setStatusDescription(ManageStatus.CANCELLED.getMessage());
+                case 4 -> response.setStatusDescription(ManageStatus.COMPLETED.getMessage());
                 default -> response.setStatusDescription("未知状态");
             }
         }
