@@ -152,7 +152,7 @@
                 <p>{{ service.description }}</p>
                 <div class="service-card__meta">
                   <span>{{ service.category }}</span>
-                  <span>{{ service.priceLabel }}</span>
+                  <span>{{ service.location }}</span>
                 </div>
               </div>
             </article>
@@ -260,10 +260,10 @@
               <span>业务类别</span><strong>{{ activeService.category }}</strong>
             </div>
             <div class="info-row">
-              <span>服务范围</span><strong>{{ activeService.location }}</strong>
+              <span>所属校区</span><strong>{{ activeService.location }}</strong>
             </div>
             <div class="info-row">
-              <span>使用说明</span><strong>{{ activeService.priceLabel }}</strong>
+              <span>状态</span><strong>{{ activeService.priceLabel }}</strong>
             </div>
           </div>
           <div class="tag-wrap">

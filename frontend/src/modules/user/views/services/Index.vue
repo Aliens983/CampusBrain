@@ -143,12 +143,6 @@
           <div class="info-row">
             <span>业务类别</span><strong>{{ item.category }}</strong>
           </div>
-          <div class="info-row">
-            <span>服务范围</span><strong>{{ item.location }}</strong>
-          </div>
-          <div class="info-row">
-            <span>说明</span><strong>{{ item.priceLabel }}</strong>
-          </div>
         </div>
         <div class="button-row">
           <el-button
@@ -170,7 +164,7 @@ import { ElMessage } from 'element-plus'
 import { Search } from '@element-plus/icons-vue'
 import cqImg from '@/assets/images/campus/cq.jpg'
 import xsImg from '@/assets/images/campus/xs.jpg'
-import { fetchServiceCards } from '@/common/campus'
+import { fetchServiceCards, fetchServiceCategories, type ServiceCategoryOption } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
 
 const router = useRouter()
@@ -200,23 +194,17 @@ function campusBg(value: string) {
 /** 当前校区下的服务 */
 const campusServices = computed(() => services.value.filter(s => !s.campus || s.campus === activeCampus.value))
 
-const catLabel: Record<string, string> = {
-  teacher: '教师咨询',
-  equipment: '设备借用',
-  space: '教室空间',
-  activity: '活动报名',
-  exam: '考试报名',
-  other: '其他服务',
-}
-const catOrder = ['teacher', 'equipment', 'space', 'activity', 'other']
+/** 业务分类字典（后端 service_category 固定 4 类，展示名库驱动） */
+const catDict = ref<ServiceCategoryOption[]>([])
 
-/** 当前校区里真实存在的分类 */
+/** 分类筛选选项：全部 + 当前校区真实存在且在后端字典里的分类（中文名来自库） */
 const catOptions = computed(() => {
   const present = new Set(campusServices.value.map(s => s.catKey).filter((k): k is string => Boolean(k)))
-  return [
-    { label: '全部', value: '' },
-    ...catOrder.filter(k => present.has(k)).map(k => ({ label: catLabel[k] || k, value: k })),
-  ]
+  const byCode = new Map(catDict.value.map(c => [c.code, c.name]))
+  const listed = [...present].filter(k => byCode.has(k)).map(k => ({ label: byCode.get(k)!, value: k }))
+  // 字典里没有但旧数据真实存在的分类也保留（兜底展示 code）
+  const extra = [...present].filter(k => !byCode.has(k)).map(k => ({ label: k, value: k }))
+  return [{ label: '全部', value: '' }, ...listed, ...extra]
 })
 
 const filteredServices = computed(() =>
@@ -235,7 +223,9 @@ const categoryCount = computed(() => new Set(campusServices.value.map(s => s.cat
 onMounted(async () => {
   loading.value = true
   try {
-    services.value = await fetchServiceCards()
+    const [svc, cats] = await Promise.all([fetchServiceCards(), fetchServiceCategories()])
+    services.value = svc
+    catDict.value = cats
     // 支持从分类磁贴 /services?category=xxx 直达
     const q = String(route.query.category || '')
     if (q && catOptions.value.some(o => o.value === q)) {
