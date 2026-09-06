@@ -7,7 +7,12 @@ type BackendService = {
   serviceName?: string
   serviceDescribe?: string
   serviceState?: number
+  categoryId?: number
+  categoryCode?: string
+  categoryName?: string
+  /** 兼容旧契约/兜底：老后端可能仍返回 code 串 */
   category?: string
+  capacity?: number
   campus?: string
   imageUrl?: string
 }
@@ -80,7 +85,7 @@ const categoryLabel: Record<string, string> = {
   other: '其他服务',
 }
 
-/** 后端没返回 category 时的兜底归类 */
+/** 后端没返回分类编码时的兜底归类（老数据按名称推断） */
 function resolveCategory(serviceName: string, raw: string | undefined, type: ServiceCard['type']): string {
   if (raw && categoryToType[raw]) return raw
   if (serviceName.includes('考试')) return 'exam'
@@ -93,8 +98,10 @@ function resolveCategory(serviceName: string, raw: string | undefined, type: Ser
 
 function mapService(item: BackendService, index: number): ServiceCard {
   const serviceName = item.serviceName || `服务 ${index + 1}`
-  const type = item.category && categoryToType[item.category] ? categoryToType[item.category] : getServiceType(serviceName)
-  const catKey = resolveCategory(serviceName, item.category, type)
+  // 优先用后端 service_category 字典返回的分类编码/中文名；老数据无则按名称兜底
+  const code = item.categoryCode || resolveCategory(serviceName, item.category, getServiceType(serviceName))
+  const type = code && categoryToType[code] ? categoryToType[code] : getServiceType(serviceName)
+  const catKey = code
 
   return {
     id: Number(item.serviceId || index + 1),
@@ -103,9 +110,11 @@ function mapService(item: BackendService, index: number): ServiceCard {
     description: item.serviceDescribe || '暂无服务说明，后续可由后台补充完整描述。',
     type,
     catKey,
+    categoryId: item.categoryId,
     campus: item.campus,
     imageUrl: item.imageUrl,
-    category: categoryLabel[catKey] || '其他服务',
+    capacity: item.capacity,
+    category: item.categoryName || categoryLabel[catKey] || '其他服务',
     location: '校园统一预约中心',
     priceLabel: item.serviceState === 1 ? '当前可申请' : '暂不可申请',
     status: item.serviceState === 1 ? 'available' : 'maintenance',
@@ -168,6 +177,19 @@ export async function fetchServiceCards() {
     throw new Error('获取服务列表失败')
   }
   return list.map(mapService)
+}
+
+/** 服务业务分类（后端 service_category 固定 4 类：教师咨询/设备借用/教室空间/活动报名） */
+export interface ServiceCategoryOption {
+  id: number
+  code: string
+  name: string
+  sort: number
+}
+
+export async function fetchServiceCategories(): Promise<ServiceCategoryOption[]> {
+  const data = (await request.get('/app/service-categories')) as ServiceCategoryOption[]
+  return Array.isArray(data) ? data : []
 }
 
 export async function fetchBookingRecords() {

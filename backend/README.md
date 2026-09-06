@@ -105,7 +105,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 
 ## 五、数据库与 Flyway 约定
 
-- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图）、`V2__seed_initial_users.sql`（初始账号）。
+- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图；服务表直接建 `category_id`，不存 `category` 编码串）、`V2__seed_initial_users.sql`（初始账号）、`V3__seed_teacher_users.sql`（教师账号 + 咨询师 user_id 回填）、`V4__service_category.sql`（**仅新增**分类表 `service_category` + 固定 4 类种子：教师咨询/设备借用/教室空间/活动报名）。
+- **迁移约定**：V*.sql 面向**全新机器**，只含建表/种子等增量，**不写 ALTER/UPDATE 改既有表结构**。服务分类落库 = 服务分类：全新库由 V1 直接建出 `services.category_id`，老库按 `cas-service/UPGRADE-service-category.md` 直接 SQL 演进（ALTER + 回填 + DROP `category`），V4 建表/补种子幂等可重复。
 - KB 迁移位于 `kb-service/src/main/resources/db/migration/`。
 - **新机器**：CAS/KB 首次启动自动执行全部迁移，零手工 SQL。
 - **已有库**：迁移文件用于全新环境，已上线的库请直接执行 SQL 演进，**不要改写历史 `V*.sql` 去适配旧库**（否则 Flyway checksum 校验失败）；如需调整结构，本地直接对库执行 SQL 即可。
@@ -113,7 +114,8 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 ## 六、核心能力（对应当前代码）
 
 ### CAS 预约
-- **按校区分流**：仓前(cq)/下沙(xs) 各自服务目录（`services.campus`/`category`），咨询师（`consultant`）、教室（`room`）、设备（`equipment`）挂各自校区服务，用户端按校区隔离。
+- **按校区分流**：仓前(cq)/下沙(xs) 各自服务目录（`services.campus`），咨询师（`consultant`）、教室（`room`）、设备（`equipment`）挂各自校区服务，用户端按校区隔离。
+- **服务分类字典**：`service_category` 表固定 4 类（教师咨询/设备借用/教室空间/活动报名），`services.category_id` 代码级外键（不建 DB FK），读写时后端按 id 回填编码与中文名；只读接口 `GET /app/service-categories` 供前端下拉/展示，新增服务必须指定存在的 `categoryId`，分类不可在管理端增删改。
 - **咨询时段预约**：咨询师在 `time_slot` 维护可约日期时段；选人 + 时段占位，同人同时段冲突被拒，审核/取消释放。
 - **教室时段预约**：`room` 一间教室 + `slot_date/start_time/end_time` 唯一，重复窗口拒绝。
 - **设备窗口借用**：`equipment.total_stock/available_stock` + 时段窗口 + 数量，库存原子扣减，到点自动归还。

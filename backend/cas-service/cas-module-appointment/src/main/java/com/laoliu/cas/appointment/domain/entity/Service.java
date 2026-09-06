@@ -36,8 +36,14 @@ public class Service implements Serializable {
     /** 已预约数 */
     private Integer bookedCount;
 
-    /** 业务分类: teacher/equipment/space/exam/other */
-    private String category;
+    /** 业务分类ID（代码级外键 → service_category.id） */
+    private Long categoryId;
+
+    /** 业务分类编码（冗余展示/判断用，读取时按 categoryId 从 service_category 回填） */
+    private String categoryCode;
+
+    /** 业务分类中文名（读取时按 categoryId 从 service_category 回填） */
+    private String categoryName;
 
     /** 校区: cq仓前 / xs下沙 */
     private String campus;

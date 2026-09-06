@@ -39,8 +39,8 @@ public class ServicesDO {
     /** 已预约数 */
     private Integer bookedCount;
 
-    /** 业务分类: teacher/equipment/space/exam/other */
-    private String category;
+    /** 业务分类ID（代码级外键 → service_category.id） */
+    private Long categoryId;
 
     /** 校区: cq仓前 / xs下沙 */
     private String campus;
@@ -53,7 +53,7 @@ public class ServicesDO {
                 .serviceId(serviceId).serviceName(serviceName)
                 .serviceDescribe(serviceDescribe).serviceState(serviceState)
                 .capacity(capacity).bookedCount(bookedCount)
-                .category(category).campus(campus).imageUrl(imageUrl)
+                .categoryId(categoryId).campus(campus).imageUrl(imageUrl)
                 .build();
     }
 
@@ -63,7 +63,7 @@ public class ServicesDO {
                 .serviceId(entity.getServiceId()).serviceName(entity.getServiceName())
                 .serviceDescribe(entity.getServiceDescribe()).serviceState(entity.getServiceState())
                 .capacity(entity.getCapacity()).bookedCount(entity.getBookedCount())
-                .category(entity.getCategory()).campus(entity.getCampus()).imageUrl(entity.getImageUrl())
+                .categoryId(entity.getCategoryId()).campus(entity.getCampus()).imageUrl(entity.getImageUrl())
                 .build();
     }
 }

@@ -3,6 +3,8 @@ package com.laoliu.cas.appointment.application.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.ServiceService;
 import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
+import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
 import com.laoliu.cas.common.result.PageResult;
@@ -33,14 +35,18 @@ class ServiceServiceImplTest {
     @Mock
     private ServiceRepository serviceRepository;
 
+    @Mock
+    private ServiceCategoryRepository serviceCategoryRepository;
+
     private ServiceService serviceService;
 
     private static final Long SERVICE_ID_1 = 1L;
     private static final Long SERVICE_ID_2 = 2L;
+    private static final Long CATEGORY_SPACE_ID = 3L;
 
     @BeforeEach
     void setUp() {
-        serviceService = new ServiceServiceImpl(serviceRepository);
+        serviceService = new ServiceServiceImpl(serviceRepository, serviceCategoryRepository);
     }
 
     @Nested
@@ -162,6 +168,7 @@ class ServiceServiceImplTest {
         void shouldAddServiceSuccessfully() {
             // Given
             ServiceAddRequest request = buildServiceAddRequest("新服务", "新服务描述", 1);
+            when(serviceCategoryRepository.findAll()).thenReturn(List.of(buildCategory()));
             when(serviceRepository.save(any(Service.class))).thenReturn(buildService(3L, "新服务", "新服务描述", 1));
 
             // When
@@ -170,6 +177,22 @@ class ServiceServiceImplTest {
             // Then
             assertTrue(result);
             verify(serviceRepository).save(any(Service.class));
+        }
+
+        @Test
+        @DisplayName("分类 ID 不存在（非法外键）时应当返回 false")
+        void shouldReturnFalseWhenCategoryMissing() {
+            // Given
+            ServiceAddRequest request = buildServiceAddRequest("新服务", "新服务描述", 1);
+            request.setCategoryId(999L); // 库里不存在的分类
+            when(serviceCategoryRepository.findAll()).thenReturn(List.of(buildCategory()));
+
+            // When
+            boolean result = serviceService.addService(request);
+
+            // Then
+            assertFalse(result);
+            verify(serviceRepository, never()).save(any(Service.class));
         }
     }
 
@@ -184,11 +207,21 @@ class ServiceServiceImplTest {
                 .build();
     }
 
+    private ServiceCategory buildCategory() {
+        return ServiceCategory.builder()
+                .id(CATEGORY_SPACE_ID)
+                .code("space")
+                .name("教室空间")
+                .sort(3)
+                .build();
+    }
+
     private ServiceAddRequest buildServiceAddRequest(String name, String describe, Integer state) {
         ServiceAddRequest request = new ServiceAddRequest();
         request.setServiceName(name);
         request.setServiceDescribe(describe);
         request.setServiceState(state);
+        request.setCategoryId(CATEGORY_SPACE_ID);
         return request;
     }
 }

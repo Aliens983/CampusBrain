@@ -32,8 +32,9 @@ public class ServiceAddRequest {
     @Schema(description = "服务状态（0-禁用，1-启用；缺省默认启用）", example = "1")
     private Integer serviceState;
 
-    @Schema(description = "业务分类（teacher/equipment/space/activity/other；缺省 other）")
-    private String category;
+    @NotNull(message = "请选择业务分类")
+    @Schema(description = "业务分类ID（引用 service_category.id：1教师咨询/2设备借用/3教室空间/4活动报名）", example = "4")
+    private Long categoryId;
 
     @Schema(description = "校区（cq=仓前 / xs=下沙；缺省 cq）")
     private String campus;

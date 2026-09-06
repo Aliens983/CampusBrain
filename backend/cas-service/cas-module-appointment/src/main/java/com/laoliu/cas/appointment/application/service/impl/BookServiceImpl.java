@@ -59,8 +59,8 @@ public class BookServiceImpl implements BookService {
             if (!service.isAvailable()) {
                 throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
             }
-            // 活动预约：容量够即直通，不走人工审核
-            if ("activity".equals(service.getCategory())) {
+            // 活动预约：容量够即直通，不走人工审核（categoryId → service_category.code）
+            if ("activity".equals(service.getCategoryCode())) {
                 activityServiceIds.add(sid.intValue());
             }
             // 乐观锁扣减库存（同事务）：容量充足才 +1，满则抛异常，事务回滚

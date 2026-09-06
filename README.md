@@ -55,7 +55,7 @@
 | 能力 | 状态 | 说明 |
 |---|---|---|
 | 按校区分流 | ✅ | 仓前(cq)/下沙(xs) 各自一套服务目录与资源（咨询师/教室/设备）；用户端可切校区，工作台区分 |
-| 服务目录 | ✅ | 多分类：`space` 空闲教室 · `teacher` 咨询/辅导 · `equipment` 设备 · `activity` 活动；支持服务上下架、封面图 |
+| 服务目录 | ✅ | 多分类：`space` 教室空间 · `teacher` 教师咨询 · `equipment` 设备借用 · `activity` 活动报名，**分类字典落库 `service_category`（固定 4 类）**，`services.category_id` 代码级外键引用；支持服务上下架、封面图 |
 | 咨询时段预约 | ✅ | 咨询师 + 日期可约时段（`time_slot` 落库）；预约占用时段，冲突被拒；审核/取消/到点自动释放 |
 | 教室时段预约 | ✅ | **一间教室同一时间段仅一人可约**（唯一性约束 + 冲突检测），按 `slot_date + start/end` 排他 |
 | 设备窗口借用 | ✅ | 固定时段窗口 + 库存扣减（`available_stock`）；到点自动归还（转 COMPLETED） |
@@ -77,7 +77,7 @@
 | RabbitMQ 预约事件 | ⚠️ 部分 | CAS 发布 `appointment.changed`；KB 已监听接收，仅记录日志（索引更新为 TODO） |
 | CI 质量门禁 | ✅ | GitHub Actions：后端 `mvn -B test` + 前端 type-check/build，push 自动触发 |
 | 交付脚本 | ✅ | `backend/scripts/run-local.sh`（本地一键起服务）/ `publish.sh`（一行发版）/ `deploy-server.sh`（服务器部署） |
-| 数据库迁移 | ✅ | CAS 与 KB 均启用 **Flyway**，启动自动建表 + 种子数据（校区、咨询师、教室、设备、轮播图、初始账号） |
+| 数据库迁移 | ✅ | CAS 与 KB 均启用 **Flyway**，启动自动建表 + 种子数据（校区、咨询师、教师账号、教室、设备、轮播图、服务分类字典、初始账号） |
 
 ## 二、架构
 

@@ -96,3 +96,4 @@ npm run lint         # eslint . --fix
 - **主题**：校徽蓝 `#3FB6FF` 收敛在 `src/assets/styles/global.css` 的 `:root` 变量与 `variables.scss`（作为 vite scss `additionalData` 自动注入），改一处全局生效。
 - **AI 助手可用性**：依赖后端配置 LLM Key（KB `OPENAI_API_KEY`/`EMBEDDING_API_KEY`，见 `backend/README.md`）；未配置时登录 / 预约等主流程不受影响，仅问答不可用。
 - **上传**：封面上传走 `/admin/files`（后端本地 `uploads/`，按子目录存放）；轮播图管理在 `/admin/system` 独立上传并落 `carousel` 目录。
+- **服务分类字典**：业务分类（教师咨询/设备借用/教室空间/活动报名）来自后端 `service_category` 表（`GET /app/service-categories`），服务卡片展示名用后端 `categoryName`、新增服务下拉选项与提交 `categoryId` 均为库驱动；卡片上“服务范围/使用说明”等展示文案仍为前端占位（见源码注释）。

@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
+import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.mapper.ServiceMapper;
@@ -12,7 +14,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -25,17 +29,19 @@ import java.util.stream.Collectors;
 public class ServiceRepositoryImpl implements ServiceRepository {
 
     private final ServiceMapper serviceMapper;
+    private final ServiceCategoryRepository serviceCategoryRepository;
 
     @Override
     public Optional<Service> findById(Long id) {
         ServicesDO dataObject = serviceMapper.selectById(id);
-        return Optional.ofNullable(dataObject).map(ServicesDO::toEntity);
+        return Optional.ofNullable(dataObject).map(ServicesDO::toEntity).map(this::enrich);
     }
 
     @Override
     public List<Service> findAll() {
         return serviceMapper.selectList(null).stream()
                 .map(ServicesDO::toEntity)
+                .map(this::enrich)
                 .collect(Collectors.toList());
     }
 
@@ -52,13 +58,14 @@ public class ServiceRepositoryImpl implements ServiceRepository {
 
         Page<ServicesDO> pageParam = new Page<>(page, pageSize);
         IPage<ServicesDO> doPage = serviceMapper.selectPage(pageParam, wrapper);
-        return doPage.convert(ServicesDO::toEntity);
+        return doPage.convert(row -> enrich(row.toEntity()));
     }
 
     @Override
     public List<Service> findByUserId(Long userId) {
         return serviceMapper.selectUserServices(userId).stream()
                 .map(ServicesDO::toEntity)
+                .map(this::enrich)
                 .collect(Collectors.toList());
     }
 
@@ -66,7 +73,7 @@ public class ServiceRepositoryImpl implements ServiceRepository {
     public IPage<Service> findByUserId(Long userId, int page, int pageSize) {
         Page<ServicesDO> pageParam = new Page<>(page, pageSize);
         IPage<ServicesDO> doPage = serviceMapper.selectUserServicesWithPage(userId, pageParam);
-        return doPage.convert(ServicesDO::toEntity);
+        return doPage.convert(row -> enrich(row.toEntity()));
     }
 
     @Override
@@ -77,7 +84,7 @@ public class ServiceRepositoryImpl implements ServiceRepository {
         } else {
             serviceMapper.updateById(dataObject);
         }
-        return dataObject.toEntity();
+        return enrich(dataObject.toEntity());
     }
 
     @Override
@@ -88,5 +95,23 @@ public class ServiceRepositoryImpl implements ServiceRepository {
     @Override
     public boolean existsById(Long id) {
         return serviceMapper.selectById(id) != null;
+    }
+
+    /** 按 categoryId 回填分类编码与中文名（代码级外键解析，分类表固定 4 行） */
+    private Service enrich(Service service) {
+        if (service == null || service.getCategoryId() == null) {
+            return service;
+        }
+        ServiceCategory category = categoryIndex().get(service.getCategoryId());
+        if (category != null) {
+            service.setCategoryCode(category.getCode());
+            service.setCategoryName(category.getName());
+        }
+        return service;
+    }
+
+    private Map<Long, ServiceCategory> categoryIndex() {
+        return serviceCategoryRepository.findAll().stream()
+                .collect(Collectors.toMap(ServiceCategory::getId, Function.identity()));
     }
 }

@@ -161,14 +161,15 @@
         </el-form-item>
         <el-form-item label="服务分类">
           <el-select
-            v-model="createForm.category"
+            v-model="createForm.categoryId"
             style="width: 100%"
+            placeholder="请选择业务分类"
           >
             <el-option
-              v-for="opt in categoryOptions"
-              :key="opt.value"
-              :label="opt.label"
-              :value="opt.value"
+              v-for="opt in categories"
+              :key="opt.id"
+              :label="opt.name"
+              :value="opt.id"
             />
           </el-select>
         </el-form-item>
@@ -247,7 +248,7 @@
 import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
-import { fetchServiceCards } from '@/services/campus'
+import { fetchServiceCards, fetchServiceCategories, type ServiceCategoryOption } from '@/services/campus'
 import type { ServiceCard } from '@/types'
 
 const createDrawer = ref(false)
@@ -255,19 +256,12 @@ const keyword = ref('')
 const statusFilter = ref('')
 const selectedService = ref<ServiceCard | null>(null)
 const services = ref<ServiceCard[]>([])
+const categories = ref<ServiceCategoryOption[]>([])
 const loading = ref(false)
 const saving = ref(false)
 
-const editForm = reactive({ name: '', category: '', description: '', image: '' })
-const createForm = reactive({ name: '', category: 'space', campus: 'cq', capacity: -1, description: '', location: '', image: '' })
-
-const categoryOptions = [
-  { value: 'space', label: '教室空间（选教室/时段）' },
-  { value: 'teacher', label: '教师咨询（咨询师档期）' },
-  { value: 'equipment', label: '设备借用（库存+窗口）' },
-  { value: 'activity', label: '活动报名（容量够即直通）' },
-  { value: 'other', label: '其他服务' },
-]
+const editForm = reactive({ name: '', category: '', categoryId: 0, description: '', image: '' })
+const createForm = reactive({ name: '', categoryId: 0, campus: 'cq', capacity: -1, description: '', location: '', image: '' })
 
 const filteredServices = computed(() =>
   services.value.filter((item) => {
@@ -289,6 +283,7 @@ watch(selectedService, (item) => {
   if (item) {
     editForm.name = item.name
     editForm.category = item.category
+    editForm.categoryId = item.categoryId ?? 0
     editForm.description = item.description
     editForm.image = item.imageUrl || ''
   }
@@ -321,6 +316,10 @@ async function uploadImage(file: File, kind: 'edit' | 'create') {
 onMounted(async () => {
   loading.value = true
   try {
+    // 分类字典来自后端 service_category，默认选中「教室空间」
+    categories.value = await fetchServiceCategories()
+    const space = categories.value.find((c) => c.code === 'space')
+    createForm.categoryId = space?.id ?? categories.value[0]?.id ?? 0
     services.value = await fetchServiceCards()
   } catch (error: unknown) {
     const err = error as { message?: string }
@@ -338,6 +337,7 @@ async function saveEdit() {
       serviceName: editForm.name,
       serviceDescribe: editForm.description,
       imageUrl: editForm.image || null,
+      categoryId: editForm.categoryId || selectedService.value.categoryId || 0,
     })
     ElMessage.success('服务修改成功')
     // 先关闭抽屉，再本地更新数据避免闪烁
@@ -360,20 +360,25 @@ async function saveCreate() {
     ElMessage.warning('请输入服务名称')
     return
   }
+  if (!createForm.categoryId) {
+    ElMessage.warning('请选择业务分类')
+    return
+  }
   saving.value = true
   try {
     await request.post('/admin/services', {
       serviceName: createForm.name,
       serviceDescribe: createForm.description,
       imageUrl: createForm.image || null,
-      category: createForm.category,
+      categoryId: createForm.categoryId,
       campus: createForm.campus,
       capacity: createForm.capacity,
     })
     ElMessage.success('服务创建成功')
     createDrawer.value = false
+    const space = categories.value.find((c) => c.code === 'space')
     createForm.name = ''
-    createForm.category = 'space'
+    createForm.categoryId = space?.id ?? categories.value[0]?.id ?? 0
     createForm.campus = 'cq'
     createForm.capacity = -1
     createForm.description = ''

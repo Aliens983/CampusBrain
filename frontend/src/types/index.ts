@@ -28,6 +28,8 @@ export interface ServiceCard {
   tags: string[]
   image: string
   capacity?: number
+  /** 后端分类 ID（service_category.id，新增/更新服务时回传） */
+  categoryId?: number
   /** 后端服务分类 key: teacher/equipment/space/activity/other */
   catKey?: string
   /** 校区: cq仓前 / xs下沙 */

@@ -162,10 +162,11 @@
         WHERE i.user_id = #{userId}
     </select>
 
-    <!-- 取消：待审核单可直接取消；已通过的活动(category='activity')开始前可自助取消，其它已通过单不可自助取消 -->
+    <!-- 取消：待审核单可直接取消；已通过的活动(category_id→service_category.code='activity')开始前可自助取消，其它已通过单不可自助取消 -->
     <update id="setBookingStatusByParts">
         UPDATE item
         JOIN services s ON item.service_id = s.service_id
+        LEFT JOIN service_category c ON c.id = s.category_id
         SET item.manage_status = 3
         WHERE item.user_id = #{userId}
           AND item.order_id IN
@@ -173,7 +174,7 @@
             #{id}
         </foreach>
           AND ( item.manage_status = 0
-                OR (item.manage_status = 1 AND s.category = 'activity') )
+                OR (item.manage_status = 1 AND c.code = 'activity') )
     </update>
 
     <update id="auditService">
@@ -296,13 +297,14 @@
         SELECT DISTINCT item.service_id
         FROM item
         JOIN services s ON item.service_id = s.service_id
+        LEFT JOIN service_category c ON c.id = s.category_id
         WHERE item.user_id = #{userId}
           AND item.order_id IN
         <foreach collection="bookingIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
           AND ( item.manage_status = 0
-                OR (item.manage_status = 1 AND s.category = 'activity') )
+                OR (item.manage_status = 1 AND c.code = 'activity') )
     </select>
 
     <select id="selectServiceIdByOrderId" resultType="long">

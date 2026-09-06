@@ -38,7 +38,7 @@ CREATE TABLE services
     service_name    VARCHAR(20)  DEFAULT NULL comment 'Services name',
     service_describe VARCHAR(100) DEFAULT NULL comment 'Services description',
     service_state   TINYINT(1) NOT NULL DEFAULT 1 comment 'Services status: 0-disabled,1-enabled',
-    category        VARCHAR(20) NOT NULL DEFAULT 'other' comment '业务分类: teacher/equipment/space/activity/exam/other',
+    category_id     INT NULL comment '业务分类ID（代码级外键 → service_category.id：1教师咨询/2设备借用/3教室空间/4活动报名）',
     campus          VARCHAR(8)  NOT NULL DEFAULT 'cq' comment '校区: cq仓前 / xs下沙',
     image_url       VARCHAR(255) NOT NULL DEFAULT '' comment '服务封面图URL',
     capacity        INT NOT NULL DEFAULT -1 comment '可预约容量，-1=不限',
@@ -47,7 +47,8 @@ CREATE TABLE services
     update_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP comment 'Record update time',
     PRIMARY KEY (service_id),
     KEY idx_service_name (service_name),
-    KEY idx_services_state (service_state)
+    KEY idx_services_state (service_state),
+    KEY idx_services_category (category_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = 'Services table - stores appointment services';
 
 -- ---------- 预约记录表 ----------
@@ -172,17 +173,17 @@ CREATE TABLE time_slot
 -- ============================================================
 -- 样例/参考数据
 -- ============================================================
-INSERT INTO services (service_id, service_name, service_describe, service_state, capacity, category, campus) VALUES
-(1, '空闲教室', '为学生提供空闲教室自习', 1, -1, 'space', 'cq'),
-(2, '心理咨询', '提供专业的心理咨询服务', 1, -1, 'teacher', 'cq'),
-(3, '学业辅导', '提供各学科的学业辅导服务', 1, -1, 'teacher', 'cq'),
-(6, '活动预约', '预约校园活动场地和资源（活动时间由发布方发布）', 1, 60, 'activity', 'cq'),
-(7, '设备借用', '借用校园公共设备，按时间段预约，到点自动归还', 1, -1, 'equipment', 'cq'),
-(8, '空闲教室', '为学生提供空闲教室自习', 1, -1, 'space', 'xs'),
-(9, '心理咨询', '提供专业的心理咨询服务', 1, -1, 'teacher', 'xs'),
-(10, '学业辅导', '提供各学科的学业辅导服务', 1, -1, 'teacher', 'xs'),
-(11, '活动预约', '预约校园活动场地和资源（活动时间由发布方发布）', 1, 60, 'activity', 'xs'),
-(12, '设备借用', '借用校园公共设备，按时间段预约，到点自动归还', 1, -1, 'equipment', 'xs');
+INSERT INTO services (service_id, service_name, service_describe, service_state, capacity, category_id, campus) VALUES
+(1, '空闲教室', '为学生提供空闲教室自习', 1, -1, 3, 'cq'),
+(2, '心理咨询', '提供专业的心理咨询服务', 1, -1, 1, 'cq'),
+(3, '学业辅导', '提供各学科的学业辅导服务', 1, -1, 1, 'cq'),
+(6, '活动预约', '预约校园活动场地和资源（活动时间由发布方发布）', 1, 60, 4, 'cq'),
+(7, '设备借用', '借用校园公共设备，按时间段预约，到点自动归还', 1, -1, 2, 'cq'),
+(8, '空闲教室', '为学生提供空闲教室自习', 1, -1, 3, 'xs'),
+(9, '心理咨询', '提供专业的心理咨询服务', 1, -1, 1, 'xs'),
+(10, '学业辅导', '提供各学科的学业辅导服务', 1, -1, 1, 'xs'),
+(11, '活动预约', '预约校园活动场地和资源（活动时间由发布方发布）', 1, 60, 4, 'xs'),
+(12, '设备借用', '借用校园公共设备，按时间段预约，到点自动归还', 1, -1, 2, 'xs');
 
 INSERT INTO consultant (id, name, department, title, description, rating, review_count, service_id) VALUES
 (1, '肖老师', '心理咨询中心', '咨询师', '擅长学业压力与情绪管理', 4.8, 100, 2),

@@ -3,6 +3,8 @@ package com.laoliu.cas.appointment.application.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.ServiceService;
 import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
+import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageReqVO;
@@ -24,6 +26,7 @@ import java.util.Optional;
 public class ServiceServiceImpl implements ServiceService {
 
     private final ServiceRepository serviceRepository;
+    private final ServiceCategoryRepository serviceCategoryRepository;
 
     @Override
     public List<Service> getAllServices() {
@@ -52,17 +55,23 @@ public class ServiceServiceImpl implements ServiceService {
         return serviceRepository.findById(id);
     }
 
-    private static final java.util.Set<String> CATEGORIES =
-            java.util.Set.of("teacher", "equipment", "space", "activity", "other");
-
     @Override
     @CacheEvict(value = "services", allEntries = true)
     public boolean addService(ServiceAddRequest request) {
+        // 代码级外键：新增服务必须指定存在的分类（service_category 固定 4 类，不允许库外 id）
+        ServiceCategory category = request.getCategoryId() == null ? null
+                : serviceCategoryRepository.findAll().stream()
+                        .filter(c -> c.getId().equals(request.getCategoryId()))
+                        .findFirst()
+                        .orElse(null);
+        if (category == null) {
+            return false;
+        }
         Service service = Service.builder()
                 .serviceName(request.getServiceName())
                 .serviceDescribe(request.getServiceDescribe())
                 .serviceState(request.getServiceState() == null ? 1 : request.getServiceState())
-                .category(normalizeCategory(request.getCategory()))
+                .categoryId(category.getId())
                 .campus(normalizeCampus(request.getCampus()))
                 .capacity(request.getCapacity() == null ? -1 : request.getCapacity())
                 .imageUrl(request.getImageUrl())
@@ -84,14 +93,6 @@ public class ServiceServiceImpl implements ServiceService {
         if (request.getImageUrl() != null) existing.setImageUrl(request.getImageUrl());
         serviceRepository.save(existing);
         return true;
-    }
-
-    /** 分类白名单，非法分类回退 other */
-    private String normalizeCategory(String category) {
-        if (category != null && CATEGORIES.contains(category)) {
-            return category;
-        }
-        return "other";
     }
 
     /** 校区仅支持 cq/xs，非法回退 cq */
