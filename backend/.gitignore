@@ -36,3 +36,9 @@ data/
 .DS_Store
 Thumbs.db
 file/
+
+# ===== 默认校区图（需入库）=====
+!uploads/
+!uploads/campus/
+!uploads/campus/cq.jpg
+!uploads/campus/xs.jpg
