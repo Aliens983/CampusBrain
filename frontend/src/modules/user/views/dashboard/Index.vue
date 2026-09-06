@@ -199,6 +199,7 @@
       v-model="metricDialogVisible"
       :title="metricDialogTitle"
       width="560px"
+      :lock-scroll="false"
     >
       <div class="detail-dialog__body">
         <div
@@ -215,6 +216,7 @@
       v-model="serviceDrawerVisible"
       title="服务速览"
       size="420px"
+      :lock-scroll="false"
     >
       <template v-if="activeService">
         <div class="drawer-stack">
