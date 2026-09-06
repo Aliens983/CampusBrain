@@ -830,3 +830,28 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== 服务治理编辑/新增抽屉：表单美化 ===== */
+.svc-drawer .el-drawer__header { margin-bottom: 6px; font-weight: 700; font-size: 16px; color: var(--text-primary); }
+.svc-drawer .el-drawer__body { padding: 20px 22px; }
+.svc-drawer .el-form-item { margin-bottom: 16px; }
+.svc-drawer .el-form-item__label { font-weight: 600; font-size: 13px; color: var(--text-primary); padding-bottom: 4px; line-height: 1.4; }
+.svc-drawer .el-input__wrapper,
+.svc-drawer .el-textarea__inner { border-radius: 10px; }
+
+/* ===== 下拉框（服务中心 / 服务治理筛选）统一样式 ===== */
+.el-select__wrapper { border-radius: 10px; }
+.el-select__wrapper.is-focused { box-shadow: 0 0 0 1px var(--el-color-primary) inset !important; }
+
+/* ===== 下拉面板与选项内容美化 ===== */
+.el-select-dropdown { border-radius: 12px; box-shadow: var(--shadow-card); padding: 6px; }
+.el-select-dropdown__list { padding: 0; }
+.el-select-dropdown__item {
+  border-radius: 8px;
+  margin: 2px 0;
+  height: 36px;
+  line-height: 36px;
+  padding: 0 16px !important;
+}
+.el-select-dropdown__item.is-hovering,
+.el-select-dropdown__item.is-selected { background: #EDF5FF !important; color: #1E6FB8; }

@@ -90,39 +90,16 @@
             >
               编辑
             </el-button>
-            <el-button
-              type="primary"
-              @click="openAccess(item)"
-            >
-              查看接入
-            </el-button>
           </div>
         </article>
       </div>
     </el-card>
 
-    <el-dialog
-      v-if="overviewVisible"
-      :model-value="true"
-      :title="overviewTitle"
-      width="560px"
-      @close="overviewVisible = false"
-    >
-      <div class="dialog-list">
-        <div
-          v-for="item in overviewItems"
-          :key="item"
-          class="dialog-card"
-        >
-          {{ item }}
-        </div>
-      </div>
-    </el-dialog>
-
     <el-drawer
       v-model="serviceDrawerVisible"
       title="服务编辑"
       size="460px"
+      class="svc-drawer"
     >
       <template v-if="selectedService">
         <el-form label-position="top">
@@ -173,6 +150,7 @@
       v-model="createDrawer"
       title="新增服务"
       size="480px"
+      class="svc-drawer"
     >
       <el-form label-position="top">
         <el-form-item label="服务名称">
@@ -242,9 +220,6 @@ import type { ServiceCard } from '@/types'
 const createDrawer = ref(false)
 const keyword = ref('')
 const statusFilter = ref('')
-const overviewVisible = ref(false)
-const overviewTitle = ref('')
-const overviewItems = ref<string[]>([])
 const selectedService = ref<ServiceCard | null>(null)
 const services = ref<ServiceCard[]>([])
 const loading = ref(false)
@@ -313,15 +288,6 @@ onMounted(async () => {
     loading.value = false
   }
 })
-
-function openAccess(item: ServiceCard) {
-  overviewTitle.value = `${item.name} 接入说明`
-  overviewItems.value = [
-    `业务分类：${item.category}`,
-    `开放范围：${item.location}`,
-  ]
-  overviewVisible.value = true
-}
 
 async function saveEdit() {
   if (!selectedService.value) return

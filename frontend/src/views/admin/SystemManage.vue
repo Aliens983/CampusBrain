@@ -82,12 +82,68 @@
           </div>
         </div>
       </el-card>
+
+      <el-card class="panel-card carousel-card">
+        <template #header>
+          <div class="section-head">
+            <h3 class="section-head__title">
+              轮播图管理
+            </h3>
+            <el-button
+              size="small"
+              type="primary"
+              @click="carouselInput?.click()"
+            >
+              上传图片
+            </el-button>
+          </div>
+        </template>
+        <input
+          ref="carouselInput"
+          type="file"
+          accept="image/*"
+          style="display: none"
+          @change="onCarouselPick"
+        >
+        <div
+          v-if="carousels.length"
+          class="carousel-grid"
+        >
+          <div
+            v-for="(c, i) in carousels"
+            :key="c.id"
+            class="carousel-thumb"
+            draggable="true"
+            @dragstart="onDragStart(i)"
+            @dragover.prevent
+            @drop="onDrop(i)"
+          >
+            <img :src="assetUrl(c.imageUrl)">
+            <span class="drag-hint">拖动排序</span>
+            <el-button
+              size="small"
+              type="danger"
+              link
+              @click="delCarousel(c.id)"
+            >
+              删除
+            </el-button>
+          </div>
+        </div>
+        <p
+          v-else
+          class="muted"
+        >
+          暂无轮播图，点右上角「上传图片」添加。
+        </p>
+      </el-card>
     </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
 
 const settings = reactive({
@@ -125,6 +181,82 @@ async function savePolicy() {
 const enabledNotifications = computed(() =>
   [policy.emailEnabled].filter(Boolean).length
 )
+// ===== 轮播图管理 =====
+interface CarouselItem {
+  id: number
+  imageUrl: string
+}
+const carousels = ref<CarouselItem[]>([])
+const carouselInput = ref<HTMLInputElement | null>(null)
+
+function assetUrl(p?: string) {
+  if (!p) return ''
+  if (/^https?:/.test(p)) return p
+  if (p.startsWith('/uploads')) return `/api${p}`
+  return p
+}
+
+async function loadCarousels() {
+  try {
+    const list = await request.get('/admin/carousel') as CarouselItem[] | unknown
+    carousels.value = Array.isArray(list) ? list : []
+  } catch {
+    carousels.value = []
+  }
+}
+
+async function onCarouselPick(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file) return
+  try {
+    const fd = new FormData()
+    fd.append('file', file)
+    await request.post('/admin/carousel', fd)
+    ElMessage.success('轮播图已添加')
+    await loadCarousels()
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '上传失败')
+  }
+}
+
+async function delCarousel(id: number) {
+  try {
+    await request.delete(`/admin/carousel/${id}`)
+    ElMessage.success('已删除')
+    await loadCarousels()
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '删除失败')
+  }
+}
+
+const dragIndex = ref<number | null>(null)
+function onDragStart(i: number) {
+  dragIndex.value = i
+}
+async function onDrop(i: number) {
+  const from = dragIndex.value
+  dragIndex.value = null
+  if (from === null || from === i) return
+  const arr = carousels.value.slice()
+  const [moved] = arr.splice(from, 1)
+  arr.splice(i, 0, moved)
+  carousels.value = arr
+  try {
+    await request.post('/admin/carousel/reorder', arr.map(c => c.id))
+    await loadCarousels()
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '保存排序失败')
+  }
+}
+
+onMounted(() => {
+  void loadCarousels()
+})
 </script>
 
 <style scoped lang="scss">
@@ -208,4 +340,11 @@ const enabledNotifications = computed(() =>
     grid-template-columns: 1fr;
   }
 }
+.carousel-card { grid-column: 1 / -1; }
+.carousel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.carousel-thumb { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--border-soft); border-radius: 12px; background: #fff; }
+.carousel-thumb img { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; display: block; }
+.carousel-thumb { cursor: grab; }
+.carousel-thumb:active { cursor: grabbing; }
+.drag-hint { font-size: 11px; color: var(--text-tertiary); text-align: center; }
 </style>

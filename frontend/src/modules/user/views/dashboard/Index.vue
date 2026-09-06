@@ -3,22 +3,29 @@
     <section class="dashboard-hero">
       <div class="dashboard-hero__main">
         <h1>工作台</h1>
-        <div class="hero-actions">
-          <el-button
-            type="primary"
-            size="large"
-            @click="router.push('/services')"
+        <el-carousel
+          v-if="banners.length"
+          ref="carouselRef"
+          :interval="3000"
+          arrow="hover"
+          indicator-position="none"
+          class="hero-banner"
+          @mousedown="onBannerDown"
+          @mouseup="onBannerUp"
+          @mouseleave="clearBannerDrag"
+        >
+          <el-carousel-item
+            v-for="(img, i) in banners"
+            :key="i"
           >
-            发起预约
-          </el-button>
-          <el-button
-            size="large"
-            class="hero-action-ghost"
-            @click="router.push('/bookings')"
-          >
-            查看我的预约
-          </el-button>
-        </div>
+            <img
+              :src="img"
+              class="hero-banner__img"
+              draggable="false"
+              alt="校园轮播"
+            >
+          </el-carousel-item>
+        </el-carousel>
       </div>
 
       <div class="dashboard-hero__panel">
@@ -40,6 +47,22 @@
         >
           <strong>暂无安排</strong>
           <span>今天没有预约事务</span>
+        </div>
+        <div class="hero-actions panel-actions">
+          <el-button
+            type="primary"
+            size="large"
+            @click="router.push('/services')"
+          >
+            发起预约
+          </el-button>
+          <el-button
+            size="large"
+            class="hero-action-ghost"
+            @click="router.push('/bookings')"
+          >
+            查看我的预约
+          </el-button>
         </div>
       </div>
     </section>
@@ -269,6 +292,7 @@ import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchBookingRecords, fetchServiceCards } from '@/common/campus'
+import request from '@/common/utils/request'
 import type { BookingRecord, BookingStatus, DashboardStat, ServiceCard } from '@/common/types'
 
 const router = useRouter()
@@ -278,8 +302,46 @@ const metricDialogItems = ref<string[]>([])
 const activeService = ref<ServiceCard | null>(null)
 const bookings = ref<BookingRecord[]>([])
 const services = ref<ServiceCard[]>([])
+const banners = ref<string[]>([])
 const loading = ref(false)
+
+/** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
+function bannerUrl(p: string) {
+  if (/^https?:/.test(p)) return p
+  if (p.startsWith('/uploads')) return `/api${p}`
+  return p
+}
+
+async function loadBanners() {
+  try {
+    const list = await request.get('/app/carousel') as string[] | unknown
+    banners.value = (Array.isArray(list) ? list : []).map(bannerUrl)
+  } catch {
+    banners.value = []
+  }
+}
+
+const carouselRef = ref<any>(null)
+let dragStartX: number | null = null
+function onBannerDown(e: MouseEvent) {
+  dragStartX = e.clientX
+}
+function onBannerUp(e: MouseEvent) {
+  if (dragStartX === null) return
+  const dx = e.clientX - dragStartX
+  dragStartX = null
+  const el = carouselRef.value
+  if (!el) return
+  if (dx < -50) el.next()   // 向左拖 → 下一张
+  else if (dx > 50) el.prev()  // 向右拖 → 上一张
+}
+function clearBannerDrag() {
+  dragStartX = null
+}
+
 onMounted(async () => {
+  void loadBanners()
+  loading.value = true
   loading.value = true
   try {
     const [bookingData, serviceData] = await Promise.all([fetchBookingRecords(), fetchServiceCards()])
@@ -369,14 +431,34 @@ function statusText(status: BookingStatus) {
 .dashboard-hero {
   position: relative;
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 20px;
+  grid-template-columns: 1.35fr 0.65fr;
+  gap: 24px;
   padding: 32px;
   border-radius: 30px;
   color: #fff;
   background: linear-gradient(135deg, #0E6CD6, #3FB6FF 62%, #ADE2FF);
   box-shadow: var(--shadow-card);
   overflow: hidden;
+}
+.dashboard-hero__main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.hero-banner {
+  flex: 1;
+  min-height: 220px;
+  width: 100%;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.hero-banner :deep(.el-carousel__container),
+.hero-banner :deep(.el-carousel-item) {
+  height: 100%;
 }
 
 .dashboard-hero::before {
@@ -431,6 +513,31 @@ function statusText(status: BookingStatus) {
   display: flex;
   gap: 12px;
   margin-top: 20px;
+}
+
+.hero-banner {
+  border-radius: 16px;
+  overflow: hidden;
+  margin-top: 14px;
+  box-shadow: 0 10px 24px rgba(7, 41, 102, 0.25);
+}
+.hero-banner__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transform: scale(1.08); /* 长图取中间部分放大填满 */
+}
+.panel-actions {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 14px;
+}
+.panel-actions .el-button {
+  margin-left: 0;
+  width: 100%;
 }
 
 /* 次要按钮：玻璃白字，适配深色 hero（避免无 type 按钮白字压浅底的"看不清"） */

@@ -232,3 +232,22 @@ INSERT INTO room (name, location, seats, service_id) VALUES
 ('C号楼', '下沙校区', 40, 8),
 ('D号楼', '下沙校区', 60, 8),
 ('E号楼', '下沙校区', 60, 8);
+
+-- ---------- 首页轮播图 ----------
+CREATE TABLE carousel
+(
+    id          BIGINT AUTO_INCREMENT PRIMARY KEY comment '主键',
+    image_url   VARCHAR(255) NOT NULL comment '图片URL',
+    sort        INT NOT NULL DEFAULT 0 comment '排序（小在前）',
+    enabled     TINYINT(1) NOT NULL DEFAULT 1 comment '是否启用 1是0否',
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = '首页轮播图';
+
+INSERT INTO carousel (image_url, sort, enabled) VALUES
+('/uploads/campus/cq.jpg', 1, 1),
+('/uploads/campus/xs.jpg', 2, 1),
+('/uploads/carousel/cq_gateway.JPG', 3, 1),
+('/uploads/carousel/xs_gateway.jpg', 4, 1),
+('/uploads/carousel/xs_library.jpg', 5, 1),
+('/uploads/carousel/xs_xilin.jpg', 6, 1);

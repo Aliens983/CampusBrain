@@ -4,6 +4,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import com.kb.infrastructure.client.CasClient;
+import com.kb.infrastructure.persistence.elasticsearch.EsIndexService;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +30,8 @@ class UserRepositoryIntegrationTest {
     @MockBean private ConnectionFactory rabbitConnectionFactory;
     @MockBean private RedisConnectionFactory redisConnectionFactory;
     @MockBean private CasClient casClient;
+    // ES 索引初始化在无 ES 环境会失败，测试里 mock 掉
+    @MockBean private EsIndexService esIndexService;
 
     @Autowired
     private UserRepository userRepository;

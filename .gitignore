@@ -1,7 +1,7 @@
 # ===== 项目文档（个人笔记，不入库）=====
 docs/
 /todo
-
+**/uploads/captcha
 # ===== IDE =====
 .idea/
 .vscode/

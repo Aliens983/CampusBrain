@@ -53,7 +53,7 @@ public class CaptchaServiceImpl implements CaptchaService {
         try {
             File tempFile = File.createTempFile("captcha-", ".png");
             captcha.write(tempFile);
-            String fileUrl = fileService.uploadFile(tempFile);
+            String fileUrl = fileService.uploadFile(tempFile, "captcha");
             tempFile.delete();
 
             String imageUrl = serverAddress + contextPath + fileUrl;
