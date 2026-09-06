@@ -170,6 +170,7 @@
       title="通知偏好"
       width="520px"
       append-to-body
+      :lock-scroll="false"
       :close-on-click-modal="false"
     >
       <div style="display:grid;gap:12px;line-height:1.6">
@@ -195,11 +196,22 @@
     <el-dialog
       v-model="passwordVisible"
       title="修改密码"
-      width="440px"
+      width="460px"
       append-to-body
+      :lock-scroll="false"
       :close-on-click-modal="false"
       @closed="resetPwdForm"
     >
+      <div class="pwd-banner">
+        <div class="pwd-banner__ico">
+          <el-icon :size="18"><Lock /></el-icon>
+        </div>
+        <div class="pwd-banner__txt">
+          <b>账号安全</b>
+          <span>先验证当前密码，再设置新密码</span>
+        </div>
+      </div>
+
       <el-form
         ref="pwdFormRef"
         :model="pwdForm"
@@ -214,9 +226,14 @@
             v-model="pwdForm.oldPassword"
             type="password"
             show-password
+            size="large"
             placeholder="请输入当前密码"
             autocomplete="current-password"
-          />
+          >
+            <template #prefix>
+              <el-icon><Lock /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
         <el-form-item
           label="新密码"
@@ -226,9 +243,32 @@
             v-model="pwdForm.newPassword"
             type="password"
             show-password
+            size="large"
             placeholder="6 位以上新密码"
             autocomplete="new-password"
-          />
+          >
+            <template #prefix>
+              <el-icon><Key /></el-icon>
+            </template>
+          </el-input>
+          <div
+            v-if="pwdStrength.cells"
+            class="pwd-strength"
+          >
+            <span class="pwd-strength__cells">
+              <i
+                v-for="n in 4"
+                :key="n"
+                :style="n <= pwdStrength.cells ? { background: pwdStrength.color } : {}"
+              />
+            </span>
+            <span
+              class="pwd-strength__label"
+              :style="{ color: pwdStrength.color }"
+            >
+              强度{{ pwdStrength.label }}
+            </span>
+          </div>
         </el-form-item>
         <el-form-item
           label="确认新密码"
@@ -238,17 +278,26 @@
             v-model="pwdForm.confirmPassword"
             type="password"
             show-password
+            size="large"
             placeholder="再次输入新密码"
             autocomplete="new-password"
             @keyup.enter="submitChangePassword"
-          />
+          >
+            <template #prefix>
+              <el-icon><CircleCheck /></el-icon>
+            </template>
+          </el-input>
         </el-form-item>
       </el-form>
       <template #footer>
-        <el-button @click="passwordVisible = false">
-          取消
+        <el-button
+          class="pwd-btn"
+          @click="passwordVisible = false"
+        >
+          取 消
         </el-button>
         <el-button
+          class="pwd-btn pwd-btn--primary"
           type="primary"
           :loading="pwdSubmitting"
           @click="submitChangePassword"
@@ -262,6 +311,7 @@
       v-model="quickVisible"
       title="快捷操作"
       size="420px"
+      :lock-scroll="false"
     >
       <template v-if="userStore.isTeacher">
         <div class="drawer-stack">
@@ -316,7 +366,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, CircleCheck, Key, Lock } from '@element-plus/icons-vue'
 import { useUserStore } from '@/common/stores/user'
 import request from '@/common/utils/request'
 
@@ -348,6 +398,24 @@ const pwdRules = {
   ],
 }
 
+// 新密码强度：长度 + 字符构成综合评分，驱动强度条展示
+const pwdStrength = computed(() => {
+  const v = pwdForm.newPassword
+  if (!v) return { cells: 0, label: '', color: '' }
+  let cells = 1
+  if (v.length >= 8) cells++
+  if (/[A-Za-z]/.test(v) && /\d/.test(v)) cells++
+  if (/[^A-Za-z0-9]/.test(v)) cells++
+  cells = Math.min(cells, 4)
+  const map = [
+    { label: '弱', color: '#ef4444' },
+    { label: '一般', color: '#f97316' },
+    { label: '中', color: '#eab308' },
+    { label: '强', color: '#22c55e' },
+  ]
+  return { cells, label: map[cells - 1].label, color: map[cells - 1].color }
+})
+
 function resetPwdForm() {
   pwdFormRef.value?.resetFields()
   pwdSubmitting.value = false
@@ -364,8 +432,13 @@ async function submitChangePassword() {
     })
     ElMessage.success('密码修改成功')
     passwordVisible.value = false
-  } catch {
-    // 失败（如旧密码不正确）由响应拦截器统一提示
+  } catch (err) {
+    // 业务码错误：拦截器按「由组件处理」静默 reject(Error(msg))；
+    // HTTP 层错误(4xx/5xx)拦截器已弹过提示(isAxiosError=true)，这里不重复弹
+    const e = err as { isAxiosError?: boolean; message?: string }
+    if (!e?.isAxiosError) {
+      ElMessage.error(e?.message || '密码修改失败，请稍后重试')
+    }
   } finally {
     pwdSubmitting.value = false
   }
@@ -489,6 +562,80 @@ function handleLogout() {
 .action-card:hover .action-card__arrow { transform: translateX(3px); color: var(--brand-500); }
 
 .drawer-stack { display: grid; gap: 12px; }
+
+/* 修改密码弹窗美化（append-to-body 但元素均在本模板内，scoped 即可命中，不外溢） */
+.pwd-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: -2px 0 18px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(14, 108, 214, 0.08), rgba(63, 182, 255, 0.14) 75%);
+}
+.pwd-banner__ico {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  color: #fff;
+  background: linear-gradient(135deg, #0e6cd6, #3fb6ff);
+  box-shadow: 0 4px 12px rgba(62, 175, 255, 0.32);
+  flex-shrink: 0;
+}
+.pwd-banner__txt {
+  display: grid;
+  gap: 2px;
+}
+.pwd-banner__txt b {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.pwd-banner__txt span {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.pwd-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.pwd-strength__cells {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+}
+.pwd-strength__cells i {
+  flex: 1;
+  height: 4px;
+  border-radius: 4px;
+  background: var(--border-soft);
+  transition: background 0.25s ease;
+}
+.pwd-strength__label {
+  width: 52px;
+  font-size: 12px;
+  text-align: right;
+}
+
+.pwd-btn {
+  padding: 8px 22px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+.pwd-btn--primary {
+  border: none;
+  background: linear-gradient(135deg, #0e6cd6, #3fb6ff);
+  box-shadow: 0 6px 14px rgba(62, 175, 255, 0.35);
+}
+.pwd-btn--primary:hover,
+.pwd-btn--primary:focus {
+  border: none;
+  background: linear-gradient(135deg, #0b5ec0, #2ea6f0);
+}
 
 @keyframes dashHalo { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-20px,-10px,0) scale(1.08); } }
 
