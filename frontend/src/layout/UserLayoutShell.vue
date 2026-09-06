@@ -19,7 +19,7 @@
           :class="{ 'is-active': route.path.startsWith(item.path) }"
           @click="router.push(item.path)"
         >
-          {{ item.label }}
+          {{ navLabel(item) }}
         </button>
       </nav>
 
@@ -76,18 +76,26 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Switch } from '@element-plus/icons-vue'
 import { useUserStore } from '@/common/stores/user'
 import request from '@/common/utils/request'
+import { useChatUnread, refreshChatUnread } from '@/common/consultChat'
 
 const route = useRoute()
 const router = useRouter()
 const weather = ref<{ shi: string; weather1: string; temp: string } | null>(null)
 
+let unreadTimer: number | undefined
+
 onMounted(async () => {
   try { weather.value = await request.get('/weather/local') as any } catch { /* 静默 */ }
+  refreshChatUnread()
+  unreadTimer = window.setInterval(refreshChatUnread, 20000)
+})
+onUnmounted(() => {
+  if (unreadTimer) window.clearInterval(unreadTimer)
 })
 
 function weatherIcon(d: string) {
@@ -99,9 +107,17 @@ const navItems = [
   { label: '工作台', path: '/dashboard' },
   { label: '服务中心', path: '/services' },
   { label: '我的预约', path: '/bookings' },
+  { label: '消息', path: '/chat', chat: true },
   { label: 'AI 助手', path: '/assistant' },
   { label: '个人中心', path: '/profile' },
 ]
+
+const unread = useChatUnread()
+
+function navLabel(item: { label: string; chat?: boolean }) {
+  if (item.chat && unread.value > 0) return `${item.label} · ${unread.value}`
+  return item.label
+}
 
 const initial = computed(() => userStore.userInfo?.username?.slice(0, 1) || 'U')
 

@@ -23,6 +23,18 @@ export const teacherRoutes: RouteRecordRaw[] = [
         meta: { title: '我的咨询', requiresAuth: true },
       },
       {
+        path: 'messages',
+        name: 'teacher-chat-list',
+        component: () => import('@/modules/chat/ConversationList.vue'),
+        meta: { title: '咨询消息', requiresAuth: true },
+      },
+      {
+        path: 'messages/:id',
+        name: 'teacher-chat-thread',
+        component: () => import('@/modules/chat/ChatThread.vue'),
+        meta: { title: '咨询沟通', requiresAuth: true },
+      },
+      {
         path: 'profile',
         name: 'teacher-profile',
         component: () => import('@/modules/user/views/profile/Index.vue'),

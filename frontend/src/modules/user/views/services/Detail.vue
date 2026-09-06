@@ -37,7 +37,7 @@
             <span>业务类别</span><strong>{{ service.category }}</strong>
           </div>
           <div class="info-row">
-            <span>服务范围</span><strong>{{ service.location }}</strong>
+            <span>所属校区</span><strong>{{ service.location }}</strong>
           </div>
           <div class="info-row">
             <span>状态</span>
@@ -54,11 +54,13 @@
           </el-divider>
 
           <div class="consult-grid">
-            <button
+            <div
               v-for="c in consultants"
               :key="c.id"
               class="consult-card"
               :class="{ 'is-active': selected?.id === c.id }"
+              role="button"
+              tabindex="0"
               @click="selectConsultant(c)"
             >
               <div class="consult-card__avatar">
@@ -73,11 +75,20 @@
                 >
                   {{ c.expertise.join(' / ') }}
                 </span>
+                <el-button
+                  size="small"
+                  type="primary"
+                  plain
+                  class="consult-card__chat"
+                  @click.stop="startConsultChat(c)"
+                >
+                  💬 在线留言
+                </el-button>
               </div>
               <span class="consult-card__rating">
                 {{ c.rating ?? '—' }}
               </span>
-            </button>
+            </div>
           </div>
 
           <div
@@ -343,6 +354,7 @@ import { Loading, ArrowLeft } from '@element-plus/icons-vue'
 import request from '@/common/utils/request'
 import { fetchServiceCards } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
+import { openChatWithConsultant } from '@/common/consultChat'
 
 interface ConsultantLite {
   id: number
@@ -402,6 +414,7 @@ const borrowEnd = ref('18:00')
 const hourOptions = Array.from({ length: 14 }, (_, i) => `${String(8 + i).padStart(2, '0')}:00`)
 
 const submitting = ref(false)
+const chatBusy = ref(false)
 
 onMounted(async () => {
   const id = Number(route.params.id)
@@ -547,6 +560,20 @@ async function submitRoom() {
     ElMessage.error(err.message || '教室预约失败，请重试')
   } finally {
     submitting.value = false
+  }
+}
+
+async function startConsultChat(c: ConsultantLite) {
+  if (chatBusy.value) return
+  chatBusy.value = true
+  try {
+    const conv = await openChatWithConsultant(c.id)
+    router.push({ path: `/chat/${conv.id}`, query: { name: conv.peerName } })
+  } catch (error: unknown) {
+    const err = error as { isAxiosError?: boolean; message?: string }
+    if (!err?.isAxiosError) ElMessage.error(err?.message || '发起沟通失败，请稍后重试')
+  } finally {
+    chatBusy.value = false
   }
 }
 

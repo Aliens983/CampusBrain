@@ -103,6 +103,21 @@
         class="detail-actions__tip"
       >活动为先到先得，取消后名额即时释放，可被他人再约。</span>
     </div>
+
+    <div
+      v-if="booking?.consultantName"
+      class="detail-actions"
+    >
+      <el-button
+        type="primary"
+        plain
+        :loading="chatBusy"
+        @click="openConsultChat"
+      >
+        💬 联系咨询老师
+      </el-button>
+      <span class="detail-actions__tip">与咨询教师在线上留言沟通，仅教师咨询开放。</span>
+    </div>
   </div>
 </template>
 
@@ -114,11 +129,13 @@ import { ArrowLeft } from '@element-plus/icons-vue'
 import { fetchBookingRecords } from '@/common/campus'
 import request from '@/common/utils/request'
 import type { BookingRecord, BookingStatus } from '@/common/types'
+import { openChatByBooking } from '@/common/consultChat'
 
 const router = useRouter()
 const route = useRoute()
 const booking = ref<BookingRecord | null>(null)
 const cancelling = ref(false)
+const chatBusy = ref(false)
 
 // 可取消：待确认(处理中)可取消；已通过的活动（先到先得）开始前可自助取消
 const canCancel = computed(() => {
@@ -139,6 +156,20 @@ async function load() {
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '获取预约详情失败')
+  }
+}
+
+async function openConsultChat() {
+  if (!booking.value) return
+  chatBusy.value = true
+  try {
+    const conv = await openChatByBooking(booking.value.id)
+    router.push({ path: `/chat/${conv.id}`, query: { name: conv.peerName } })
+  } catch (error: unknown) {
+    const err = error as { isAxiosError?: boolean; message?: string }
+    if (!err?.isAxiosError) ElMessage.error(err?.message || '发起沟通失败，请稍后重试')
+  } finally {
+    chatBusy.value = false
   }
 }
 

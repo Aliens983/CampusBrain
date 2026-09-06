@@ -40,6 +40,15 @@
           </div>
           <div class="row__action">
             <el-button
+              size="small"
+              plain
+              :disabled="!b.userId"
+              :loading="chatBusyId === b.orderId"
+              @click="chatStudent(b)"
+            >
+              回复
+            </el-button>
+            <el-button
               type="primary"
               size="small"
               :loading="busy === b.orderId"
@@ -65,6 +74,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   approveBooking,
@@ -73,10 +83,13 @@ import {
   rejectBooking,
   type TeacherBooking,
 } from '../composables'
+import { openChatWithStudent } from '@/common/consultChat'
 
+const router = useRouter()
 const list = ref<TeacherBooking[]>([])
 const loading = ref(false)
 const busy = ref<number | null>(null)
+const chatBusyId = ref<number | null>(null)
 
 async function load() {
   loading.value = true
@@ -87,6 +100,20 @@ async function load() {
     ElMessage.error(err.message || '获取待审核列表失败')
   } finally {
     loading.value = false
+  }
+}
+
+async function chatStudent(b: TeacherBooking) {
+  if (b.userId == null) return
+  chatBusyId.value = b.orderId ?? b.userId
+  try {
+    const conv = await openChatWithStudent(b.userId)
+    router.push({ path: `/teacher/messages/${conv.id}`, query: { name: conv.peerName } })
+  } catch (error: unknown) {
+    const err = error as { isAxiosError?: boolean; message?: string }
+    if (!err?.isAxiosError) ElMessage.error(err?.message || '发起沟通失败，请稍后重试')
+  } finally {
+    chatBusyId.value = null
   }
 }
 

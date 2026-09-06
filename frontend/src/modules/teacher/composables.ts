@@ -4,6 +4,8 @@ import request from '@/common/utils/request'
 /** 后端 /teacher/bookings 列表项（ServiceStatusResponse 子集） */
 export interface TeacherBooking {
   orderId?: number
+  /** 申请学生用户ID（回消息/发起会话用） */
+  userId?: number
   username?: string
   serviceName?: string
   serviceDescribe?: string

@@ -19,7 +19,7 @@
           :class="{ 'is-active': route.path.startsWith(item.path) }"
           @click="router.push(item.path)"
         >
-          {{ item.label }}
+          {{ navLabel(item) }}
         </button>
       </nav>
 
@@ -56,9 +56,10 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/common/stores/user'
+import { useChatUnread, refreshChatUnread } from '@/common/consultChat'
 
 const route = useRoute()
 const router = useRouter()
@@ -67,8 +68,25 @@ const userStore = useUserStore()
 const navItems = [
   { label: '待我审核', path: '/teacher/review' },
   { label: '我的咨询', path: '/teacher/consultations' },
+  { label: '消息', path: '/teacher/messages', chat: true },
   { label: '个人中心', path: '/teacher/profile' },
 ]
+
+const unread = useChatUnread()
+
+function navLabel(item: { label: string; chat?: boolean }) {
+  if (item.chat && unread.value > 0) return `${item.label} · ${unread.value}`
+  return item.label
+}
+
+let unreadTimer: number | undefined
+onMounted(() => {
+  refreshChatUnread()
+  unreadTimer = window.setInterval(refreshChatUnread, 20000)
+})
+onUnmounted(() => {
+  if (unreadTimer) window.clearInterval(unreadTimer)
+})
 
 const initial = computed(() => userStore.userInfo?.username?.slice(0, 1) || 'T')
 

@@ -42,6 +42,18 @@ export const userRoutes: RouteRecordRaw[] = [
         meta: { title: '预约详情', requiresAuth: true, audience: 'user' },
       },
       {
+        path: 'chat',
+        name: 'chat-list',
+        component: () => import('@/modules/chat/ConversationList.vue'),
+        meta: { title: '咨询消息', requiresAuth: true, audience: 'user' },
+      },
+      {
+        path: 'chat/:id',
+        name: 'chat-thread',
+        component: () => import('@/modules/chat/ChatThread.vue'),
+        meta: { title: '咨询沟通', requiresAuth: true, audience: 'user' },
+      },
+      {
         path: 'profile',
         name: 'profile',
         component: () => import('@/modules/user/views/profile/Index.vue'),

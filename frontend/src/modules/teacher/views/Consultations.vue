@@ -75,27 +75,35 @@
               >备注：{{ b.reason }}</span>
             </div>
           </div>
-          <div
-            v-if="b.manageStatus === 0"
-            class="row__action"
-          >
+          <div class="row__action">
             <el-button
-              type="primary"
               size="small"
-              :loading="busy === b.orderId"
-              @click="doApprove(b)"
-            >
-              通过
-            </el-button>
-            <el-button
-              type="danger"
               plain
-              size="small"
-              :loading="busy === b.orderId"
-              @click="doReject(b)"
+              :disabled="!b.userId"
+              :loading="chatBusyId === b.orderId"
+              @click="chatStudent(b)"
             >
-              拒绝
+              回复
             </el-button>
+            <template v-if="b.manageStatus === 0">
+              <el-button
+                type="primary"
+                size="small"
+                :loading="busy === b.orderId"
+                @click="doApprove(b)"
+              >
+                通过
+              </el-button>
+              <el-button
+                type="danger"
+                plain
+                size="small"
+                :loading="busy === b.orderId"
+                @click="doReject(b)"
+              >
+                拒绝
+              </el-button>
+            </template>
           </div>
         </div>
       </div>
@@ -105,6 +113,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   approveBooking,
@@ -113,11 +122,14 @@ import {
   rejectBooking,
   type TeacherBooking,
 } from '../composables'
+import { openChatWithStudent } from '@/common/consultChat'
 
+const router = useRouter()
 const status = ref<'all' | 'pending' | 'approved' | 'rejected' | 'completed'>('all')
 const list = ref<TeacherBooking[]>([])
 const loading = ref(false)
 const busy = ref<number | null>(null)
+const chatBusyId = ref<number | null>(null)
 
 function toNum(): number | undefined {
   if (status.value === 'pending') return 0
@@ -145,6 +157,20 @@ function statusText(s?: number): string {
 
 function tagType(s?: number): 'warning' | 'success' | 'danger' | 'info' {
   return s === 0 ? 'warning' : s === 1 ? 'success' : s === 2 ? 'danger' : 'info'
+}
+
+async function chatStudent(b: TeacherBooking) {
+  if (b.userId == null) return
+  chatBusyId.value = b.orderId ?? b.userId
+  try {
+    const conv = await openChatWithStudent(b.userId)
+    router.push({ path: `/teacher/messages/${conv.id}`, query: { name: conv.peerName } })
+  } catch (error: unknown) {
+    const err = error as { isAxiosError?: boolean; message?: string }
+    if (!err?.isAxiosError) ElMessage.error(err?.message || '发起沟通失败，请稍后重试')
+  } finally {
+    chatBusyId.value = null
+  }
 }
 
 async function doApprove(b: TeacherBooking) {
