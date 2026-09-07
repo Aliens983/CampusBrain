@@ -51,43 +51,4 @@ CREATE TABLE IF NOT EXISTS conversation
     created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- User table (for security/authentication)
-CREATE TABLE IF NOT EXISTS kb_user
-(
-    id            BIGINT PRIMARY KEY AUTO_INCREMENT,
-    username      VARCHAR(50)   NOT NULL UNIQUE,
-    email         VARCHAR(100)  NOT NULL UNIQUE,
-    password_hash VARCHAR(255)  NOT NULL,
-    role          VARCHAR(20)   NOT NULL DEFAULT 'USER',
-    nickname      VARCHAR(100),
-    avatar_url    VARCHAR(500),
-    enabled       TINYINT       NOT NULL DEFAULT 1,
-    deleted       TINYINT       DEFAULT 0,
-    created_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- OAuth2 access token table
-CREATE TABLE IF NOT EXISTS oauth2_access_token
-(
-    id            BIGINT PRIMARY KEY AUTO_INCREMENT,
-    access_token  VARCHAR(255) NOT NULL UNIQUE,
-    refresh_token VARCHAR(255) NOT NULL,
-    user_id       BIGINT       NOT NULL,
-    username      VARCHAR(50),
-    role          VARCHAR(20),
-    nickname      VARCHAR(100),
-    expires_time  TIMESTAMP    NOT NULL,
-    deleted       TINYINT      DEFAULT 0,
-    created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- OAuth2 refresh token table
-CREATE TABLE IF NOT EXISTS oauth2_refresh_token
-(
-    id            BIGINT PRIMARY KEY AUTO_INCREMENT,
-    refresh_token VARCHAR(255) NOT NULL UNIQUE,
-    user_id       BIGINT       NOT NULL,
-    deleted       TINYINT      DEFAULT 0,
-    created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
+-- (security 表 kb_user / oauth2_access_token / oauth2_refresh_token 已随自带登录体系下线 2026-09-07)

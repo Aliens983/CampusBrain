@@ -70,19 +70,3 @@ CREATE TABLE IF NOT EXISTS conversation
   DEFAULT CHARSET = utf8mb4
   COLLATE = utf8mb4_unicode_ci
   COMMENT ='Conversation history (Q&A pairs)';
-
--- Evaluation dataset table: test cases for RAG evaluation
-CREATE TABLE IF NOT EXISTS eval_test_case
-(
-    id                BIGINT PRIMARY KEY AUTO_INCREMENT,
-    query             TEXT        NOT NULL COMMENT 'Test query',
-    expected_answer   TEXT        NOT NULL COMMENT 'Expected answer',
-    relevant_doc_ids  JSON COMMENT 'List of relevant document IDs',
-    relevant_chunk_ids JSON COMMENT 'List of relevant chunk IDs',
-    category          VARCHAR(50) COMMENT 'Test category: factual/analytical/procedural',
-    created_at        DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_category (category)
-) ENGINE = InnoDB
-  DEFAULT CHARSET = utf8mb4
-  COLLATE = utf8mb4_unicode_ci
-  COMMENT ='Evaluation test cases for RAG performance measurement';
