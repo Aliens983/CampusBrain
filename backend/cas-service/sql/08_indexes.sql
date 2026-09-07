@@ -15,10 +15,3 @@ CREATE INDEX IF NOT EXISTS idx_item_service_id ON `item`(`service_id`);
 CREATE INDEX IF NOT EXISTS idx_item_manage_status ON `item`(`manage_status`);
 CREATE INDEX IF NOT EXISTS idx_item_user_status ON `item`(`user_id`, `manage_status`);
 
--- ai_chat_history 表：用户ID常用于查询对话历史
-CREATE INDEX IF NOT EXISTS idx_ai_chat_user_id ON `ai_chat_history`(`user_id`);
-CREATE INDEX IF NOT EXISTS idx_ai_chat_created_at ON `ai_chat_history`(`created_at`);
-
--- file_info 表：上传用户ID和软删除标记
-CREATE INDEX IF NOT EXISTS idx_file_upload_user ON `file_info`(`upload_user`);
-CREATE INDEX IF NOT EXISTS idx_file_is_deleted ON `file_info`(`is_deleted`);

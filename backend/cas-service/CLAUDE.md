@@ -290,28 +290,16 @@ com.laoliu.cas.infra
 com.laoliu.cas.thirdparty
 ├── config/
 │   ├── AliyunConfig.java             ← SMS Client bean
-│   ├── DeepSeekConfig.java           ← EXISTS BUT NEVER USED (dead code)
-│   └── QwenConfig.java               ← WebClient bean for DashScope
+│   ├── DeepSeekConfig.java           ← 孤儿配置（Qwen 直连已下线 2026-09-07，无人注入，可留可删）
+│   └── QwenConfig.java               ← 同上
 ├── controller/
-│   ├── CallTheModelController.java   ← POST /callTheLargeModel
 │   └── WeatherController.java        ← GET /weather
 ├── service/
 │   ├── WeatherApi.java / impl/WeatherApiImpl.java       ← RestTemplate → cn.apihz.cn
-│   ├── CallModelService.java / impl/CallModelServiceImpl.java ← WebClient → Qwen API
 │   ├── OSSService.java / impl/OSSServiceImpl.java       ← Aliyun OSS upload
 │   └── SmsService.java / impl/SmsServiceImpl.java       ← Aliyun SMS send
-├── domain/
-│   ├── entity/AiChatHistory.java     ← Anemic entity
-│   └── repository/AiChatHistoryRepository.java
-├── infrastructure/persistence/
-│   ├── dataobject/AiChatHistoryDO.java
-│   ├── mapper/AiChatHistoryMapper.java
-│   └── repository/AiChatHistoryRepositoryImpl.java
 ├── dto/
-│   ├── ChatReqVO.java
-│   ├── ChatRespVO.java
 │   └── WeatherResponse.java
-└── (resources/mapper/AiChatHistoryMapper.xml)
 ```
 
 ### cas-server (1 file + config)
@@ -410,16 +398,13 @@ GET /graphic/get?uuid=xxx
 | `user` | id, name, grade, sex, age, email, password, role | role: 0=USER, 1=ADMIN, 2=SUPER_ADMIN |
 | `services` | service_id, service_name, service_describe, service_state | service_state: 0=disabled, 1=enabled |
 | `item` | order_id, user_id, service_id, manage_status, reason, create_time, update_time | FK→user.id, FK→services.service_id, manage_status: 0=待审核,1=通过,2=拒绝,3=取消 |
-| `file_info` | file_name, file_path, file_uuid, upload_user, is_deleted | Soft delete via is_deleted flag |
-| `ai_chat_history` | user_id, model, user_message, ai_response, response_time_ms | Chat history persisted but never queried via API |
+| ~~file_info / ai_chat_history~~ | — | 孤儿表已于 2026-09-07 下线删除（DB 已 DROP，Flyway V1/init SQL 已同步裁剪） |
 
 ### SQL Scripts (in `sql/` directory)
 - `database.sql` — CREATE DATABASE
 - `user.sql` — user table DDL
 - `services.sql` — services table DDL
 - `item.sql` — item table DDL
-- `file.sql` — file_info table DDL
-- `ai_chat_history.sql` — AI chat history DDL
 - `data.sql` — Sample data (5 services: 自习室预约, 心理咨询, 学业辅导, 考试报名, 社团活动)
 - `indexes.sql` — Additional index creation
 

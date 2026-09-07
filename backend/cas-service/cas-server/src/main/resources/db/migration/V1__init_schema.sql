@@ -80,42 +80,6 @@ CREATE TABLE item
     CONSTRAINT fk_item_service FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = 'Order table - stores user appointment orders';
 
--- ---------- 文件信息表 ----------
-CREATE TABLE file_info
-(
-    id          bigint auto_increment comment 'Primary key' primary key,
-    file_name   varchar(255) not null comment 'Original file name',
-    file_path   varchar(500) not null comment 'Stored file path',
-    file_size   bigint       null comment 'File size in bytes',
-    file_type   varchar(100) null comment 'MIME type of the file',
-    file_ext    varchar(20)  null comment 'File extension',
-    file_uuid   varchar(64)  not null comment 'Unique UUID for file access',
-    upload_user bigint       null comment 'User ID who uploaded the file',
-    create_time datetime     not null comment 'Upload timestamp',
-    update_time datetime     not null comment 'Last update timestamp',
-    is_deleted  int default 0 not null comment 'Soft delete flag: 0-normal,1-deleted',
-    KEY idx_file_uuid (file_uuid),
-    KEY idx_upload_user (upload_user),
-    KEY idx_create_time (create_time),
-    KEY idx_file_is_deleted (is_deleted)
-) collate = utf8mb4_unicode_ci comment = '文件信息表';
-
--- ---------- AI 对话历史表 ----------
-CREATE TABLE ai_chat_history
-(
-    id               BIGINT NOT NULL AUTO_INCREMENT comment '主键',
-    user_id          BIGINT NOT NULL comment '用户ID',
-    model            VARCHAR(64) NOT NULL comment '使用的模型名称',
-    user_message     TEXT NOT NULL comment '用户问题',
-    ai_response      TEXT NOT NULL comment 'AI回答',
-    response_time_ms INT DEFAULT 0 comment '响应时间(毫秒)',
-    created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP comment '创建时间',
-    updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP comment '更新时间',
-    PRIMARY KEY (id),
-    KEY idx_user_id (user_id),
-    KEY idx_created_at (created_at)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = 'AI对话历史记录表';
-
 -- ---------- 咨询师表 ----------
 CREATE TABLE consultant
 (

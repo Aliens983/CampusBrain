@@ -45,7 +45,6 @@ services（服务目录：category/campus/image_url/capacity/booked_count）
  ├─ item ──────────┘ 预约单：用户 × 服务 × 资源
 carousel            首页轮播图（image_url/sort/enabled）
 notification_policy 全局通知策略（单行，邮件通道开关）
-file_info / ai_chat_history
 ```
 
 `item`（预约单）关键列：`service_id` + 资源列其一 —— 咨询 `consultant_id/slot_id/slot_date/start_time/end_time`；设备 `equipment_id/quantity`；教室 `room_id + slot_date/start_time/end_time`。`manage_status`：`0 待审 → 1 通过 / 2 拒绝 / 3 取消 / 4 完成`，拒绝必有 `reason`。

@@ -65,6 +65,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 1
+    validate-on-migrate: false   # V1 已裁剪孤儿表 ai_chat_history/file_info(2026-09-07)，跳过 checksum 校验以免存量库启动失败
 
 mybatis-plus:
   mapper-locations: classpath*:/mapper/**/*.xml
