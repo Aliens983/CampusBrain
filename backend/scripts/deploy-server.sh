@@ -8,7 +8,8 @@
 #
 # 职责（幂等，HEAD 未变则直接退出）：
 #   1. 判定相对上次部署的改动，得出要重建的服务集合
-#   2. mvn 全量打包 backend（可靠；避免 cas-server 嵌套模块 -pl 漏编的坑）
+#   2. mvn clean 全量打包 backend（clean 防 stale 产物：删类/删资源/删迁移时旧文件会残留 target/classes 被打进 jar；
+#      并避免 cas-server 嵌套模块 -pl 漏编的坑，2026-09-07 起加 clean）
 #   3. 只 docker build 改动服务的镜像（frontend 仅当其源码改动才构建，需联网拉 npm）
 #   4. TAG=deploy docker compose up -d 对应服务（复用 /opt 下的 .env）
 #   5. 冒烟：容器无 Restarting / 前端与网关链路 200 / Nacos 三服务注册
@@ -67,9 +68,11 @@ if [ -z "${TO_BUILD}" ] && [ "${INFRA_CHANGED}" = "no" ]; then
 fi
 echo "将重建:${TO_BUILD:-（仅 infra）}  infra=${INFRA_CHANGED}"
 
-# ---------- 1) mvn 全量打包 ----------
-echo "═══ mvn package（-DskipTests）═══"
-if ! mvn -B -DskipTests package > /tmp/deploy-mvn.log 2>&1; then
+# ---------- 1) mvn clean 全量打包 ----------
+# 必须 clean：deploy 常见"删除类/资源/迁移"改动，非 clean 时旧文件残留在 target/classes 会被重新打
+# 进（嵌套）jar → 镜像里 MyBatis/ClassNotFound 崩（2026-09-07 事故，详见 docs/服务器发布排障全记录-2026-09-07.md）
+echo "═══ mvn clean package（-DskipTests）═══"
+if ! mvn -B -DskipTests clean package > /tmp/deploy-mvn.log 2>&1; then
   tail -40 /tmp/deploy-mvn.log >&2
   echo "❌ mvn 打包失败，终止（详见 /tmp/deploy-mvn.log）" >&2
   exit 1
