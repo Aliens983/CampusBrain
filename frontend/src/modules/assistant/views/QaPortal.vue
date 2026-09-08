@@ -285,28 +285,40 @@ async function fetchRaw(path: string, init?: RequestInit) {
 }
 
 function ensureSession() {
-  // 恢复/创建一个当前会话（跨刷新沿用）
+  // 只恢复「历史列表里真实存在的会话」；否则从头开始，不再预建空“新对话”
   const storedCurrent = localStorage.getItem(currentKey())
-  const all = loadSessionsFromStorage()
+  // 清理历史遗留的占位空会话（标题还是“新对话”=从未有过消息）
+  const all = loadSessionsFromStorage().filter(s => s.title !== '新对话')
+  sessions.value = all
   if (storedCurrent && all.some(s => s.id === storedCurrent)) {
     currentSessionId.value = storedCurrent
-    sessions.value = all
-    return
+  } else {
+    currentSessionId.value = ''
   }
-  const id = uuid()
-  currentSessionId.value = id
-  sessions.value = [{ id, title: '新对话', updatedAt: new Date().toISOString() }, ...all]
   persistSessions()
-  persistCurrent()
 }
 
 function touchSessionTitle(title: string) {
   const found = sessions.value.find(s => s.id === currentSessionId.value)
   if (found) {
-    if (found.title === '新对话') found.title = title.slice(0, 30)
+    if (['新对话', '新会话', ''].includes(found.title)) found.title = title.slice(0, 30)
     found.updatedAt = new Date().toISOString()
   }
   persistSessions()
+}
+
+/** 首次提问才把当前会话登记进历史列表（标题取首问），避免空“新对话”占位重复 */
+function registerActive(firstQ: string) {
+  const id = currentSessionId.value
+  const found = sessions.value.find(s => s.id === id)
+  if (!found) {
+    sessions.value = [{ id, title: firstQ.slice(0, 30), updatedAt: new Date().toISOString() }, ...sessions.value]
+  } else {
+    if (['新对话', '新会话', ''].includes(found.title)) found.title = firstQ.slice(0, 30)
+    found.updatedAt = new Date().toISOString()
+  }
+  persistSessions()
+  persistCurrent()
 }
 
 async function loadHistory(sessionId: string) {
@@ -341,18 +353,20 @@ function onSwitchSession(id: string) {
 
 function startNewSession() {
   if (streaming.value) return
-  const id = uuid()
-  currentSessionId.value = id
-  sessions.value = [{ id, title: '新对话', updatedAt: new Date().toISOString() }, ...sessions.value]
-  persistSessions()
-  persistCurrent()
+  // 开新会话：清空当前对话；不预建空条目，首次提问才登记进历史下拉
+  currentSessionId.value = ''
   messages.value = []
   query.value = ''
+  persistCurrent()
 }
 
 function askQuestion() {
   const q = query.value.trim()
   if (!q || streaming.value) return
+
+  // 无会话时先生成一个；并把当前会话登记进历史（标题=首问）
+  if (!currentSessionId.value) currentSessionId.value = uuid()
+  registerActive(q)
 
   streaming.value = true
   // 同一会话内连续提问（延续上下文），并自动落库、可回看
