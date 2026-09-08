@@ -102,31 +102,43 @@ TAG=deploy docker compose -f docker-compose.yml -f docker-compose.business.yml u
 # ---------- 4) 冒烟 ----------
 echo "═══ 冒烟测试 ═══"
 fail=0
-RC=$(docker ps --format "{{.Status}}" | grep -c "Restarting" || true)
-[ "${RC}" -gt 0 ] && { echo "❌ 有容器在重启 (${RC})"; fail=1; }
 
-# 等服务起来（cas/kb 可能需要数十秒）
-sleep 20
-for i in $(seq 1 15); do
+# 等服务起来：cas/kb 冷启动 + clean→migrate 重建库可能 >2 分钟，耐心多等几轮（每 10s，最多 ~4 分钟）
+echo "  等待全链路就绪（最多约 4 分钟）..."
+for i in $(seq 1 24); do
   ok=1
   curl -sf -o /dev/null -m 5 http://localhost/                     || ok=0
   curl -sf -o /dev/null -m 5 http://localhost:8888/api/v1/captcha  || ok=0
   curl -sf -o /dev/null -m 5 http://localhost:8888/api/v1/kb/health || ok=0
   [ "${ok}" = "1" ] && break
   echo "  等待全链路就绪... ${i}"
-  sleep 6
+  sleep 10
 done
-curl -sf -o /dev/null -m 5 http://localhost/                     || { echo "❌ 前端 200 不通"; fail=1; }
-curl -sf -o /dev/null -m 5 http://localhost:8888/api/v1/captcha  || { echo "❌ 网关→CAS 不通"; fail=1; }
-curl -sf -o /dev/null -m 5 http://localhost:8888/api/v1/kb/health || { echo "❌ 网关→KB 不通"; fail=1; }
-echo "  前端 / 网关→CAS / 网关→KB 均 200 ✓"
 
+# 最终 HTTP 判定：只在真正通过时打印 ✓（之前"均 200 ✓"是无条件打印，会误导）
+http_ok=1
+curl -sf -o /dev/null -m 8 http://localhost/                     || { echo "❌ 前端 200 不通";        http_ok=0; }
+curl -sf -o /dev/null -m 8 http://localhost:8888/api/v1/captcha  || { echo "❌ 网关→CAS 不通";       http_ok=0; }
+curl -sf -o /dev/null -m 8 http://localhost:8888/api/v1/kb/health || { echo "❌ 网关→KB 不通";        http_ok=0; }
+[ "${http_ok}" = "1" ] && echo "  前端 / 网关→CAS / 网关→KB 均 200 ✓"
+[ "${http_ok}" = "0" ] && fail=1
+
+# Nacos 注册：服务可能已 200 但还没注册完，逐个再等一会（每 8s，最多 ~2.5 分钟）
+echo "  等待 Nacos 注册..."
 for s in gateway cas-service kb-service; do
-  n=$(curl -sf -m 6 "http://localhost:8848/nacos/v1/ns/instance/list?serviceName=${s}" 2>/dev/null \
-      | python3 -c "import sys,json;print(len(json.load(sys.stdin).get('hosts',[])))" 2>/dev/null || echo 0)
-  [ "${n}" -ge 1 ] || { echo "❌ Nacos 缺实例: ${s}=${n}"; fail=1; }
+  n=0
+  for i in $(seq 1 19); do
+    n=$(curl -sf -m 6 "http://localhost:8848/nacos/v1/ns/instance/list?serviceName=${s}" 2>/dev/null \
+        | python3 -c "import sys,json;print(len(json.load(sys.stdin).get('hosts',[])))" 2>/dev/null || echo 0)
+    [ "${n}" -ge 1 ] && break
+    sleep 8
+  done
+  if [ "${n}" -ge 1 ]; then echo "  Nacos ${s}: ${n} 实例 ✓"; else echo "❌ Nacos 缺实例: ${s}=${n}"; fail=1; fi
 done
-echo "  Nacos 实例: gateway/cas-service/kb-service 均 ≥1 ✓"
+
+# 收尾复查：等待期间是否有容器掉入重启循环
+RC=$(docker ps --format "{{.Status}}" | grep -c "Restarting" || true)
+if [ "${RC}" -gt 0 ]; then echo "❌ 有容器在重启 (${RC})"; fail=1; fi
 
 if [ "${fail}" = "0" ]; then
   echo "✅ 部署成功，记录部署点 ${HEAD}"
