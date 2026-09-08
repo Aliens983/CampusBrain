@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -44,9 +45,11 @@ public class ServiceServiceImpl implements ServiceService {
     @Override
     @Cacheable(value = "services", key = "'available'")
     public List<Service> getAvailableServices() {
-        return serviceRepository.findAll().stream()
+        // 必须返回可变的 ArrayList：JDK16 Stream.toList() 是不可变(final) List，
+        // 在 NON_FINAL 类型策略下顶层不带类型包装 → 缓存二次读 SerializationException(2026-09-08)。
+        return new ArrayList<>(serviceRepository.findAll().stream()
                 .filter(Service::isAvailable)
-                .toList();
+                .toList());
     }
 
     @Override

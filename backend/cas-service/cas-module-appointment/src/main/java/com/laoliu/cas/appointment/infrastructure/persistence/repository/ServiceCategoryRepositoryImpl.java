@@ -8,6 +8,7 @@ import com.laoliu.cas.appointment.infrastructure.persistence.mapper.ServiceCateg
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -23,12 +24,14 @@ public class ServiceCategoryRepositoryImpl implements ServiceCategoryRepository 
 
     @Override
     public List<ServiceCategory> findAll() {
-        return serviceCategoryMapper.selectList(
+        // 返回可变 ArrayList（service-categories 被 @Cacheable 缓存）：
+        // .toList() 是不可变(final) List → 缓存顶层不带类型包装 → 二次读 SerializationException(2026-09-08)。
+        return new ArrayList<>(serviceCategoryMapper.selectList(
                         new LambdaQueryWrapper<ServiceCategoryDO>()
                                 .orderByAsc(ServiceCategoryDO::getSort)
                                 .orderByAsc(ServiceCategoryDO::getId))
                 .stream()
                 .map(ServiceCategoryDO::toEntity)
-                .toList();
+                .toList());
     }
 }
