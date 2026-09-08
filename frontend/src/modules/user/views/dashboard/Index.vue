@@ -136,7 +136,14 @@
               class="service-card"
               @click="activeService = service"
             >
+              <img
+                v-if="service.imageUrl"
+                :src="assetUrl(service.imageUrl)"
+                class="service-card__cover-img"
+                alt="封面"
+              >
               <div
+                v-else
                 class="service-card__cover"
                 :class="service.image"
               >
@@ -243,7 +250,14 @@
     >
       <template v-if="activeService">
         <div class="drawer-stack">
+          <img
+            v-if="activeService.imageUrl"
+            :src="assetUrl(activeService.imageUrl)"
+            class="cover-badge cover-badge__img"
+            alt="封面"
+          >
           <div
+            v-else
             class="cover-badge"
             :class="activeService.image"
           >
@@ -306,10 +320,16 @@ const banners = ref<string[]>([])
 const loading = ref(false)
 
 /** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
-function bannerUrl(p: string) {
+function assetUrl(p?: string) {
+  if (!p) return ''
   if (/^https?:/.test(p)) return p
   if (p.startsWith('/uploads')) return `/api${p}`
   return p
+}
+
+/** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
+function bannerUrl(p: string) {
+  return assetUrl(p)
 }
 
 async function loadBanners() {
@@ -772,6 +792,16 @@ function statusText(status: BookingStatus) {
   flex-shrink: 0;
 }
 
+/* 上传过封面图：用真实图片替代渐变底（与 service-card__cover 同尺寸） */
+.service-card__cover-img {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  object-fit: cover;
+  border: 1px solid var(--border-soft);
+  flex-shrink: 0;
+}
+
 .gradient-brand { background: linear-gradient(135deg, #ADE2FF, #7BD0FF); }
 .gradient-teal { background: linear-gradient(135deg, #11998e, #38ef7d); }
 .gradient-amber { background: linear-gradient(135deg, #f093fb, #f5576c); }
@@ -915,6 +945,12 @@ function statusText(status: BookingStatus) {
   font-size: 14px;
   font-weight: 700;
   color: #fff;
+}
+
+/* 抽屉速览里上传过封面时，用图片替代渐变底 */
+.cover-badge__img {
+  object-fit: cover;
+  background: #fff;
 }
 
 .info-list {

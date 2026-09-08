@@ -56,6 +56,20 @@
         </div>
       </template>
 
+      <div class="campus-seg">
+        <button
+          v-for="opt in campusOptions"
+          :key="opt.value"
+          type="button"
+          class="campus-seg__item"
+          :class="{ 'is-active': campusFilter === opt.value }"
+          @click="campusFilter = opt.value"
+        >
+          {{ opt.label }}
+          <span class="campus-seg__count">{{ campusCount(opt.value) }}</span>
+        </button>
+      </div>
+
       <div class="service-stack">
         <article
           v-for="item in filteredServices"
@@ -267,16 +281,33 @@ const categories = ref<ServiceCategoryOption[]>([])
 const loading = ref(false)
 const saving = ref(false)
 
+// 校区 Tab：'' 全部 / cq 仓前 / xs 下沙
+const campusFilter = ref('')
+const campusOptions = [
+  { label: '全部', value: '' },
+  { label: '仓前校区', value: 'cq' },
+  { label: '下沙校区', value: 'xs' },
+]
+
 const editForm = reactive({ name: '', category: '', categoryId: 0, description: '', image: '' })
 const createForm = reactive({ name: '', categoryId: 0, campus: 'cq', capacity: -1, description: '', location: '', image: '' })
+
+/** 空/未知校区在展示上按仓前算（与列表 location 文案保持一致） */
+function campusOf(item: ServiceCard): string {
+  return item.campus === 'xs' ? 'xs' : 'cq'
+}
 
 const filteredServices = computed(() =>
   services.value.filter((item) => {
     const matchKeyword = !keyword.value || [item.name, item.category, item.location].join('|').toLowerCase().includes(keyword.value.toLowerCase())
     const matchStatus = !statusFilter.value || item.status === statusFilter.value
-    return matchKeyword && matchStatus
+    const matchCampus = !campusFilter.value || campusOf(item) === campusFilter.value
+    return matchKeyword && matchStatus && matchCampus
   }),
 )
+/** 各 Tab 计数（不看状态筛选，只按校区统计总量） */
+const campusCount = (value: string) =>
+  value === '' ? services.value.length : services.value.filter((s) => campusOf(s) === value).length
 const availableCount = computed(() => services.value.filter((item) => item.status === 'available').length)
 const serviceDrawerVisible = computed({
   get: () => Boolean(selectedService.value),
@@ -438,6 +469,11 @@ async function saveCreate() {
 
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .toolbar { display: flex; gap: 12px; }
+.campus-seg { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 14px; border-radius: 999px; background: #EEF2F7; }
+.campus-seg__item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 18px; border-radius: 999px; border: 0; font-size: 13px; color: var(--text-secondary); background: transparent; cursor: pointer; transition: background .2s, color .2s, box-shadow .2s; }
+.campus-seg__item:hover { color: var(--text-primary); }
+.campus-seg__item.is-active { background: #fff; color: #3B82F6; font-weight: 600; box-shadow: 0 2px 8px rgba(20,33,61,.1); }
+.campus-seg__count { font-size: 11px; opacity: .7; }
 .cover-prev { display: block; width: 100%; max-height: 150px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-soft); }
 .field-tip { margin-top: 4px; font-size: 12px; line-height: 1.6; color: var(--text-tertiary); }
 .service-stack, .dialog-list { display: grid; gap: 14px; }

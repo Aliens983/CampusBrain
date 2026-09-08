@@ -19,7 +19,14 @@
     >
       <div class="service-detail">
         <div class="service-detail__cover">
+          <img
+            v-if="service.imageUrl"
+            :src="assetUrl(service.imageUrl)"
+            class="cover-badge cover-badge__img"
+            alt="封面"
+          >
           <div
+            v-else
             class="cover-badge"
             :class="service.image"
           >
@@ -390,6 +397,14 @@ interface RoomLite {
 const router = useRouter()
 const route = useRoute()
 const service = ref<ServiceCard | null>(null)
+
+/** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
+function assetUrl(p?: string) {
+  if (!p) return ''
+  if (/^https?:/.test(p)) return p
+  if (p.startsWith('/uploads')) return `/api${p}`
+  return p
+}
 const booking = ref(false)
 
 // 教师咨询态
@@ -652,6 +667,7 @@ async function handleBook() {
 .service-detail__cover h3 { margin: 0 0 4px; font-size: 20px; }
 .service-detail__cover .muted { margin: 0; }
 .cover-badge { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.cover-badge__img { object-fit: cover; background: #fff; }
 .info-list { display: grid; gap: 8px; }
 .info-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--border-soft); }
 .info-row:last-child { border-bottom: none; }
