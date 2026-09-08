@@ -5,6 +5,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
 
 /**
  * 演示模式数据库重建开关（仅服务器开启）
@@ -24,10 +26,20 @@ public class DbResetConfig {
 
     @Bean
     public FlywayMigrationStrategy dbResetFlywayStrategy(
-            @Value("${app.db.reset-on-startup:false}") boolean resetOnStartup) {
+            @Value("${app.db.reset-on-startup:false}") boolean resetOnStartup,
+            RedisConnectionFactory connectionFactory) {
         return flyway -> {
             if (resetOnStartup) {
                 flyway.clean();
+                flyway.migrate();
+                // 重置模式下一次清空 Redis，避免旧序列化格式缓存读侧 SerializationException(2026-09-08)
+                RedisConnection conn = connectionFactory.getConnection();
+                try {
+                    conn.flushDb();
+                } finally {
+                    conn.close();
+                }
+                return;
             }
             flyway.migrate();
         };
