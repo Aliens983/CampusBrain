@@ -15,4 +15,7 @@ public class FileUploadReqVO {
     @NotNull(message = "文件不能为空")
     @Schema(description = "待上传的文件")
     private MultipartFile file;
+
+    @Schema(description = "存放子目录（如 service），不传则落在 uploads 根目录")
+    private String subDir;
 }

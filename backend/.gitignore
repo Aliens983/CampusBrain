@@ -27,7 +27,7 @@ logs/
 # ===== 应用配置：已全环境变量化（${VAR}），无真实密钥，可入库 =====
 # 真实密钥只在 backend/.env（gitignore）与部署环境变量里提供
 
-# ===== 运行时上传/临时文件 =====
+# ===== 运行时上传/临时文件（不入库）=====
 uploads/
 data/
 *.tmp
@@ -37,8 +37,9 @@ data/
 Thumbs.db
 file/
 
-# ===== 默认校区图（需入库）=====
-!uploads/
+# ===== 需入库的默认素材（已 commit 跟踪，跟踪状态不受 ignore 影响）=====
+# 注意：不要加 “!uploads/” 顶层反选，否则会把 uploads 下的运行时散图也放开暴露。
 !uploads/campus/
 !uploads/campus/cq.jpg
 !uploads/campus/xs.jpg
+

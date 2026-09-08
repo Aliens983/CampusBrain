@@ -30,7 +30,7 @@ public class FileAdminController {
     @PostMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
     public CommonResult<String> uploadFile(@Validated FileUploadReqVO fileUploadReqVO) {
-        String fileUrl = fileService.uploadFile(fileUploadReqVO.getFile());
+        String fileUrl = fileService.uploadFile(fileUploadReqVO.getFile(), fileUploadReqVO.getSubDir());
         return CommonResult.success(fileUrl);
     }
 }

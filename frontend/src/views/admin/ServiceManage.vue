@@ -62,7 +62,14 @@
           :key="item.id"
           class="service-item"
         >
+          <img
+            v-if="item.imageUrl"
+            :src="assetUrl(item.imageUrl)"
+            class="service-item__cover-img"
+            alt="封面"
+          >
           <div
+            v-else
             class="service-item__cover"
             :class="item.image"
           >
@@ -303,6 +310,7 @@ async function uploadImage(file: File, kind: 'edit' | 'create') {
   try {
     const fd = new FormData()
     fd.append('file', file)
+    fd.append('subDir', 'service')
     const url = await request.post('/admin/files', fd) as string
     if (kind === 'edit') editForm.image = url
     else createForm.image = url
@@ -345,7 +353,12 @@ async function saveEdit() {
     selectedService.value = null
     const idx = services.value.findIndex(s => s.id === updated.id)
     if (idx !== -1) {
-      services.value[idx] = { ...services.value[idx], name: editForm.name, description: editForm.description }
+      services.value[idx] = {
+        ...services.value[idx],
+        name: editForm.name,
+        description: editForm.description,
+        imageUrl: editForm.image || services.value[idx].imageUrl || '',
+      }
     }
   } catch (error: unknown) {
     const err = error as { message?: string }
@@ -431,6 +444,7 @@ async function saveCreate() {
 .service-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
 .service-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
 .service-item__cover { width: 72px; min-height: 72px; display: grid; place-items: center; border-radius: 18px; color: #fff; font-weight: 700; }
+.service-item__cover-img { width: 72px; height: 72px; object-fit: cover; border-radius: 18px; border: 1px solid var(--border-soft); flex-shrink: 0; }
 .service-item__main { display: grid; gap: 10px; }
 .service-item__head { display: flex; justify-content: space-between; gap: 12px; }
 .service-item__head p { margin: 4px 0 0; color: var(--text-tertiary); font-size: 12px; }
