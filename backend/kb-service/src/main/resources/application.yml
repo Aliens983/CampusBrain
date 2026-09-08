@@ -83,9 +83,9 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 0
-    validate-on-migrate: false   # V1~V3 已裁剪孤儿表(2026-09-07)，跳过 checksum 校验以免存量库启动失败
+    validate-on-migrate: false   # V1~V3 已裁剪孤儿表(2026-09-07)；服务器演示模式每次启动 clean+migrate，此项留 false 仅防本地存量库校验误报
     table: flyway_schema_history
-    clean-disabled: true
+    clean-disabled: false   # 需放行 clean：服务器 DbResetConfig 每次启动先 clean 再 migrate（仅 compose 注入 APP_DB_RESET_ON_STARTUP=true 时触发）
 
   # ---------- Graceful Shutdown ----------
   lifecycle:

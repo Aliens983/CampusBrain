@@ -99,6 +99,8 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY}
       ALIYUN_OSS_ACCESS_KEY_ID: ${ALIYUN_OSS_ACCESS_KEY_ID}
       ALIYUN_OSS_ACCESS_KEY_SECRET: ${ALIYUN_OSS_ACCESS_KEY_SECRET}
+      # 演示模式：每次启动 flyway clean→migrate 重建 cas_db（数据不保留；本地开发不设此变量）
+      APP_DB_RESET_ON_STARTUP: "true"
     volumes:
       - cas-uploads:/app/uploads
     depends_on:
@@ -144,6 +146,8 @@ services:
       # 大模型：对话走 DeepSeek（OpenAI 兼容接口），Embedding 走硅基流动
       OPENAI_API_KEY: ${DEEPSEEK_API_KEY}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      # 演示模式：每次启动 flyway clean→migrate 重建 knowledge_base（AI 会话/上传文档不保留）
+      APP_DB_RESET_ON_STARTUP: "true"
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
