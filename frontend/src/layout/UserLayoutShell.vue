@@ -95,6 +95,7 @@ const navItems = [
   { label: '服务中心', path: '/services' },
   { label: '我的预约', path: '/bookings' },
   { label: '消息', path: '/chat', chat: true },
+  { label: 'AI 助手', path: '/assistant' },
   { label: '个人中心', path: '/profile' },
 ]
 

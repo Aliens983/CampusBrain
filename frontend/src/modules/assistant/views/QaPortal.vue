@@ -1,7 +1,8 @@
 <template>
   <div class="qa-portal">
-    <!-- 知识库文档 -->
+    <!-- 知识库文档（仅管理员：可上传/管理；普通用户只看问答，见下方 AI 问答卡片） -->
     <el-card
+      v-if="isAdmin"
       shadow="never"
       class="section-card"
     >
@@ -503,7 +504,9 @@ function statusLabel(status?: string): string {
 }
 
 onMounted(async () => {
-  refreshDocuments()
+  if (isAdmin.value) {
+    refreshDocuments()   // 仅管理员拉取/管理文档列表
+  }
   ensureSession()
   await loadHistory(currentSessionId.value)
 })
