@@ -42,6 +42,12 @@ export const adminRoutes: RouteRecordRaw[] = [
         component: () => import('@/views/admin/Tools.vue'),
         meta: { title: '工具箱', requiresAuth: true, requiresAdmin: true },
       },
+      {
+        path: 'assistant',
+        name: 'admin-assistant',
+        component: () => import('@/modules/assistant/views/QaPortal.vue'),
+        meta: { title: 'AI 助手', requiresAuth: true, requiresAdmin: true },
+      },
     ],
   },
 ]

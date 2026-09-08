@@ -32,12 +32,6 @@
           <span class="weather-pill__text">{{ weather.shi }} {{ weather.weather1 }} {{ weather.temp }}</span>
         </div>
         <div class="workspace__actions">
-          <el-button
-            plain
-            @click="router.push('/dashboard')"
-          >
-            切到用户端
-          </el-button>
           <el-button @click="logout">
             退出
           </el-button>
@@ -78,7 +72,7 @@ const navItems = [
   { label: '用户与权限', path: '/admin/users' },
   { label: '系统设置', path: '/admin/system' },
   { label: '工具箱', path: '/admin/tools' },
-  { label: 'AI 助手', path: '/assistant' },
+  { label: 'AI 助手', path: '/admin/assistant' },
 ]
 
 function logout() {

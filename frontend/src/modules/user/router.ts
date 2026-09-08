@@ -59,12 +59,6 @@ export const userRoutes: RouteRecordRaw[] = [
         component: () => import('@/modules/user/views/profile/Index.vue'),
         meta: { title: '个人中心', requiresAuth: true },
       },
-      {
-        path: 'assistant',
-        name: 'assistant',
-        component: () => import('@/modules/assistant/views/QaPortal.vue'),
-        meta: { title: 'AI 助手', requiresAuth: true, audience: 'user' },
-      },
     ],
   },
 ]

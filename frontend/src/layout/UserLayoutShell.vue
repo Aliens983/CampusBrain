@@ -32,18 +32,6 @@
           <span class="weather-pill__text">{{ weather.shi }} {{ weather.weather1 }} {{ weather.temp }}</span>
         </div>
 
-        <el-button
-          v-if="userStore.isAdmin"
-          plain
-          class="admin-switch"
-          @click="router.push('/admin')"
-        >
-          <el-icon style="margin-right: 5px">
-            <Switch />
-          </el-icon>
-          管理后台
-        </el-button>
-
         <el-dropdown
           class="user-dropdown"
           @command="handleCommand"
@@ -78,7 +66,6 @@
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Switch } from '@element-plus/icons-vue'
 import { useUserStore } from '@/common/stores/user'
 import request from '@/common/utils/request'
 import { useChatUnread, refreshChatUnread } from '@/common/consultChat'
@@ -108,7 +95,6 @@ const navItems = [
   { label: '服务中心', path: '/services' },
   { label: '我的预约', path: '/bookings' },
   { label: '消息', path: '/chat', chat: true },
-  { label: 'AI 助手', path: '/assistant' },
   { label: '个人中心', path: '/profile' },
 ]
 
@@ -124,10 +110,6 @@ const initial = computed(() => userStore.userInfo?.username?.slice(0, 1) || 'U')
 function handleCommand(command: string) {
   if (command === 'profile') {
     router.push('/profile')
-    return
-  }
-  if (command === 'admin') {
-    router.push('/admin')
     return
   }
   userStore.logout()
