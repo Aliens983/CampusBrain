@@ -203,13 +203,35 @@ export async function fetchBookingRecords() {
 }
 
 export async function fetchAdminUsers() {
-  const data = (await request.get('/users/list')) as { records?: BackendUser[] } | BackendUser[]
-  // 后端返回 PageResult 分页结构，数据在 records 字段中
-  const list = Array.isArray(data) ? data : data?.records
-  if (!Array.isArray(list)) {
+  // 后端 /users/list 为分页接口（默认 pageSize=10 且按 id DESC 排序），
+  // 不传分页参数会导致最早创建的管理员（id 较小）落在后续页而“消失”。
+  // 这里显式按最大页长翻页拉全，保证管理员自己也出现在用户列表中。
+  const pageSize = 200
+  const fetchPage = (pageNo: number) =>
+    request.get('/users/list', { params: { pageNo, pageSize } }) as Promise<
+      { records?: BackendUser[]; total?: number } | BackendUser[]
+    >
+
+  const first = await fetchPage(1)
+  // 兼容后端直接返回数组的情况
+  if (Array.isArray(first)) {
+    return first.map(mapAdminUser)
+  }
+  const firstList = first.records
+  if (!Array.isArray(firstList)) {
     throw new Error('获取用户列表失败')
   }
-  return list.map(mapAdminUser)
+
+  const total = Number(first.total ?? firstList.length)
+  const pageCount = Math.max(1, Math.ceil(total / pageSize))
+  const rest: BackendUser[] = []
+  for (let pageNo = 2; pageNo <= pageCount; pageNo++) {
+    const data = await fetchPage(pageNo)
+    if (!Array.isArray(data) && Array.isArray(data.records)) {
+      rest.push(...data.records)
+    }
+  }
+  return [...firstList, ...rest].map(mapAdminUser)
 }
 
 /**
