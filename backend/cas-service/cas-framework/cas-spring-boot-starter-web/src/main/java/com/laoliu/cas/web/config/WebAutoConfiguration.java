@@ -28,6 +28,18 @@ public class WebAutoConfiguration {
     @Value("${file.upload.path:./uploads/}")
     private String uploadPath;
 
+    /**
+     * 允许跨域的站点，逗号分隔。
+     * 默认仅放行本地开发端口；生产/演示需要放开其它域名时（如 cpolar 内网穿透），
+     * 通过环境变量或 Nacos 配置 cas.cors.allowed-origins 覆盖，例如：
+     * cas.cors.allowed-origins=http://localhost:3000,https://xxx.cpolar.cn
+     * <p>
+     * 注意：本服务与 allowCredentials=true 配合，切勿再使用 "*" 全放行，
+     * 否则任意站点都可携带凭证访问本服务接口。
+     */
+    @Value("${cas.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost:80,http://localhost}")
+    private String[] allowedOrigins;
+
     @Bean
     public WebMvcConfigurer resourceConfigurer() {
         return new WebMvcConfigurer() {
@@ -52,7 +64,12 @@ public class WebAutoConfiguration {
     public CorsFilter corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
-        config.addAllowedOriginPattern("*");
+        for (String origin : allowedOrigins) {
+            String trimmed = origin.trim();
+            if (!trimmed.isEmpty()) {
+                config.addAllowedOriginPattern(trimmed);
+            }
+        }
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         config.setMaxAge(3600L);
