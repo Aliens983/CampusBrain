@@ -31,7 +31,7 @@
 
       <div class="user-stack">
         <article
-          v-for="item in filteredUsers"
+          v-for="item in pagedUsers"
           :key="item.id"
           class="user-item"
         >
@@ -69,7 +69,24 @@
             </el-button>
           </div>
         </article>
+
+        <el-empty
+          v-if="!loading && pagedUsers.length === 0"
+          description="没有符合条件的用户"
+        />
       </div>
+
+      <el-pagination
+        class="list-pagination"
+        background
+        :current-page="pageNo"
+        :page-size="pageSize"
+        :page-sizes="[5, 10, 20]"
+        :total="filteredUsers.length"
+        layout="total, sizes, prev, pager, next"
+        @current-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </el-card>
 
     <el-dialog
@@ -157,9 +174,28 @@ const tableData = ref<UserInfo[]>([])
 const loading = ref(false)
 const roleSaving = ref(false)
 
+// 列表分页：默认每页 5 条，可切换 5 / 10 / 20
+const pageNo = ref(1)
+const pageSize = ref(5)
+
 const filteredUsers = computed(() =>
   tableData.value.filter((item) => [item.username, item.department, item.email].join('|').toLowerCase().includes(keyword.value.toLowerCase())),
 )
+const pagedUsers = computed(() => {
+  const start = (pageNo.value - 1) * pageSize.value
+  return filteredUsers.value.slice(start, start + pageSize.value)
+})
+function onPageChange(page: number) {
+  pageNo.value = page
+}
+function onPageSizeChange(size: number) {
+  pageSize.value = size
+  pageNo.value = 1
+}
+// 搜索后结果变少，回到第一页避免停留在空页
+watch(keyword, () => {
+  pageNo.value = 1
+})
 const adminCount = computed(() => tableData.value.filter((item) => item.role === 'admin' || item.role === 'super_admin').length)
 const userDrawerVisible = computed({
   get: () => Boolean(selectedUser.value),
@@ -268,6 +304,17 @@ function roleText(role: UserRole) {
 
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .user-stack, .dialog-list, .drawer-stack { display: grid; gap: 14px; }
+
+/* 分页栏固定在列表左下角 */
+.list-pagination {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
 .user-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
 .user-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
 .user-item__avatar { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(135deg, #3FB6FF, #ADE2FF); color: #fff; font-size: 22px; font-weight: 700; }

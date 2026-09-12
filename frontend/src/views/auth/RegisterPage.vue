@@ -1,7 +1,12 @@
 <template>
   <div class="auth-page">
     <div class="register-card">
+      <div class="register-card__strip" />
       <div class="auth-head">
+        <div class="auth-head__brand">
+          <span class="auth-head__logo">C</span>
+          <span>CampusBrain 智汇校园</span>
+        </div>
         <span class="status-pill is-success">安全注册</span>
         <h1>创建校园预约账号</h1>
         <p>使用邮箱验证码完成注册；注册后即可预约空间、设备与咨询服务。</p>
@@ -245,15 +250,56 @@ onMounted(() => {
 }
 
 .register-card {
+  position: relative;
   width: min(920px, 100%);
   padding: 40px;
   border-radius: 28px;
   background: rgba(255, 255, 255, 0.96);
   box-shadow: 0 24px 60px rgba(16, 24, 40, 0.12);
+  overflow: hidden;
+  animation: registerIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.register-card__strip {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, #0E6CD6, #3FB6FF 55%, #7BD0FF);
+}
+
+@keyframes registerIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .auth-head {
   margin-bottom: 22px;
+}
+
+.auth-head__brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--brand-700);
+}
+
+.auth-head__logo {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #0E6CD6, #3FB6FF);
+  box-shadow: 0 6px 14px rgba(30, 152, 242, 0.28);
 }
 
 .auth-head h1 {

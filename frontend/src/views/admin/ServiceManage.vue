@@ -72,7 +72,7 @@
 
       <div class="service-stack">
         <article
-          v-for="item in filteredServices"
+          v-for="item in pagedServices"
           :key="item.id"
           class="service-item"
         >
@@ -113,7 +113,24 @@
             </el-button>
           </div>
         </article>
+
+        <el-empty
+          v-if="!loading && pagedServices.length === 0"
+          description="没有符合条件的服务"
+        />
       </div>
+
+      <el-pagination
+        class="list-pagination"
+        background
+        :current-page="pageNo"
+        :page-size="pageSize"
+        :page-sizes="[5, 10, 20]"
+        :total="filteredServices.length"
+        layout="total, sizes, prev, pager, next"
+        @current-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </el-card>
 
     <el-drawer
@@ -305,6 +322,25 @@ const filteredServices = computed(() =>
     return matchKeyword && matchStatus && matchCampus
   }),
 )
+
+// 列表分页：默认每页 5 条，可切换 5 / 10 / 20
+const pageNo = ref(1)
+const pageSize = ref(5)
+const pagedServices = computed(() => {
+  const start = (pageNo.value - 1) * pageSize.value
+  return filteredServices.value.slice(start, start + pageSize.value)
+})
+function onPageChange(page: number) {
+  pageNo.value = page
+}
+function onPageSizeChange(size: number) {
+  pageSize.value = size
+  pageNo.value = 1
+}
+// 搜索 / 状态 / 校区切换后结果变少，回到第一页避免停留在空页
+watch([keyword, statusFilter, campusFilter], () => {
+  pageNo.value = 1
+})
 /** 各 Tab 计数（不看状态筛选，只按校区统计总量） */
 const campusCount = (value: string) =>
   value === '' ? services.value.length : services.value.filter((s) => campusOf(s) === value).length
@@ -429,6 +465,7 @@ async function saveCreate() {
     createForm.location = ''
     createForm.image = ''
     services.value = await fetchServiceCards()
+    pageNo.value = 1
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '创建失败')
@@ -477,6 +514,17 @@ async function saveCreate() {
 .cover-prev { display: block; width: 100%; max-height: 150px; object-fit: cover; border-radius: 12px; border: 1px solid var(--border-soft); }
 .field-tip { margin-top: 4px; font-size: 12px; line-height: 1.6; color: var(--text-tertiary); }
 .service-stack, .dialog-list { display: grid; gap: 14px; }
+
+/* 分页栏固定在列表左下角 */
+.list-pagination {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
 .service-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
 .service-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
 .service-item__cover { width: 72px; min-height: 72px; display: grid; place-items: center; border-radius: 18px; color: #fff; font-weight: 700; }

@@ -13,6 +13,8 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
+    // 前导点 = 通配子域：覆盖 cpolar free 版每次重启随机分配的域名（r6.cpolar.cn / r34.cpolar.top 两种后缀）
+    allowedHosts: ['.cpolar.cn', '.cpolar.top'],
     proxy: {
       // KB 路径已带 /api/v1/kb 前缀，直接透传给网关，不再加 /v1
       '/api/v1/kb': {

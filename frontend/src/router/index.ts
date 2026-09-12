@@ -108,7 +108,7 @@ router.beforeEach((to, _from, next) => {
 })
 
 router.afterEach((to) => {
-  document.title = `${String(to.meta.title || '校园预约系统')} - Campus Appointment System`
+  document.title = `${String(to.meta.title || '智汇校园')} · CampusBrain`
   warmRouteChunks()
 })
 

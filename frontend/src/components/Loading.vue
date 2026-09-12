@@ -63,38 +63,43 @@ function setText(customText: string) {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(244, 249, 255, 0.62);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   z-index: 2000;
-  
+
   .loading-spinner {
     display: flex;
     gap: 10px;
-    
+
     .spinner-circle {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
-      background-color: #7BD0FF;
+      background: linear-gradient(135deg, #3FB6FF, #1E98F2);
+      box-shadow: 0 4px 12px rgba(30, 152, 242, 0.3);
       animation: bounce 1.4s infinite ease-in-out both;
-      
+
       &.circle-1 {
         animation-delay: -0.32s;
       }
-      
+
       &.circle-2 {
         animation-delay: -0.16s;
       }
     }
   }
-  
+
   .loading-text {
     margin-top: 20px;
-    color: #606266;
+    color: #1E6FB8;
     font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
   }
 }
 

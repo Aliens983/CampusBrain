@@ -18,6 +18,9 @@
         :class="{ 'is-active': route.path === item.path }"
         @click="router.push(item.path)"
       >
+        <el-icon class="sidebar__icon">
+          <component :is="item.icon" />
+        </el-icon>
         {{ item.label }}
       </button>
     </aside>
@@ -66,13 +69,13 @@ const router = useRouter()
 const userStore = useUserStore()
 
 const navItems = [
-  { label: '管理概览', path: '/admin' },
-  { label: '服务治理', path: '/admin/services' },
-  { label: '预约审核', path: '/admin/bookings' },
-  { label: '用户与权限', path: '/admin/users' },
-  { label: '系统设置', path: '/admin/system' },
-  { label: '工具箱', path: '/admin/tools' },
-  { label: 'AI 助手', path: '/admin/assistant' },
+  { label: '管理概览', path: '/admin', icon: 'Odometer' },
+  { label: '服务治理', path: '/admin/services', icon: 'Grid' },
+  { label: '预约审核', path: '/admin/bookings', icon: 'Calendar' },
+  { label: '用户与权限', path: '/admin/users', icon: 'User' },
+  { label: '系统设置', path: '/admin/system', icon: 'Setting' },
+  { label: '工具箱', path: '/admin/tools', icon: 'Tools' },
+  { label: 'AI 助手', path: '/admin/assistant', icon: 'ChatDotRound' },
 ]
 
 function logout() {
@@ -90,8 +93,11 @@ function logout() {
 }
 
 .sidebar {
+  position: relative;
   padding: 20px 16px;
-  background: linear-gradient(180deg, #143A78, #1A4C92 55%, #1F63B8);
+  background:
+    radial-gradient(circle at 18% -6%, rgba(123, 208, 255, 0.22), transparent 46%),
+    linear-gradient(180deg, #143A78, #1A4C92 55%, #1F63B8);
   color: #fff;
   overflow-y: auto;         /* 菜单多时左栏内部自滚，但栏体始终固定 */
 }
@@ -121,20 +127,59 @@ function logout() {
 }
 
 .sidebar__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
   width: 100%;
-  margin-bottom: 10px;
-  padding: 14px 16px;
+  margin-bottom: 6px;
+  padding: 13px 16px;
   text-align: left;
-  color: rgba(255, 255, 255, 0.82);
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.78);
   border: 0;
-  border-radius: 16px;
+  border-radius: 14px;
   background: transparent;
   cursor: pointer;
+  transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease;
+}
+
+.sidebar__icon {
+  font-size: 17px;
+  flex-shrink: 0;
+  opacity: 0.85;
+  transition: opacity 0.22s ease;
+}
+
+.sidebar__item:hover .sidebar__icon,
+.sidebar__item.is-active .sidebar__icon {
+  opacity: 1;
+}
+
+.sidebar__item:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  transform: translateX(2px);
 }
 
 .sidebar__item.is-active {
   color: #fff;
-  background: rgba(167, 139, 250, 0.18);
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(63, 182, 255, 0.95), rgba(30, 152, 242, 0.9));
+  box-shadow: 0 10px 24px rgba(30, 120, 220, 0.34);
+}
+
+.sidebar__item.is-active::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 22px;
+  border-radius: 0 4px 4px 0;
+  background: #7BD0FF;
 }
 
 .workspace {
@@ -216,7 +261,7 @@ function logout() {
 .workspace__actions .el-button--default:hover {
   color: #1E98F2;
   border-color: #CBEBFF;
-  background: #faf8ff;
+  background: #F4FAFF;
   box-shadow: none;
 }
 .workspace__actions .el-button--default:last-child:hover {

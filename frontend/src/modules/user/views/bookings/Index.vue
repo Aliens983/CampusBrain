@@ -221,7 +221,7 @@ function campusName(c?: string) {
 
 .booking-card__body { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; width: 100%; }
 .booking-card__main { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
-.booking-card__icon { width: 40px; height: 40px; display: grid; place-items: center; flex-shrink: 0; border-radius: 10px; background: #eae3fb; color: #4f6ef7; }
+.booking-card__icon { width: 40px; height: 40px; display: grid; place-items: center; flex-shrink: 0; border-radius: 10px; background: #E1EFFF; color: #1E7FE0; }
 .booking-card__info { display: grid; gap: 4px; min-width: 0; }
 .booking-card__title { font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.3; }
 .booking-card__row { display: flex; align-items: center; gap: 4px; color: #64748b; font-size: 13px; }
@@ -229,7 +229,7 @@ function campusName(c?: string) {
 .booking-card__divider { color: #cbd5e1; margin: 0 2px; }
 .booking-card__aside { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
 .booking-card__chevron { color: #cbd5e1; font-size: 18px; transition: transform .2s ease, color .2s ease; }
-.booking-card:hover .booking-card__chevron { color: #4f6ef7; transform: translateX(4px); }
+.booking-card:hover .booking-card__chevron { color: #1E98F2; transform: translateX(4px); }
 
 @keyframes dashHalo { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-20px,-10px,0) scale(1.08); } }
 .campus-chip {

@@ -321,7 +321,7 @@ onMounted(async () => {
 .chat-msg { display: flex; gap: 10px; align-items: flex-start; }
 .chat-msg.user { flex-direction: row-reverse; }
 .chat-msg__avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #F1F7FF; font-size: 16px; flex-shrink: 0; }
-.chat-msg.user .chat-msg__avatar { background: #ebe3f9; }
+.chat-msg.user .chat-msg__avatar { background: #D3EEFF; }
 .chat-msg__bubble {
   max-width: 70%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.65;
   background: #f3f4f6; color: #1f2937; white-space: pre-wrap; word-break: break-word;

@@ -693,7 +693,7 @@ async function handleBook() {
 .equip-stock { font-size: 12px; font-weight: 600; color: #0d9488; flex-shrink: 0; }
 .equip-stock.is-empty { color: #dc2626; }
 
-.slot-panel { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: #f8f6fc; border: 1px solid var(--border-soft); }
+.slot-panel { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: #F4FAFF; border: 1px solid var(--border-soft); }
 .slot-panel__head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .slot-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .slot-chip {

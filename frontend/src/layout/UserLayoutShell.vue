@@ -212,7 +212,7 @@ function handleCommand(command: string) {
   padding: 0 16px;
   border-radius: 999px;
   font-size: 13px;
-  border-color: #d6c9f0;
+  border-color: #C8EBFF;
   color: #1E98F2;
   background: #fff;
 }

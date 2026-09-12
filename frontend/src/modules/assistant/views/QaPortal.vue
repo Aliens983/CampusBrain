@@ -46,7 +46,11 @@
         </div>
       </header>
 
-      <div class="chat-body">
+      <div
+        ref="chatBodyRef"
+        class="chat-body"
+        @scroll="onBodyScroll"
+      >
         <template v-if="messages.length">
           <div v-for="(m, idx) in messages" :key="idx" class="chat-msg" :class="m.role">
             <div class="chat-msg__label">{{ m.role === 'user' ? '我' : 'AI' }}</div>
@@ -83,7 +87,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/common/stores/user'
 
@@ -104,6 +108,41 @@ const BASE = '/api/v1/kb'
 const uid = computed(() => String(userStore.userInfo?.id ?? 'anon'))
 const sessions = ref<SessionMeta[]>([])
 const currentSessionId = ref('')
+
+// ===== 聊天区自动滚动 =====
+// 真实滚动容器（.chat-body 自身 overflow-y:auto）
+const chatBodyRef = ref<HTMLElement | null>(null)
+// 用户是否贴着底部阅读：上滑查看历史时暂停自动跟随，回到底部后恢复
+const stickToBottom = ref(true)
+let scrollFrame = 0
+
+function doScrollToBottom() {
+  const el = chatBodyRef.value
+  if (el) el.scrollTop = el.scrollHeight
+}
+/** 立即滚到底部（发消息 / 切换会话 / 流结束时用） */
+function scrollToBottom() {
+  stickToBottom.value = true
+  if (scrollFrame) {
+    cancelAnimationFrame(scrollFrame)
+    scrollFrame = 0
+  }
+  void nextTick(doScrollToBottom)
+}
+/** 高频增量时按帧合并滚动，同一帧最多滚一次 */
+function scheduleScroll() {
+  if (!stickToBottom.value || scrollFrame) return
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = 0
+    doScrollToBottom()
+  })
+}
+function onBodyScroll() {
+  const el = chatBodyRef.value
+  if (!el) return
+  // 距底 60px 内视为“贴着底部”
+  stickToBottom.value = el.scrollHeight - el.scrollTop - el.clientHeight < 60
+}
 
 function sessionsKey() { return `campusbrain:kb_sessions:${uid.value}` }
 function currentKey() { return `campusbrain:kb_current:${uid.value}` }
@@ -140,6 +179,7 @@ async function loadHistory(id: string) {
   messages.value = []
   if (!id) return
   try { const rows = await fetchRaw(`/qa/conversation/${id}`) as Array<{ id?: number; role?: string; content?: string }>; for (const row of rows || []) if (row.role === 'user' || row.role === 'assistant') messages.value.push({ id: row.id, role: row.role, content: row.content || '' }) } catch (e) { console.error('加载会话历史失败', e) }
+  scrollToBottom()
 }
 function onSwitchSession(id: string) { if (streaming.value || id === '__empty__') return; currentSessionId.value = id; persistCurrent(); loadHistory(id) }
 function startNewSession() { if (streaming.value) return; currentSessionId.value = ''; messages.value = []; query.value = ''; persistCurrent() }
@@ -147,10 +187,11 @@ function askQuestion() {
   const q = query.value.trim(); if (!q || streaming.value) return
   if (!currentSessionId.value) currentSessionId.value = uuid(); registerActive(q); streaming.value = true
   messages.value.push({ role: 'user', content: q }); const aiMsg: ChatMsg = { role: 'assistant', content: '' }; messages.value.push(aiMsg); query.value = ''
+  scrollToBottom()
   const params = new URLSearchParams({ query: q, sessionId: currentSessionId.value, token: userStore.token }); const es = new EventSource(`${BASE}/qa/ask/stream?${params.toString()}`)
   es.addEventListener('messageId', event => { const id = Number((event as MessageEvent).data); if (id) aiMsg.id = id })
-  es.onmessage = event => { if (event.data === '[DONE]') { streaming.value = false; es.close(); touchSessionTitle(q); if (!aiMsg.content) aiMsg.content = '（本次未生成内容，请换个问法试试）'; return }; if (event.data.startsWith('[ERROR]')) { aiMsg.content += `\n\n${event.data.replace('[ERROR] ', '')}`; streaming.value = false; es.close(); return }; aiMsg.content += event.data }
-  es.onerror = () => { if (!aiMsg.content) aiMsg.content = '连接失败，请确认后端服务已启动。'; streaming.value = false; es.close() }
+  es.onmessage = event => { if (event.data === '[DONE]') { streaming.value = false; es.close(); touchSessionTitle(q); if (!aiMsg.content) aiMsg.content = '（本次未生成内容，请换个问法试试）'; scrollToBottom(); return }; if (event.data.startsWith('[ERROR]')) { aiMsg.content += `\n\n${event.data.replace('[ERROR] ', '')}`; streaming.value = false; es.close(); scrollToBottom(); return }; aiMsg.content += event.data; scheduleScroll() }
+  es.onerror = () => { if (!aiMsg.content) aiMsg.content = '连接失败，请确认后端服务已启动。'; streaming.value = false; es.close(); scrollToBottom() }
 }
 const lastAssistantMsgId = computed(() => { for (let i = messages.value.length - 1; i >= 0; i--) if (messages.value[i].role === 'assistant') return messages.value[i].id ?? null; return null })
 const canFeedback = computed(() => !streaming.value && lastAssistantMsgId.value != null)
@@ -171,6 +212,10 @@ function onFileSelected(event: Event) { const target = event.target as HTMLInput
 async function uploadFile(file: File) { uploading.value = true; try { const formData = new FormData(); formData.append('file', file); const resp = await fetch(`${BASE}/documents/upload`, { method: 'POST', headers: authHeaders(), body: formData }); const result = await resp.json(); if (result.code === 0 || result.code === 200) { ElMessage.success('上传成功'); setTimeout(refreshDocuments, 800) } else ElMessage.error(result.message || '上传失败') } catch { ElMessage.error('上传失败，请重试') } finally { uploading.value = false } }
 
 onMounted(async () => { if (isAdmin.value) refreshDocuments(); ensureSession(); await loadHistory(currentSessionId.value) })
+onUnmounted(() => {
+  // 离开页面：取消待执行的滚动帧
+  if (scrollFrame) cancelAnimationFrame(scrollFrame)
+})
 </script>
 
 <style scoped>

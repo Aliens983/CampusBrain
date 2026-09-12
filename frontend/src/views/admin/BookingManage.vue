@@ -29,7 +29,7 @@
 
       <div class="booking-stack">
         <article
-          v-for="item in filteredBookings"
+          v-for="item in pagedBookings"
           :key="item.id"
           class="booking-item"
           @click="openBookingDrawer(item)"
@@ -85,7 +85,24 @@
             </el-button>
           </div>
         </article>
+
+        <el-empty
+          v-if="!loading && pagedBookings.length === 0"
+          description="没有符合条件的预约申请"
+        />
       </div>
+
+      <el-pagination
+        class="list-pagination"
+        background
+        :current-page="pageNo"
+        :page-size="pageSize"
+        :page-sizes="[5, 10, 20]"
+        :total="filteredBookings.length"
+        layout="total, sizes, prev, pager, next"
+        @current-change="onPageChange"
+        @size-change="onPageSizeChange"
+      />
     </el-card>
 
     <el-dialog
@@ -212,7 +229,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
 import type { BookingStatus } from '@/types'
@@ -325,6 +342,33 @@ async function loadBookings() {
 
 const filteredBookings = computed(() =>
   filter.value === 'all' ? bookings.value : bookings.value.filter((item) => item.status === filter.value)
+)
+
+// 列表分页：默认每页 5 条，可切换 5 / 10 / 20
+const pageNo = ref(1)
+const pageSize = ref(5)
+const pagedBookings = computed(() => {
+  const start = (pageNo.value - 1) * pageSize.value
+  return filteredBookings.value.slice(start, start + pageSize.value)
+})
+function onPageChange(page: number) {
+  pageNo.value = page
+}
+function onPageSizeChange(size: number) {
+  pageSize.value = size
+  pageNo.value = 1
+}
+// 切换状态筛选后结果变少，回到第一页避免停留在空页
+watch(filter, () => {
+  pageNo.value = 1
+})
+// 审核后当前页可能为空，自动回退到有效末页
+watch(
+  () => filteredBookings.value.length,
+  (total) => {
+    const maxPage = Math.max(1, Math.ceil(total / pageSize.value))
+    if (pageNo.value > maxPage) pageNo.value = maxPage
+  },
 )
 const pendingCount = computed(() => bookings.value.filter((item) => item.status === 'pending').length)
 const bookingDrawerVisible = ref(false)
@@ -446,6 +490,17 @@ function campusName(c?: string) {
 
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .booking-stack, .dialog-list, .drawer-stack { display: grid; gap: 14px; }
+
+/* 分页栏固定在列表左下角 */
+.list-pagination {
+  display: flex;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-soft);
+}
 .booking-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); cursor: pointer; transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
 .booking-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
 .booking-item__main { flex: 1; display: grid; gap: 10px; }
