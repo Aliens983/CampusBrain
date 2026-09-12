@@ -1,119 +1,75 @@
 # AGENTS.md — cas-module-appointment
 
-Core business module: service management, booking, appointment audit (approve/reject), consultation, equipment.
+预约核心业务模块：服务目录（分类/校区）、四类预约（咨询/教室/设备/活动）、审核、教师自审、咨询沟通、时段与库存防冲突、自动完成、轮播图。权威说明见上层 `../CLAUDE.md`。
 
-## Complete File List
+## 包结构（com.laoliu.cas.appointment）
 
 ```
-com.laoliu.cas.appointment
-├── interfaces/
-│   ├── controller/
-│   │   ├── admin/
-│   │   │   ├── ServiceAdminController.java          ← GET/POST /admin/service
-│   │   │   └── ServiceStatusAdminController.java     ← POST /admin/service-status/audit/{pass,reject}
-│   │   └── app/
-│   │       ├── BookAppController.java                ← POST /book, /book/{room,equipment,consultation}
-│   │       ├── ConsultationAppController.java
-│   │       ├── EquipmentAppController.java
-│   │       ├── ServiceAppController.java
-│   │       ├── ServiceController.java                ← Bridge: GET /service
-│   │       ├── ServiceStatusAppController.java
-│   │       └── ServiceStatusController.java          ← Bridge: GET /service-status/user
-│   └── dto/
-│       ├── request/
-│       │   ├── AuditRequest.java                     ← orderId, status(1=通过,2=拒绝), reason
-│       │   ├── ServiceAddRequest.java
-│       │   └── SpecializedBookingRequest.java
-│       └── response/
-│           ├── BookingDTO.java
-│           ├── BookResultResponse.java
-│           ├── ConsultantResponse.java               ← FAKE HARDCODED DATA
-│           ├── EquipmentResponse.java                ← FAKE HARDCODED DATA
-│           └── ServiceStatusResponse.java            ← NOTE: leaks to domain layer via BookingRepository
-├── application/service/
-│   ├── BookService.java / impl/BookServiceImpl.java           ← booking create/cancel
-│   ├── ConsultationService.java / impl/ConsultationServiceImpl.java  ← FAKE data
-│   ├── EquipmentService.java / impl/EquipmentServiceImpl.java        ← FAKE data
-│   ├── ServiceService.java / impl/ServiceServiceImpl.java            ← service CRUD
-│   └── ServiceStatusService.java / impl/ServiceStatusServiceImpl.java ← audit logic + email
-├── domain/
-│   ├── entity/
-│   │   ├── AppointmentRecord.java                     ← ANEMIC
-│   │   └── Service.java                               ← ONLY entity with domain behaviors
-│   └── repository/
-│       ├── BookingRepository.java
-│       └── ServiceRepository.java
-└── infrastructure/persistence/
-    ├── dataobject/
-    │   ├── AppointmentRecordDO.java
-    │   ├── ItemDO.java
-    │   └── ServicesDO.java
-    ├── mapper/
-    │   ├── ItemMapper.java
-    │   └── ServiceMapper.java
-    └── repository/
-        ├── BookingRepositoryImpl.java
-        └── ServiceRepositoryImpl.java
+interfaces/
+├── controller/
+│   ├── admin/    ServiceAdminController(/admin/services) · ServiceStatusAdminController(/admin/bookings)
+│   ├── app/      BookAppController(/app/bookings) · ServiceStatusController(/app/bookings/mine)
+│   │             ServiceController(/app/services) · ServiceCategoryController(/app/service-categories)
+│   │             ConsultationAppController(/app/consultations) · RoomAppController(/app/rooms)
+│   │             EquipmentAppController(/app/equipment) · AvailabilityController(/appointments/*)
+│   │             ConsultChatAppController(/app/chat/consult/**)
+│   └── teacher/  TeacherAuditController(/teacher/bookings)
+├── dto/          request/（BookServiceRequest、RoomBookRequest、EquipmentBookRequest、
+│                     ConsultationBookRequest、AuditRequest、TeacherAuditRequest、Service*ReqVO …）
+│                 response/（ServiceRespVO、ServiceCategoryRespVO、BookingDTO、ServiceStatusResponse、
+│                     ConsultantResponse、RoomResponse、TimeSlotRespVO、BookResultResponse、
+│                     ServiceAvailabilityVO、UserServicesRespVO …）
+└── convert/      ServiceConvert
+application/service/  Book · ServiceStatus · Service · ServiceCategory · Consultation · Room ·
+                      Equipment · TeacherAudit · ConsultChat（接口 + impl）
+domain/          entity：Service · ServiceCategory · AppointmentRecord · Consultant · TimeSlot ·
+                        Room · Equipment · ConsultChatConversation · ConsultChatMessage
+                 repository：对应 *Repository 接口
+infrastructure/
+├── persistence/ dataobject（ServicesDO/ServiceCategoryDO/ItemDO/AppointmentRecordDO/ConsultantDO/
+│                 TimeSlotDO/RoomDO/EquipmentDO/ConsultChat*DO）+ mapper + repository/*Impl
+├── task/        BookingAutoCompleteTask（@Scheduled 60s）+ AppointmentScheduleConfig
+├── mq/          BookingEventPublisher + RabbitMqConfig（发 appointment.changed）
+└── config/      AppointmentScheduleConfig
+carousel/        独立子域：controller(CarouselAdminController/CarouselAppController) · service ·
+                 mapper · dataobject（轮播图，未严格四层）
 ```
 
-## Key Business Logic
+> 历史上曾存在的「FAKE 硬编码咨询师/设备数据」「重复 ServiceController/ServiceStatusController」
+> 「ServiceController 直注 Repository」等问题均已重构修复；本模块无残留假数据。
 
-### BookService — Booking Flow
-```
-bookService(userId, serviceIds)
-  → Validate serviceIds not empty
-  → ServiceRepository.selectByIds(serviceIds)
-  → Filter available (serviceState=1) vs unavailable
-  → @Transactional → BookingRepository.insertServices(userId, availableIds)
-  → Return BookResultResponse(success=[...], failed=[...])
-```
+## 关键接口（网关前缀 /api/v1）
 
-Specialized bookings (room/equipment/consultation) all delegate to the same `bookService()`.
-Cancel: `cancelBookings(userId, bookingIds)` → batch updates manage_status to CANCELLED(3).
+| 分组 | 路径 |
+|---|---|
+| 服务目录 | `GET /app/services`、`/{id}`、`/mine`；`GET /app/service-categories`；`GET/POST /admin/services`、`PUT /admin/services/{id}` |
+| 预约 | `POST /app/bookings`、`POST /app/bookings/{room,equipment,consultation}`、`GET /app/bookings`、`GET /app/bookings/{id}`、`GET /app/bookings/mine` |
+| 资源 | `/app/consultations`（+`/{consultantId}/slots`、`/{consultantId}/book`）、`/app/rooms`（+`/{roomId}/book`）、`/app/equipment`（+`/categories`、`/{id}`、`/{equipmentId}/book`） |
+| 审核（管理员） | `GET /admin/bookings`、`PATCH /admin/bookings/{id}/{approve,reject}`（reject 必填原因） |
+| 审核（教师） | `GET /teacher/bookings`、`PATCH /teacher/bookings/{id}/{approve,reject}`（仅本人名下咨询） |
+| 咨询沟通 | `/app/chat/consult/conversations/**`（列表/unread-count/open-*/messages/已读，参与者鉴权） |
+| 余量（给 KB） | `GET /appointments/availability`（内网签名）、`GET /appointments/mine` |
+| 轮播图 | `GET /app/carousel`；`GET/POST/DELETE /admin/carousel/{id}`、`POST /admin/carousel/reorder` |
 
-### ServiceStatusService — Audit Flow
-```
-auditPass(orderId, reason?)
-  → getServiceStatusByOrderId() → check non-null
-  → auditService(orderId, APPROVED(1), reason)
-  → Compose email: service name + description + optional reason
-  → sendAuditEmail(orderId, "预约审核通过通知", content)
+## 核心规则
 
-auditReject(orderId, reason)  // reason REQUIRED
-  → Validate reason not blank → throw AUDIT_REASON_REQUIRED
-  → getServiceStatusByOrderId() → check non-null
-  → auditService(orderId, REJECTED(2), reason)
-  → Compose email: service name + description + rejection reason
-  → sendAuditEmail(orderId, "预约审核未通过通知", content)
-```
+- **状态机** `manage_status`：0 待审 / 1 通过 / 2 拒绝 / 3 取消 / 4 完成；拒绝必有 reason。
+- **防冲突**：咨询/教室 = 时段重叠查询 + 行锁（一间教室同时段唯一）；设备 = available_stock 原子扣减；活动 = capacity/booked_count 原子扣减（-1 不限、容量够直通）。取消/拒绝回补。
+- **幂等**：下单 60s 窗口同用户同服务去重，重复返回 BOOKING_REPEATED。
+- **自动完成**：BookingAutoCompleteTask 60s 轮询，窗口过期置 COMPLETED。
+- **事件**：预约创建/取消后 BookingEventPublisher 发 RabbitMQ `appointment.changed`。
 
-SQL guard: `UPDATE item SET manage_status=? WHERE order_id=? AND manage_status=0`
-— only pending appointments can be audited.
+## 数据表
 
-### Service Entity — Domain Behaviors
-```java
-public boolean isAvailable() { return serviceState != null && serviceState == 1; }
-public void disable() { this.serviceState = 0; }
-public void enable() { this.serviceState = 1; }
-```
+Flyway：`services`（category_id/campus/image_url/capacity/booked_count）、`service_category`（固定 4 类）、
+`consultant`、`time_slot`、`room`、`equipment`、`item`、`carousel`、
+`consult_chat_conversation`、`consult_chat_message`（V5）。外键均为代码级，不建 DB FK。
 
-## Known Issues
-1. **ConsultationServiceImpl** and **EquipmentServiceImpl** return hardcoded fake data — no DB tables, no real data
-2. **ServiceStatusResponse** (interfaces-layer DTO) is used in `BookingRepository` domain interface — LAYERING VIOLATION
-3. **Duplicate controllers** — `ServiceStatusController` and `ServiceStatusAppController` are duplicates
-4. **ServiceController** directly injects `ServiceRepository` — BYPASSES SERVICE LAYER
-5. **No Bean Validation** on request DTOs
-6. **AppointmentRecord entity is anemic** — no `approve()`, `reject()`, `cancel()` methods
+## 测试
 
-## Database Tables
-- `services` (service_id, service_name, service_describe, service_state, timestamps)
-- `item` (order_id, user_id, service_id, manage_status, reason, timestamps)
-  - manage_status: 0=待审核, 1=通过, 2=拒绝, 3=取消
+5 个测试类 / 41 个 `@Test`：BookServiceImplTest 15、ServiceStatusServiceImplTest 10、
+ServiceServiceImplTest 8、TeacherAuditServiceImplTest 5、AvailabilityControllerTest 3。
 
-## Mapper XML
-- `ItemMapper.xml` — most complex mapper: multi-table JOINs, conditional updates, batch operations
-- `ServiceMapper.xml` — service CRUD
+## 依赖
 
-## Dependencies
-- Depends: `cas-module-system` (UserInfoApi), `cas-module-infra` (EmailService), `cas-framework`
-- Does NOT depend: any other business module
+依赖 `cas-module-system`（UserInfoApi）、`cas-module-infra`（Email/File）、`cas-framework`；不依赖其他业务模块。

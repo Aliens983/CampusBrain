@@ -1,103 +1,66 @@
 # AGENTS.md — cas-module-system
 
-System management module: user CRUD, authentication (login/register/reset-password), role management, captcha, email verification.
+用户与账号模块：认证（登录/注册/忘记密码）、图形/邮箱验证码、用户资料与改密、四级角色、通知策略。权威说明见上层 `../CLAUDE.md`。
 
-## Complete File List
+## 包结构（com.laoliu.cas.system）
 
 ```
-com.laoliu.cas.system
-├── interfaces/
-│   ├── assembler/
-│   │   └── UserAssembler.java              ← User entity → UserResponse DTO
-│   ├── controller/
-│   │   ├── admin/
-│   │   │   ├── EmailAdminController.java   ← admin email endpoints
-│   │   │   ├── RoleAdminController.java    ← role query + change
-│   │   │   └── UserController.java         ← user CRUD (admin)
-│   │   ├── app/
-│   │   │   └── EmailController.java        ← Bridge: POST /email
-│   │   ├── GraphicController.java          ← Bridge: GET /graphic/get (CAPTCHA)
-│   │   ├── GraphicVerificationAppController.java ← DUPLICATE of GraphicController
-│   │   ├── LoginAppController.java
-│   │   ├── LoginController.java            ← Bridge: POST /login
-│   │   ├── RegisterAppController.java
-│   │   └── RegisterController.java         ← Bridge: POST /register/verify-code
-│   ├── dto/
-│   │   ├── request/
-│   │   │   ├── AdminCreateUserRequest.java
-│   │   │   ├── ChangePasswordRequest.java
-│   │   │   ├── EmailRequest.java
-│   │   │   ├── ResetPasswordRequest.java
-│   │   │   ├── UserLoginRequest.java
-│   │   │   └── UserRegisterRequest.java
-│   │   └── response/
-│   │       ├── EmailResponse.java
-│   │       ├── UserInfoAndServicesViaMPRespVO.java
-│   │       └── UserResponse.java
-│   └── vo/
-│       ├── CaptchaResult.java
-│       ├── UserRegisterVO.java
-│       └── VerifyCodeReqVO.java
-├── application/service/
-│   ├── AuthService.java                    ← login(), register(), resetPassword()
-│   ├── CaptchaService.java                 ← createCaptcha(uuid)
-│   ├── EmailVerificationService.java       ← sendVerificationCode(email)
-│   ├── RoleService.java                    ← changeRoleById(userId, role)
-│   ├── UserService.java                    ← getUserById(), getAllUsers()
-│   └── impl/
-│       ├── AuthServiceImpl.java            ← STRONGEST business logic in codebase
-│       ├── CaptchaServiceImpl.java         ← Hutool ShearCaptcha + MathGenerator
-│       ├── EmailVerificationServiceImpl.java ← Redis rate limit + code generation
-│       ├── RoleServiceImpl.java            ← BUG: role toggle is inverted
-│       └── UserServiceImpl.java
-├── domain/
-│   ├── entity/User.java                    ← ANEMIC — no behavior methods
-│   └── repository/UserRepository.java
-├── infrastructure/
-│   ├── aspect/RoleAspect.java              ← @RequireRole interceptor (HAS ISSUES)
-│   └── persistence/
-│       ├── dataobject/UserDO.java
-│       ├── mapper/UserMapper.java
-│       └── repository/UserRepositoryImpl.java
-└── api/
-    ├── UserInfoApi.java                    ← getUserById(Long) → UserInfoDTO
-    ├── UserInfoApiImpl.java
-    └── dto/UserInfoDTO.java
+interfaces/
+├── controller/
+│   ├── app/    LoginController(/auth：login、reset) · RegisterController(/auth/register)
+│   │           EmailController(/auth/verification-code) · GraphicController(GET /captcha)
+│   └── admin/  UserController(@RequestMapping("/users")：/、/me、/list、POST、PUT /me、
+│   │               /me/notify GET|PUT、PUT /password、GET /me/bookings)
+│               RoleAdminController(/admin/users/role GET|PUT)
+│               NotifyPolicyAdminController(/admin/settings/notify GET|PUT)
+│               EmailAdminController(POST /admin/email)
+├── dto/        request（UserLoginRequest、UserRegisterRequest、VerifyCodeReqVO、ResetPasswordRequest、
+│                   ChangePasswordRequest、UpdateProfileRequest、AdminCreateUserRequest、ChangeRoleRequest、
+│                   UserPageReqVO、EmailRequest …）
+│               response（UserResponse、EmailResponse、CaptchaRespVO、ChangeRoleRespVO、
+│                   BookingRecordRespVO、UserInfoAndServicesViaMPRespVO …）
+│               NotifyPolicyDTO、NotifyPrefDTO
+├── convert/    UserConvert、BookingRecordConvert
+└── assembler/  UserAssembler
+application/
+├── service/    AuthService、CaptchaService、EmailVerificationService、UserService、
+│               RoleService、NotificationSettingsService（+ impl）
+└── service/vo/ CaptchaResult、UserRegisterVO
+domain/         entity/User · repository/UserRepository
+infrastructure/
+├── aspect/     RoleAspect（@RequireRole 拦截，抛 Unauthorized/ForbiddenException）
+└── persistence/dataobject（UserDO、BookingRecordDO）
+                mapper（UserMapper、NotificationPolicyMapper —— 后者注解 SQL 直查 notification_policy 单行，无 DO）· repository/UserRepositoryImpl
+api/            UserInfoApi + impl/UserInfoApiImpl + dto/UserInfoDTO
+                GetUserIdViaTokenApiImpl（接口定义在 cas-common）
 ```
 
-## Key Business Logic
+> 历史问题均已修复：登录/注册/验证码**无重复 Controller**；**RoleAspect 改为抛异常**（走
+> GlobalExceptionHandler，不再手写 JSON）；**角色切换颠倒 Bug 已修**；请求 DTO 已加 Bean Validation。
 
-### AuthService (most complex service in the project)
-- `login(email, password)` → find by email → BCrypt verify → generate JWT → return LoginUser
-- `register(request)` → validate email code from Redis → check uniqueness → encode password → save user → delete Redis key → return JWT
-- `resetPassword(email, code, newPassword)` → verify code → update password → return new JWT
+## 关键业务
 
-### EmailVerificationService
-- Generates 6-digit code → stores in Redis `verification_code:{email}` (TTL 300s)
-- Rate limiting: Redis key `rate_limit:email:{email}` (TTL 60s)
-- Calls `EmailService.sendEmail()` (@Async)
+- **登录**：邮箱+密码（BCrypt 校验）+ 图形验证码 → 签发 JWT。
+- **注册/重置**：邮箱 6 位验证码（Redis `verification_code:{email}` TTL 300s，限频 `rate_limit:email:{email}` 60s）→ 写库。
+- **验证码**：Hutool 算术验证码，答案存 Redis（captcha:{uuid} TTL 300s），图片经 infra FileService 落 uploads/captcha。
+- **角色**：`UserRoleEnum` USER(0)/ADMIN(1)/SUPER_ADMIN(2)/TEACHER(3)；超管全放行，教师可访问开放给 USER 的接口。
+- **通知**：NotificationSettingsService 管理全局 `notification_policy` 与用户 `email_notify` 偏好。
 
-### CaptchaService
-- Math captcha: Hutool `ShearCaptcha` + `MathGenerator` → creates expression image
-- Evaluates answer via `Calculator.conversion()`
-- Stores answer in Redis `captcha:{uuid}` (TTL 300s)
-- Writes image to temp file → upload via FileService → delete temp file
+## 接口（网关前缀 /api/v1）
 
-## Known Issues
-1. **Role toggle bug** — `RoleServiceImpl.changeRoleById()`: switching to "普通用户" sets role=1 (ADMIN) in SQL
-2. **RoleAspect** — writes manual JSON to HttpServletResponse instead of throwing exceptions (bypasses GlobalExceptionHandler)
-3. **Duplicate controllers** — LoginController/LoginAppController, RegisterController/RegisterAppController, GraphicController/GraphicVerificationAppController are functional duplicates
-4. **No Bean Validation** — all request DTOs lack `@NotBlank`/`@Email` etc.
-5. **User entity is anemic** — no `changePassword()`, `hasRole()`, `updateProfile()` methods
+`POST /auth/login|/reset`、`POST /auth/register`、`POST /auth/verification-code`、`GET /captcha`、
+`GET/POST/PUT /users/*`、`GET/PUT /admin/users/role`、`GET/PUT /admin/settings/notify`、`POST /admin/email`。
 
-## Dependencies
-- Depends: `cas-module-infra`, `cas-thirdparty`, `cas-framework`
-- Does NOT depend: `cas-module-appointment`
+## 数据表
 
-## Cross-Module APIs Provided
-- `UserInfoApi` → used by appointment module to get user details
-- `GetUserIdViaTokenApi` → used internally and by RoleAspect
+`user`（role 0~3、email_notify）、`notification_policy`（单行全局策略）；Mapper XML：resources/mapper/UserMapper.xml。
 
-## Database
-- Table: `user` (id, name, grade, sex, age, email, password, role)
-- Mapper XML: `cas-module-system/src/main/resources/mapper/UserMapper.xml`
+## 测试
+
+4 个测试类 / 30 个 `@Test`：AuthServiceTest 15、RoleServiceImplTest 10、
+EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
+
+## 依赖与对外 API
+
+依赖 `cas-module-infra`（邮件/文件）、`cas-thirdparty`、`cas-framework`；不依赖 appointment。
+对外提供 `UserInfoApi`（appointment 取用户）与 `GetUserIdViaTokenApi`（RoleAspect 等用）。

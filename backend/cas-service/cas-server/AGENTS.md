@@ -1,100 +1,50 @@
 # AGENTS.md — cas-server
 
-Application entry point. Aggregates all module dependencies, holds `application.yml`, and configures component scanning. Contains **ZERO business code**.
+启动入口模块：聚合全部模块依赖、承载 application.yml 与 Flyway 脚本。**零业务代码**（仅两个功能演示控制器）。权威说明见上层 `../CLAUDE.md`。
 
-## File List
+## 文件清单
 
 ```
 cas-server/
-├── pom.xml                                          ← depends on ALL modules
+├── pom.xml                                        依赖全部业务模块 + starters
 └── src/main/
     ├── java/com/laoliu/cas/server/
-    │   └── CampusAppointmentApplication.java         ← @SpringBootApplication
+    │   ├── CampusAppointmentApplication.java      @SpringBootApplication
+    │   │                                          @MapperScan("com.laoliu.cas.**.mapper")
+    │   │                                          @ComponentScan("com.laoliu.cas")
+    │   ├── DbResetConfig.java                     仅 APP_DB_RESET_ON_STARTUP=true 时 clean+migrate（compose 演示）
+    │   └── controller/
+    │       ├── ConfigDemoController.java          GET /config-demo/greeting（Nacos 热更新演示）
+    │       └── SentinelDemoController.java        GET /sentinel-demo/limited（限流演示）
     └── resources/
-        ├── application.yml                           ← REAL CREDENTIALS — treat as secrets
-        └── application.yml.example                   ← template without real values
+        ├── application.yml                        全部 ${ENV_VAR}（无明文密钥，仅本地示例默认值）
+        └── db/migration/
+            ├── V1__init_schema.sql                建表 + 两校区/分类/轮播图种子
+            ├── V2__seed_initial_users.sql         admin@ / user@campus.com
+            ├── V3__seed_teacher_users.sql         教师账号 + 咨询师回填
+            ├── V4__service_category.sql           service_category + 4 类
+            └── V5__consult_chat.sql               咨询沟通两表
 ```
 
-## CampusAppointmentApplication.java
+> 已无 `application.yml.example`；历史「yml 内含真实凭据 / SQL 输出 StdOutImpl / 日志 debug」均不成立：
+> 当前密钥全部环境变量化，MyBatis 不打印 SQL，日志级别 info。
 
-```java
-@SpringBootApplication
-@MapperScan("com.laoliu.cas.**.mapper")      // scans all modules' mappers
-@ComponentScan("com.laoliu.cas")              // scans all modules' components
-public class CampusAppointmentApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(CampusAppointmentApplication.class, args);
-    }
-}
-```
+## 关键配置
 
-**Key points:**
-- `@MapperScan` with wildcard `com.laoliu.cas.**.mapper` → picks up all MyBatis mappers from all modules automatically
-- `@ComponentScan("com.laoliu.cas")` → picks up all `@Service`/`@Component`/`@Repository`/`@Controller` from all modules
-- New packages under `com.laoliu.cas` are picked up WITHOUT any config change
+| 项 | 值 |
+|---|---|
+| server.port / context-path | 18080 / `/api/v1` |
+| datasource | `jdbc:mysql://localhost:3306/cas_db`，账号 `${DB_USERNAME:root}` / `${MYSQL_ROOT_PASSWORD}` |
+| redis | localhost:6379 db0 |
+| spring.application.name | cas-service |
+| spring.config.import | `optional:nacos:cas-service.yaml` |
+| nacos / sentinel | `${NACOS_ADDR:localhost:8848}`；Sentinel 规则源 data-id `cas-sentinel-flow-rules` |
+| rabbitmq | `${RABBITMQ_HOST:localhost}:${RABBITMQ_PORT:5672}`，admin/admin123 |
+| flyway | enabled，locations=classpath:db/migration，validate-on-migrate=false，clean-disabled=false |
+| jwt / internal-sign | `${JWT_SECRET:本地默认}` / `${INTERNAL_SIGN_SECRET:本地默认}`（生产必覆盖） |
+| file.upload | dir=uploads，url-prefix=/uploads，server-address=http://localhost:18080 |
 
-## application.yml Configuration
+## 红线
 
-### Server
-- Port: **18080** (not 8080)
-
-### Database
-- MySQL: `jdbc:mysql://localhost:3306/cas_db`
-- User: `root`
-- MyBatis-Plus: `map-underscore-to-camel-case: true`, SQL stdout logging (StdOutImpl)
-
-### Redis
-- Host: `localhost:6379`, database 0
-
-### Mail (163.com SMTP)
-- Host: `smtp.163.com`, port 465, SSL
-- Username: `dmregy@163.com` (real credential)
-
-### JWT
-- Base64-encoded secret
-- Expiration: 86400000 ms (24 hours)
-
-### File Upload
-- Directory: `./uploads/`
-- URL prefix: `/api/files/`
-- Server address: `http://localhost:18080`
-
-### Email Verification
-- Code expiration: 300 seconds (5 min)
-- Send frequency limit: 60 seconds
-
-### External APIs
-- Weather: cn.apihz.cn (real API key/ID in config)
-- Aliyun OSS: placeholder credentials (`your-access-key-id`)
-- Aliyun SMS: real credentials in config
-- AI (Qwen): DashScope API
-
-### Actuator
-- Exposed: `health`, `info` only
-- Show details: `when_authorized`
-
-### Knife4j / Swagger
-- Access: `http://localhost:18080/doc.html`
-- Permit-all paths for swagger resources
-
-### Logging
-- `com.laoliu: debug`
-- MyBatis SQL logging via `StdOutImpl` (should be dev-profile only)
-
-## Dependency Aggregation
-
-cas-server's pom.xml depends on:
-- `cas-module-system`
-- `cas-module-appointment`
-- `cas-module-infra`
-- `cas-thirdparty`
-- All `cas-spring-boot-starter-*` modules
-- `spring-boot-starter-actuator`
-- `knife4j-openapi3-jakarta-spring-boot-starter`
-- `mysql-connector-j` (runtime)
-
-## ANTI-PATTERNS
-
-- ❌ **NO business code** — no services, no entities, no controllers in this module
-- ❌ **NO domain entities** — entities belong in their business modules
-- ❌ **NO new credentials in application.yml** — use env vars, add to `.example` instead
+- ❌ 不写业务代码 / 不放领域实体；新密钥一律环境变量注入并登记 `backend/.env.example`。
+- ❌ 不改写历史 V*.sql（Flyway checksum）；新结构增量加 V 文件或对存量库直接执行 SQL。

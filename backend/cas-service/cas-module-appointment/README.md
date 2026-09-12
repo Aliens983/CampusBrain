@@ -26,16 +26,19 @@ com.laoliu.cas.appointment
 ## 主要 REST 分组（经网关前缀 `/api/v1`）
 | 路径 | 说明 |
 |---|---|
+| `GET /app/service-categories` | 固定 4 类分类字典（只读） |
 | `GET /app/services`、`/{id}`、`/mine` | 服务目录浏览 |
-| `POST /app/bookings/room\|equipment\|consultation`、`GET /app/bookings/{id}` | 资源预约 / 详情 |
-| `GET /app/consultations`、`/{id}/slots`、`GET /app/rooms`、`GET /app/equipment` | 资源与可约数据 |
-| `GET /appointments/availability` | 实时余量（供 KB 只读查询） |
+| `POST /app/bookings`、`POST /app/bookings/room\|equipment\|consultation`、`GET /app/bookings/{id}`、`GET /app/bookings/mine` | 资源预约 / 详情 / 我的预约 |
+| `GET /app/consultations`、`/{consultantId}/slots`、`GET /app/rooms`、`GET /app/equipment(/categories)` | 资源与可约数据 |
+| `/app/chat/consult/conversations/**` | 学生⇄教师 1:1 咨询沟通（列表/未读/打开/消息/已读，参与者鉴权） |
+| `GET /teacher/bookings`、`PATCH /teacher/bookings/{id}/approve\|reject` | 教师自审名下咨询档期 |
+| `GET /appointments/availability` | 实时余量（供 KB 只读查询，内网签名） |
 | `GET /app/carousel` | 用户端轮播列表 |
-| `GET/PUT /admin/services`、`GET/POST /admin/bookings` | 服务治理 / 预约审核 |
+| `GET/POST/PUT /admin/services`、`GET /admin/bookings` + `PATCH /admin/bookings/{id}/approve\|reject` | 服务治理 / 预约审核 |
 | `GET/POST/DELETE /admin/carousel`、`POST /admin/carousel/reorder` | 轮播图管理 |
 
-## 核心数据表（Flyway V1）
-`services`（目录：category/campus/image_url/capacity/booked_count）→ `item`（预约单：service_id + 资源列其一；`manage_status` 0待审/1通过/2拒绝/3取消/4完成）→ 资源 `consultant`+`time_slot`、`room`、`equipment`；独立 `carousel`。
+## 核心数据表（Flyway V1/V4/V5）
+`services`（目录：category_id/campus/image_url/capacity/booked_count）+ `service_category`（固定 4 类）→ `item`（预约单：service_id + 资源列其一；`manage_status` 0待审/1通过/2拒绝/3取消/4完成）→ 资源 `consultant`+`time_slot`、`room`、`equipment`；独立 `carousel`；`consult_chat_conversation`+`consult_chat_message`（V5 咨询沟通）。
 
 ## 依赖
-依赖 `cas-module-system`（用户/角色）、`cas-module-infra`（邮件/文件）；测试 4 个测试类（预约/审核流程，Mockito）。
+依赖 `cas-module-system`（用户/角色）、`cas-module-infra`（邮件/文件）；测试 5 个测试类、41 个 `@Test`（预约/审核/教师自审/余量，Mockito）。

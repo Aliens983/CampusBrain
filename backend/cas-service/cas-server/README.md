@@ -7,14 +7,18 @@ cas-service 的 Spring Boot 启动模块，聚合全部业务模块依赖并承�
 cas-server/
 ├── src/main/java/com/laoliu/cas/server/
 │   ├── CampusAppointmentApplication.java   # 启动类（@SpringBootApplication + @MapperScan + @ComponentScan）
+│   ├── DbResetConfig.java                  # 仅 APP_DB_RESET_ON_STARTUP=true 时启动 clean+migrate（compose 演示）
 │   └── controller/                         # 仅演示控制器（无业务）
 │       ├── ConfigDemoController.java       # GET /config-demo/greeting（Nacos 配置热更新演示）
 │       └── SentinelDemoController.java     # GET /sentinel-demo/limited（限流演示）
 ├── src/main/resources/
 │   ├── application.yml                     # 端口 18080、context-path /api/v1、Nacos/RabbitMQ/DS/Redis、Flyway 等
 │   └── db/migration/
-│       ├── V1__init_schema.sql             # 全部建表 + 两校区种子数据
-│       └── V2__seed_initial_users.sql      # 初始账号 admin@campus.com / user@campus.com
+│       ├── V1__init_schema.sql             # 全部建表 + 两校区种子（服务/咨询师/教室/设备/轮播图/分类）
+│       ├── V2__seed_initial_users.sql      # 初始账号 admin@campus.com / user@campus.com
+│       ├── V3__seed_teacher_users.sql      # 教师账号 + 咨询师 user_id 回填
+│       ├── V4__service_category.sql        # service_category 分类表 + 固定 4 类
+│       └── V5__consult_chat.sql            # 咨询沟通会话/消息两表
 └── pom.xml
 ```
 

@@ -61,7 +61,7 @@ cas-server               启动入口(application.yml/@MapperScan)，含 Flyway 
 | `MINIO_ACCESS_KEY` / `MINIO_ROOT_PASSWORD` | MinIO | minioadmin / minioadmin123 |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP 发信（可选） | smtp.163.com / 465 |
 | `WEATHER_API_ID` / `WEATHER_API_KEY` | 天气 API（可选） | — |
-| `DEEPSEEK_API_KEY` | CAS `/ai`（可选） | — |
+| `DEEPSEEK_API_KEY` | 预留：CAS 侧旧 Qwen `/ai/chat` 已下线（2026-09-07），当前无消费方 | — |
 | `OPENAI_API_KEY` | KB Chat（DeepSeek 兼容接口） | — |
 | `EMBEDDING_API_KEY` | KB Embedding（硅基流动 Qwen3-Embedding-0.6B） | — |
 | `ALIYUN_OSS_ACCESS_KEY_ID` / `_SECRET` | 阿里云 OSS（可选） | — |
@@ -79,7 +79,7 @@ docker compose up -d      # nacos + kb-mysql/redis/es/qdrant/rabbitmq/minio
 ### 2. 起三个服务（推荐一键脚本）
 ```bash
 ./scripts/run-local.sh gateway    # 先起网关，:8888
-./scripts/run-local.sh cas        # :18080  —— 自动执行 Flyway（V1 schema + V2 初始账号）
+./scripts/run-local.sh cas        # :18080  —— 自动执行 Flyway（V1~V5：schema + 种子账号 + 服务分类 + 咨询沟通表）
 ./scripts/run-local.sh kb         # :8081
 ```
 脚本行为：加载 `.env` → `mvn -DskipTests -pl <模块> -am package` → `java -jar`；`--fast` 跳过打包。
@@ -107,7 +107,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 
 - CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图；服务表直接建 `category_id`，不存 `category` 编码串）、`V2__seed_initial_users.sql`（初始账号）、`V3__seed_teacher_users.sql`（教师账号 + 咨询师 user_id 回填）、`V4__service_category.sql`（**仅新增**分类表 `service_category` + 固定 4 类种子：教师咨询/设备借用/教室空间/活动报名）、`V5__consult_chat.sql`（**仅新增**咨询沟通会话表 `consult_chat_conversation` + 消息表 `consult_chat_message`，学生⇄教师 1:1 在线留言）。
 - **迁移约定**：V*.sql 面向**全新机器**，只含建表/种子等增量，**不写 ALTER/UPDATE 改既有表结构**。服务分类落库 = 服务分类：全新库由 V1 直接建出 `services.category_id`，老库按 `cas-service/UPGRADE-service-category.md` 直接 SQL 演进（ALTER + 回填 + DROP `category`），V4 建表/补种子幂等可重复。
-- KB 迁移位于 `kb-service/src/main/resources/db/migration/`。
+- KB 迁移位于 `kb-service/src/main/resources/db/migration/`：`V1__init_document_and_conversation.sql`（文档/分块/会话等）。多租户 `tenant_id` 已于 2026-09-12 下线：原 `V4__add_tenant_id_to_business_tables.sql` 连同 `TenantContext`/`TenantFilter` 一并移除，业务代码与 H2 测试 schema 均不再保留租户字段。
 - **新机器**：CAS/KB 首次启动自动执行全部迁移，零手工 SQL。
 - **已有库**：迁移文件用于全新环境，已上线的库请直接执行 SQL 演进，**不要改写历史 `V*.sql` 去适配旧库**（否则 Flyway checksum 校验失败）；如需调整结构，本地直接对库执行 SQL 即可。
 
@@ -137,7 +137,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 ```bash
 cd backend && mvn -B test
 ```
-- 后端共 **132 个测试方法**（CAS 73 · KB 59），CAS 分布在 appointment/infra/system/thirdparty，KB 集成测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）。
+- 后端共 **131 个测试方法**（CAS 82 · KB 49），CAS 分布在 appointment/infra/system/thirdparty，KB 集成测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）。
 - GitHub Actions `.github/workflows/ci.yml`：push/PR 自动跑 `mvn -B test` + 前端 type-check/build。
 
 ## 八、Docker 部署（服务器）

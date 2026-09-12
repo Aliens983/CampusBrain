@@ -61,6 +61,8 @@
 | 设备窗口借用 | ✅ | 固定时段窗口 + 库存扣减（`available_stock`）；到点自动归还（转 COMPLETED） |
 | 活动容量预约 | ✅ 免审直通 | `capacity` 容量扣减，-1 不限；**容量够即直接成功（无人工审核）**，开始前可自助取消并释放名额 |
 | 预约审核/取消 | ✅ | 0待审→1通过/2拒绝/3取消/4完成；拒绝必填原因；审核/取消自动释放占用的时段与库存 |
+| 教师自审档期 | ✅ | 教师端 `/teacher/*`：待我审核 / 我的咨询，教师只审自己名下咨询预约 |
+| 咨询在线沟通 | ✅ | 学生⇄教师 1:1 留言（`consult_chat_conversation`/`consult_chat_message`，Flyway V5）；仅教师咨询场景开放，按 `afterId` 增量轮询 + 未读/已读 |
 | 自动完成调度 | ✅ | `@Scheduled` 定时扫描，窗口过期自动置 COMPLETED（设备到点归还、教室释放） |
 | 邮件通知 | ✅ | 审核结果邮件（受**全局通知策略** + **用户邮件偏好**开关控制） |
 | 首页轮播图 | ✅ | 管理端上传 / 删除 / 拖拽排序（最多 6 张），用户端工作台渲染；默认 6 张校区/校园图 |
@@ -178,7 +180,7 @@ npm run dev        # http://localhost:3000
 
 ## 五、测试与 CI
 ```bash
-cd backend && mvn -B test     # 132 个测试方法：CAS 73 + KB 59（KB 用 H2 + @MockBean 隔离中间件）
+cd backend && mvn -B test     # 131 个测试方法：CAS 82 + KB 49（KB 用 H2 + @MockBean 隔离中间件）
 cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 ```
 推送到 GitHub 自动触发 `ci.yml`（后端 test + 前端 type-check/build）作为质量门禁。
@@ -203,3 +205,6 @@ cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 | `backend/README.md` | 后端模块、端口、中间件、环境变量、启动与部署 |
 | `frontend/README.md` | 前端技术栈、路由、开发 / 构建、代理、账号 |
 | `backend/cas-service/README.md` | cas-service 模块级说明（DDD 分层、预约领域模型） |
+| `backend/cas-service/CLAUDE.md` | cas-service 给 AI 助手的权威工作指南（模块/接口/约定/现状） |
+| `backend/cas-service/**/AGENTS.md` | cas-service 及各子模块的 Agent 快速指引 |
+| `backend/cas-service/UPGRADE-*.md` | 老库手工演进说明（服务分类落库、教师角色） |

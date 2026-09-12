@@ -3,7 +3,9 @@
 面向 **校园预约（CAS）+ 知识库 AI 助手（KB）** 的统一单页应用。Vue 3 `<script setup>` + TypeScript + Vite + Element Plus + Pinia。主题采用杭师大 **HZNU 校徽蓝 `#3FB6FF`**。
 
 ## 技术栈
-Vue 3.4 · TypeScript 5.6 · Vite 5 · Element Plus 2.8 · Pinia（+ persistedstate）· Vue Router 4 · SCSS · ECharts · dayjs
+Vue 3.4 · TypeScript 5.6 · Vite 5 · Element Plus 2.8 · Pinia（+ persistedstate）· Vue Router 4 · SCSS（sass-embedded）· Tailwind CSS 3.4 · ECharts · dayjs · Axios
+
+> `package.json` 另声明了 `vue-i18n`，但当前代码未实际使用（无 `useI18n` 引用），属预留依赖。
 
 ## 路由 / 页面（对应 `src/router/index.ts` + 各模块 router）
 
@@ -41,6 +43,7 @@ Vue 3.4 · TypeScript 5.6 · Vite 5 · Element Plus 2.8 · Pinia（+ persistedst
 | `/admin/users` | 用户与权限 | 用户搜索、角色管理 |
 | `/admin/system` | 系统设置 | **轮播图管理**（上传/删除/拖拽排序，≤6 张）、**通知策略** |
 | `/admin/tools` | 工具箱 | 天气查询、二维码生成 |
+| `/admin/assistant` | AI 助手 | 复用 KB QaPortal（管理员也可进入问答/上传文档） |
 
 **公共**：`/login` 登录（图形验证码）、`/register` 邮箱注册、404。
 
@@ -48,22 +51,28 @@ Vue 3.4 · TypeScript 5.6 · Vite 5 · Element Plus 2.8 · Pinia（+ persistedst
 ```
 frontend/
 ├── src/
-│   ├── router/index.ts        # 根路由：/login /register + userRoutes + adminRoutes
+│   ├── router/index.ts        # 根路由：/ /login /register /404 + userRoutes + adminRoutes + teacherRoutes
 │   ├── modules/
 │   │   ├── user/              # 用户端：router + views/{dashboard,services,bookings,profile}
 │   │   ├── admin/             # 管理端：router（视图在 src/views/admin/*）
-│   │   └── assistant/views/QaPortal.vue   # AI 助手
+│   │   ├── teacher/           # 教师端：router + views/{Review,Consultations} + composables
+│   │   ├── chat/              # 咨询沟通：ConversationList / ChatThread（学生端与教师端共用）
+│   │   └── assistant/views/QaPortal.vue   # AI 助手（/assistant 与 /admin/assistant 共用）
 │   ├── views/
-│   │   ├── auth/              # LoginPage / RegisterPage / 404
+│   │   ├── auth/              # 实际使用 LoginPage / RegisterPage（Login.vue、Register.vue 为旧版未路由）
+│   │   ├── errors/NotFound.vue
 │   │   └── admin/             # 管理概览/服务治理/预约审核/用户权限/系统设置/工具箱
-│   ├── layout/                # UserLayoutShell / AdminLayoutShell
-│   ├── common/                # stores/user、utils/request、utils/auth、campus 映射等
-│   ├── assets/styles/         # global.css（主题变量）+ variables.scss（自动注入）
-│   └── services/              # API 调用层（campus 等）
+│   ├── layout/                # UserLayoutShell / AdminLayoutShell / TeacherLayoutShell / index
+│   ├── common/                # stores/user、utils/request、utils/auth、campus、consultChat、types
+│   ├── services/              # API 调用层（api / campus / portal）
+│   ├── assets/styles/         # global.css（Tailwind 指令 + 主题变量）+ variables.scss（自动注入）
+│   └── utils/、types/         # 通用工具与类型
 ├── vite.config.ts
 └── package.json
 ```
-> 早期曾并存一套 `src/views/{dashboard,services,bookings,consultation,rooms,equipment,profile}` 页面；主路由已全部迁到 `src/modules/*`，旧目录仅登录/注册/管理端等仍在使用，其余为遗留副本。
+> `src/views/` 下另有一套早期页面（`bookings/ services/ dashboard/ profile/ consultation/ rooms/ equipment/`
+> 及旧 `auth/Login.vue`、`Register.vue`），**主路由均未引用**（学生端走 `src/modules/user/*`，沟通走 `modules/chat/*`），
+> 属无路由的遗留副本，改动前端时勿误改这些文件；仍在路由中使用的 `src/views` 页面只有 `auth/*Page.vue`、`errors/*`、`admin/*`。
 
 ## 快速开始
 

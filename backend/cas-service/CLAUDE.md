@@ -1,645 +1,155 @@
-# CampusAppointmentSystem — Backend CLAUDE.md
+# cas-service — AI 助手工作指南（CLAUDE.md）
 
-This file is the definitive guide for Claude Code when working on this backend. It documents every module, every service, every convention, and every known issue. Read this first before making any code changes.
+> 本文件是 AI 编码助手在 cas-service（校园预约系统）内工作的权威指南。最后核对：**2026-09-11**，与当前代码一致。
+> 整体微服务架构（gateway / cas-service / kb-service）见 `../README.md`；面向人的模块说明见 `README.md`。
 
-> ⚠️ **当前状态（2026-08-21 更新）**：本项目已重构为微服务的一部分。下方正文是**重构前**的参考，多数「已知问题」已修复、接口路径与模块结构已变化，**以 `../README.md` 和代码为准**。关键变化摘要：
->
-> - **微服务化**：cas-service 是 3 个服务之一（还有 gateway、kb-service），统一由 `common-auth` + `gateway` 做 JWT 网关鉴权 + 内网签名。
-> - **安全已修复**：注册提权、IDOR、管理端裸奔、`/ai` 公开、JWT 密钥外部化、角色层级 Bug 均已修。**全仓库 `mvn test` 120 个测试全绿**（CAS 65 + KB 55）。
-> - **服务间调用**：KB 通过 OpenFeign + Nacos 服务发现 + 内网签名头直连 CAS 只读接口；`InternalAuthFilter` 校验签名通过后写入 SecurityContext，放行服务间调用。
-> - **预约幂等**：`insertServices` 改为幂等 SQL（60 秒窗口同用户同服务去重），新增 `BOOKING_REPEATED` 错误码。
-> - **新增依赖**：Nacos 注册/配置中心、Sentinel 限流（Nacos 数据源）、RabbitMQ（预约变更事件）。
-> - **新增接口**：`PUT /users/me`（更新资料）、`GET /appointments/availability`（实时余量）、`/config-demo/**`（配置热更新）、`/sentinel-demo/**`（限流演示）。
-> - **配置**：`spring.application.name=cas-service`；`spring.config.import=optional:nacos:cas-service.yaml`；已移除 MyBatis `StdOutImpl`、日志级别 info。
-
----
-
-## Quick Reference Card
+## Quick Reference
 
 ```
-Port:      18080 (not 8080)
-Java:      17
-Spring:    Boot 3.3.5
-ORM:       MyBatis-Plus 3.5.5
-DB:        MySQL (cas_db), user root
-Cache:     Redis localhost:6379 db 0
-Mail:      SMTP 163.com (dmregy@163.com), SSL 465
-Auth:      Stateless JWT (HMAC-SHA512, 24h expiration)
-API Docs:  Knife4j 4.5.0 → http://localhost:18080/doc.html
-Build:     mvn clean package -DskipTests   (NO mvnw)
-Run:       java -jar cas-server/target/cas-server-1.0.0.jar
-Base pkg:  com.laoliu.cas
-Group ID:  com.laoliu
+端口:        18080，server.servlet.context-path=/api/v1
+服务名:      cas-service（Nacos 注册；配置中心 data-id: cas-service.yaml）
+Java:        17       Spring Boot: 3.3.5       Spring Cloud Alibaba: 2023.0.1.2
+ORM:         MyBatis-Plus 3.5.5
+DB:          MySQL 8，库 cas_db（本地开发用宿主机 3306；compose 全栈用 cas-mysql）
+Cache:       Redis（本地 6379 db0）：验证码 / 邮箱限频
+MQ:          RabbitMQ：发布 appointment.changed
+迁移:        Flyway（classpath:db/migration，V1~V5）
+API 文档:    Knife4j → http://localhost:18080/api/v1/doc.html（经网关放行）
+Group/包:    com.laoliu / com.laoliu.cas
+构建运行:    mvn -pl cas-service/cas-server -am package -DskipTests
+             java -jar cas-server/target/cas-server-1.0.0.jar（无 mvnw，用系统 mvn）
+测试:        mvn -B -pl cas-service -am test  → 82 个 @Test（13 个测试类）
+密钥:        全部 ${ENV_VAR} 注入（application.yml 仅内置本地示例默认值，生产必须覆盖）
 ```
 
----
-
-## Module Dependency Graph (Bottom → Top)
+## 微服务中的位置
 
 ```
-cas-dependencies (BOM)
-    ↓ imports
-cas-framework (pom aggregator of starters)
-    ├── cas-common                         ← shared kernel (24 files)
-    ├── cas-spring-boot-starter-web        ← GlobalExceptionHandler
-    ├── cas-spring-boot-starter-security   ← JWTFilter + SecurityConfig
-    ├── cas-spring-boot-starter-mybatis    ← MyBatis-Plus config
-    ├── cas-spring-boot-starter-redis      ← RedisTemplate + RedisUtil
-    ├── cas-spring-boot-starter-mq         ← EMPTY stub (no implementation)
-    └── cas-spring-boot-starter-test       ← BaseApplicationTest
-    ↓ used by
-cas-module-infra          ← files, QR, email  (depends: common + thirdparty)
-cas-module-system         ← users, auth, roles (depends: infra + thirdparty)
-cas-module-appointment    ← booking, services  (depends: system + infra)
-cas-thirdparty            ← AI, weather, OSS, SMS (depends: common only)
-    ↓ aggregated by
-cas-server                ← entry point, application.yml, @MapperScan, @ComponentScan
+frontend → gateway:8888（JWT 验签 + 身份头透传）
+             ├─ /api/v1/**（除 /kb）→ cas-service:18080（context-path 也是 /api/v1，不剥前缀）
+             └─ /api/v1/kb/**       → kb-service:8081（StripPrefix=2）
+kb-service ──Feign + Nacos + X-Internal-Sign──> GET /appointments/availability（cas 只读接口）
+cas-service ──RabbitMQ appointment.changed──> kb-service（KB 当前仅记日志）
 ```
 
-**Hard rules:**
-- `infra` MUST NOT depend on `system` or `appointment`
-- Business modules MUST NOT depend on each other directly
-- `thirdparty` depends ONLY on `cas-common`
-- `cas-server` contains ZERO business code — only boot config
+- JWT 由 gateway 统一验签；cas 信任网关注入的身份头。`InternalAuthFilter`（cas-spring-boot-starter-security）校验服务间请求的 `X-Internal-Sign`（HMAC + 时间戳新鲜度），通过后写入 SecurityContext。
+- 放行路径在 `SecurityAutoConfiguration` 配置（auth/captcha/swagger/error/uploads 等）。
 
----
-
-## DDD Four-Layer Layout (Every Business Module)
+## Maven 模块依赖图（自底向上）
 
 ```
-<module>/src/main/java/com/laoliu/cas/<domain>/
-│
-├── interfaces/                    ← REST boundary
-│   ├── controller/
-│   │   ├── admin/                 ← Admin endpoints, guarded with @RequireRole
-│   │   └── app/                   ← User-facing endpoints
-│   ├── dto/
-│   │   ├── request/               ← *Request DTOs (inbound)
-│   │   └── response/              ← *Response DTOs (outbound)
-│   └── assembler/                 ← Entity ↔ DTO converters
-│
-├── application/                   ← Orchestration layer
-│   └── service/
-│       ├── XxxService.java        ← Interface (application concerns)
-│       └── impl/
-│           └── XxxServiceImpl.java ← Implementation (orchestration only, NO direct DB)
-│
-├── domain/                        ← Pure business logic
-│   ├── entity/                    ← Domain entities (NO Spring annotations!)
-│   └── repository/                ← Repository interfaces (contract only)
-│
-├── infrastructure/                ← Technical implementation
-│   ├── persistence/
-│   │   ├── dataobject/            ← *DO classes (MyBatis-Plus entities)
-│   │   ├── mapper/                ← MyBatis Mapper interfaces (@Mapper annotated)
-│   │   └── repository/            ← Repository interface implementations
-│   ├── external/                  ← External API adapters
-│   └── aspect/                    ← AOP aspects (RoleAspect, etc.)
-│
-└── api/                           ← Cross-module public API
-    ├── XxxApi.java                ← Interface (what other modules can call)
-    └── XxxApiImpl.java            ← @Component implementation
+cas-dependencies（BOM，统一第三方版本）
+cas-framework（聚合）
+  ├─ cas-common                     共享内核：Result/异常/错误码/枚举/JWT 工具/安全工具/@RequireRole
+  ├─ cas-spring-boot-starter-web    GlobalExceptionHandler、Web 配置
+  ├─ cas-spring-boot-starter-security  JWTFilter + InternalAuthFilter + SecurityAutoConfiguration
+  ├─ cas-spring-boot-starter-mybatis  MyBatis-Plus 配置
+  ├─ cas-spring-boot-starter-redis    RedisTemplate + RedisUtil
+  ├─ cas-spring-boot-starter-mq       MqAutoConfiguration（RabbitMQ 基础配置，非空 stub）
+  └─ cas-spring-boot-starter-test     BaseApplicationTest
+cas-module-infra        文件 / 邮件 / 二维码（依赖 framework + thirdparty 的 OSSService）
+cas-thirdparty          天气、阿里云 OSS、短信（仅依赖 common；AI 对话链已删除，见下）
+cas-module-system       用户 / 认证 / 角色 / 通知策略（依赖 infra + thirdparty）
+cas-module-appointment  预约核心（依赖 system + infra）
+cas-server              启动入口：CampusAppointmentApplication + application.yml + Flyway + Demo 控制器
 ```
 
-**Layer rules:**
-- **domain/** — zero framework annotations, pure Java. If you see `@Service`/`@Component`/`@Autowired` here, it's a violation.
-- **application/** — orchestrates domain objects, calls repositories. No direct MyBatis/DB access.
-- **infrastructure/** — implements domain repository interfaces. Contains MyBatis mappers, DOs, XML.
-- **interfaces/** — controllers only receive/return DTOs, never domain entities.
-- **api/** — the ONLY way another module calls into this module.
+硬约束：`server` 零业务代码；业务模块互不直接依赖（跨模块走 `api/`）；thirdparty 不依赖业务模块。
 
----
-
-## Complete File Inventory
-
-### cas-common (24 files, the shared kernel)
+## DDD 分层（每个业务模块一致）
 
 ```
-com.laoliu.cas.common
-├── annotation/
-│   └── RequireRole.java              ← @RequireRole({ADMIN, SUPER_ADMIN})
-├── api/
-│   └── GetUserIdViaTokenApi.java     ← Cross-module current-user-id interface
-├── enums/
-│   ├── ManageStatus.java             ← SUBMIT(0)/APPROVED(1)/REJECTED(2)/CANCELLED(3)
-│   ├── ServiceStatus.java            ← service state enum
-│   └── UserRoleEnum.java             ← USER(0)/ADMIN(1)/SUPER_ADMIN(2)
-├── exception/
-│   ├── BusinessException.java        ← General business exception (has ErrorCode + 可变参数)
-│   ├── ErrorCode.java                ← ErrorCode record(code int, message String)
-│   ├── ForbiddenException.java
-│   ├── ResourceNotFoundException.java
-│   └── UnauthorizedException.java
-├── exception/code/
-│   ├── BookErrorCode.java            ← 预约相关错误码
-│   ├── CommonErrorCode.java          ← 通用错误码 (EMAIL_SEND_FAILED etc.)
-│   ├── EmailErrorCode.java
-│   ├── LoginErrorCode.java
-│   ├── RoleErrorCode.java
-│   ├── ServiceErrorCode.java
-│   ├── ServiceStatusErrorCode.java   ← STATUS_NOT_FOUND, AUDIT_FAILED, AUDIT_REASON_REQUIRED, etc.
-│   └── UserErrorCode.java
-├── result/
-│   └── CommonResult.java             ← CommonResult<T>(code, message, data) + static factories
-├── security/
-│   ├── JWTUtils.java                 ← HMAC-SHA512 JWT create/parse
-│   ├── LoginUser.java                ← SecurityContext principal carrier
-│   └── SecurityFrameworkUtils.java   ← getLoginUser()/getLoginUserId()/getLoginUserRole()
-└── util/
-    ├── CodeGenerator.java            ← 6-digit random code
-    └── PasswordUtils.java            ← BCrypt encode/matches (static PasswordEncoder)
+interfaces/   controller/{admin,app,teacher} + dto/{request,response} + convert|assembler
+application/  service + impl（编排，不直接碰 MyBatis）
+domain/       entity（纯 POJO，无 Spring 注解）+ repository（接口）
+infrastructure/ persistence/{dataobject,mapper,repository/*Impl} + task/mq/config/aspect
+api/          跨模块对外接口 XxxApi + XxxApiImpl + dto（仅 system 模块提供）
+carousel/     appointment 内的独立子域包（controller/service/mapper/dataobject，未严格四层）
 ```
 
-### cas-module-system (22 files — user/auth/role management)
-
-```
-com.laoliu.cas.system
-├── interfaces/
-│   ├── assembler/
-│   │   └── UserAssembler.java        ← User → UserResponse DTO converter
-│   ├── controller/
-│   │   ├── admin/
-│   │   │   ├── EmailAdminController.java
-│   │   │   ├── RoleAdminController.java
-│   │   │   └── UserController.java
-│   │   └── app/
-│   │       └── EmailController.java  ← Bridge: POST /email
-│   ├── dto/
-│   │   ├── request/
-│   │   │   ├── AdminCreateUserRequest.java
-│   │   │   ├── ChangePasswordRequest.java
-│   │   │   ├── EmailRequest.java
-│   │   │   ├── ResetPasswordRequest.java
-│   │   │   ├── UserLoginRequest.java
-│   │   │   └── UserRegisterRequest.java
-│   │   └── response/
-│   │       ├── EmailResponse.java
-│   │       ├── UserInfoAndServicesViaMPRespVO.java
-│   │       └── UserResponse.java
-│   └── vo/                           ← NOT standard DDD; internal VOs
-│       ├── CaptchaResult.java
-│       ├── UserRegisterVO.java
-│       └── VerifyCodeReqVO.java
-├── application/service/
-│   ├── AuthService.java              ← login/register/reset-password
-│   ├── CaptchaService.java           ← math captcha generation
-│   ├── EmailVerificationService.java ← email code generation + send with rate limit
-│   ├── RoleService.java
-│   ├── UserService.java
-│   └── impl/
-│       ├── AuthServiceImpl.java
-│       ├── CaptchaServiceImpl.java
-│       ├── EmailVerificationServiceImpl.java
-│       ├── RoleServiceImpl.java
-│       └── UserServiceImpl.java
-├── domain/
-│   ├── entity/
-│   │   └── User.java                 ← Anemic (no behavior methods)
-│   └── repository/
-│       └── UserRepository.java
-├── infrastructure/
-│   ├── aspect/
-│   │   └── RoleAspect.java           ← @RequireRole interceptor (HAS ISSUES)
-│   └── persistence/
-│       ├── dataobject/UserDO.java
-│       ├── mapper/UserMapper.java
-│       └── repository/UserRepositoryImpl.java
-└── api/
-    ├── UserInfoApi.java              ← getUserById(Long) → UserInfoDTO
-    ├── UserInfoApiImpl.java
-    └── dto/UserInfoDTO.java
-```
-
-### cas-module-appointment (22 files — core business)
-
-```
-com.laoliu.cas.appointment
-├── interfaces/
-│   ├── controller/
-│   │   ├── admin/
-│   │   │   ├── ServiceAdminController.java      ← GET/POST /admin/service
-│   │   │   └── ServiceStatusAdminController.java ← POST /admin/service-status/audit/{pass,reject}
-│   │   └── app/
-│   │       ├── BookAppController.java           ← POST /book, /book/{room,equipment,consultation}
-│   │       ├── ConsultationAppController.java
-│   │       ├── EquipmentAppController.java
-│   │       ├── ServiceAppController.java
-│   │       ├── ServiceController.java           ← Bridge: GET /service
-│   │       ├── ServiceStatusAppController.java
-│   │       └── ServiceStatusController.java     ← Bridge: GET /service-status/user
-│   ├── dto/
-│   │   ├── request/
-│   │   │   ├── AuditRequest.java                ← orderId, status(1/2), reason
-│   │   │   ├── ServiceAddRequest.java
-│   │   │   └── SpecializedBookingRequest.java
-│   │   └── response/
-│   │       ├── BookingDTO.java
-│   │       ├── BookResultResponse.java
-│   │       ├── ConsultantResponse.java          ← FAKE data
-│   │       ├── EquipmentResponse.java           ← FAKE data
-│   │       └── ServiceStatusResponse.java
-├── application/service/
-│   ├── BookService.java / impl/BookServiceImpl.java
-│   ├── ConsultationService.java / impl/ConsultationServiceImpl.java     ← FAKE data
-│   ├── EquipmentService.java / impl/EquipmentServiceImpl.java           ← FAKE data
-│   ├── ServiceService.java / impl/ServiceServiceImpl.java
-│   └── ServiceStatusService.java / impl/ServiceStatusServiceImpl.java   ← audit logic
-├── domain/
-│   ├── entity/
-│   │   ├── AppointmentRecord.java     ← Anemic
-│   │   └── Service.java              ← Has domain behaviors: isAvailable(), enable(), disable()
-│   └── repository/
-│       ├── BookingRepository.java
-│       └── ServiceRepository.java
-└── infrastructure/persistence/
-    ├── dataobject/
-    │   ├── AppointmentRecordDO.java
-    │   ├── ItemDO.java
-    │   └── ServicesDO.java
-    ├── mapper/
-    │   ├── ItemMapper.java
-    │   └── ServiceMapper.java
-    └── repository/
-        ├── BookingRepositoryImpl.java
-        └── ServiceRepositoryImpl.java
-```
-
-### cas-module-infra (9 files — infrastructure services)
-
-```
-com.laoliu.cas.infra
-├── interfaces/controller/admin/
-│   ├── FileAdminController.java      ← POST /admin/file/upload
-│   └── OSSAdminController.java      ← POST /admin/oss/upload
-├── interfaces/dto/
-│   └── FileUploadReqVO.java          ← Only DTO with @NotNull Bean Validation
-├── application/service/
-│   ├── EmailService.java             ← sendEmail(to, subject, content) @Async
-│   ├── FileService.java              ← local file upload
-│   ├── QRCodeService.java            ← QR code generate → OSS upload
-│   └── impl/
-│       ├── EmailServiceImpl.java     ← JavaMailSender + spring.mail.username
-│       ├── FileServiceImpl.java      ← ./uploads/, UUID rename
-│       └── QRCodeServiceImpl.java    ← Hutool QrCodeUtil → ByteArrayMultipartFile → OSS
-└── (no domain/ or api/ subpackages — infra is self-contained)
-```
-
-### cas-thirdparty (16 files — external integrations)
-
-```
-com.laoliu.cas.thirdparty
-├── config/
-│   ├── AliyunConfig.java             ← SMS Client bean
-│   ├── DeepSeekConfig.java           ← 孤儿配置（Qwen 直连已下线 2026-09-07，无人注入，可留可删）
-│   └── QwenConfig.java               ← 同上
-├── controller/
-│   └── WeatherController.java        ← GET /weather
-├── service/
-│   ├── WeatherApi.java / impl/WeatherApiImpl.java       ← RestTemplate → cn.apihz.cn
-│   ├── OSSService.java / impl/OSSServiceImpl.java       ← Aliyun OSS upload
-│   └── SmsService.java / impl/SmsServiceImpl.java       ← Aliyun SMS send
-├── dto/
-│   └── WeatherResponse.java
-```
-
-### cas-server (1 file + config)
-
-```
-com.laoliu.cas.server
-└── CampusAppointmentApplication.java   ← @SpringBootApplication, @MapperScan, @ComponentScan
-
-src/main/resources/
-├── application.yml                     ← Real credentials (DB/SMTP/JWT/API keys) — TREAT AS SECRETS
-└── application.yml.example             ← Template without real credentials
-```
-
----
-
-## Key Business Flows
-
-### 1. Login Flow
-```
-POST /login {email, password, captchaId, captchaCode}
-  → AuthService.login()
-    → UserRepository.findByEmail() → verify BCrypt password → JWTUtils.generateToken()
-    → Return CommonResult<LoginUser>
-```
-
-### 2. Registration Flow
-```
-Step 1: POST /email {email} → EmailVerificationServiceImpl
-          → Redis SET "rate_limit:email:{email}" TTL 60s (rate limit)
-          → CodeGenerator.generate() → Redis SET "verification_code:{email}" TTL 300s
-          → EmailService.sendEmail() @Async
-
-Step 2: POST /register/verify-code {email, code, password, name, ...}
-          → AuthService.register()
-            → Redis GET "verification_code:{email}" → compare code
-            → UserRepository.findByEmail() → check uniqueness
-            → PasswordUtils.encode(password) → UserRepository.save()
-            → Redis DELETE "verification_code:{email}" → JWTUtils.generateToken()
-```
-
-### 3. Booking Flow
-```
-POST /book {serviceIds: [1, 2]}
-  → BookServiceImpl.bookService()
-    → Validate serviceIds not empty → ServiceRepository.selectByIds()
-    → Filter available services → @Transactional
-    → BookingRepository.insertServices(userId, serviceIds)
-    → Return BookResultResponse (success + failed lists)
-
-Specialized bookings:
-  POST /book/room        → doSpecializedBooking(request, "会议室")
-  POST /book/equipment   → doSpecializedBooking(request, "设备")
-  POST /book/consultation → doSpecializedBooking(request, "咨询")
-  All three call the same BookServiceImpl.bookService() underneath
-```
-
-### 4. Audit Flow (Approve / Reject)
-```
-POST /admin/service-status/audit/pass  {orderId, status:1, reason?}
-  → @RequireRole({ADMIN, SUPER_ADMIN})
-  → ServiceStatusServiceImpl.auditPass(orderId, reason)
-    → getServiceStatusByOrderId() → check non-null
-    → auditService(orderId, APPROVED, reason)
-      → SQL: UPDATE item SET manage_status=1, reason=? WHERE order_id=? AND manage_status=0
-    → Send email: "预约审核通过通知" + service details + optional reason
-
-POST /admin/service-status/audit/reject {orderId, status:2, reason}
-  → @RequireRole({ADMIN, SUPER_ADMIN})
-  → ServiceStatusServiceImpl.auditReject(orderId, reason)
-    → Validate reason not blank → throw AUDIT_REASON_REQUIRED if blank
-    → getServiceStatusByOrderId() → check non-null
-    → auditService(orderId, REJECTED, reason)
-      → SQL: UPDATE item SET manage_status=2, reason=? WHERE order_id=? AND manage_status=0
-    → Send email: "预约审核未通过通知" + service details + rejection reason
-```
-
-### 5. Captcha Flow
-```
-GET /graphic/get?uuid=xxx
-  → CaptchaServiceImpl.createCaptcha(uuid)
-    → Hutool ShearCaptcha + MathGenerator → createImage()
-    → Calculator.conversion() evaluates math expression
-    → Redis SET "captcha:{uuid}" = answer, TTL 300s
-    → Write captcha PNG to temp file → FileService.uploadFile() → delete temp file
-    → Return captcha image URL
-```
-
----
-
-## Database Schema (MySQL cas_db, InnoDB, utf8mb4)
-
-### Tables
-
-| Table | Key Columns | Notes |
-|-------|-------------|-------|
-| `user` | id, name, grade, sex, age, email, password, role | role: 0=USER, 1=ADMIN, 2=SUPER_ADMIN |
-| `services` | service_id, service_name, service_describe, service_state | service_state: 0=disabled, 1=enabled |
-| `item` | order_id, user_id, service_id, manage_status, reason, create_time, update_time | FK→user.id, FK→services.service_id, manage_status: 0=待审核,1=通过,2=拒绝,3=取消 |
-| ~~file_info / ai_chat_history~~ | — | 孤儿表已于 2026-09-07 下线删除（DB 已 DROP，Flyway V1/init SQL 已同步裁剪） |
-
-### SQL Scripts (in `sql/` directory)
-- `database.sql` — CREATE DATABASE
-- `user.sql` — user table DDL
-- `services.sql` — services table DDL
-- `item.sql` — item table DDL
-- `data.sql` — Sample data (5 services: 自习室预约, 心理咨询, 学业辅导, 考试报名, 社团活动)
-- `indexes.sql` — Additional index creation
-
-**Note:** No Flyway/Liquibase. SQL scripts are run manually.
-
----
-
-## Auth & Permission System
-
-### JWT Details
-- Signing: HMAC-SHA512 (key = SHA-512 hash of `jwt.secret` from application.yml)
-- Claims: userId, name, role, email, iat, exp
-- Expiration: 86400000 ms (24 hours)
-- Token format: `Authorization: Bearer <token>`
-
-### Security Filter Chain
-- `SecurityAutoConfiguration` in cas-spring-boot-starter-security
-- `SessionCreationPolicy.STATELESS`, CSRF disabled
-- `@EnableMethodSecurity(prePostEnabled = true)`
-- `JWTFilter extends OncePerRequestFilter` → extracts token → validates → sets SecurityContext
-
-### Permit-All Paths (no auth required)
-```
-/api/auth/**, /api/public/**, /login, /login/reset, /graphic/get,
-/register/verify-code, /email, /error, /api/files/**, /uploads/**,
-/doc.html, /swagger-ui/**, /v3/api-docs/**, /webjars/**,
-/favicon.ico, /hello, /callTheLargeModel/**
-```
-
-### Role-Based Access
-- `@RequireRole(UserRoleEnum.ADMIN)` — single role
-- `@RequireRole({ADMIN, SUPER_ADMIN})` — multiple roles
-- Enforced by `RoleAspect` (AOP around-advice) in cas-module-system
-- **KNOWN BUG**: `RoleAspect` writes manual JSON to `HttpServletResponse` instead of throwing exceptions — THIS BYPASSES `GlobalExceptionHandler`
-- **KNOWN BUG**: `RoleServiceImpl.changeRoleById()` has the role assignment inverted (toggling to "common user" sets role=1=ADMIN)
-
-### Getting Current User
-```java
-// In any service/controller:
-LoginUser user = SecurityFrameworkUtils.getLoginUser();
-Long userId = SecurityFrameworkUtils.getLoginUserId();
-Integer role = SecurityFrameworkUtils.getLoginUserRole();
-
-// For cross-module calls, inject:
-@Autowired
-private GetUserIdViaTokenApi getUserIdViaTokenApi;
-```
-
----
-
-## Response & Error Handling
-
-### CommonResult<T>
-```java
-CommonResult.success(data);                    // code=200, message="成功"
-CommonResult.success("custom msg", data);       // code=200
-CommonResult.error(errorCode);                  // uses ErrorCode.code + ErrorCode.message
-CommonResult.error(errorCode, params...);       // message with format params
-```
-
-### Exception Hierarchy
-```
-RuntimeException
-├── BusinessException(code, message, params...)   ← General business error (GlobalExceptionHandler maps to ErrorCode.code)
-├── ForbiddenException                            ← 403
-├── UnauthorizedException                         ← 401
-└── ResourceNotFoundException                     ← 404
-```
-
-### GlobalExceptionHandler (catches 9 exception types)
-Located at `cas-spring-boot-starter-web/.../GlobalExceptionHandler.java`
-
-| Exception | HTTP Status |
-|-----------|-------------|
-| `NoResourceFoundException` | 404 |
-| `BusinessException` | From e.getCode() |
-| `MethodArgumentNotValidException` | 400 (aggregates field errors) |
-| `BindException` | 400 |
-| `HttpRequestMethodNotSupportedException` | 405 |
-| `UnauthorizedException` | 401 |
-| `ForbiddenException` | 403 |
-| `ResourceNotFoundException` | 404 |
-| `RuntimeException` | 500 |
-| `Exception` (catch-all) | 500 |
-
-### Error Code Conventions (Inconsistent — needs fixing)
-- Some use HTTP codes: 400, 404
-- Some use domain codes: 10001 (from BookErrorCode)
-- Some use magic numbers: 3838438 (AUDIT_REASON_REQUIRED), 404404404 (USER_EMAIL_NOT_FOUND)
-
----
-
-## Cross-Module API Pattern
-
-When module A needs data from module B:
-
-1. Module B defines `api/XxxApi.java` (interface) + `api/XxxApiImpl.java` (@Component)
-2. Module A declares dependency on module B in pom.xml
-3. Module A injects `XxxApi` via `@Autowired` constructor
-
-**Existing cross-module APIs:**
-
-| API Interface | Location | Provided By | Used By |
-|---|---|---|---|
-| `UserInfoApi` | cas-module-system/api/ | system | appointment (BookServiceImpl, ServiceAdminController) |
-| `GetUserIdViaTokenApi` | cas-common/api/ | system | system (RoleAspect) |
-| `EmailService` | cas-module-infra/application/ | infra | system (AuthService), appointment (ServiceStatusServiceImpl) |
-| `FileService` | cas-module-infra/application/ | infra | system (CaptchaServiceImpl) |
-| `OSSService` | cas-thirdparty/service/ | thirdparty | infra (QRCodeServiceImpl, OSSAdminController) |
-
-**Anti-patterns (DO NOT do this):**
-- `ServiceController` directly injects `ServiceRepository` alongside `ServiceService`
-- `GraphicVerificationAppController` directly injects `RedisUtil`
-
----
-
-## Testing
-
-### Current State
-
-The project has **20 unit tests** in the `cas-module-appointment` module, using **JUnit 5 + Mockito**. There are no integration tests yet.
-
-| Test Class | Location | Tests | What It Covers |
-|------------|----------|-------|----------------|
-| `BookServiceImplTest` | `cas-module-appointment/src/test/.../impl/` | 11 | Booking creation, validation (empty/null IDs, service not found, disabled), cancellation, query by user/order ID |
-| `ServiceStatusServiceImplTest` | `cas-module-appointment/src/test/.../impl/` | 9 | Audit approval (with/without reason), audit rejection (reason validation: null/empty/blank), order not found, update failure |
-
-### Testing Infrastructure
-
-- **Test framework**: JUnit 5 (Jupiter) + Mockito (`@ExtendWith(MockitoExtension.class)`)
-- **Test base class**: `BaseApplicationTest` in `cas-spring-boot-starter-test` (abstract, `@SpringBootTest`)
-- **Dependency**: `spring-boot-starter-test` (pulled in by `cas-module-appointment/pom.xml`, scope `test`)
-- **Pattern**: Given-When-Then with `@Nested` inner classes for grouping
-
-### What's Missing
-
-| Gap | Priority |
-|-----|----------|
-| `cas-module-system` tests | High — AuthService, UserService, CaptchaService |
-| `cas-module-infra` tests | Medium — EmailService, FileService |
-| Controller integration tests | Medium — `@WebMvcTest` or `@SpringBootTest` + MockMvc |
-| Repository integration tests | Low — `@MybatisPlusTest` against real DB |
-
----
-
-## Known Issues & TODOs（当前真实状态）
-
-> 下列为**截至 2026-08-22 仍未解决**的问题。曾列于此处的多数历史问题（测试覆盖、分页、Bean Validation、重复 Controller、RoleAspect 绕过、角色切换颠倒、无 @Cacheable、无幂等）**均已修复**，此处不再列出。
-
-### 未解决
-1. **Error codes 不统一** — 同一 `*ErrorCode` 接口内 HTTP 码（400/404）与领域码（40001…）混用。
-2. **响应模型跨服务不统一** — CAS 用 `CommonResult`，KB 用 `ApiResponse`（`code` 为 Object）。统一需同步改前端契约，暂缓。
-3. **Maven 治理不统一** — CAS groupId `com.laoliu`，KB `com.kb`；统一 BOM/Parent 需迁包名，风险高，暂缓。
-4. **DTO 命名不一致** — `*ReqVO` / `*Request` / `*DTO` / `*Response` 混用。
-5. **`DeepSeekConfig` 死代码** — 未被任何 Bean 注入使用。
-6. **无数据库迁移工具** — CAS 的 SQL 脚本手工执行（KB 已用 Flyway）。
-7. **咨询时段硬编码** — `getAvailableTimeSlots()` 仍返回固定 6 个时段，未落库。
-8. **设备图片无数据源** — `EquipmentResponse.image` 无 DB 列支撑。
-
----
-
-## Coding Conventions
-
-### Do
-- ✅ Controllers return `CommonResult<T>` from `cas-common.result`
-- ✅ Use `SecurityFrameworkUtils` to get current user (NOT `HttpServletRequest`)
-- ✅ Use `@RequireRole` annotation for access control (NOT inline role checks)
-- ✅ Add new error codes to the appropriate `*ErrorCode` interface
-- ✅ Throw `BusinessException` for expected errors (NOT return `CommonResult.error()`)
-- ✅ Cross-module calls through `api/` interfaces
-- ✅ Domain entities stay pure (no Spring annotations)
-- ✅ Use Lombok `@Builder`, `@Data` on entities
-- ✅ MyBatis mapper XML at `classpath*:/mapper/**/*.xml`
-
-### Don't
-- ❌ No business code in `cas-server` or `cas-common`
-- ❌ No direct Mapper calls from other modules — use `api/` interface
-- ❌ No `HttpServletRequest` injection — use `SecurityFrameworkUtils`
-- ❌ No `CommonResult.error("string")` — use `CommonResult.error(ErrorCode)`
-- ❌ No Spring annotations in `domain/` layer
-- ❌ No `try-catch` in controllers — let `GlobalExceptionHandler` handle it
-- ❌ No new credentials in `application.yml` — use environment variables
-
----
-
-## Maven Module Quick Build Commands
-
-```bash
-# Build everything
-mvn clean package -DskipTests
-
-# Build just appointment module + its dependencies
-mvn -pl cas-module-appointment -am clean compile
-
-# Build common changes
-mvn -pl cas-framework/cas-common -am clean compile
-
-# Build + run
-mvn clean package -DskipTests && java -jar cas-server/target/cas-server-1.0.0.jar
-
-# Run tests for appointment module
-mvn -pl cas-module-appointment -am test
-
-# Run a single test class
-mvn -pl cas-module-appointment -am test -Dtest=BookServiceImplTest
-
-# Run a single test method
-mvn -pl cas-module-appointment -am test -Dtest=ServiceStatusServiceImplTest#shouldApproveAndSendEmailWithoutReason
-```
-
-### Dependency Versions (BOM managed in cas-dependencies)
-
-| Dependency | Version |
-|-----------|---------|
-| Spring Boot | 3.3.5 |
-| MyBatis-Plus | 3.5.5 |
-| jjwt | 0.12.6 |
-| Hutool | 5.8.32 |
-| Fastjson2 | 2.0.56 |
-| MapStruct | 1.6.3 |
-| Knife4j | 4.5.0 |
-| Aliyun SMS SDK | 2.0.2 |
-| MySQL Connector | runtime scope |
-
----
-
-## Bridge Controllers (Flat Paths)
-
-These controllers bypass the `/api/` and `/app/` / `/admin/` prefix convention for frontend convenience:
-
-| Controller | Endpoint | Module |
-|-----------|----------|--------|
-| `LoginController` | `POST /login` | system |
-| `GraphicController` | `GET /graphic/get` | system |
-| `RegisterController` | `POST /register/verify-code` | system |
-| `EmailController` | `POST /email` | system |
-| `ServiceController` | `GET /service` | appointment |
-| `ServiceStatusController` | `GET /service-status/user` | appointment |
+预约模块另有扁平化子域包：`carousel/`（轮播图）；咨询沟通类放在标准四层（ConsultChat* 系列）。
+
+## 当前各模块真实内容
+
+### cas-module-appointment（最大模块）
+- **服务目录**：ServiceController `GET /app/services`、`/{id}`、`/mine`；ServiceAdminController `/admin/services`（GET 分页 / POST 新增 / PUT `/{id}` / GET `/by-user`）；ServiceCategoryController `GET /app/service-categories`（固定 4 类字典，配套 ServiceCategory* 全套）。
+- **预约**：BookAppController `/app/bookings`（POST 统一下单、GET 列表、GET `/{id}`、POST `/room|/equipment|/consultation`）；ServiceStatusController `GET /app/bookings/mine`；ServiceStatusAdminController `/admin/bookings`（GET 分页 + `PATCH /{id}/approve|reject`，拒绝必填原因）。
+- **资源**：ConsultationAppController `/app/consultations`（列表 / `{id}` / `{consultantId}/slots` / `{consultantId}/book`）；RoomAppController `/app/rooms`（GET、POST `/{roomId}/book`）；EquipmentAppController `/app/equipment`（GET、`/categories`、`/{id}`、`/{equipmentId}/book`）。
+- **教师端**：TeacherAuditController `/teacher/bookings`（GET 我名下申请、`PATCH /{id}/approve|reject`），Service/Impl + TeacherAuditRequest。
+- **咨询沟通**：ConsultChatAppController `/app/chat/consult/conversations/**`（列表、unread-count、open-with-consultant/open-with-student/open-by-booking、消息按 afterId 增量拉取、发消息、已读），参与者本人鉴权。
+- **余量（给 KB）**：AvailabilityController `GET /appointments/availability`（内网签名）+ `/appointments/mine`。
+- **轮播图**：`carousel/` 子包 CarouselAdminController（/admin/carousel，GET/POST/DELETE/{id}/reorder）、CarouselAppController（GET /app/carousel）。
+- **领域实体**：Service、ServiceCategory、AppointmentRecord、Consultant、TimeSlot、Room、Equipment、ConsultChatConversation、ConsultChatMessage。
+- **定时/MQ**：infrastructure/task/BookingAutoCompleteTask（60s 扫描过期置 COMPLETED）+ AppointmentScheduleConfig；infrastructure/mq/BookingEventPublisher + RabbitMqConfig（发 appointment.changed）。
+
+### cas-module-system
+- controller/app：LoginController（`POST /auth/login`、`/auth/reset`）、RegisterController（`POST /auth/register`）、EmailController（`POST /auth/verification-code`）、GraphicController（`GET /captcha`）。
+- controller/admin：UserController（`@RequestMapping("/users")`：`/`、`/me`、`/list`、POST、PUT `/me`、`/me/notify` GET/PUT、PUT `/password`、GET `/me/bookings`）、RoleAdminController（`/admin/users/role` GET/PUT）、NotifyPolicyAdminController（`/admin/settings/notify` GET/PUT）、EmailAdminController（`POST /admin/email`）。
+- aspect/RoleAspect：**已修复**——权限不足抛 `ForbiddenException`/`UnauthorizedException`，由 GlobalExceptionHandler 统一返回；超管放行全部，TEACHER 可访问开放给 USER 的接口，教师专属接口须显式列 TEACHER。
+- api：UserInfoApi（供 appointment 取用户信息）、GetUserIdViaTokenApi。
+- 另有 NotificationPolicy*（全局策略 + 用户偏好）、BookingRecord*（我的预约视图）。
+
+### cas-module-infra
+- FileAdminController `POST /admin/files`（本地上传，绝对路径 transferTo，支持子目录 uuid 命名）、OSSAdminController `POST /admin/files/oss`；QRCodeAppController `GET /app/qr-code`。
+- FileService / EmailService（@Async，JavaMail 465 SSL）/ QRCodeService（Hutool → OSSService）。无 domain 层。
+
+### cas-thirdparty（注意：AI 对话链已整体删除）
+- 现存：WeatherController（`GET /weather`、`/weather/local`）、WeatherApi(Impl)、OSSService(Impl)、SmsService(Impl)、AliyunConfig、OSSConfig，infrastructure/config 下 **QwenConfig / DeepSeekConfig 为无注入的孤儿配置类**。
+- 已于 **2026-09-07 下线删除**：CallTheModelController、CallModelService(Impl)、ChatReqVO/RespVO、AiChatHistory 实体/DO/Mapper/Repository、`ai_chat_history` 表（Flyway V1 已同步裁剪）。不要再恢复或引用 `/ai/chat`、`/callTheLargeModel`。AI 对话唯一存储在 kb-service 的 conversation 表。
+
+### cas-server
+- CampusAppointmentApplication（@SpringBootApplication + @MapperScan("com.laoliu.cas.**.mapper") + @ComponentScan("com.laoliu.cas")）。
+- DbResetConfig：仅当环境变量 `APP_DB_RESET_ON_STARTUP=true`（compose 演示模式）时启动 clean+migrate。
+- controller/ConfigDemoController（`GET /config-demo/greeting`，Nacos 热更新演示）、SentinelDemoController（`GET /sentinel-demo/limited`）。
+- resources：application.yml（无 application.yml.example，无明文密钥，全部环境变量 + 本地默认值）、db/migration/V1~V5。
+
+## 数据库（Flyway V1~V5，全新机器零手工 SQL）
+
+| 表 | 要点 |
+|---|---|
+| `user` | role：0 普通用户 / 1 管理员 / 2 超管 / **3 教师**；email_notify 偏好 |
+| `notification_policy` | 全局单行，邮件通道开关 |
+| `service_category` | 固定 4 类（教师咨询/设备借用/教室空间/活动报名），不可在管理端增删改 |
+| `services` | category_id（代码级外键）、campus(cq/xs)、image_url、capacity(-1 不限)、booked_count |
+| `consultant` / `time_slot` | 咨询师挂校区服务；可约时段落库（非硬编码） |
+| `room` | 教室 + 校区；同间同时段唯一 |
+| `equipment` | total_stock / available_stock / unit / location |
+| `item` | 预约单：service_id + 资源列其一（consultant_id/slot_id… 或 room_id… 或 equipment_id/quantity）；manage_status 0待审/1通过/2拒绝/3取消/4完成；reason |
+| `carousel` | image_url / sort / enabled（≤6） |
+| `consult_chat_conversation` / `consult_chat_message` | V5 新增，学生⇄教师 1:1 唯一会话；read_flag 未读 |
+
+种子：V1 两校区服务/咨询师/教室/设备/轮播图/分类；V2 admin@campus.com、user@campus.com（密码 123456）；V3 教师账号 + 咨询师回填。
+
+**迁移约定**：V*.sql 只面向全新库做增量建表/种子，不写 ALTER 既有表；已上线库的结构演进直接对库执行 SQL，参考 `UPGRADE-service-category.md`、`UPGRADE-teacher-role.md`。禁止改写历史 V 文件（checksum）。`sql/` 目录是演进/参考脚本，不参与 Flyway。
+
+## 关键业务规则
+
+- **防冲突**：咨询/教室按时段重叠查询 + 行级锁；设备 `available_stock`、活动 `capacity/booked_count` 原子扣减；取消/拒绝回补。活动容量够即直通成功（无人工审核）。
+- **幂等**：下单 SQL 60s 窗口同用户同服务去重，重复返回 `BOOKING_REPEATED`。
+- **审核邮件**：全局策略 + 用户 `email_notify` 双开关；拒绝必填原因。
+- **统一返回**：`CommonResult<T>`（cas-common.result）；业务错误抛 `BusinessException(ErrorCode)`，由 starter-web 的 GlobalExceptionHandler 兜底，禁止 Controller 手写 JSON / try-catch。
+- **错误码**：`*ErrorCode` 接口（Book/Common/Email/Login/Role/Service/ServiceStatus/User/Chat），历史上 HTTP 码与领域码混用，新增时向领域码靠拢。
+
+## 编码约定
+
+Do：Controller 返回 `CommonResult<T>`；用 `SecurityFrameworkUtils` 取当前用户；用 `@RequireRole` 鉴权；跨模块走 `api/`；domain 保持纯 Java + Lombok；Mapper XML 放 `classpath*:/mapper/**/*.xml`；新密钥走环境变量并在 `.env.example` 登记。
+
+Don't：cas-server/cas-common 写业务；跨模块直接注入 Mapper；注入 HttpServletRequest 取用户；`CommonResult.error("字符串")`；domain 加 Spring 注解；application.yml 放真实凭据；恢复已下线的 Qwen AI 链。
+
+## 测试现状
+
+82 个 `@Test` / 13 个测试类（JUnit5 + Mockito，纯单元测试，不起 Docker）：
+- appointment（41）：BookServiceImplTest 15、ServiceStatusServiceImplTest 10、ServiceServiceImplTest 8、TeacherAuditServiceImplTest 5、AvailabilityControllerTest 3。
+- system（30）：AuthServiceTest 15、RoleServiceImplTest 10、EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
+- infra（5）：QRCodeServiceImplTest 3、EmailServiceImplTest 2。
+- thirdparty（6）：WeatherApiImplTest 4、SmsServiceImplTest 2。
+
+## 仍存在的已知限制（真实，未修）
+
+1. Error code 口径不统一（HTTP 码 / 领域码混用）。
+2. CAS 用 `CommonResult`，KB 用 `ApiResponse`，跨服务响应模型未统一（牵涉前端契约）。
+3. Maven groupId 不统一（com.laoliu vs com.kb）。
+4. DTO 命名混用（*ReqVO / *Request / *DTO / *RespVO）。
+5. `QwenConfig` / `DeepSeekConfig` 是孤儿配置类，可删。
+6. Sentinel 已接入但 Nacos 流控规则为空，预留生产调优。
+7. KB 侧消费 appointment.changed 仅记日志，索引更新 TODO（属 kb-service）。

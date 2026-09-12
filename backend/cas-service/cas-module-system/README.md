@@ -6,7 +6,7 @@
 - **认证**：登录（图形验证码）、注册（邮箱验证码）、忘记密码；`/auth` 分组。
 - **验证码**：算术 CAPTCHA（Hutool，Redis 存答案 TTL）、邮箱 6 位验证码（Redis 限频 60s）。
 - **密码**：BCrypt 存储；个人中心改密 `PUT /users/password`（校验旧密码）。
-- **角色权限**：`@RequireRole` 注解 + `RoleAspect` AOP 拦截，三级角色 USER/ADMIN/SUPER_ADMIN。
+- **角色权限**：`@RequireRole` 注解 + `RoleAspect` AOP 拦截（权限不足抛异常走全局处理器），四级角色 USER(0)/ADMIN(1)/SUPER_ADMIN(2)/TEACHER(3)；超管全放行，教师可访问开放给 USER 的接口，教师专属接口须显式列 TEACHER。
 - **通知偏好**：`notification_policy`（全局单行）+ `user.email_notify` 用户开关。
 - **文件上传集成**：验证码图片经 `infra.FileService` 落 `uploads/captcha/`。
 
@@ -37,7 +37,7 @@ com.laoliu.cas.system
 | `POST /admin/email` | 管理端邮件接口（用途见 `EmailAdminController`） |
 
 ## 数据表（Flyway V1）
-`user`（role 0/1/2 · email_notify）、`notification_policy`（单行策略）。
+`user`（role 0 普通/1 管理员/2 超管/3 教师 · email_notify）、`notification_policy`（单行策略）。
 
 ## 依赖
 依赖 `cas-module-infra`（邮件/文件）；被 `cas-module-appointment` 依赖（经 `UserInfoApi` 取用户）。

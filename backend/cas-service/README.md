@@ -19,11 +19,11 @@ CAS 以 **杭州师范大学两校区（仓前 cq / 下沙 xs）** 建模：服�
 ```
 cas-service/
 ├── cas-dependencies    依赖 BOM（第三方版本统一）
-├── cas-framework       框架聚合：cas-common + 各 cas-spring-boot-starter-*（web/security/mybatis/redis/test）
+├── cas-framework       框架聚合：cas-common + 各 cas-spring-boot-starter-*（web/security/mybatis/redis/mq/test）
 ├── cas-module-infra    基础设施服务：本地文件上传(按子目录 uuid 命名)、OSS、二维码、邮件
 ├── cas-module-system   用户与账号：登录/注册/图形验证码/邮箱验证码/忘记密码/改密/角色/通知策略
 ├── cas-module-appointment  预约核心：服务目录、四类预约、审核、时段/库存防冲突、自动完成、轮播图
-├── cas-thirdparty      第三方集成：天气 / Qwen AI(/ai) / 阿里云
+├── cas-thirdparty      第三方集成：天气 / 阿里云 OSS / 短信（旧 Qwen AI 对话已下线）
 └── cas-server          启动入口：application.yml、@MapperScan、Demo 控制器、Flyway 脚本
 ```
 
@@ -67,22 +67,28 @@ notification_policy 全局通知策略（单行，邮件通道开关）
 | 分组 | 控制器路径 | 说明 |
 |---|---|---|
 | 账号 | `POST /auth/login|/reset`、`POST /auth/register`、`POST /auth/verification-code`、`GET /captcha`、`GET/PUT /users/*` | 登录/忘记密码/邮箱验证码注册/图形验证码/资料·改密 |
+| 服务分类 | `GET /app/service-categories` | 固定 4 类字典（教师咨询/设备借用/教室空间/活动报名），只读 |
 | 服务目录 | `GET /app/services`（列表/详情/`mine`） | 用户端浏览服务（带分类/校区/封面） |
 | 预约 | `POST /app/bookings/room\|equipment\|consultation`、`GET /app/bookings/{id}` | 三类资源预约；`/app/bookings/mine` 我的预约 |
-| 咨询资源 | `GET /app/consultations`、`GET /app/consultations/{id}/slots` | 咨询师列表 / 可约时段 |
-| 教室/设备资源 | `GET /app/rooms`、`POST /app/rooms/{id}/book`、`GET /app/equipment(/categories)` | 资源浏览（详情含时段/库存） |
-| 余量 | `GET /appointments/availability` | 实时余量（供 KB Function Calling 只读调用，内网签名鉴权） |
+| 咨询资源 | `GET /app/consultations`、`GET /app/consultations/{consultantId}/slots` | 咨询师列表 / 可约时段 |
+| 教室/设备资源 | `GET /app/rooms`、`POST /app/rooms/{roomId}/book`、`GET /app/equipment(/categories)` | 资源浏览（详情含时段/库存） |
+| 咨询沟通 | `/app/chat/consult/conversations/**` | 学生⇄教师 1:1 留言：会话列表/未读数/打开会话/发消息/已读（参与者鉴权） |
+| 教师端 | `GET /teacher/bookings` | 教师查看并审核自己名下咨询预约（`PATCH` 通过/拒绝） |
+| 余量 | `GET /appointments/availability`、`GET /appointments/mine` | 实时余量（供 KB Function Calling 只读调用，内网签名鉴权） |
 | 轮播图 | `GET /app/carousel`、`GET/POST/DELETE /admin/carousel`、`POST /admin/carousel/reorder` | 用户端启用列表；管理端上传(≤6)/删除/拖拽排序 |
-| 管理端 | `GET /admin/services`(+`PUT`)、`GET/POST /admin/bookings`、`GET/PUT /admin/users`、`GET/PUT /admin/settings/notify`、`POST /admin/files` | 服务治理/预约审核/用户角色/通知策略/封面上传 |
-| 其他 | `GET /weather/local`、`POST /ai/chat`、`GET /app/qr-code`、`GET /config-demo/greeting`、`GET /sentinel-demo/limited` | 天气 / AI / 二维码 / Nacos 热更新与 Sentinel 演示 |
+| 管理端 | `GET/PUT /admin/services`、`GET/PATCH /admin/bookings`、`GET/PUT /admin/users`、`GET/PUT /admin/settings/notify`、`POST /admin/files` | 服务治理/预约审核/用户角色/通知策略/封面上传 |
+| 其他 | `GET /weather`、`GET /weather/local`、`GET /app/qr-code`、`GET /config-demo/greeting`、`GET /sentinel-demo/limited` | 天气 / 二维码 / Nacos 热更新与 Sentinel 演示 |
 
 ## 数据库迁移与种子（Flyway）
 
 迁移位于 `cas-server/src/main/resources/db/migration/`：
-- `V1__init_schema.sql` —— 全部建表 + 校区种子：cq/xs 两套服务目录、咨询师（仓前肖/周/刘/石/管、下沙姚/裘/孙/管）、教室（勤园/恕园/A~E 号楼）、设备、初始轮播图 6 张。
+- `V1__init_schema.sql` —— 全部建表 + 校区种子：cq/xs 两套服务目录、咨询师（仓前肖/周/刘/石/管、下沙姚/裘/孙/管）、教室（勤园/恕园/A~E 号楼）、设备、初始轮播图 6 张、服务分类字典。
 - `V2__seed_initial_users.sql` —— 初始账号：`admin@campus.com` 与 `user@campus.com`，密码均 `123456`（BCrypt，登录后请改密）。
+- `V3__seed_teacher_users.sql` —— 教师账号种子 + 咨询师 `user_id` 回填（教师端登录用）。
+- `V4__service_category.sql` —— `service_category` 分类表 + 固定 4 类种子（教师咨询/设备借用/教室空间/活动报名）。
+- `V5__consult_chat.sql` —— 咨询沟通 `consult_chat_conversation` / `consult_chat_message`（学生⇄教师 1:1，仅新增表）。
 
-新机器首次启动 CAS 自动建库建表；**已有库**不改写历史 `V*.sql`（Flyway checksum），结构演进直接对库执行 SQL（约定见 `../README.md`）。
+新机器首次启动 CAS 自动建库建表；**已有库**不改写历史 `V*.sql`（Flyway checksum），结构演进直接对库执行 SQL 或按 `UPGRADE-*.md` 操作（约定见 `../README.md`）。
 
 ## 构建 / 运行 / 测试
 
@@ -94,7 +100,7 @@ cd ../..
 # 构建产物
 mvn clean package -DskipTests     # cas-server/target/cas-server-1.0.0.jar
 
-# 测试（appointment/infra/system/thirdparty 共 73 个测试方法）
+# 测试（appointment/system/infra/thirdparty 共 82 个测试方法 / 13 个测试类）
 mvn -B -pl cas-service -am test
 ```
 
