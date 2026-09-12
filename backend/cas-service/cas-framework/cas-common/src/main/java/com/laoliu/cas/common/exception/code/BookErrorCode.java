@@ -39,6 +39,14 @@ public interface BookErrorCode {
 
     ErrorCode BORROW_TIME_INVALID = new ErrorCode(40016, "借用时间不合法，请检查日期与起止时段");
 
+    /**
+     * 设备借用必须走专用端点。
+     * 通用下单只传 serviceId，拿不到 equipmentId / 借用时段 / 数量，
+     * 既无法参与设备的时段占用校验（可超借），又会让 services.booked_count
+     * 与 equipment.available_stock 两套库存口径分裂。
+     */
+    ErrorCode EQUIPMENT_REQUIRE_DEDICATED_API = new ErrorCode(40020, "设备借用请使用设备专用接口：POST /app/equipment/{equipmentId}/book");
+
     // ========== 教室时段预约 ==========
 
     ErrorCode BOOK_TIME_INVALID = new ErrorCode(40017, "预约时间段不合法，请检查日期与起止时间");

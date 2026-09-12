@@ -59,6 +59,12 @@ public class BookServiceImpl implements BookService {
             if (!service.isAvailable()) {
                 throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
             }
+            // 设备借用必须走专用端点 /app/equipment/{equipmentId}/book。
+            // 通用下单拿不到 equipmentId/时段/数量：既无法参与设备时段占用校验（会超借），
+            // 又会让 services.booked_count 与 equipment.available_stock 两套口径分裂。
+            if ("equipment".equals(service.getCategoryCode())) {
+                throw new BusinessException(BookErrorCode.EQUIPMENT_REQUIRE_DEDICATED_API, sid);
+            }
             // 活动预约：容量够即直通，不走人工审核（categoryId → service_category.code）
             if ("activity".equals(service.getCategoryCode())) {
                 activityServiceIds.add(sid.intValue());
