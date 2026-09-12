@@ -26,10 +26,14 @@ public class LoginController {
 
     private final AuthService authService;
 
-    @Operation(summary = "用户登录", description = "用户通过邮箱和密码登录，返回JWT令牌")
+    @Operation(summary = "用户登录", description = "用户通过邮箱、密码和图形验证码登录，返回JWT令牌")
     @PostMapping("/login")
     public CommonResult<String> login(@Valid @RequestBody UserLoginRequest userLoginRequest) {
-        String token = authService.login(userLoginRequest.getEmail(), userLoginRequest.getPassword());
+        String token = authService.login(
+                userLoginRequest.getEmail(),
+                userLoginRequest.getPassword(),
+                userLoginRequest.getCaptchaUuid(),
+                userLoginRequest.getCaptchaCode());
         return CommonResult.success(token);
     }
 

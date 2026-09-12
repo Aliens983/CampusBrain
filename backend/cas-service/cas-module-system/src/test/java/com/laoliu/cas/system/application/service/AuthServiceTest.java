@@ -51,11 +51,17 @@ class AuthServiceTest {
     private static final String TOKEN = "jwt.token.string";
     private static final Long USER_ID = 1L;
     private static final String VERIFICATION_CODE = "123456";
+    private static final String CAPTCHA_UUID = "captcha-uuid-001";
+    private static final String CAPTCHA_CODE = "7";
+    private static final String LOGIN_FAIL_KEY = "login:fail:" + EMAIL;
+
+    @Mock
+    private CaptchaService captchaService;
 
     @BeforeEach
     void setUp() {
         passwordUtilsMock = mockStatic(PasswordUtils.class);
-        authService = new AuthService(userRepository, jwtUtils, new PasswordUtils(), redisUtil);
+        authService = new AuthService(userRepository, jwtUtils, new PasswordUtils(), redisUtil, captchaService);
     }
 
     @AfterEach
@@ -70,9 +76,10 @@ class AuthServiceTest {
     class LoginTests {
 
         @Test
-        @DisplayName("应当成功登录并返回 JWT Token")
+        @DisplayName("应当成功登录并返回 JWT Token，且清零失败计数")
         void shouldLoginSuccessfully() {
             // Given
+            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(null);
             when(userRepository.getEncodePasswordByEmail(EMAIL)).thenReturn(ENCODED_PASSWORD);
             passwordUtilsMock.when(() -> PasswordUtils.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
             when(userRepository.getUserIdByEmail(EMAIL)).thenReturn(USER_ID);
@@ -80,14 +87,16 @@ class AuthServiceTest {
             when(jwtUtils.generateToken(any(LoginUser.class))).thenReturn(TOKEN);
 
             // When
-            String result = authService.login(EMAIL, PASSWORD);
+            String result = authService.login(EMAIL, PASSWORD, CAPTCHA_UUID, CAPTCHA_CODE);
 
             // Then
             assertNotNull(result);
             assertEquals(TOKEN, result);
+            verify(captchaService).validateCaptcha(CAPTCHA_UUID, CAPTCHA_CODE);
             verify(userRepository).getEncodePasswordByEmail(EMAIL);
             verify(userRepository).getUserIdByEmail(EMAIL);
             verify(jwtUtils).generateToken(any(LoginUser.class));
+            verify(redisUtil).delete(LOGIN_FAIL_KEY);
         }
 
         @Test
@@ -95,37 +104,70 @@ class AuthServiceTest {
         void shouldThrowExceptionWhenEmailOrPasswordEmpty() {
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> authService.login(null, PASSWORD));
+                    () -> authService.login(null, PASSWORD, CAPTCHA_UUID, CAPTCHA_CODE));
             assertEquals(UserErrorCode.EMAIL_OR_PASSWORD_EMPTY.getCode(), exception.getCode());
 
             exception = assertThrows(BusinessException.class,
-                    () -> authService.login(EMAIL, null));
+                    () -> authService.login(EMAIL, null, CAPTCHA_UUID, CAPTCHA_CODE));
             assertEquals(UserErrorCode.EMAIL_OR_PASSWORD_EMPTY.getCode(), exception.getCode());
         }
 
         @Test
-        @DisplayName("用户不存在时应当抛出 USER_NOT_EXIST 异常")
+        @DisplayName("用户不存在时应当抛出 USER_NOT_EXIST 异常并记录一次失败")
         void shouldThrowExceptionWhenUserNotExist() {
             // Given
+            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(null);
             when(userRepository.getEncodePasswordByEmail(EMAIL)).thenReturn(null);
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> authService.login(EMAIL, PASSWORD));
+                    () -> authService.login(EMAIL, PASSWORD, CAPTCHA_UUID, CAPTCHA_CODE));
             assertEquals(UserErrorCode.USER_NOT_EXIST.getCode(), exception.getCode());
+            verify(redisUtil).increment(LOGIN_FAIL_KEY);
         }
 
         @Test
-        @DisplayName("密码错误时应当抛出 PASSWORD_ERROR 异常")
+        @DisplayName("密码错误时应当抛出 PASSWORD_ERROR 异常并记录一次失败")
         void shouldThrowExceptionWhenPasswordError() {
             // Given
+            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(null);
             when(userRepository.getEncodePasswordByEmail(EMAIL)).thenReturn(ENCODED_PASSWORD);
             passwordUtilsMock.when(() -> PasswordUtils.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(false);
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> authService.login(EMAIL, PASSWORD));
+                    () -> authService.login(EMAIL, PASSWORD, CAPTCHA_UUID, CAPTCHA_CODE));
             assertEquals(UserErrorCode.PASSWORD_ERROR.getCode(), exception.getCode());
+            verify(redisUtil).increment(LOGIN_FAIL_KEY);
+        }
+
+        @Test
+        @DisplayName("图形验证码校验不通过时应当直接抛出，且不再查询用户密码")
+        void shouldThrowExceptionWhenCaptchaInvalid() {
+            // Given
+            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(null);
+            doThrow(new BusinessException(UserErrorCode.VERIFICATION_CODE_ERROR))
+                    .when(captchaService).validateCaptcha(CAPTCHA_UUID, CAPTCHA_CODE);
+
+            // When & Then
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> authService.login(EMAIL, PASSWORD, CAPTCHA_UUID, CAPTCHA_CODE));
+            assertEquals(UserErrorCode.VERIFICATION_CODE_ERROR.getCode(), exception.getCode());
+            verify(userRepository, never()).getEncodePasswordByEmail(any());
+        }
+
+        @Test
+        @DisplayName("失败次数达到阈值时应当抛出 LOGIN_FAILED_TOO_MANY_TIMES 且不再消耗验证码")
+        void shouldThrowExceptionWhenLoginLocked() {
+            // Given
+            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(5L);
+
+            // When & Then
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> authService.login(EMAIL, PASSWORD, CAPTCHA_UUID, CAPTCHA_CODE));
+            assertEquals(UserErrorCode.LOGIN_FAILED_TOO_MANY_TIMES.getCode(), exception.getCode());
+            verifyNoInteractions(captchaService);
+            verify(userRepository, never()).getEncodePasswordByEmail(any());
         }
     }
 

@@ -24,4 +24,12 @@ public class UserLoginRequest {
     @Size(min = 6, message = "密码长度至少6位")
     @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "password123")
     private String password;
+
+    @NotBlank(message = "图形验证码不能为空")
+    @Schema(description = "图形验证码答案（GET /captcha 返回图片上的算术结果）", requiredMode = Schema.RequiredMode.REQUIRED, example = "7")
+    private String captchaCode;
+
+    @NotBlank(message = "验证码标识不能为空")
+    @Schema(description = "图形验证码 uuid，由 GET /captcha 返回", requiredMode = Schema.RequiredMode.REQUIRED)
+    private String captchaUuid;
 }

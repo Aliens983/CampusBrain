@@ -190,6 +190,7 @@ const resetFormRef = ref<FormInstance>()
 const loading = ref(false)
 const sendingCode = ref(false)
 const captchaImage = ref('')
+const captchaUuid = ref('')
 const resetMode = ref(false)
 
 const loginForm = reactive({
@@ -221,11 +222,14 @@ const resetRules: FormRules = {
 async function refreshCaptcha() {
   try {
     const response = await request.get('/captcha') as unknown as { uuid: string; imageUrl: string }
+    // uuid 需随验证码答案一起提交；图形验证码一次性，提交后即失效
+    captchaUuid.value = response.uuid
     // 后端返回 http://localhost:18080/api/v1/uploads/xxx.png
     // 转为走Vite代理的路径 /api/uploads/xxx.png
     const path = new URL(response.imageUrl).pathname.replace('/api/v1', '')
     captchaImage.value = '/api' + path
   } catch {
+    captchaUuid.value = ''
     captchaImage.value = ''
     ElMessage.warning('验证码加载失败，点击刷新重试')
   }
@@ -256,6 +260,8 @@ async function handleLogin() {
     const loginResult = await request.post<string>('/auth/login', {
       email: loginForm.email,
       password: loginForm.password,
+      captchaUuid: captchaUuid.value,
+      captchaCode: loginForm.captcha,
     })
 
     const token = extractToken(loginResult) || String(loginResult || '')
@@ -266,6 +272,9 @@ async function handleLogin() {
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '登录失败，请检查账号和密码')
+    // 图形验证码一次性：提交后即失效，登录失败需重新拉取并清空已填答案
+    loginForm.captcha = ''
+    await refreshCaptcha()
   } finally {
     loading.value = false
   }

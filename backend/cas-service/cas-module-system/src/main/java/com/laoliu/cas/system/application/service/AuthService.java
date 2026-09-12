@@ -13,6 +13,8 @@ import com.laoliu.cas.system.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * @author forever-king
  */
@@ -20,26 +22,61 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AuthService {
 
+    /** 同一账号允许的最大连续登录失败次数，达到后临时锁定 */
+    private static final int MAX_LOGIN_FAIL = 5;
+    /** 达到失败阈值后的锁定时长（秒） */
+    private static final long LOGIN_FAIL_LOCK_SECONDS = 15 * 60;
+    /** 登录失败计数在 Redis 中的 key 前缀 */
+    private static final String LOGIN_FAIL_KEY_PREFIX = "login:fail:";
+
     private final UserRepository userRepository;
     private final JWTUtils jwtUtils;
     private final PasswordUtils passwordUtils;
     private final RedisUtil redisUtil;
+    private final CaptchaService captchaService;
 
-    /** 用户登录 */
-    public String login(String email, String password) {
+    /**
+     * 用户登录。
+     * <p>
+     * 校验顺序：失败限频 → 图形验证码 → 账号密码。
+     * 图形验证码为一次性，密码错误也会作废当前验证码，需重新获取。
+     */
+    public String login(String email, String password, String captchaUuid, String captchaCode) {
         if (email == null || password == null) {
             throw new BusinessException(UserErrorCode.EMAIL_OR_PASSWORD_EMPTY);
         }
 
+        // 1. 限频前置：已锁定账号直接拒绝，避免继续消耗验证码
+        String failKey = LOGIN_FAIL_KEY_PREFIX + email;
+        Long failCount = redisUtil.get(failKey);
+        if (failCount != null && failCount >= MAX_LOGIN_FAIL) {
+            throw new BusinessException(UserErrorCode.LOGIN_FAILED_TOO_MANY_TIMES);
+        }
+
+        // 2. 图形验证码校验（一次性）
+        captchaService.validateCaptcha(captchaUuid, captchaCode);
+
+        // 3. 校验账号与密码
         String encodePassword = userRepository.getEncodePasswordByEmail(email);
         if (encodePassword == null) {
+            recordLoginFailure(failKey);
             throw new BusinessException(UserErrorCode.USER_NOT_EXIST);
         }
         if (passwordUtils.matches(password, encodePassword)) {
+            redisUtil.delete(failKey);
             Long userId = userRepository.getUserIdByEmail(email);
             return jwtUtils.generateToken(buildLoginUser(userId, email));
         }
+        recordLoginFailure(failKey);
         throw new BusinessException(UserErrorCode.PASSWORD_ERROR);
+    }
+
+    /** 记录一次登录失败：原子自增计数，首次失败时设定锁定期 */
+    private void recordLoginFailure(String failKey) {
+        Long count = redisUtil.increment(failKey);
+        if (count != null && count == 1L) {
+            redisUtil.expire(failKey, LOGIN_FAIL_LOCK_SECONDS, TimeUnit.SECONDS);
+        }
     }
 
     /** 重置密码 */

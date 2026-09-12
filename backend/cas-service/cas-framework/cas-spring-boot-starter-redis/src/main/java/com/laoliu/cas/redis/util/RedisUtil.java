@@ -49,6 +49,18 @@ public class RedisUtil {
         return redisTemplate.getExpire(key, unit);
     }
 
+    // ========== 计数（限频/限次） ==========
+
+    /** 自增 1，返回自增后的值（Redis INCR，原子操作，适合并发限频） */
+    public Long increment(String key) {
+        return redisTemplate.opsForValue().increment(key);
+    }
+
+    /** 自增指定步长，返回自增后的值 */
+    public Long increment(String key, long delta) {
+        return redisTemplate.opsForValue().increment(key, delta);
+    }
+
     // ========== Hash 操作 ==========
 
     public <T> void hSet(String key, String field, T value) {

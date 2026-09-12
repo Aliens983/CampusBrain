@@ -69,4 +69,12 @@ public interface UserErrorCode {
 
     ErrorCode USER_ROLE_ERROR = new ErrorCode(20021, "用户角色权限不足");
 
+    // ========== 登录保护 ==========
+
+    /** 同一账号连续登录失败达到阈值后被临时锁定 */
+    ErrorCode LOGIN_FAILED_TOO_MANY_TIMES = new ErrorCode(20023, "登录失败次数过多，账号已被临时锁定，请15分钟后再试");
+
+    /** 图形验证码缺失（登录必须携带） */
+    ErrorCode CAPTCHA_REQUIRED = new ErrorCode(20024, "请先完成图形验证码校验");
+
 }
