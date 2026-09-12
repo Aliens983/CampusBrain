@@ -2,7 +2,6 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.BookService;
 import com.laoliu.cas.appointment.interfaces.dto.request.BookServiceRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.SpecializedBookingRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.BookingDTO;
 import com.laoliu.cas.appointment.interfaces.dto.response.BookResultResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
@@ -74,44 +73,13 @@ public class BookAppController {
         return CommonResult.success(booking);
     }
 
-    @Operation(summary = "预约会议室", description = "预约会议室服务")
-    @PostMapping("/room")
-    public CommonResult<BookResultResponse> bookRoom(@Valid @RequestBody SpecializedBookingRequest request) {
-        Long serviceId = request.extractServiceId();
-        if (serviceId == null) {
-            return CommonResult.badRequest("会议室ID不能为空");
-        }
-        return doSpecializedBooking(serviceId, "会议室预约成功");
-    }
-
-    @Operation(summary = "预约设备", description = "预约设备借用服务")
-    @PostMapping("/equipment")
-    public CommonResult<BookResultResponse> bookEquipment(@Valid @RequestBody SpecializedBookingRequest request) {
-        Long serviceId = request.extractServiceId();
-        if (serviceId == null) {
-            return CommonResult.badRequest("设备ID不能为空");
-        }
-        return doSpecializedBooking(serviceId, "设备预约成功");
-    }
-
-    @Operation(summary = "预约咨询", description = "预约咨询服务")
-    @PostMapping("/consultation")
-    public CommonResult<BookResultResponse> bookConsultation(@Valid @RequestBody SpecializedBookingRequest request) {
-        Long serviceId = request.extractServiceId();
-        if (serviceId == null) {
-            return CommonResult.badRequest("咨询师ID不能为空");
-        }
-        return doSpecializedBooking(serviceId, "咨询预约成功");
-    }
-
-    /**
-     * 执行专项预约并构建响应
-     */
-    private CommonResult<BookResultResponse> doSpecializedBooking(Long serviceId, String successMsg) {
-        Long userId = getUserIdViaTokenApi.getUserId();
-        UserInfoDTO userInfo = bookService.bookService(userId, Collections.singletonList(serviceId));
-        return CommonResult.success(successMsg, buildBookResult(userInfo, userId));
-    }
+    // 注：原 /room、/equipment、/consultation 三个「专项预约」端点已移除。
+    // 它们把 roomId / equipmentId / consultantId 误当作 serviceId 直接传入 bookService，
+    // 且丢弃 date / startTime / endTime / purpose 等预约要素，语义错误且是误用陷阱。
+    // 资源类预约请改用各自的正确端点：
+    //   · 教室 → RoomAppController         POST /app/rooms/{roomId}/book
+    //   · 设备 → EquipmentAppController    POST /app/equipment/{equipmentId}/book
+    //   · 咨询 → ConsultationAppController POST /app/consultations/{consultantId}/book
 
     /**
      * 构建预约结果响应
