@@ -4,7 +4,7 @@
 
 > **AI 对话能力已下线（2026-09-07）**：旧的 Qwen `/ai/chat`（CallTheModelController/CallModelService/ChatReqVO/RespVO）
 > 及 `ai_chat_history` 整套（entity/DO/mapper/repository/表）均已删除。平台 AI 对话统一由 **kb-service** 的 RAG 问答承担
-> （会话存 KB `conversation` 表）。本模块仅保留 `QwenConfig` / `DeepSeekConfig` 两个**无消费方的孤儿配置类**，可留可删。
+> （会话存 KB `conversation` 表）。原遗留的 `QwenConfig` / `DeepSeekConfig` 孤儿配置类也已于 **2026-09-12 删除**。
 
 ## 核心功能
 - **天气查询**：`GET /weather`、`GET /weather/local`（RestTemplate → cn.apihz.cn）。
@@ -18,7 +18,7 @@ com.laoliu.cas.thirdparty
 ├── interfaces/dto/response/WeatherResponse
 ├── api/WeatherApi + impl/WeatherApiImpl
 ├── application/service/  OSSService(Impl)、SmsService(Impl)
-└── infrastructure/config/ AliyunConfig、OSSConfig、QwenConfig、DeepSeekConfig（后两者孤儿）
+└── infrastructure/config/ AliyunConfig、OSSConfig（原 QwenConfig、DeepSeekConfig 已于 2026-09-12 删除）
 ```
 
 ## 主要接口

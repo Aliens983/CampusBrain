@@ -43,7 +43,7 @@ carousel/        独立子域：controller(CarouselAdminController/CarouselAppCo
 | 分组 | 路径 |
 |---|---|
 | 服务目录 | `GET /app/services`、`/{id}`、`/mine`；`GET /app/service-categories`；`GET/POST /admin/services`、`PUT /admin/services/{id}` |
-| 预约 | `POST /app/bookings`、`POST /app/bookings/{room,equipment,consultation}`、`GET /app/bookings`、`GET /app/bookings/{id}`、`GET /app/bookings/mine` |
+| 预约 | `POST /app/bookings`、`GET /app/bookings`、`GET /app/bookings/{id}`、`GET /app/bookings/mine`、`PATCH /app/bookings/{id}/cancel`（原 `/{room,equipment,consultation}` 三端点已于 2026-09-12 删除，见下方核心规则） |
 | 资源 | `/app/consultations`（+`/{consultantId}/slots`、`/{consultantId}/book`）、`/app/rooms`（+`/{roomId}/book`）、`/app/equipment`（+`/categories`、`/{id}`、`/{equipmentId}/book`） |
 | 审核（管理员） | `GET /admin/bookings`、`PATCH /admin/bookings/{id}/{approve,reject}`（reject 必填原因） |
 | 审核（教师） | `GET /teacher/bookings`、`PATCH /teacher/bookings/{id}/{approve,reject}`（仅本人名下咨询） |
@@ -54,7 +54,9 @@ carousel/        独立子域：controller(CarouselAdminController/CarouselAppCo
 ## 核心规则
 
 - **状态机** `manage_status`：0 待审 / 1 通过 / 2 拒绝 / 3 取消 / 4 完成；拒绝必有 reason。
-- **防冲突**：咨询/教室 = 时段重叠查询 + 行锁（一间教室同时段唯一）；设备 = available_stock 原子扣减；活动 = capacity/booked_count 原子扣减（-1 不限、容量够直通）。取消/拒绝回补。
+- **防冲突**：咨询/教室 = 时段重叠查询 + 行锁（一间教室同时段唯一）；活动 = capacity/booked_count 原子扣减（-1 不限、容量够直通）。取消/拒绝回补。
+- **设备 = 时段重叠动态统计（易误解）**：`equipment.available_stock` 是**静态总台数、不扣减**；占用量由 `sumEquipmentOverlap(设备, 日期, 起止时段)` 统计，借用时校验 `已占用 + 本次数量 ≤ available_stock` 并对设备行加锁。
+- **设备借用必须走专用端点**：`POST /app/bookings`（通用下单）拒绝 `equipment` 类服务，返回 `EQUIPMENT_REQUIRE_DEDICATED_API(40020)`。通用下单不携带 equipmentId/时段/数量，会造成时段占用统计不到而超借。
 - **幂等**：下单 60s 窗口同用户同服务去重，重复返回 BOOKING_REPEATED。
 - **自动完成**：BookingAutoCompleteTask 60s 轮询，窗口过期置 COMPLETED。
 - **事件**：预约创建/取消后 BookingEventPublisher 发 RabbitMQ `appointment.changed`。

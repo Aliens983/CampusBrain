@@ -1,13 +1,13 @@
 # AGENTS.md — cas-service（校园预约系统后端）
 
-> **当前状态（2026-09-11 核对）**：本服务是微服务三件套之一（另有 gateway、kb-service），整体见 `../README.md`。给 AI 助手的完整权威指南见 **`CLAUDE.md`**（模块、接口、约定、已知限制均与代码同步）。
+> **当前状态（2026-09-12 核对）**：本服务是微服务三件套之一（另有 gateway、kb-service），整体见 `../README.md`。给 AI 助手的完整权威指南见 **`CLAUDE.md`**（模块、接口、约定、已知限制均与代码同步）。
 
 ## 快速概览
 
 - **模块**：7 个 Maven 子模块（cas-dependencies BOM → cas-framework 6 starters → infra/thirdparty → system → appointment → server 入口）。
 - **端口**：18080，context-path `/api/v1`，Nacos 注册名 `cas-service`。
 - **技术栈**：Java 17 · Spring Boot 3.3.5 · Spring Cloud Alibaba 2023.0.1.2（Nacos 注册/配置 + Sentinel）· MyBatis-Plus · RabbitMQ · Flyway（V1~V5）。
-- **测试**：82 个 `@Test`（13 个测试类）全绿（`mvn -B -pl cas-service -am test`）。
+- **测试**：84 个 `@Test`（13 个测试类）全绿（`cd cas-service && mvn -B test`；注意 `-pl cas-service -am` 只构建聚合 pom、不跑子模块测试）。
 
 ## 常用命令
 

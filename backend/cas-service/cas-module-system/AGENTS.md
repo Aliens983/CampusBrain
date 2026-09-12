@@ -40,7 +40,7 @@ api/            UserInfoApi + impl/UserInfoApiImpl + dto/UserInfoDTO
 
 ## 关键业务
 
-- **登录**：邮箱+密码（BCrypt 校验）+ 图形验证码 → 签发 JWT。
+- **登录**：邮箱+密码（BCrypt 校验）**+ 图形验证码（必填、一次性）** → 签发 JWT。验证码由 `CaptchaService.validateCaptcha` 校验后立即删除；同一账号连续失败 **5 次锁定 15 分钟**（Redis `login:fail:{email}` 原子 INCR），登录成功清零。⚠ 与前端 `LoginPage.vue` 需同时发布。
 - **注册/重置**：邮箱 6 位验证码（Redis `verification_code:{email}` TTL 300s，限频 `rate_limit:email:{email}` 60s）→ 写库。
 - **验证码**：Hutool 算术验证码，答案存 Redis（captcha:{uuid} TTL 300s），图片经 infra FileService 落 uploads/captcha。
 - **角色**：`UserRoleEnum` USER(0)/ADMIN(1)/SUPER_ADMIN(2)/TEACHER(3)；超管全放行，教师可访问开放给 USER 的接口。
@@ -57,7 +57,7 @@ api/            UserInfoApi + impl/UserInfoApiImpl + dto/UserInfoDTO
 
 ## 测试
 
-4 个测试类 / 30 个 `@Test`：AuthServiceTest 15、RoleServiceImplTest 10、
+4 个测试类 / 32 个 `@Test`：AuthServiceTest 17、RoleServiceImplTest 10、
 EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
 
 ## 依赖与对外 API

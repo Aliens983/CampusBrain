@@ -69,7 +69,7 @@ notification_policy 全局通知策略（单行，邮件通道开关）
 | 账号 | `POST /auth/login|/reset`、`POST /auth/register`、`POST /auth/verification-code`、`GET /captcha`、`GET/PUT /users/*` | 登录/忘记密码/邮箱验证码注册/图形验证码/资料·改密 |
 | 服务分类 | `GET /app/service-categories` | 固定 4 类字典（教师咨询/设备借用/教室空间/活动报名），只读 |
 | 服务目录 | `GET /app/services`（列表/详情/`mine`） | 用户端浏览服务（带分类/校区/封面） |
-| 预约 | `POST /app/bookings/room\|equipment\|consultation`、`GET /app/bookings/{id}` | 三类资源预约；`/app/bookings/mine` 我的预约 |
+| 预约 | `POST /app/bookings`、`GET /app/bookings/{id}`、`GET /app/bookings/mine` | 统一下单 / 详情 / 我的预约；资源预约走 `/app/rooms`、`/app/equipment`、`/app/consultations` 专用端点（原 `/app/bookings/{room,equipment,consultation}` 三端点已于 2026-09-12 删除） |
 | 咨询资源 | `GET /app/consultations`、`GET /app/consultations/{consultantId}/slots` | 咨询师列表 / 可约时段 |
 | 教室/设备资源 | `GET /app/rooms`、`POST /app/rooms/{roomId}/book`、`GET /app/equipment(/categories)` | 资源浏览（详情含时段/库存） |
 | 咨询沟通 | `/app/chat/consult/conversations/**` | 学生⇄教师 1:1 留言：会话列表/未读数/打开会话/发消息/已读（参与者鉴权） |
@@ -100,7 +100,7 @@ cd ../..
 # 构建产物
 mvn clean package -DskipTests     # cas-server/target/cas-server-1.0.0.jar
 
-# 测试（appointment/system/infra/thirdparty 共 82 个测试方法 / 13 个测试类）
+# 测试（appointment/system/infra/thirdparty 共 84 个测试方法 / 13 个测试类）
 mvn -B -pl cas-service -am test
 ```
 

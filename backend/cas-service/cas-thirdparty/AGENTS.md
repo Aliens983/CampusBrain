@@ -4,7 +4,8 @@
 
 > ⚠️ **AI 对话链已整体下线（2026-09-07）**：CallTheModelController、CallModelService(Impl)、
 > ChatReqVO/ChatRespVO、AiChatHistory（entity/DO/mapper/repository）、`ai_chat_history` 表均已删除。
-> 现存 `infrastructure/config/QwenConfig.java`、`DeepSeekConfig.java` 是**无注入方的孤儿配置类**（可留可删，勿据此恢复 AI 功能）。AI 对话唯一入口在 kb-service。
+> 原孤儿配置类 `infrastructure/config/QwenConfig.java`、`DeepSeekConfig.java` 也已于 **2026-09-12 删除**。
+> AI 对话唯一入口在 kb-service，**勿据残留引用恢复 AI 功能**。
 
 ## 文件清单（com.laoliu.cas.thirdparty）
 
@@ -14,8 +15,8 @@ interfaces/
 └── dto/response/    WeatherResponse
 api/               WeatherApi（接口）+ impl/WeatherApiImpl（RestTemplate → cn.apihz.cn）
 application/service/  OSSService(Impl)、SmsService(Impl)
-infrastructure/config/ AliyunConfig（短信 Client bean）、OSSConfig（@ConfigurationProperties(prefix=aliyun.oss)）、
-                        QwenConfig、DeepSeekConfig（孤儿，无消费方）
+infrastructure/config/ AliyunConfig（短信 Client bean）、OSSConfig（@ConfigurationProperties(prefix=aliyun.oss)）
+                        （原 QwenConfig、DeepSeekConfig 孤儿配置类已于 2026-09-12 删除）
 ```
 
 ## 服务说明
@@ -32,7 +33,7 @@ infrastructure/config/ AliyunConfig（短信 Client bean）、OSSConfig（@Confi
 
 ## 已知限制
 
-1. QwenConfig / DeepSeekConfig 孤儿配置，建议删除。
+1. ~~QwenConfig / DeepSeekConfig 孤儿配置，建议删除。~~ ✅ 已于 2026-09-12 删除；`QWEN_API_KEY` / `DEEPSEEK_API_KEY` 现无任何消费方，属历史遗留。
 2. OSS 凭证默认空串，不配置则 `/admin/files/oss` 不可用。
 3. OSSConfig 定义了但 OSSServiceImpl 实际用 @Value。
 4. SMS 无业务调用方。

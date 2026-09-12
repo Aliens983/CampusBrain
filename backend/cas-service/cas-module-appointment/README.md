@@ -28,7 +28,7 @@ com.laoliu.cas.appointment
 |---|---|
 | `GET /app/service-categories` | 固定 4 类分类字典（只读） |
 | `GET /app/services`、`/{id}`、`/mine` | 服务目录浏览 |
-| `POST /app/bookings`、`POST /app/bookings/room\|equipment\|consultation`、`GET /app/bookings/{id}`、`GET /app/bookings/mine` | 资源预约 / 详情 / 我的预约 |
+| `POST /app/bookings`、`GET /app/bookings/{id}`、`GET /app/bookings/mine` | 统一下单 / 详情 / 我的预约（原 `/app/bookings/{room,equipment,consultation}` 三端点已于 2026-09-12 删除，改走各资源专用端点） |
 | `GET /app/consultations`、`/{consultantId}/slots`、`GET /app/rooms`、`GET /app/equipment(/categories)` | 资源与可约数据 |
 | `/app/chat/consult/conversations/**` | 学生⇄教师 1:1 咨询沟通（列表/未读/打开/消息/已读，参与者鉴权） |
 | `GET /teacher/bookings`、`PATCH /teacher/bookings/{id}/approve\|reject` | 教师自审名下咨询档期 |
