@@ -76,8 +76,5 @@ public class EsDocumentEntity {
      * 创建时间，用于排序
      * Creation timestamp for sorting
      */
-    /** 所属租户 ID */
-    private Long tenantId;
-
     private String createdAt;
 }

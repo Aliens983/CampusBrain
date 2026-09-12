@@ -12,7 +12,6 @@ import com.kb.infrastructure.rag.chunker.ChunkerFactory;
 import com.kb.infrastructure.rag.graph.KnowledgeGraphService;
 import com.kb.infrastructure.rag.parser.ParserChain;
 import com.kb.infrastructure.rag.parser.ParserFactory;
-import com.kb.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -81,24 +80,13 @@ public class DocumentProcessingConsumer {
      */
     @RabbitListener(queues = "kb.document.processing.queue")
     public void processDocument(DocumentProcessingMessage message) {
-        Long documentId = message.getDocumentId();
-
-        // 恢复租户上下文（从生产者线程的 HTTP 请求传递到消费者线程）
-        if (message.getTenantId() != null) {
-            TenantContext.setTenant(message.getTenantId());
-        }
-
-        try {
-            processDocumentInternal(message);
-        } finally {
-            TenantContext.clear();
-        }
+        processDocumentInternal(message);
     }
 
     private void processDocumentInternal(DocumentProcessingMessage message) {
         Long documentId = message.getDocumentId();
-        log.info("Processing document: id={}, tenantId={}, forceReprocess={}",
-                documentId, message.getTenantId(), message.isForceReprocess());
+        log.info("Processing document: id={}, forceReprocess={}",
+                documentId, message.isForceReprocess());
 
         Optional<Document> docOpt = documentRepository.findById(documentId);
         if (docOpt.isEmpty()) {
@@ -223,7 +211,6 @@ public class DocumentProcessingConsumer {
             payload.put("content", chunk.getContent());
             payload.put("section_title", chunk.getMetadata() != null
                     ? chunk.getMetadata().getOrDefault("sectionTitle", "") : "");
-            payload.put("tenant_id", TenantContext.getTenantId());
 
             qdrantPoints.add(new VectorStoreService.VectorPoint(
                     chunk.getQdrantId(), vector, payload));
@@ -234,7 +221,6 @@ public class DocumentProcessingConsumer {
                     .documentTitle((String) payload.get("document_title"))
                     .content(chunk.getContent())
                     .chunkIndex(chunk.getChunkIndex())
-                    .tenantId(TenantContext.getTenantId())
                     .createdAt(LocalDateTime.now()
                             .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                     .build());

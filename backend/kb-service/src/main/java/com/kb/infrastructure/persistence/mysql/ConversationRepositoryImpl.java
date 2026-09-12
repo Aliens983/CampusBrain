@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.conversation.ConversationRepository;
 import com.kb.infrastructure.persistence.mysql.dataobject.ConversationDO;
-import com.kb.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -43,7 +42,6 @@ public class ConversationRepositoryImpl implements ConversationRepository {
         convDO.setRole(role);
         convDO.setContent(content);
         convDO.setReferencesJson(toJson(references));
-        convDO.setTenantId(TenantContext.getTenantId());
         conversationMapper.insert(convDO);
         // MyBatis-Plus 自增主键回填
         return convDO.getId();
@@ -94,7 +92,6 @@ public class ConversationRepositoryImpl implements ConversationRepository {
                 .content(convDO.getContent())
                 .references(parseReferences(convDO.getReferencesJson()))
                 .feedback(convDO.getFeedback())
-                .tenantId(convDO.getTenantId())
                 .createdAt(convDO.getCreatedAt())
                 .build();
     }

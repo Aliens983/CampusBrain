@@ -47,9 +47,6 @@ public class Document {
     /** 文档所属用户ID */
     private Long ownerId;
 
-    /** 所属租户 ID（多租户隔离） */
-    private Long tenantId;
-
     /** 文档元数据（如作者、页数、创建日期等） */
     private Map<String, Object> metadata;
 

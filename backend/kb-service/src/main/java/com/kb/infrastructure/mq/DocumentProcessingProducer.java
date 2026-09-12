@@ -1,7 +1,6 @@
 package com.kb.infrastructure.mq;
 
 import com.kb.infrastructure.config.RabbitMqConfig;
-import com.kb.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -36,7 +35,7 @@ public class DocumentProcessingProducer {
      */
     public void send(Long documentId, boolean forceReprocess) {
         DocumentProcessingMessage message = new DocumentProcessingMessage(
-                documentId, forceReprocess, TenantContext.getTenantId());
+                documentId, forceReprocess);
         rabbitTemplate.convertAndSend(
                 RabbitMqConfig.EXCHANGE_DOCUMENT,
                 RabbitMqConfig.ROUTING_KEY_DOCUMENT_PROCESSING,

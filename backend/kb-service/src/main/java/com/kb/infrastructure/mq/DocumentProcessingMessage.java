@@ -24,7 +24,4 @@ public class DocumentProcessingMessage implements Serializable {
 
     /** 是否强制重新处理（即使已处于READY状态） */
     private boolean forceReprocess;
-
-    /** 租户 ID（跨线程传递，消费者线程据此恢复 TenantContext） */
-    private Long tenantId;
 }

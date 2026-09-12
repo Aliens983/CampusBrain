@@ -10,7 +10,6 @@ import com.kb.domain.document.DocumentStatus;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kb.infrastructure.persistence.mysql.dataobject.DocumentChunkDO;
 import com.kb.infrastructure.persistence.mysql.dataobject.DocumentDO;
-import com.kb.infrastructure.tenant.TenantContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -57,37 +56,21 @@ public class DocumentRepositoryImpl implements DocumentRepository {
 
     @Override
     public Optional<Document> findById(Long id) {
-        LambdaQueryWrapper<DocumentDO> wrapper = new LambdaQueryWrapper<DocumentDO>()
-                .eq(DocumentDO::getId, id);
-        Long tenantId = TenantContext.getTenantId();
-        if (tenantId != null) {
-            wrapper.eq(DocumentDO::getTenantId, tenantId);
-        }
-        DocumentDO docDO = documentMapper.selectOne(wrapper);
+        DocumentDO docDO = documentMapper.selectById(id);
         return Optional.ofNullable(docDO).map(this::toDocument);
     }
 
     @Override
     public List<Document> findAll() {
-        return documentMapper.selectList(tenantFilter()).stream()
+        return documentMapper.selectList(null).stream()
                 .map(this::toDocument)
                 .toList();
-    }
-
-    /** 构建租户过滤条件（如果当前设置了租户上下文） */
-    private LambdaQueryWrapper<DocumentDO> tenantFilter() {
-        LambdaQueryWrapper<DocumentDO> wrapper = new LambdaQueryWrapper<>();
-        Long tenantId = TenantContext.getTenantId();
-        if (tenantId != null) {
-            wrapper.eq(DocumentDO::getTenantId, tenantId);
-        }
-        return wrapper;
     }
 
     @Override
     public List<Document> findAll(int page, int size) {
         var pageQuery = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<DocumentDO>(page + 1, size);
-        var result = documentMapper.selectPage(pageQuery, tenantFilter());
+        var result = documentMapper.selectPage(pageQuery, null);
         return result.getRecords().stream().map(this::toDocument).toList();
     }
 
@@ -110,13 +93,7 @@ public class DocumentRepositoryImpl implements DocumentRepository {
 
     @Override
     public void delete(Long id) {
-        LambdaQueryWrapper<DocumentDO> wrapper = new LambdaQueryWrapper<DocumentDO>()
-                .eq(DocumentDO::getId, id);
-        Long tenantId = TenantContext.getTenantId();
-        if (tenantId != null) {
-            wrapper.eq(DocumentDO::getTenantId, tenantId);
-        }
-        int deleted = documentMapper.delete(wrapper);
+        int deleted = documentMapper.deleteById(id);
         if (deleted == 0) {
             return;
         }
@@ -125,12 +102,12 @@ public class DocumentRepositoryImpl implements DocumentRepository {
 
     @Override
     public long count() {
-        return documentMapper.selectCount(tenantFilter());
+        return documentMapper.selectCount(null);
     }
 
     @Override
     public long countByStatus(DocumentStatus status) {
-        LambdaQueryWrapper<DocumentDO> wrapper = tenantFilter()
+        LambdaQueryWrapper<DocumentDO> wrapper = new LambdaQueryWrapper<DocumentDO>()
                 .eq(DocumentDO::getStatus, status.name());
         return documentMapper.selectCount(wrapper);
     }
@@ -179,7 +156,6 @@ public class DocumentRepositoryImpl implements DocumentRepository {
                 .status(DocumentStatus.valueOf(docDO.getStatus()))
                 .chunkCount(docDO.getChunkCount())
                 .ownerId(docDO.getOwnerId())
-                .tenantId(docDO.getTenantId())
                 .metadata(parseJsonMap(docDO.getMetadataJson()))
                 .errorMsg(docDO.getErrorMsg())
                 .createdAt(docDO.getCreatedAt())
@@ -197,7 +173,6 @@ public class DocumentRepositoryImpl implements DocumentRepository {
         docDO.setStatus(doc.getStatus().name());
         docDO.setChunkCount(doc.getChunkCount());
         docDO.setOwnerId(doc.getOwnerId());
-        docDO.setTenantId(doc.getTenantId());
         docDO.setMetadataJson(toJson(doc.getMetadata()));
         docDO.setErrorMsg(doc.getErrorMsg());
         return docDO;

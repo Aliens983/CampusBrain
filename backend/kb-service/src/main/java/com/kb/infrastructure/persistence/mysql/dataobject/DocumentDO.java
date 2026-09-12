@@ -42,9 +42,6 @@ public class DocumentDO {
     /** 文档所属用户ID */
     private Long ownerId;
 
-    /** 所属租户 ID（多租户隔离，null = 个人模式） */
-    private Long tenantId;
-
     /** JSON字符串，存储元数据信息，在Repository实现层进行转换 */
     @TableField("metadata")
     private String metadataJson;

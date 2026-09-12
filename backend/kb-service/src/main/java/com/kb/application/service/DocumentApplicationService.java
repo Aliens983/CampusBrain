@@ -10,7 +10,6 @@ import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.mq.DocumentProcessingProducer;
 import com.kb.infrastructure.rag.parser.ParserRegistry;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
-import com.kb.infrastructure.tenant.TenantContext;
 import com.kb.infrastructure.persistence.elasticsearch.EsDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -94,7 +93,6 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                 .filePath(localPath)
                 .status(DocumentStatus.UPLOADED)
                 .ownerId(SecurityFrameworkUtils.getLoginUserId())
-                .tenantId(TenantContext.getTenantId())
                 .chunkCount(0)
                 .build();
         Document saved = documentRepository.save(doc);

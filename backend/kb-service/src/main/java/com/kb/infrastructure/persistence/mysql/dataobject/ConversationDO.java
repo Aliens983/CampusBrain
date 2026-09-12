@@ -37,9 +37,6 @@ public class ConversationDO {
     /** 用户反馈 */
     private String feedback;
 
-    /** 所属租户 ID（多租户隔离） */
-    private Long tenantId;
-
     /** 创建时间 */
     private LocalDateTime createdAt;
 }

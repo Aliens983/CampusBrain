@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS document
     error_msg   TEXT,
     deleted     TINYINT       DEFAULT 0,
     owner_id    BIGINT        DEFAULT NULL,
-    tenant_id   BIGINT        DEFAULT NULL,
     created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

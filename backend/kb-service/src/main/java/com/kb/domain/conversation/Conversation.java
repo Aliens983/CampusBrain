@@ -40,9 +40,6 @@ public class Conversation {
     /** 用户反馈：like（点赞）、dislike（踩）或 null（无反馈） */
     private String feedback;
 
-    /** 所属租户 ID（多租户隔离） */
-    private Long tenantId;
-
     /** 消息创建时间 */
     private LocalDateTime createdAt;
 
