@@ -18,22 +18,22 @@ class ApiResponseTest {
     class Success {
 
         @Test
-        @DisplayName("success(data) 应返回 code=0, message=成功")
+        @DisplayName("success(data) 应返回 code=200, message=成功")
         void shouldReturnSuccessWithData() {
             ApiResponse<String> resp = ApiResponse.success("hello");
 
-            assertThat(resp.getCode()).isEqualTo(0);
+            assertThat(resp.getCode()).isEqualTo(200);
             assertThat(resp.getMessage()).isEqualTo("成功");
             assertThat(resp.getData()).isEqualTo("hello");
             assertThat(resp.getTimestamp()).isPositive();
         }
 
         @Test
-        @DisplayName("success() 无参应返回 code=0, data=null")
+        @DisplayName("success() 无参应返回 code=200, data=null")
         void shouldReturnSuccessWithoutData() {
             ApiResponse<Void> resp = ApiResponse.success();
 
-            assertThat(resp.getCode()).isEqualTo(0);
+            assertThat(resp.getCode()).isEqualTo(200);
             assertThat(resp.getData()).isNull();
         }
     }

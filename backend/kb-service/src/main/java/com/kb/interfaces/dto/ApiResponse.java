@@ -18,8 +18,12 @@ import lombok.NoArgsConstructor;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
 
-    /** 业务状态码（0=成功, A001/A002...=具体错误） */
-    private Object code;
+    /**
+     * 业务状态码，统一为数值（与 CAS CommonResult 对齐）：
+     * 200 = 成功，其余见 {@link ErrorCode}。
+     * 曾为 Object（int/String 混用），导致前端无法做类型安全的分支判断。
+     */
+    private Integer code;
 
     /** 响应消息 */
     private String message;

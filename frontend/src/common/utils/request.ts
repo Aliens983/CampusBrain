@@ -2,6 +2,13 @@ import axios, { type AxiosInstance, type AxiosResponse, type InternalAxiosReques
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/common/stores/user'
 
+/**
+ * 统一业务成功码。
+ * CAS 的 CommonResult 与 KB 的 ApiResponse 已对齐为 200，
+ * 前端所有成功判断都引用此常量，不要再写死字面量或双写兼容 0/200。
+ */
+export const API_SUCCESS_CODE = 200
+
 const request: AxiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
   timeout: 15000,
@@ -33,7 +40,7 @@ request.interceptors.response.use(
       return data
     }
 
-    if (data.code !== undefined && data.code !== 200) {
+    if (data.code !== undefined && data.code !== API_SUCCESS_CODE) {
       const msg = data.msg || data.message || '请求失败'
       // 不在此处弹错误，由组件自行处理，避免重复提示
       return Promise.reject(new Error(msg))
@@ -50,6 +57,10 @@ request.interceptors.response.use(
       const userStore = useUserStore()
       userStore.logout()
       window.location.href = '/login'
+    } else if (status === 400) {
+      // 业务异常（参数错误 / 规则不满足）：CAS 现已按 HTTP 语义返回 400。
+      // 错误文案交给调用组件展示，此处不弹，避免与组件提示重复。
+      return Promise.reject(new Error(serverMsg || '请求失败'))
     } else if (status === 403) {
       ElMessage.error(serverMsg || '没有权限访问该资源')
     } else if (status === 404) {

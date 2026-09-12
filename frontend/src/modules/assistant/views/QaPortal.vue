@@ -119,6 +119,7 @@
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/common/stores/user'
+import { API_SUCCESS_CODE } from '@/common/utils/request'
 
 interface DocumentItem { id: number; title: string; fileType?: string; status?: string }
 interface SessionMeta { id: string; title: string; updatedAt: string }
@@ -208,7 +209,7 @@ function persistCurrent() { localStorage.setItem(currentKey(), currentSessionId.
 async function fetchRaw(path: string, init?: RequestInit) {
   const resp = await fetch(`${BASE}${path}`, { headers: authHeaders(), ...init })
   const result = await resp.json()
-  if (result.code === 0 || result.code === 200) return result.data
+  if (result.code === API_SUCCESS_CODE) return result.data
   throw new Error(result.message || '请求失败')
 }
 function ensureSession() {
@@ -294,7 +295,7 @@ function statusLabel(status?: string): string {
 }
 function triggerUpload() { fileInput.value?.click() }
 function onFileSelected(event: Event) { const target = event.target as HTMLInputElement; if (target.files) for (const file of Array.from(target.files)) uploadFile(file); target.value = '' }
-async function uploadFile(file: File) { uploading.value = true; try { const formData = new FormData(); formData.append('file', file); const resp = await fetch(`${BASE}/documents/upload`, { method: 'POST', headers: authHeaders(), body: formData }); const result = await resp.json(); if (result.code === 0 || result.code === 200) { ElMessage.success('上传成功'); setTimeout(refreshDocuments, 800) } else ElMessage.error(result.message || '上传失败') } catch { ElMessage.error('上传失败，请重试') } finally { uploading.value = false } }
+async function uploadFile(file: File) { uploading.value = true; try { const formData = new FormData(); formData.append('file', file); const resp = await fetch(`${BASE}/documents/upload`, { method: 'POST', headers: authHeaders(), body: formData }); const result = await resp.json(); if (result.code === API_SUCCESS_CODE) { ElMessage.success('上传成功'); setTimeout(refreshDocuments, 800) } else ElMessage.error(result.message || '上传失败') } catch { ElMessage.error('上传失败，请重试') } finally { uploading.value = false } }
 
 onMounted(async () => { if (isAdmin.value) refreshDocuments(); ensureSession(); await loadHistory(currentSessionId.value) })
 onUnmounted(() => {
