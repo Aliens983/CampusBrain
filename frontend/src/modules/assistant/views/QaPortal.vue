@@ -46,6 +46,12 @@
         </div>
       </header>
 
+      <div v-if="slotChips.length" class="ctx-strip">
+        <span class="ctx-strip__label">本次对话已记住</span>
+        <el-tag v-for="chip in slotChips" :key="chip.key" size="small" effect="plain" type="info">{{ chip.text }}</el-tag>
+        <el-button link size="small" class="ctx-strip__reset" @click="resetContext">清空记忆</el-button>
+      </div>
+
       <div
         ref="chatBodyRef"
         class="chat-body"
@@ -60,6 +66,28 @@
                 <span v-if="m.content" class="chat-msg__text">{{ m.content }}</span>
                 <span v-else-if="streaming && idx === messages.length - 1" class="chat-msg__typing">AI 正在检索知识库并生成答案…</span>
                 <span v-else class="chat-msg__typing">…</span>
+
+                <!-- 预约动作结果（确认/取消执行后回执） -->
+                <div v-if="m.action" class="action-badge">
+                  <span class="action-badge__dot" />{{ m.action.message }}
+                </div>
+
+                <!-- 待确认卡片：预约或取消前必须经用户点按钮或回复确认 -->
+                <div v-if="m.confirm && pendingIndex === idx" class="confirm-card">
+                  <div class="confirm-card__head">
+                    <span class="confirm-card__title">{{ m.confirm.action === 'CANCEL' ? '取消确认' : '预约确认' }}</span>
+                    <el-tag size="small" :type="m.confirm.needAudit ? 'warning' : 'success'">
+                      {{ m.confirm.action === 'CANCEL' ? '取消后不可恢复' : (m.confirm.needAudit ? '需审核' : '即时通过') }}
+                    </el-tag>
+                  </div>
+                  <div class="confirm-card__summary">{{ m.confirm.summary }}</div>
+                  <div class="confirm-card__actions">
+                    <el-button size="small" type="primary" :disabled="streaming" @click="reply('确认')">
+                      {{ m.confirm.action === 'CANCEL' ? '确认取消' : '确认预约' }}
+                    </el-button>
+                    <el-button size="small" :disabled="streaming" @click="reply('取消')">再想想</el-button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -70,6 +98,7 @@
           <p>你可以询问校园服务、预约规则，也可以直接查询可用时段。</p>
           <div class="chat-empty__suggestions">
             <button @click="query = '可以预约哪些校园服务？'">可以预约哪些校园服务？</button>
+            <button @click="query = '仓前校区上午9-10点还能预约教师吗'">仓前校区上午9-10点还能预约教师吗</button>
             <button @click="query = '如何查询教室的可用时段？'">如何查询教室的可用时段？</button>
           </div>
         </div>
@@ -93,7 +122,15 @@ import { useUserStore } from '@/common/stores/user'
 
 interface DocumentItem { id: number; title: string; fileType?: string; status?: string }
 interface SessionMeta { id: string; title: string; updatedAt: string }
-interface ChatMsg { id?: number; role: 'user' | 'assistant'; content: string }
+/** 多轮对话中 AI 记住的预约条件（槽位） */
+interface SlotsView { campus?: string; category?: string; date?: string; startTime?: string; endTime?: string; serviceId?: number; keyword?: string }
+/** 待用户确认的动作：BOOK 预约 / CANCEL 取消 */
+interface PendingView { action: 'BOOK' | 'CANCEL'; draftId?: string; orderId?: number; summary?: string; needAudit?: boolean }
+interface ActionView { status?: string; statusText?: string; message?: string; orderId?: number }
+interface ChatMsg { id?: number; role: 'user' | 'assistant'; content: string; confirm?: PendingView; action?: ActionView }
+
+const CAMPUS_LABEL: Record<string, string> = { cq: '仓前校区', xs: '下沙校区' }
+const CATEGORY_LABEL: Record<string, string> = { teacher: '教师咨询', equipment: '设备借用', space: '教室空间', activity: '活动报名' }
 
 const userStore = useUserStore()
 const isAdmin = computed(() => ['admin', 'super_admin'].includes(userStore.userInfo?.role || ''))
@@ -108,6 +145,22 @@ const BASE = '/api/v1/kb'
 const uid = computed(() => String(userStore.userInfo?.id ?? 'anon'))
 const sessions = ref<SessionMeta[]>([])
 const currentSessionId = ref('')
+// 多轮上下文：AI 已记住的预约条件 + 待确认动作（挂在最后一条助手消息上）
+const slots = ref<SlotsView>({})
+const pending = ref<PendingView | null>(null)
+const pendingIndex = ref<number | null>(null)
+
+const slotChips = computed(() => {
+  const s = slots.value
+  const chips: Array<{ key: string; text: string }> = []
+  if (s.campus) chips.push({ key: 'campus', text: CAMPUS_LABEL[s.campus] || s.campus })
+  if (s.category) chips.push({ key: 'category', text: CATEGORY_LABEL[s.category] || s.category })
+  if (s.date) chips.push({ key: 'date', text: s.date })
+  if (s.startTime && s.endTime) chips.push({ key: 'time', text: `${s.startTime}-${s.endTime}` })
+  else if (s.startTime) chips.push({ key: 'time', text: `${s.startTime} 起` })
+  if (s.keyword) chips.push({ key: 'keyword', text: s.keyword })
+  return chips
+})
 
 // ===== 聊天区自动滚动 =====
 // 真实滚动容器（.chat-body 自身 overflow-y:auto）
@@ -181,15 +234,47 @@ async function loadHistory(id: string) {
   try { const rows = await fetchRaw(`/qa/conversation/${id}`) as Array<{ id?: number; role?: string; content?: string }>; for (const row of rows || []) if (row.role === 'user' || row.role === 'assistant') messages.value.push({ id: row.id, role: row.role, content: row.content || '' }) } catch (e) { console.error('加载会话历史失败', e) }
   scrollToBottom()
 }
-function onSwitchSession(id: string) { if (streaming.value || id === '__empty__') return; currentSessionId.value = id; persistCurrent(); loadHistory(id) }
-function startNewSession() { if (streaming.value) return; currentSessionId.value = ''; messages.value = []; query.value = ''; persistCurrent() }
+function onSwitchSession(id: string) { if (streaming.value || id === '__empty__') return; currentSessionId.value = id; persistCurrent(); clearContext(); loadHistory(id) }
+function startNewSession() { if (streaming.value) return; currentSessionId.value = ''; messages.value = []; query.value = ''; persistCurrent(); clearContext() }
+/** 仅清本地上下文展示，不请求后端（切换/新建会话时后端会以新 sessionId 重新开始） */
+function clearContext() { slots.value = {}; pending.value = null; pendingIndex.value = null }
+async function resetContext() {
+  clearContext()
+  if (!currentSessionId.value) return
+  try { await fetchRaw(`/qa/session/${currentSessionId.value}/reset`, { method: 'POST' }); ElMessage.success('已清空本次对话记住的预约条件') }
+  catch (e) { console.error('清空会话上下文失败', e) }
+}
+/** 点确认卡片按钮 = 以对应话术发起新一轮提问，让后端走确定性确认分支 */
+function reply(text: string) { if (streaming.value) return; query.value = text; askQuestion() }
 function askQuestion() {
   const q = query.value.trim(); if (!q || streaming.value) return
   if (!currentSessionId.value) currentSessionId.value = uuid(); registerActive(q); streaming.value = true
+  // 新一轮提问即作废上一张确认卡片（后端也会丢弃过期草稿）
+  pendingIndex.value = null
   messages.value.push({ role: 'user', content: q }); const aiMsg: ChatMsg = { role: 'assistant', content: '' }; messages.value.push(aiMsg); query.value = ''
   scrollToBottom()
   const params = new URLSearchParams({ query: q, sessionId: currentSessionId.value, token: userStore.token }); const es = new EventSource(`${BASE}/qa/ask/stream?${params.toString()}`)
   es.addEventListener('messageId', event => { const id = Number((event as MessageEvent).data); if (id) aiMsg.id = id })
+  // 槽位更新：展示 AI 当前记住的预约条件
+  es.addEventListener('slots', event => {
+    try { slots.value = JSON.parse((event as MessageEvent).data) as SlotsView } catch { /* 忽略解析失败 */ }
+  })
+  // 待确认动作：渲染确认卡片
+  es.addEventListener('confirm', event => {
+    try {
+      pending.value = JSON.parse((event as MessageEvent).data) as PendingView
+      aiMsg.confirm = pending.value
+      pendingIndex.value = messages.value.length - 1
+      scheduleScroll()
+    } catch { /* 忽略解析失败 */ }
+  })
+  // 动作回执：确认/取消执行完成，收起卡片
+  es.addEventListener('action', event => {
+    try { aiMsg.action = JSON.parse((event as MessageEvent).data) as ActionView } catch { /* 忽略解析失败 */ }
+    pending.value = null
+    pendingIndex.value = null
+    slots.value = {}
+  })
   es.onmessage = event => { if (event.data === '[DONE]') { streaming.value = false; es.close(); touchSessionTitle(q); if (!aiMsg.content) aiMsg.content = '（本次未生成内容，请换个问法试试）'; scrollToBottom(); return }; if (event.data.startsWith('[ERROR]')) { aiMsg.content += `\n\n${event.data.replace('[ERROR] ', '')}`; streaming.value = false; es.close(); scrollToBottom(); return }; aiMsg.content += event.data; scheduleScroll() }
   es.onerror = () => { if (!aiMsg.content) aiMsg.content = '连接失败，请确认后端服务已启动。'; streaming.value = false; es.close(); scrollToBottom() }
 }
@@ -238,5 +323,18 @@ onUnmounted(() => {
 .chat-msg__content { max-width: min(82%,760px); }.chat-msg.user .chat-msg__content { display: flex; flex-direction: column; align-items: flex-end; }.chat-msg__meta { margin: 1px 0 5px; color: var(--text-tertiary); font-size: 11px; }.chat-msg__bubble { max-width: 100%; padding: 12px 16px; border-radius: 6px 16px 16px 16px; background: #f2f6fb; line-height: 1.8; }.chat-msg.user .chat-msg__bubble { border-radius: 16px 6px 16px 16px; background: #e4f7ec; }.chat-msg__text { white-space: pre-wrap; word-break: break-word; font-size: 14px; }.chat-msg__typing { color: #7aa7cf; font-size: 13px; }
 .chat-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 36px 18px; text-align: center; }.chat-empty__icon { width: 58px; height: 58px; margin-bottom: 18px; border-radius: 18px; font-size: 16px; }.chat-empty h2 { margin: 0 0 8px; font-size: 22px; }.chat-empty p { margin: 0; color: var(--text-secondary); font-size: 13px; }.chat-empty__suggestions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 22px; }.chat-empty__suggestions button { padding: 9px 14px; border: 1px solid rgba(63,182,255,.2); border-radius: 10px; color: #2673a8; background: rgba(255,255,255,.75); cursor: pointer; transition: .2s; }.chat-empty__suggestions button:hover { border-color: #3fb6ff; background: #fff; transform: translateY(-1px); }
 .chat-composer { flex-shrink: 0; padding: 16px clamp(18px,7vw,110px) 18px; border-top: 1px solid rgba(37,99,155,.09); background: rgba(255,255,255,.96); }.qa-input { display: flex; gap: 12px; }.qa-input .el-input { flex: 1; }.qa-input .el-textarea :deep(.el-textarea__inner) { min-height: 44px !important; padding: 12px 14px; border-radius: 12px; box-shadow: 0 0 0 1px rgba(63,182,255,.16) inset; }.qa-input__btn { flex-shrink: 0; min-width: 96px; margin: 0; border-radius: 12px; font-weight: 600; }.composer-hint { display: flex; align-items: center; gap: 4px; margin-top: 7px; color: var(--text-tertiary); font-size: 11px; }.composer-hint > span { margin-right: auto; }.composer-hint .el-button { padding: 2px 5px; }
+/* 多轮上下文提示条 */
+.ctx-strip { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 9px 24px; border-bottom: 1px solid rgba(37,99,155,.09); background: rgba(240,249,255,.72); }
+.ctx-strip__label { color: var(--text-tertiary); font-size: 12px; }
+.ctx-strip__reset { margin-left: auto; color: var(--text-tertiary); }
+/* 预约动作回执 */
+.action-badge { display: flex; align-items: center; gap: 7px; margin-top: 10px; padding: 8px 12px; border-radius: 10px; color: #1d6f3c; background: #e9f8ef; font-size: 13px; font-weight: 600; }
+.action-badge__dot { width: 7px; height: 7px; border-radius: 50%; background: #35a35f; flex-shrink: 0; }
+/* 待确认卡片 */
+.confirm-card { margin-top: 12px; padding: 12px 14px; border: 1px solid rgba(63,182,255,.28); border-radius: 12px; background: #f6fbff; }
+.confirm-card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.confirm-card__title { font-size: 13px; font-weight: 700; color: #1c5f8f; }
+.confirm-card__summary { color: var(--text-secondary); font-size: 13px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+.confirm-card__actions { display: flex; gap: 8px; margin-top: 10px; }
 @media (max-width:720px) { .qa-portal { height: calc(100vh - 156px); min-height: 520px; }.knowledge-strip { align-items: flex-start; flex-direction: column; gap: 8px; }.knowledge-strip__actions { width: 100%; }.knowledge-strip__hint { margin-right: auto; }.chat-head { align-items: flex-start; flex-direction: column; padding: 14px 16px; }.chat-head__actions { width: 100%; }.chat-head__select { flex: 1; width: auto; }.chat-body { padding: 20px 14px; }.chat-composer { padding: 12px 14px; }.chat-msg__content { max-width: 88%; }.composer-hint > span { display: none; } }
 </style>

@@ -9,6 +9,7 @@ import com.kb.interfaces.dto.FeedbackRequest;
 import com.kb.interfaces.dto.QaRequest;
 import com.kb.interfaces.dto.QaResponse;
 import com.kb.infrastructure.ratelimit.annotations.RateLimit;
+import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -54,7 +55,19 @@ public class QaController {
      * eventSource.addEventListener('citations', (event) => {
      *     showCitations(JSON.parse(event.data));
      * });
+     * eventSource.addEventListener('slots',   (e) => renderSlots(JSON.parse(e.data)));
+     * eventSource.addEventListener('confirm', (e) => renderConfirmCard(JSON.parse(e.data)));
+     * eventSource.addEventListener('action',  (e) => renderActionResult(JSON.parse(e.data)));
      * </pre>
+     * 事件说明：
+     * <ul>
+     *   <li>{@code message}（默认）—— 回答 token 流</li>
+     *   <li>{@code citations} —— 引用来源列表</li>
+     *   <li>{@code messageId} —— 助手消息 ID，供点赞/点踩</li>
+     *   <li>{@code slots} —— 当前会话累积的预约条件（校区/分类/日期/时段）</li>
+     *   <li>{@code confirm} —— 待用户确认的预约草稿，前端应渲染确认/取消按钮</li>
+     *   <li>{@code action} —— 预约或取消动作的执行结果</li>
+     * </ul>
      */
     @RateLimit(permits = 20, seconds = 60, message = "问答请求过于频繁，请稍后再试")
     @Operation(summary = "流式问答（SSE）", description = "通过 Server-Sent Events 逐字流式返回 AI 回答，支持会话上下文")
@@ -63,9 +76,13 @@ public class QaController {
             @Parameter(description = "用户问题") @RequestParam String query,
             @Parameter(description = "会话 ID，不传则自动生成新会话") @RequestParam(required = false, defaultValue = "") String sessionId) {
 
+        // 在 Servlet 线程内解析身份：SSE 的 Flux 会在异步线程执行，
+        // 不能依赖 SecurityContext 的线程继承
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+
         return Flux.create(sink -> {
             try {
-                qaService.askStreaming(query, sessionId,
+                qaService.askStreaming(query, sessionId, userId,
                         token -> {
                             // 回答 token 用默认 message 事件
                             if (!sink.isCancelled()) {
@@ -87,6 +104,20 @@ public class QaController {
                             if (!sink.isCancelled()) {
                                 sink.next(ServerSentEvent.builder()
                                         .event("messageId").data(messageId).build());
+                            }
+                        },
+                        event -> {
+                            // 结构化事件：槽位更新 / 待确认预约 / 预约动作结果
+                            if (sink.isCancelled() || event == null) {
+                                return;
+                            }
+                            try {
+                                sink.next(ServerSentEvent.builder()
+                                        .event(event.getType())
+                                        .data(objectMapper.writeValueAsString(event.getPayload()))
+                                        .build());
+                            } catch (Exception e) {
+                                log.warn("Failed to serialize assistant event: {}", event.getType(), e);
                             }
                         }
                 );
@@ -142,5 +173,14 @@ public class QaController {
             @Parameter(description = "会话 ID") @PathVariable String sessionId) {
         List<Conversation> history = qaService.getConversationHistory(sessionId);
         return ApiResponse.success(history);
+    }
+
+    @Operation(summary = "清空会话上下文",
+            description = "清除多轮对话累积的预约条件与待确认草稿；消息历史保留，便于回看")
+    @PostMapping("/session/{sessionId}/reset")
+    public ApiResponse<Void> resetSession(
+            @Parameter(description = "会话 ID") @PathVariable String sessionId) {
+        qaService.resetSession(sessionId);
+        return ApiResponse.success();
     }
 }

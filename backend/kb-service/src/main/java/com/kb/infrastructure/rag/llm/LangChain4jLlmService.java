@@ -50,6 +50,9 @@ public class LangChain4jLlmService implements LlmService {
     @Value("${llm.provider:deepseek}")
     private String llmProvider;
 
+    /** 注入 LLM 的历史消息上限（超出部分丢弃最早的记录） */
+    private static final int MAX_HISTORY_MESSAGES = 6;
+
     /** 绑定实时查询工具的 AI 助手（AiServices） */
     private ToolAssistant toolAssistant;
 
@@ -81,15 +84,7 @@ public class LangChain4jLlmService implements LlmService {
         for (ChatMessage cm : fullPrompt) {
             messages.add(toLangChainMessage(cm));
         }
-        // 只取最近 6 条历史，避免历史过长导致 LLM 串题
-        if (conversationHistory != null && !conversationHistory.isEmpty()) {
-            List<ChatMessage> recent = conversationHistory.size() > 6
-                    ? conversationHistory.subList(conversationHistory.size() - 6, conversationHistory.size())
-                    : conversationHistory;
-            for (ChatMessage cm : recent) {
-                messages.add(toLangChainMessage(cm));
-            }
-        }
+        appendRecentHistory(messages, conversationHistory);
 
         try {
             var response = chatModel.generate(messages);
@@ -121,12 +116,7 @@ public class LangChain4jLlmService implements LlmService {
         for (ChatMessage cm : fullPrompt) {
             messages.add(toLangChainMessage(cm));
         }
-
-        if (conversationHistory != null) {
-            for (ChatMessage cm : conversationHistory) {
-                messages.add(toLangChainMessage(cm));
-            }
-        }
+        appendRecentHistory(messages, conversationHistory);
 
         StringBuilder fullAnswer = new StringBuilder();
 
@@ -190,7 +180,8 @@ public class LangChain4jLlmService implements LlmService {
             ChatLanguageModel fallbackModel = OpenAiChatModel.builder()
                     .baseUrl(fallbackProvider.getBaseUrl())
                     .apiKey(fallbackApiKey)
-                    .modelName("deepseek-chat")
+                    // 不同 Provider 的模型名不同，不能写死成 deepseek-chat
+                    .modelName(defaultModelName(fallbackProvider))
                     .temperature(0.3)
                     .maxTokens(2048)
                     .timeout(Duration.ofSeconds(60))
@@ -225,15 +216,20 @@ public class LangChain4jLlmService implements LlmService {
     @Override
     public String generateAnswerWithTools(String query, List<RetrievalResult> retrievedDocs,
                                            List<ChatMessage> conversationHistory,
-                                           Consumer<String> tokenConsumer) {
+                                           Consumer<String> tokenConsumer, String contextHint) {
         try {
             String context = buildRagContext(retrievedDocs);
             String historyText = buildHistoryText(conversationHistory);
             String userMessage = "对话历史：\n" + historyText
                     + "\n\n用户问题：" + query
                     + "\n\n知识库参考内容：\n" + context
+                    + (contextHint == null || contextHint.isBlank()
+                        ? "" : "\n\n【当前已知的预约条件】" + contextHint
+                             + "\n调用工具时若用户未重新说明，请沿用这些条件；用户本轮明确改变了某项则以本轮为准。")
                     + "\n\n你是校园预约助手。**仅当**用户询问「当前/今天有哪些服务可预约、预约余量、会议室/设备/咨询是否可用」这类需要实时预约数据的问题时，"
-                    + "才调用预约查询工具获取实时数据回答；其他问题（自我介绍、能力介绍、闲聊、知识问答等）请直接回答，不要调用任何工具。";
+                    + "才调用预约查询工具获取实时数据回答；其他问题（自我介绍、能力介绍、闲聊、知识问答等）请直接回答，不要调用任何工具。"
+                    + "\n\n用户要求预约或取消时，只能调用 prepareBooking / requestCancelBooking 生成待确认草稿，"
+                    + "并明确询问用户「是否确认预约？」。**严禁**在用户明确答复之前做任何写操作。";
             String answer = toolAssistant.chat(userMessage);
             if (tokenConsumer != null) {
                 tokenConsumer.accept(answer);
@@ -304,17 +300,40 @@ public class LangChain4jLlmService implements LlmService {
                         + "请只回答用户当前最后提出的这个问题；历史对话仅供理解上下文，"
                         + "不要重复回答历史中已出现过的问题。"
                         + "如果不知道答案，请诚实说明，不要编造。"));
-        // 只取最近 6 条历史，避免历史过长导致 LLM 串题
-        if (conversationHistory != null && !conversationHistory.isEmpty()) {
-            List<ChatMessage> recent = conversationHistory.size() > 6
-                    ? conversationHistory.subList(conversationHistory.size() - 6, conversationHistory.size())
-                    : conversationHistory;
-            for (ChatMessage cm : recent) {
-                messages.add(toLangChainMessage(cm));
-            }
-        }
+        appendRecentHistory(messages, conversationHistory);
         messages.add(dev.langchain4j.data.message.UserMessage.from(query));
         return messages;
+    }
+
+    /**
+     * 追加最近若干条历史消息。
+     * <p>
+     * 只取最近 6 条：历史过长会让模型"串题"（把上一轮的问题再答一遍），
+     * 且无谓地消耗 token。
+     */
+    private void appendRecentHistory(List<dev.langchain4j.data.message.ChatMessage> messages,
+                                     List<ChatMessage> conversationHistory) {
+        if (conversationHistory == null || conversationHistory.isEmpty()) {
+            return;
+        }
+        List<ChatMessage> recent = conversationHistory.size() > MAX_HISTORY_MESSAGES
+                ? conversationHistory.subList(conversationHistory.size() - MAX_HISTORY_MESSAGES,
+                                              conversationHistory.size())
+                : conversationHistory;
+        for (ChatMessage cm : recent) {
+            messages.add(toLangChainMessage(cm));
+        }
+    }
+
+    /** 各 Provider 的默认兜底模型名（不能共用一个名字，否则请求必然失败） */
+    private static String defaultModelName(ModelProvider provider) {
+        return switch (provider) {
+            case DEEPSEEK -> "deepseek-chat";
+            case QWEN -> "qwen-plus";
+            case OPENAI -> "gpt-4o-mini";
+            case OLLAMA -> "qwen2.5";
+            case SILICONFLOW -> "Qwen/Qwen2.5-7B-Instruct";
+        };
     }
 
     /** 把多轮对话历史拼成文本，供 Tool 增强链路保留上下文 */

@@ -46,9 +46,25 @@ public interface LlmService {
      * @param tokenConsumer       callback invoked with the generated answer
      * @return the generated answer text
      */
+    default String generateAnswerWithTools(String query, List<RetrievalResult> retrievedDocs,
+                                           List<ChatMessage> conversationHistory,
+                                           Consumer<String> tokenConsumer) {
+        return generateAnswerWithTools(query, retrievedDocs, conversationHistory, tokenConsumer, null);
+    }
+
+    /**
+     * Generate an answer with real-time tool (Function Calling) enhancement.
+     *
+     * @param query               the user's question
+     * @param retrievedDocs       relevant document chunks from retrieval
+     * @param conversationHistory previous messages in this session
+     * @param tokenConsumer       callback invoked with the generated answer
+     * @param contextHint         本轮已知的预约上下文（槽位摘要），用于帮助 LLM 正确填工具参数；无则传 null
+     * @return the generated answer text
+     */
     String generateAnswerWithTools(String query, List<RetrievalResult> retrievedDocs,
                                    List<ChatMessage> conversationHistory,
-                                   Consumer<String> tokenConsumer);
+                                   Consumer<String> tokenConsumer, String contextHint);
 
     /**
      * 本地资料库未检索到相关内容时的兜底回答：直接用大模型（DeepSeek）对话，

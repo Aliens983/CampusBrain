@@ -1,16 +1,18 @@
 package com.kb.application.service;
 
+import com.kb.domain.chat.BookingSlots;
+import com.kb.domain.chat.ChatSession;
+import com.kb.domain.chat.ChatSessionRepository;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.conversation.ConversationRepository;
 import com.kb.domain.rag.LlmService;
 import com.kb.domain.rag.RerankerService;
 import com.kb.domain.rag.RetrievalResult;
 import com.kb.domain.rag.SearchService;
-import com.kb.infrastructure.cache.QaCacheService;
-import com.kb.infrastructure.cache.SemanticCacheService;
+import com.kb.infrastructure.client.CasClient;
 import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.rag.graph.GraphAssistedRetriever;
-import com.kb.infrastructure.rag.rewrite.QueryRewriter;
+import com.kb.infrastructure.rag.rewrite.ContextualQueryRewriter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,7 +24,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
-import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -34,8 +35,8 @@ import static org.mockito.Mockito.*;
  * <p>
  * 验证：
  * 1. 预约类问题 → 走 {@code generateAnswerWithTools}（Function Calling 链路）；
- * 2. 非预约类问题 → 走 {@code generateAnswerStreaming}（纯 RAG 流式），不触发工具；
- * 3. {@code isAppointmentQuery} 关键词边界
+ * 2. 非预约类问题 → 走 RAG / DeepSeek 兜底，不触发工具；
+ * 3. {@code isAppointmentQuery} 关键词边界。
  * </p>
  *
  * @author forever-king
@@ -48,19 +49,25 @@ class QaAppServiceToolRoutingTest {
     @Mock private RerankerService rerankerService;
     @Mock private LlmService llmService;
     @Mock private ConversationRepository conversationRepository;
-    @Mock private QaCacheService qaCacheService;
-    @Mock private SemanticCacheService semanticCacheService;
-    @Mock private QueryRewriter queryRewriter;
+    @Mock private ContextualQueryRewriter contextualRewriter;
     @Mock private GraphAssistedRetriever graphRetriever;
     @Mock private BusinessMetrics metrics;
     @Mock private StringRedisTemplate redisTemplate;
+    @Mock private ChatSessionRepository chatSessionRepository;
+    @Mock private CasClient casClient;
 
     @InjectMocks private QaApplicationService service;
 
+    /** 会话上下文桩：每次返回干净会话，模拟首轮提问 */
+    private void stubSession() {
+        when(chatSessionRepository.loadOrCreate(anyString(), any()))
+                .thenAnswer(inv -> ChatSession.create(inv.getArgument(0), 1L));
+    }
+
     private void stubPipeline(String query) {
-        // 缓存已全部禁用，不 stub qaCacheService/semanticCache；
-        // 单句独立问答不再读取会话历史，故不 stub getRecentMessages
-        when(queryRewriter.rewrite(query, List.of())).thenReturn(query);
+        stubSession();
+        when(contextualRewriter.rewrite(eq(query), anyList(), any(BookingSlots.class)))
+                .thenReturn(new ContextualQueryRewriter.RewriteResult(query, new BookingSlots(), false));
         when(graphRetriever.retrieve(query)).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank(query, List.of())).thenReturn(List.<RetrievalResult>of());
         when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
@@ -76,26 +83,26 @@ class QaAppServiceToolRoutingTest {
         void shouldRouteAppointmentQueryToTools() {
             String query = "有哪些服务可以预约？";
             stubPipeline(query);
-            when(llmService.generateAnswerWithTools(anyString(), anyList(), anyList(), any()))
+            when(llmService.generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString()))
                     .thenReturn("实时答案");
 
             service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
-            verify(llmService).generateAnswerWithTools(anyString(), anyList(), anyList(), any());
-            verify(llmService, never()).generateAnswerStreaming(anyString(), anyList(), anyList(), any());
+            verify(llmService).generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString());
+            verify(llmService, never()).generateAnswerDirectStreaming(anyString(), anyList(), any());
         }
 
         @Test
         @DisplayName("非预约类 + 无本地资料 → 走 DeepSeek 兜底（不走工具）")
         void shouldRouteNonAppointmentToDirectWhenNoDocs() {
             String query = "什么是 RAG 检索？";
-            stubPipeline(query);  // 检索为空
+            stubPipeline(query);
             when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any()))
                     .thenReturn("兜底答案");
 
             service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
-            verify(llmService, never()).generateAnswerWithTools(anyString(), anyList(), anyList(), any());
+            verify(llmService, never()).generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString());
             verify(llmService).generateAnswerDirectStreaming(anyString(), anyList(), any());
         }
 
@@ -103,8 +110,9 @@ class QaAppServiceToolRoutingTest {
         @DisplayName("非预约类 + 有本地资料 → 走 RAG 回答（不走工具）")
         void shouldRouteNonAppointmentToRagWhenDocsExist() {
             String query = "什么是向量检索？";
-            // 单独 stub（有检索结果；缓存已禁用）
-            when(queryRewriter.rewrite(query, List.of())).thenReturn(query);
+            stubSession();
+            when(contextualRewriter.rewrite(eq(query), anyList(), any(BookingSlots.class)))
+                    .thenReturn(new ContextualQueryRewriter.RewriteResult(query, new BookingSlots(), false));
             RetrievalResult doc = RetrievalResult.builder()
                     .chunkId("c1").documentId("d1").documentTitle("文档")
                     .content("向量检索是...").chunkIndex(0).score(0.9).source("keyword")
@@ -113,12 +121,11 @@ class QaAppServiceToolRoutingTest {
             when(rerankerService.rerank(query, List.of(doc))).thenReturn(List.of(doc));
             when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
                     .thenReturn(1L);
-            // RAG 能回答（不触发兜底）
             when(llmService.generateAnswer(anyString(), anyList(), anyList())).thenReturn("RAG 答案");
 
             service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
-            verify(llmService, never()).generateAnswerWithTools(anyString(), anyList(), anyList(), any());
+            verify(llmService, never()).generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString());
             verify(llmService).generateAnswer(anyString(), anyList(), anyList());
         }
 
@@ -127,7 +134,7 @@ class QaAppServiceToolRoutingTest {
         void shouldPassMessageIdOnToolPath() {
             String query = "会议室还有多少余量？";
             stubPipeline(query);
-            when(llmService.generateAnswerWithTools(anyString(), anyList(), anyList(), any()))
+            when(llmService.generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString()))
                     .thenReturn("实时答案");
 
             long[] captured = {0L};
@@ -149,6 +156,7 @@ class QaAppServiceToolRoutingTest {
             assertTrue(invokeIsAppointment("怎么借用设备"));
             assertTrue(invokeIsAppointment("预约心理咨询"));
             assertTrue(invokeIsAppointment("自习室还有名额吗"));
+            assertTrue(invokeIsAppointment("下沙校区有空闲教室吗"));
         }
 
         @Test

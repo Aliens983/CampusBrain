@@ -129,15 +129,27 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 ### KB 知识库
 - 文档上传 → 解析 → 分块（sliding_window 512/50）→ Embedding（硅基流动 Qwen3-Embedding-0.6B，1024 维）
 - 检索：ES 关键词（top10）+ Qdrant 向量（top10）→ RRF 融合（top5）→ DeepSeek（`deepseek-chat`）生成，Resilience4j 熔断。
-- Function Calling：Feign + Nacos + 内网签名直连 CAS `/appointments/availability`，LangChain4j `@Tool`。
 - 存储：KB 元数据在 `knowledge_base`(MySQL)，文档正文在 MinIO，关键词索引 ES，向量 Qdrant。
+
+### KB × CAS 预约集成（AI 助手）
+- **多轮上下文**：`ChatSession`（槽位 + 待确认动作）存 Redis（TTL 6h）；
+  `BookingSlotExtractor` 规则抽取校区/分类/日期/时段，`ContextualQueryRewriter` 做追问补全与 LLM 指代消解兜底。
+  示例：首轮「仓前校区上午9-10点能预约教师吗」→ 次轮「换成下沙校区呢？」自动沿用分类与时段。
+- **Function Calling 工具集**（`AppointmentTool`）：
+  查询类 `searchAvailableServices` / `searchConsultants` / `searchConsultantTimeSlots` / `searchRooms` / `searchEquipment` / `searchMyBookings`；
+  动作类 `prepareBooking` / `requestCancelBooking`（**只登记意向，不写数据**）。
+- **两段式预约闭环**：草稿由 CAS 存 Redis（TTL 10min，按用户隔离）；前端 SSE 收到 `confirm` 事件后渲染确认卡片，
+  用户点「确认预约」→ KB 调 `confirmBookingDraft` → CAS 二次校验后复用既有下单服务。
+  SSE 事件：`message`(token) / `citations` / `messageId` / `slots` / `confirm` / `action`。
+- **CAS 侧配套接口**：`/api/v1/appointments/assistant/**`（`cas-module-appointment` 的 `assistant` 子包），
+  查询按校区/分类/时段过滤并回填余量；预约草稿/确认/取消三段式。
 
 ## 七、测试与 CI
 
 ```bash
 cd backend && mvn -B test
 ```
-- 后端共 **131 个测试方法**（CAS 82 · KB 49），CAS 分布在 appointment/infra/system/thirdparty，KB 集成测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）。
+- 后端共 **133 个测试方法**（CAS 84 · KB 49），CAS 分布在 appointment/infra/system/thirdparty，KB 集成测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）。
 - GitHub Actions `.github/workflows/ci.yml`：push/PR 自动跑 `mvn -B test` + 前端 type-check/build。
 
 ## 八、Docker 部署（服务器）

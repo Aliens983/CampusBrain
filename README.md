@@ -75,7 +75,10 @@
 |---|---|---|
 | RAG 知识库问答 | ✅ | 文档上传 → 解析分块 → Embedding(Qwen3) → **ES 关键词 + Qdrant 向量双路召回 → RRF 融合** → DeepSeek 生成 |
 | AI 助手入口 | ✅ | 前端 `/assistant`（QaPortal），知识库资料优先回答；文档上传仅管理员 |
-| 预约实时查询 | ⚠️ 需 Key | KB 经 Feign + Nacos + 内网签名直连 CAS 只读余量接口；LangChain4j `@Tool` 实现 Function Calling（需配 `OPENAI_API_KEY`/`EMBEDDING_API_KEY`） |
+| 多轮对话上下文 | ✅ | 槽位（校区/分类/日期/时段/资源）在会话内累积继承；"仓前校区上午9-10点能约教师吗" → "换成下沙校区呢？" 自动沿用分类与时段 |
+| 预约查询（深度集成） | ✅ | 服务/咨询师与时段/教室/设备/我的预约，全部按校区、分类、日期时段过滤并回填余量与空闲状态 |
+| 协助完成预约 | ✅ | **两段式闭环**：AI 只生成待确认草稿 → 前端渲染确认卡片 → 用户点「确认预约」才真正下单；取消预约同样需确认 |
+| 预约实时查询 | ⚠️ 需 Key | KB 经 Feign + Nacos + 内网签名直连 CAS 助手接口；LangChain4j `@Tool` 实现 Function Calling（需配 `OPENAI_API_KEY`/`EMBEDDING_API_KEY`） |
 | RabbitMQ 预约事件 | ⚠️ 部分 | CAS 发布 `appointment.changed`；KB 已监听接收，仅记录日志（索引更新为 TODO） |
 | CI 质量门禁 | ✅ | GitHub Actions：后端 `mvn -B test` + 前端 type-check/build，push 自动触发 |
 | 交付脚本 | ✅ | `backend/scripts/run-local.sh`（本地一键起服务）/ `publish.sh`（一行发版）/ `deploy-server.sh`（服务器部署） |
@@ -108,7 +111,8 @@
 ```
 
 **服务间协作**
-- **预约余量实时查询**：KB 经 OpenFeign + Nacos 服务发现调用 CAS 只读接口（`/appointments/availability`），以内网签名头标识受信服务；LangChain4j `AppointmentTool` + AiServices 在识别到预约问题时返回实时数据。
+- **预约查询 / 代办（AI 助手）**：KB 经 OpenFeign + Nacos 调用 CAS 的 `/appointments/assistant/**`，以内网签名头标识受信服务。查询接口按校区/分类/时段过滤并回填余量；预约动作走「草稿 → 确认」两段式，确认时复用 CAS 既有下单逻辑（同一套防冲突 / 防超卖 / 幂等）。
+- **预约余量实时查询（轻量）**：另有 `/appointments/availability`、`/appointments/mine` 两个精简只读接口。
 - **预约变更事件**：CAS 预约创建/取消后发布 RabbitMQ `appointment.changed`，KB 监听消费。
 
 ## 三、目录结构（git 追踪范围）
@@ -176,11 +180,11 @@ npm run dev        # http://localhost:3000
 ### 6. 验证
 - 浏览器登录后：工作台 → 服务中心（切校区、按分类选服务）→ 咨询/教室/设备预约 → 我的预约；
 - 管理端（admin 账号）：服务治理 / 预约审核 / 系统设置（轮播图、通知策略）；
-- AI 助手 `/assistant`：配置好 LLM Key 后可 RAG 问答。
+- AI 助手 `/assistant`：配置好 LLM Key 后可 RAG 问答；试着连续问「仓前校区上午9-10点能预约教师吗」→「换成下沙校区呢？」，或直接说「帮我约一个」走确认卡片完成预约。
 
 ## 五、测试与 CI
 ```bash
-cd backend && mvn -B test     # 131 个测试方法：CAS 82 + KB 49（KB 用 H2 + @MockBean 隔离中间件）
+cd backend && mvn -B test     # 133 个测试方法：CAS 84 + KB 49（KB 用 H2 + @MockBean 隔离中间件）
 cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 ```
 推送到 GitHub 自动触发 `ci.yml`（后端 test + 前端 type-check/build）作为质量门禁。
@@ -191,6 +195,8 @@ cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 - **两校区数据模型**：服务、咨询师、教室、设备均带 `campus`/挂校区服务，用户端按校区隔离浏览。
 - **Flyway 迁移**：启动自动建库建表并灌入校区种子与初始账号（新机器零手工 SQL）。
 - **RAG 混合检索**：ES 关键词 + Qdrant 向量双路召回 → RRF 融合 → LLM（Resilience4j 熔断）。
+- **多轮上下文（Slot Filling）**：会话槽位存 Redis（TTL 6h），规则抽取校区/分类/日期/时段（确定性强、未配 LLM Key 也可用），LLM 负责指代消解兜底；工具漏传参数时自动回退到会话槽位。
+- **预约两段式确认**：AI 只能生成草稿（`prepareBooking`），用户明确确认后才由应用层调用 CAS 下单；转移话题会自动丢弃过期草稿，杜绝 AI 擅自替用户预约。
 
 ## 七、已知限制
 - **AI 问答依赖外部 Key**：KB 需 `OPENAI_API_KEY`（DeepSeek 兼容）+ `EMBEDDING_API_KEY`（硅基流动），缺省时 AI 助手不可用（登录/预约不受影响）。

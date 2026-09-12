@@ -14,7 +14,12 @@ import java.util.List;
 @Mapper
 public interface ConversationMapper extends BaseMapper<ConversationDO> {
 
-    @Select("SELECT * FROM conversation WHERE session_id = #{sessionId} ORDER BY created_at DESC LIMIT #{limit}")
+    /**
+     * 取会话最近 N 条消息，按时间<b>正序</b>返回（便于直接拼成对话历史）。
+     * 内层先按倒序取最近 N 条，外层再翻转回正序。
+     */
+    @Select("SELECT * FROM (SELECT * FROM conversation WHERE session_id = #{sessionId} " +
+            "ORDER BY created_at DESC LIMIT #{limit}) t ORDER BY created_at ASC, id ASC")
     List<ConversationDO> selectRecentBySessionId(@Param("sessionId") String sessionId,
                                                   @Param("limit") int limit);
 
