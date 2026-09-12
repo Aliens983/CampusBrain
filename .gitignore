@@ -9,6 +9,8 @@ docs/
 *.iml
 *.iws
 *.ipr
+# AI 编码助手工作数据（记忆、会话、自动化配置，仅本地）
+.codebuddy/
 
 # ===== 日志 =====
 logs/
