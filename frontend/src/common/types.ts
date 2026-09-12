@@ -1,4 +1,148 @@
 /**
- * 统一类型定义已收敛到 `@/types`，此文件仅作兼容转发，避免调用方重复引用两套类型。
+ * 统一类型定义 —— 全项目唯一真源。
+ *
+ * 收敛说明（2026-09-12）：此前类型分散在 types/index.ts 与 common/types.ts，
+ * 且后者只是前者的转发壳（方向是反的）。现把真源迁到此处，
+ * types/index.ts 反向转发，保证 common 层为唯一类型/数据层。
  */
-export * from '@/types'
+
+export type UserRole = 'user' | 'teacher' | 'admin' | 'super_admin'
+
+export type ServiceStatus = 'available' | 'busy' | 'maintenance'
+export type BookingStatus = 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled'
+export type BookingType = 'room' | 'equipment' | 'consultation' | 'activity' | 'printing'
+
+export interface UserInfo {
+  id: number
+  username: string
+  email: string
+  phone: string
+  role: UserRole
+  department: string
+  avatar?: string
+  createdAt: string
+}
+
+export interface ServiceCard {
+  id: number
+  code: string
+  name: string
+  description: string
+  type: BookingType
+  category: string
+  location: string
+  priceLabel: string
+  status: ServiceStatus
+  tags: string[]
+  image: string
+  capacity?: number
+  /** 后端分类 ID（service_category.id，新增/更新服务时回传） */
+  categoryId?: number
+  /** 后端服务分类 key: teacher/equipment/space/activity/other */
+  catKey?: string
+  /** 校区: cq仓前 / xs下沙 */
+  campus?: string
+  /** 封面图URL */
+  imageUrl?: string
+}
+
+export interface RoomResource {
+  id: number
+  name: string
+  building: string
+  floor: string
+  capacity: number
+  status: 'available' | 'occupied' | 'maintenance'
+  facilities: string[]
+  manager: string
+  openTime: string
+  image: string
+}
+
+export interface EquipmentResource {
+  id: number
+  name: string
+  category: string
+  description: string
+  stock: number
+  availableStock: number
+  unit: string
+  priceLabel: string
+  location: string
+  image: string
+}
+
+export interface Consultant {
+  id: number
+  name: string
+  title: string
+  department: string
+  expertise: string[]
+  rating: number
+  reviews: number
+  available: boolean
+  nextSlot: string
+  avatar?: string
+}
+
+export interface BookingRecord {
+  id: number
+  bookingNo: string
+  serviceName: string
+  type: BookingType
+  applicant: string
+  department: string
+  location: string
+  date: string
+  timeRange: string
+  status: BookingStatus
+  createdAt: string
+  remarks?: string
+  orderId?: number
+  /** 咨询时段预约：咨询师姓名（非咨询预约无此字段） */
+  consultantName?: string
+  /** 设备借用：设备名称与数量 */
+  equipmentName?: string
+  quantity?: number
+  /** 教室预约：教室名称 */
+  roomName?: string
+  /** 所属校区: cq仓前 / xs下沙 */
+  campus?: string
+}
+
+export interface MessageItem {
+  id: number
+  title: string
+  content: string
+  time: string
+  type: 'system' | 'approval' | 'notice'
+  unread: boolean
+}
+
+export interface DashboardStat {
+  label: string
+  value: string
+  trend: string
+  tone: 'brand' | 'success' | 'warning' | 'danger'
+}
+
+export interface AdminSummary {
+  totalUsers: number
+  totalServices: number
+  activeBookings: number
+  approvalRate: string
+  /** 待审核（manageStatus=0）预约数量 */
+  pendingBookings: number
+}
+
+export interface BookingDraft {
+  targetId: number
+  targetName: string
+  date: string
+  startTime: string
+  endTime: string
+  contactName: string
+  contactPhone: string
+  purpose: string
+  notes: string
+}

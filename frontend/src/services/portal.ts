@@ -1,6 +1,6 @@
 import request from '@/common/utils/request'
-import type { AdminSummary, BookingRecord, ServiceCard, UserInfo } from '@/types'
-import { normalizeRole, normalizeUserInfo } from '@/utils/auth'
+import type { AdminSummary, BookingRecord, ServiceCard, UserInfo } from '@/common/types'
+import { normalizeRole, normalizeUserInfo } from '@/common/utils/auth'
 
 type ApiService = {
   serviceId?: number

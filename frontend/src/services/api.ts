@@ -1,5 +1,5 @@
 import request from '@/common/utils/request'
-import type { UserInfo } from '@/types'
+import type { UserInfo } from '@/common/types'
 
 // 用户相关API
 export const userAPI = {

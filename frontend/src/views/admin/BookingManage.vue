@@ -232,7 +232,7 @@
 import { computed, ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
-import type { BookingStatus } from '@/types'
+import type { BookingStatus } from '@/common/types'
 
 interface AdminBooking {
   orderId: number

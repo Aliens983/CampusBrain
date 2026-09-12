@@ -287,7 +287,7 @@ import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
 import { fetchServiceCards, fetchServiceCategories, type ServiceCategoryOption } from '@/services/campus'
-import type { ServiceCard } from '@/types'
+import type { ServiceCard } from '@/common/types'
 
 const createDrawer = ref(false)
 const keyword = ref('')

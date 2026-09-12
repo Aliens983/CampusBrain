@@ -59,7 +59,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { fetchAdminSummary } from '@/services/campus'
-import type { AdminSummary } from '@/types'
+import type { AdminSummary } from '@/common/types'
 
 type MetricField = keyof Pick<AdminSummary, 'totalUsers' | 'totalServices' | 'activeBookings' | 'approvalRate'>
 

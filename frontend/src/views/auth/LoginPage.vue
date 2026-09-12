@@ -180,7 +180,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import request from '@/common/utils/request'
 import { useUserStore } from '@/common/stores/user'
-import { extractToken, resolveHomeByRole } from '@/utils/auth'
+import { extractToken, resolveHomeByRole } from '@/common/utils/auth'
 import { loadUserProfile } from '@/services/portal'
 
 const router = useRouter()

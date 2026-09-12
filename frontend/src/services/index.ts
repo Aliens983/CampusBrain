@@ -1,5 +1,5 @@
 import { userAPI, bookingAPI, roomAPI, equipmentAPI, consultationAPI, adminAPI } from './api'
-import type { UserInfo } from '@/types'
+import type { UserInfo } from '@/common/types'
 
 // 用户服务
 export const userService = {
