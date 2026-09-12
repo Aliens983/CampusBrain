@@ -184,7 +184,7 @@ npm run dev        # http://localhost:3000
 
 ## 五、测试与 CI
 ```bash
-cd backend && mvn -B test     # 133 个测试方法：CAS 84 + KB 49（KB 用 H2 + @MockBean 隔离中间件）
+cd backend && mvn -B test     # 154 个测试方法：CAS 84 + KB 70（KB 用 H2 + @MockBean 隔离中间件）
 cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 ```
 推送到 GitHub 自动触发 `ci.yml`（后端 test + 前端 type-check/build）作为质量门禁。
