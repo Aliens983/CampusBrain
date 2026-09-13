@@ -100,7 +100,9 @@ services:
       ALIYUN_OSS_ACCESS_KEY_ID: ${ALIYUN_OSS_ACCESS_KEY_ID}
       ALIYUN_OSS_ACCESS_KEY_SECRET: ${ALIYUN_OSS_ACCESS_KEY_SECRET}
       # 演示模式：每次启动 flyway clean→migrate 重建 cas_db（数据不保留；本地开发不设此变量）
+      # 清库需「双开关」同时放开，缺一不可，防止误配导致生产库被清空
       APP_DB_RESET_ON_STARTUP: "true"
+      FLYWAY_CLEAN_DISABLED: "false"
     volumes:
       - cas-uploads:/app/uploads
     depends_on:
@@ -147,7 +149,9 @@ services:
       OPENAI_API_KEY: ${DEEPSEEK_API_KEY}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
       # 演示模式：每次启动 flyway clean→migrate 重建 knowledge_base（AI 会话/上传文档不保留）
+      # 清库需「双开关」同时放开，缺一不可，防止误配导致生产库被清空
       APP_DB_RESET_ON_STARTUP: "true"
+      FLYWAY_CLEAN_DISABLED: "false"
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
