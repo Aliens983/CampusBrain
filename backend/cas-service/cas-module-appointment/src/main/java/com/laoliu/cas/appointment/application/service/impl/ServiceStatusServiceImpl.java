@@ -12,6 +12,7 @@ import com.laoliu.cas.infra.application.service.EmailService;
 import com.laoliu.cas.system.application.service.NotificationSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -85,7 +86,14 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         }
     }
 
+    /**
+     * 审核通过：改状态 + （必要时）发通知。
+     * <p>
+     * 加事务是因为一次审核可能伴随多步写操作（状态、库存回补、时段释放），
+     * 任一步失败都必须整体回滚，否则会留下"名额退了但时段仍被占"的不一致。
+     */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void auditPass(Long orderId, String reason) {
         ServiceStatusResponse serviceInfo = getServiceStatusByOrderId(orderId);
         if (serviceInfo == null) {
@@ -107,7 +115,11 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         }
     }
 
+    /**
+     * 审核拒绝：改状态 + 释放库存 + 释放咨询时段 + 发通知，四步必须同成功同失败。
+     */
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void auditReject(Long orderId, String reason) {
         if (reason == null || reason.trim().isEmpty()) {
             throw new BusinessException(BookErrorCode.AUDIT_REASON_REQUIRED);
