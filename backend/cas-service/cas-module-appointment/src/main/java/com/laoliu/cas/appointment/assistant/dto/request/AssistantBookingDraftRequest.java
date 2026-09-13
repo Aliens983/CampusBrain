@@ -1,7 +1,10 @@
 package com.laoliu.cas.appointment.assistant.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * 预约助手：生成预约草稿请求
@@ -18,6 +21,9 @@ import lombok.Data;
  * @author forever-king
  */
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Schema(description = "预约助手·生成预约草稿请求")
 public class AssistantBookingDraftRequest {
 
