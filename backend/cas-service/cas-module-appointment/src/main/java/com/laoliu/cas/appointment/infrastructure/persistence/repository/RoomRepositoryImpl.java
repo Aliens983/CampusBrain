@@ -38,4 +38,11 @@ public class RoomRepositoryImpl implements RoomRepository {
                 .map(RoomDO::toEntity)
                 .collect(Collectors.toList());
     }
+
+    @Override
+    public List<Room> findAll() {
+        return roomMapper.selectList(null).stream()
+                .map(RoomDO::toEntity)
+                .collect(Collectors.toList());
+    }
 }

@@ -18,4 +18,9 @@ public interface RoomRepository {
     Optional<Room> findByIdForUpdate(Long id);
 
     List<Room> findByServiceId(Long serviceId);
+
+    /**
+     * 全量教室（供批量场景使用，避免"按服务逐个查"的 N+1）
+     */
+    List<Room> findAll();
 }

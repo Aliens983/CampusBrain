@@ -3,6 +3,7 @@ package com.laoliu.cas.appointment.assistant.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laoliu.cas.appointment.application.service.BookService;
+import com.laoliu.cas.appointment.application.service.ServiceService;
 import com.laoliu.cas.appointment.application.service.impl.ConsultationServiceImpl;
 import com.laoliu.cas.appointment.application.service.impl.EquipmentServiceImpl;
 import com.laoliu.cas.appointment.application.service.impl.RoomServiceImpl;
@@ -48,6 +49,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * 预约助手应用服务实现
@@ -70,6 +72,8 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     private final ServiceRepository serviceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
+    /** 走应用服务（带 @Cacheable）而非直接查库，避免每次助手问答全表扫服务 */
+    private final ServiceService serviceService;
     private final ConsultantRepository consultantRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final RoomRepository roomRepository;
@@ -88,10 +92,9 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     public List<AssistantServiceVO> findServices(String campus, String category, String keyword) {
         Map<Long, ServiceCategory> categories = categoryIndex();
         List<AssistantServiceVO> result = new ArrayList<>();
-        for (Service s : serviceRepository.findAll()) {
-            if (!s.isAvailable()) {
-                continue;
-            }
+        // 走 ServiceService 而非 repository：前者带 @Cacheable("services")，
+        // 避免每次助手问答都全表扫 services
+        for (Service s : serviceService.getAvailableServices()) {
             ServiceCategory cat = categories.get(s.getCategoryId());
             String categoryCode = cat == null ? null : cat.getCode();
             if (!matchesCampus(s.getCampus(), campus) || !matchesCategory(categoryCode, category)) {
@@ -158,12 +161,16 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         boolean withWindow = parsedDate != null && startTime != null && endTime != null
                 && !startTime.isBlank() && !endTime.isBlank() && startTime.compareTo(endTime) < 0;
 
+        // 一次性取全部教室再按服务分组：此前是"遍历服务 → 每个服务查一次教室"的 N+1
+        Map<Long, List<Room>> roomsByService = roomRepository.findAll().stream()
+                .collect(Collectors.groupingBy(Room::getServiceId, LinkedHashMap::new, Collectors.toList()));
+
         List<AssistantRoomVO> result = new ArrayList<>();
-        for (Service s : serviceRepository.findAll()) {
-            if (!s.isAvailable() || !matchesCampus(s.getCampus(), campus)) {
+        for (Service s : serviceService.getAvailableServices()) {
+            if (!matchesCampus(s.getCampus(), campus)) {
                 continue;
             }
-            for (Room r : roomRepository.findByServiceId(s.getServiceId())) {
+            for (Room r : roomsByService.getOrDefault(s.getServiceId(), List.of())) {
                 Boolean free = null;
                 if (withWindow) {
                     free = bookingRepository.countRoomOverlap(r.getId(), parsedDate, startTime, endTime) == 0;
