@@ -201,7 +201,7 @@ cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 ## 七、已知限制
 - **AI 问答依赖外部 Key**：KB 需 `OPENAI_API_KEY`（DeepSeek 兼容）+ `EMBEDDING_API_KEY`（硅基流动），缺省时 AI 助手不可用（登录/预约不受影响）。
 - **RabbitMQ 消费不完整**：KB 收到预约事件仅记录日志，索引/缓存更新仍为 TODO。
-- **响应模型 / Maven 治理不统一**：CAS 用 `CommonResult`（`com.laoliu`），KB 用 `ApiResponse`（`com.kb`），属历史演进结果，未强统。
+- **响应包装类尚未合并**：CAS 用 `CommonResult`（`com.laoliu`）、KB 用 `ApiResponse`（`com.kb`），类名不同属历史演进结果；但**响应码契约已统一**（2026-09-12）——两侧 `code = 200`（Integer）均为成功、错误码均为数值，前端统一用 `API_SUCCESS_CODE` 判断。（Maven groupId 不统一仍存在：`com.laoliu` vs `com.kb`。）
 - **Sentinel 已接入但流控规则为空**（Nacos `cas-sentinel-flow-rules`），预留生产调优。
 - **邮件 / 短信 / 天气 / OSS** 为可选外部集成，未配对应 Key 时相应能力降级。
 

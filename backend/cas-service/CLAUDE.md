@@ -87,7 +87,8 @@ carousel/     appointment 内的独立子域包（controller/service/mapper/data
   - 预约（两段式）：`POST /bookings/draft`（只校验预览，草稿存 Redis TTL 10min，key 按 userId 隔离）→ `POST /bookings/{draftId}/confirm`（二次校验后复用 `ConsultationServiceImpl` / `RoomServiceImpl` / `EquipmentServiceImpl` / `BookService` 下单）；`GET|DELETE /bookings/draft/{draftId}`、`POST /bookings/{orderId}/cancel`
   - 校验不通过时返回 `valid=false` + `invalidReason`（不抛异常），便于 AI 直接转述给用户。
 - **领域实体**：Service、ServiceCategory、AppointmentRecord、Consultant、TimeSlot、Room、Equipment、ConsultChatConversation、ConsultChatMessage。
-- **定时/MQ**：infrastructure/task/BookingAutoCompleteTask（60s 扫描过期置 COMPLETED）+ AppointmentScheduleConfig；infrastructure/mq/BookingEventPublisher + RabbitMqConfig（发 appointment.changed）。
+- **定时/MQ**：infrastructure/task/BookingAutoCompleteTask（60s 扫描过期置 COMPLETED）+ AppointmentScheduleConfig；infrastructure/mq/BookingEventPublisher + RabbitMqConfig + AppointmentChangedEvent（发 appointment.changed）。
+- **MQ 拓扑（2026-09-12 改造）**：显式声明 `DirectExchange cas.appointment.exchange` + Binding，不再依赖默认 exchange 的隐式绑定；队列名沿用 `appointment.changed` 以免存量消息丢失。消息体为 `AppointmentChangedEvent` 经 ObjectMapper 序列化的 JSON（取代手工拼接字符串，后者无转义、易产出非法 JSON），序列化失败只记日志、不影响预约主流程。**KB 侧 `AppointmentEventConfig` 的同名常量需与此处同步。**
 
 ### cas-module-system
 - controller/app：LoginController（`POST /auth/login`、`/auth/reset`）、RegisterController（`POST /auth/register`）、EmailController（`POST /auth/verification-code`）、GraphicController（`GET /captcha`）。
@@ -139,6 +140,9 @@ carousel/     appointment 内的独立子域包（controller/service/mapper/data
 - **幂等**：下单 SQL 60s 窗口同用户同服务去重，重复返回 `BOOKING_REPEATED`。
 - **审核邮件**：全局策略 + 用户 `email_notify` 双开关；拒绝必填原因。
 - **统一返回**：`CommonResult<T>`（cas-common.result）；业务错误抛 `BusinessException(ErrorCode)`，由 starter-web 的 GlobalExceptionHandler 兜底，禁止 Controller 手写 JSON / try-catch。
+- **跨服务响应码契约**：CAS 与 KB 统一 `code = 200`（Integer）表示成功。KB 侧已于 2026-09-12 由 `0` 改为 `200`、`Object` 改为 `Integer`，字符串错误码（A001/U002/G001…）映射为数值区间；前端判断统一引用 `API_SUCCESS_CODE` 常量，勿再写死字面量或双写兼容 `0/200`。
+- **HTTP 语义（2026-09-12 起）**：业务异常 **400** / 未授权 **401** / 禁权 **403** / 未找到 **404** / 兜底 **500**。此前业务异常也返回 200（仅靠 body 的 code 区分），现已补齐 `@ResponseStatus`；catch-all 只返回通用文案，完整堆栈仅进日志、不泄露内部信息。⚠ 外部调用方若依赖旧的 200 需同步适配。
+- **异常处理器位置（易找错）**：专职实现在 `cas-spring-boot-starter-web` 的 **`com.laoliu.cas.web.exception.GlobalExceptionHandler`**。`WebAutoConfiguration` 上虽也有 `@RestControllerAdvice`，但**仅保留 `IllegalArgumentException`（400）**——其余类型一律交给前者。同一异常被两个 advice 同时声明时，生效哪个取决于注册顺序、行为不确定，新增处理前务必先确认目标类型是否已被 `GlobalExceptionHandler` 覆盖。
 - **错误码**：`*ErrorCode` 接口（Book/Common/Email/Login/Role/Service/ServiceStatus/User/Chat），历史上 HTTP 码与领域码混用，新增时向领域码靠拢。
 
 ## 编码约定

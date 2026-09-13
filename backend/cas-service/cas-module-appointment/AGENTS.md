@@ -29,7 +29,8 @@ infrastructure/
 ├── persistence/ dataobject（ServicesDO/ServiceCategoryDO/ItemDO/AppointmentRecordDO/ConsultantDO/
 │                 TimeSlotDO/RoomDO/EquipmentDO/ConsultChat*DO）+ mapper + repository/*Impl
 ├── task/        BookingAutoCompleteTask（@Scheduled 60s）+ AppointmentScheduleConfig
-├── mq/          BookingEventPublisher + RabbitMqConfig（发 appointment.changed）
+├── mq/          BookingEventPublisher + RabbitMqConfig + AppointmentChangedEvent
+│                （发 appointment.changed；显式 DirectExchange + Binding）
 └── config/      AppointmentScheduleConfig
 carousel/        独立子域：controller(CarouselAdminController/CarouselAppController) · service ·
                  mapper · dataobject（轮播图，未严格四层）
@@ -59,7 +60,7 @@ carousel/        独立子域：controller(CarouselAdminController/CarouselAppCo
 - **设备借用必须走专用端点**：`POST /app/bookings`（通用下单）拒绝 `equipment` 类服务，返回 `EQUIPMENT_REQUIRE_DEDICATED_API(40020)`。通用下单不携带 equipmentId/时段/数量，会造成时段占用统计不到而超借。
 - **幂等**：下单 60s 窗口同用户同服务去重，重复返回 BOOKING_REPEATED。
 - **自动完成**：BookingAutoCompleteTask 60s 轮询，窗口过期置 COMPLETED。
-- **事件**：预约创建/取消后 BookingEventPublisher 发 RabbitMQ `appointment.changed`。
+- **事件**：预约创建/取消后 BookingEventPublisher 发 RabbitMQ `appointment.changed`。**拓扑（2026-09-12 起）**：显式 `DirectExchange cas.appointment.exchange` + Binding，取代默认 exchange 的隐式绑定；队列名仍为 `appointment.changed`；消息体为 `AppointmentChangedEvent` 经 ObjectMapper 序列化的 JSON，**不再手工拼接字符串**。KB 侧 `AppointmentEventConfig` 的 EXCHANGE/QUEUE/ROUTING_KEY 三个常量须与此处一致。
 
 ## 数据表
 

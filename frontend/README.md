@@ -59,20 +59,22 @@ frontend/
 │   │   ├── chat/              # 咨询沟通：ConversationList / ChatThread（学生端与教师端共用）
 │   │   └── assistant/views/QaPortal.vue   # AI 助手（/assistant 与 /admin/assistant 共用）
 │   ├── views/
-│   │   ├── auth/              # 实际使用 LoginPage / RegisterPage（Login.vue、Register.vue 为旧版未路由）
+│   │   ├── auth/              # LoginPage.vue / RegisterPage.vue（旧版 Login.vue、Register.vue 已于 2026-09-12 删除）
 │   │   ├── errors/NotFound.vue
 │   │   └── admin/             # 管理概览/服务治理/预约审核/用户权限/系统设置/工具箱
 │   ├── layout/                # UserLayoutShell / AdminLayoutShell / TeacherLayoutShell / index
-│   ├── common/                # stores/user、utils/request、utils/auth、campus、consultChat、types
-│   ├── services/              # API 调用层（api / campus / portal）
+│   ├── common/                # 唯一数据/类型层：types、campus、consultChat、stores/user、utils/{request,auth}
+│   ├── services/              # 遗留 API 封装层（api / campus / portal），底层统一引用 common
 │   ├── assets/styles/         # global.css（Tailwind 指令 + 主题变量）+ variables.scss（自动注入）
-│   └── utils/、types/         # 通用工具与类型
+│   └── utils/                 # 通用工具（日期/校验/下载等；auth 与类型已并入 common）
 ├── vite.config.ts
 └── package.json
 ```
-> `src/views/` 下另有一套早期页面（`bookings/ services/ dashboard/ profile/ consultation/ rooms/ equipment/`
-> 及旧 `auth/Login.vue`、`Register.vue`），**主路由均未引用**（学生端走 `src/modules/user/*`，沟通走 `modules/chat/*`），
-> 属无路由的遗留副本，改动前端时勿误改这些文件；仍在路由中使用的 `src/views` 页面只有 `auth/*Page.vue`、`errors/*`、`admin/*`。
+> **目录收敛（2026-09-12）**：原 `src/types/`（类型定义）与 `src/utils/auth.ts`（角色/用户归一化）已并入 `common/`，
+> 两套重复实现消除，`normalizeRole` / `normalizeUserInfo` 只保留一份实现。
+> `src/views/` 下的早期遗留页面（`bookings/ services/ dashboard/ profile/ consultation/ rooms/ equipment/`）
+> 及旧 `auth/Login.vue`、`Register.vue` 已全部删除。
+> 现在仍在路由中使用的 `src/views` 只有 `auth/*Page.vue`、`errors/*`、`admin/*`。
 
 ## 快速开始
 

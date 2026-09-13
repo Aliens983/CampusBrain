@@ -29,6 +29,8 @@ java -jar cas-server/target/cas-server-1.0.0.jar
 - **跨模块**：只能通过 `api/` 接口，禁止直接调他模块 Mapper/Service。
 - **DDD 分层**：interfaces / application / domain / infrastructure（+ api）；`domain/` 零框架注解。
 - **响应**：统一 `CommonResult<T>`；业务异常抛 `BusinessException`，由 `GlobalExceptionHandler` 兜底。
+- **HTTP 状态（2026-09-12 起）**：业务异常 400 / 未授权 401 / 禁权 403 / 未找到 404 / 系统异常 500（已补齐 `@ResponseStatus`，此前业务错误也返回 200）。
+- **跨服务契约**：与 KB 统一 `code = 200`（Integer）为成功，前端统一引用 `API_SUCCESS_CODE`。
 - **下线红线**：Qwen `/ai/chat`、CallTheModel*、AiChatHistory*、`ai_chat_history` 表已于 2026-09-07 删除，勿恢复；AI 对话只在 kb-service。
 
 > 子模块目录下的 `AGENTS.md` 为当前结构的精简快照，如与代码冲突，**以代码和本目录 `CLAUDE.md` 为准**。

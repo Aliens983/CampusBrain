@@ -169,6 +169,7 @@ cd backend && mvn -B test
 
 ## 九、代码约定
 - Controller 统一返回 `CommonResult<T>`；业务异常抛 `BusinessException(ErrorCode)` 由全局处理器兜底。
+- **HTTP 状态语义（2026-09-12 起）**：业务异常 400 / 未授权 401 / 禁权 403 / 未找到 404 / 系统异常 500。此前业务错误也返回 200（仅靠 body 的 code 区分），现已补齐 `@ResponseStatus`；catch-all 仅返回通用文案，堆栈只进日志。
 - 跨模块调用走 `api/` 接口，模块间不直接依赖 Mapper。
 - `domain/` 纯净实体，无 Spring 注解；应用层编排、基础设施层落实现。
 - 新增密钥不入库，一律经环境变量注入。
