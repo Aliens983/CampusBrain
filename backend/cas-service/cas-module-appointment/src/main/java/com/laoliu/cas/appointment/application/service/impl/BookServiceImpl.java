@@ -10,6 +10,7 @@ import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
+import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.system.api.UserInfoApi;
 import com.laoliu.cas.system.api.dto.UserInfoDTO;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -137,18 +139,21 @@ public class BookServiceImpl implements BookService {
         return dto;
     }
 
+    /**
+     * 状态中文描述统一取自 {@link ManageStatus} 枚举。
+     * <p>
+     * 此前这里与 {@code ServiceStatusServiceImpl#setStatusDescription} 各写一份 switch，
+     * 新增状态或改文案时极易只改一处，造成同一状态在列表页与详情页显示不一致。
+     */
     private String getStatusDescription(Integer status) {
         if (status == null) {
             return "未知状态";
         }
-        return switch (status) {
-            case 0 -> "待审核";
-            case 1 -> "通过";
-            case 2 -> "拒绝";
-            case 3 -> "取消";
-            case 4 -> "已完成";
-            default -> "未知状态";
-        };
+        return Arrays.stream(ManageStatus.values())
+                .filter(s -> s.getCode() == status)
+                .map(ManageStatus::getMessage)
+                .findFirst()
+                .orElse("未知状态");
     }
 
     @Override
