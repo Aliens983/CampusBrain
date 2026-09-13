@@ -249,6 +249,12 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     @Override
     public AssistantBookingDraft createDraft(Long userId, AssistantBookingDraftRequest request) {
         AssistantBookingDraft draft = resolveAndValidate(request);
+        // 校验不通过：不分配草稿ID、不写 Redis。
+        // 无效草稿本就无法被确认，给它一个 ID 只会误导调用方，并留下永不清理的键
+        if (Boolean.FALSE.equals(draft.getValid())) {
+            log.info("预约草稿校验不通过: userId={}, reason={}", userId, draft.getInvalidReason());
+            return draft;
+        }
         String draftId = UUID.randomUUID().toString();
         draft.setDraftId(draftId);
         draft.setUserId(userId);
