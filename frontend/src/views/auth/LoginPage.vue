@@ -181,7 +181,7 @@ import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import request from '@/common/utils/request'
 import { useUserStore } from '@/common/stores/user'
 import { extractToken, resolveHomeByRole } from '@/common/utils/auth'
-import { loadUserProfile } from '@/services/portal'
+import { fetchUserProfile } from '@/common/campus'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -266,7 +266,7 @@ async function handleLogin() {
 
     const token = extractToken(loginResult) || String(loginResult || '')
     userStore.setToken(token)
-    userStore.setUserInfo(await loadUserProfile())
+    userStore.setUserInfo(await fetchUserProfile())
     ElMessage.success('登录成功')
     router.push(resolveHomeByRole(userStore.userInfo?.role))
   } catch (error: unknown) {

@@ -161,7 +161,7 @@
 import { computed, ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
-import { fetchAdminUsers } from '@/services/campus'
+import { fetchAdminUsers } from '@/common/campus'
 import type { UserInfo, UserRole } from '@/common/types'
 
 const keyword = ref('')
