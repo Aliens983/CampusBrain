@@ -1,9 +1,5 @@
 package com.laoliu.cas.web.config;
 
-import com.laoliu.cas.common.exception.BusinessException;
-import com.laoliu.cas.common.exception.ForbiddenException;
-import com.laoliu.cas.common.exception.ResourceNotFoundException;
-import com.laoliu.cas.common.exception.UnauthorizedException;
 import com.laoliu.cas.common.result.CommonResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,7 +7,6 @@ import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -21,7 +16,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * @author forever-king
@@ -85,75 +79,24 @@ public class WebAutoConfiguration {
         return new CorsFilter(source);
     }
 
-    // ========== 业务异常（HTTP 语义与 body.code 保持一致） ==========
+    // ========== 异常处理 ==========
+    //
+    // 本服务另有一个专职的 GlobalExceptionHandler（cas.web.exception 包），
+    // 已覆盖：BusinessException(400) / UnauthorizedException(401) / ForbiddenException(403) /
+    // ResourceNotFoundException(404) / MethodArgumentNotValidException(400) /
+    // NoResourceFoundException(404) / RuntimeException(500) / Exception(500)。
+    //
+    // 因此本类只保留下面这一个它未覆盖的类型。同一异常若被两个 @RestControllerAdvice
+    // 同时声明，最终生效哪个取决于注册顺序，行为不确定——这是必须避免的。
 
     /**
-     * 业务异常：此前没有 @ResponseStatus，导致业务失败也返回 HTTP 200，
-     * 与网关/前端的 HTTP 语义判断不一致。现统一为 400。
+     * 非法参数 → 400（客户端错误）。
+     * 若不在此声明，会落到 GlobalExceptionHandler 的 RuntimeException 分支而返回 500，语义偏重。
      */
-    @ExceptionHandler(BusinessException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public CommonResult<?> handleBusinessException(BusinessException e) {
-        // 业务异常是可预期分支，不是系统故障，用 warn 即可
-        log.warn("Business exception: code={}, message={}", e.getCode(), e.getMessage());
-        return CommonResult.error(e.getCode(), e.getMessage());
-    }
-
-    @ExceptionHandler(UnauthorizedException.class)
-    @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public CommonResult<?> handleUnauthorized(UnauthorizedException e) {
-        log.warn("Unauthorized: {}", e.getMessage());
-        return CommonResult.unauthorized(e.getMessage());
-    }
-
-    @ExceptionHandler(ForbiddenException.class)
-    @ResponseStatus(HttpStatus.FORBIDDEN)
-    public CommonResult<?> handleForbidden(ForbiddenException e) {
-        log.warn("Forbidden: {}", e.getMessage());
-        return CommonResult.forbidden(e.getMessage());
-    }
-
-    @ExceptionHandler(ResourceNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public CommonResult<?> handleResourceNotFound(ResourceNotFoundException e) {
-        log.warn("Resource not found: {}", e.getMessage());
-        return CommonResult.notFound(e.getMessage());
-    }
-
-    // ========== 参数校验 ==========
-
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public CommonResult<?> handleValidation(MethodArgumentNotValidException e) {
-        String msg = e.getBindingResult().getFieldErrors().stream()
-                .map(f -> f.getField() + ": " + f.getDefaultMessage())
-                .reduce((a, b) -> a + "; " + b)
-                .orElse("参数校验失败");
-        log.warn("Validation failed: {}", msg);
-        return CommonResult.badRequest(msg);
-    }
-
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public CommonResult<?> handleIllegalArgumentException(IllegalArgumentException e) {
         log.warn("Illegal argument: {}", e.getMessage());
         return CommonResult.badRequest(e.getMessage());
-    }
-
-    @ExceptionHandler(NoResourceFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public CommonResult<?> handleNoResourceFoundException(NoResourceFoundException e) {
-        log.warn("Resource not found: {}", e.getMessage());
-        return CommonResult.notFound("资源不存在: " + e.getMessage());
-    }
-
-    // ========== Catch-all（消息脱敏） ==========
-
-    @ExceptionHandler(Exception.class)
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public CommonResult<?> handleException(Exception e) {
-        // 完整堆栈只进日志，绝不回传前端，避免泄露 SQL / 路径 / 配置等内部信息
-        log.error("System exception: ", e);
-        return CommonResult.internalServerError("系统内部错误");
     }
 }
