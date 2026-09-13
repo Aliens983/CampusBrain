@@ -45,7 +45,9 @@
         order_id,user_id,service_id,create_time,update_time,manage_status
     </sql>
 
-    <!-- 幂等插入：60 秒内同用户对同一服务（待审核状态）不重复插入，防止连点/并发重复预约 -->
+    <!-- 幂等插入：同一用户对同一服务只要还有生效预约（待审核 / 已通过）就不重复插入。
+         此前只排除「60 秒内的待审核单」，导致活动类预约（免审直通、几秒内即变为已通过）
+         在 60 秒后可被同一用户重复提交、重复占名额；改为按"是否存在生效预约"判定后即修复。 -->
     <insert id="insertServices">
         INSERT INTO item(user_id,service_id)
         SELECT #{userId}, s.service_id
@@ -58,8 +60,7 @@
             SELECT 1 FROM item i
             WHERE i.user_id = #{userId}
               AND i.service_id = s.service_id
-              AND i.manage_status = 0
-              AND i.create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+              AND i.manage_status IN (0, 1)
         )
     </insert>
 
