@@ -41,6 +41,26 @@
         <result property="serviceState" column="service_state"/>
     </resultMap>
 
+    <!-- 预约单详情的统一列清单与 JOIN：7 个查询共用，加字段只需改这一处 -->
+    <sql id="ServiceStatus_Columns">
+        i.order_id, i.user_id, u.name AS username,
+        s.service_name, s.service_describe, s.campus AS campus, i.reason,
+        i.create_time, i.update_time, i.manage_status,
+        c.name AS consultantName, i.slot_date AS slotDate,
+        i.start_time AS startTime, i.end_time AS endTime,
+        e.name AS equipmentName, i.quantity AS quantity,
+        r.name AS roomName
+    </sql>
+
+    <sql id="ServiceStatus_Joins">
+        FROM item i
+        JOIN user u ON i.user_id = u.id
+        JOIN services s ON i.service_id = s.service_id
+        LEFT JOIN consultant c ON i.consultant_id = c.id
+        LEFT JOIN equipment e ON i.equipment_id = e.id
+        LEFT JOIN room r ON i.room_id = r.id
+    </sql>
+
     <sql id="Base_Column_List">
         order_id,user_id,service_id,create_time,update_time,manage_status
     </sql>
@@ -80,71 +100,31 @@
     </insert>
 
     <select id="getServiceStatus" resultMap="ServiceStatusResultMap">
-        SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, s.campus AS campus, i.reason,
-               i.create_time, i.update_time, i.manage_status,
-               c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity,
-               r.name AS roomName
-        FROM item i
-        JOIN user u ON i.user_id = u.id
-        JOIN services s ON i.service_id = s.service_id
-        LEFT JOIN consultant c ON i.consultant_id = c.id
-        LEFT JOIN equipment e ON i.equipment_id = e.id
-        LEFT JOIN room r ON i.room_id = r.id
+        SELECT
+        <include refid="ServiceStatus_Columns"/>
+        <include refid="ServiceStatus_Joins"/>
         ORDER BY i.create_time DESC
     </select>
 
     <select id="getServiceStatusByUserId" resultMap="ServiceStatusResultMap">
-        SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, s.campus AS campus, i.reason,
-               i.create_time, i.update_time, i.manage_status,
-               c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity,
-               r.name AS roomName
-        FROM item i
-        JOIN user u ON i.user_id = u.id
-        JOIN services s ON i.service_id = s.service_id
-        LEFT JOIN consultant c ON i.consultant_id = c.id
-        LEFT JOIN equipment e ON i.equipment_id = e.id
-        LEFT JOIN room r ON i.room_id = r.id
+        SELECT
+        <include refid="ServiceStatus_Columns"/>
+        <include refid="ServiceStatus_Joins"/>
         WHERE i.user_id = #{userId}
         ORDER BY i.create_time DESC
     </select>
 
     <select id="getServiceStatusByOrderId" resultMap="ServiceStatusResultMap">
-        SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, s.campus AS campus, i.reason,
-               i.create_time, i.update_time, i.manage_status,
-               c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity,
-               r.name AS roomName
-        FROM item i
-        JOIN user u ON i.user_id = u.id
-        JOIN services s ON i.service_id = s.service_id
-        LEFT JOIN consultant c ON i.consultant_id = c.id
-        LEFT JOIN equipment e ON i.equipment_id = e.id
-        LEFT JOIN room r ON i.room_id = r.id
+        SELECT
+        <include refid="ServiceStatus_Columns"/>
+        <include refid="ServiceStatus_Joins"/>
         WHERE i.order_id = #{orderId}
     </select>
 
     <select id="getServiceStatusByOrderIdAndUserId" resultMap="ServiceStatusResultMap">
-        SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, s.campus AS campus, i.reason,
-               i.create_time, i.update_time, i.manage_status,
-               c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity,
-               r.name AS roomName
-        FROM item i
-        JOIN user u ON i.user_id = u.id
-        JOIN services s ON i.service_id = s.service_id
-        LEFT JOIN consultant c ON i.consultant_id = c.id
-        LEFT JOIN equipment e ON i.equipment_id = e.id
-        LEFT JOIN room r ON i.room_id = r.id
+        SELECT
+        <include refid="ServiceStatus_Columns"/>
+        <include refid="ServiceStatus_Joins"/>
         WHERE i.order_id = #{orderId}
         AND i.user_id = #{userId}
     </select>
@@ -321,19 +301,9 @@
 
     <!-- 分页查询所有服务预约状态（支持按审核状态、服务名称筛选） -->
     <select id="getServiceStatusWithPage" resultMap="ServiceStatusResultMap">
-        SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, s.campus AS campus, i.reason,
-               i.create_time, i.update_time, i.manage_status,
-               c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity,
-               r.name AS roomName
-        FROM item i
-        JOIN user u ON i.user_id = u.id
-        JOIN services s ON i.service_id = s.service_id
-        LEFT JOIN consultant c ON i.consultant_id = c.id
-        LEFT JOIN equipment e ON i.equipment_id = e.id
-        LEFT JOIN room r ON i.room_id = r.id
+        SELECT
+        <include refid="ServiceStatus_Columns"/>
+        <include refid="ServiceStatus_Joins"/>
         <where>
             <if test="manageStatus != null">
                 AND i.manage_status = #{manageStatus}
@@ -347,19 +317,9 @@
 
     <!-- 分页查询用户的预约状态（支持按审核状态、服务名称筛选） -->
     <select id="getServiceStatusByUserIdWithPage" resultMap="ServiceStatusResultMap">
-        SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, s.campus AS campus, i.reason,
-               i.create_time, i.update_time, i.manage_status,
-               c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity,
-               r.name AS roomName
-        FROM item i
-        JOIN user u ON i.user_id = u.id
-        JOIN services s ON i.service_id = s.service_id
-        LEFT JOIN consultant c ON i.consultant_id = c.id
-        LEFT JOIN equipment e ON i.equipment_id = e.id
-        LEFT JOIN room r ON i.room_id = r.id
+        SELECT
+        <include refid="ServiceStatus_Columns"/>
+        <include refid="ServiceStatus_Joins"/>
         WHERE i.user_id = #{userId}
         <if test="manageStatus != null">
             AND i.manage_status = #{manageStatus}
@@ -373,18 +333,11 @@
     <!-- 教师：其名下咨询师(c.user_id=教师账号)档期的申请列表（可仅看某状态） -->
     <select id="getTeacherBookingsWithPage" resultMap="ServiceStatusResultMap">
         SELECT i.order_id, i.user_id, u.name AS username,
-               s.service_name, s.service_describe, s.campus AS campus, i.reason,
-               i.create_time, i.update_time, i.manage_status,
-               c.name AS consultantName, i.slot_date AS slotDate,
-               i.start_time AS startTime, i.end_time AS endTime,
-               e.name AS equipmentName, i.quantity AS quantity,
-               r.name AS roomName
-        FROM item i
-        JOIN user u ON i.user_id = u.id
-        JOIN services s ON i.service_id = s.service_id
-        JOIN consultant c ON i.consultant_id = c.id
-        LEFT JOIN equipment e ON i.equipment_id = e.id
-        LEFT JOIN room r ON i.room_id = r.id
+        SELECT
+        <include refid="ServiceStatus_Columns"/>
+        <include refid="ServiceStatus_Joins"/>
+        <!-- 教师端只关心咨询预约：c.user_id 条件会把未挂咨询师的单自然排除，
+             因此共用 LEFT JOIN 版本即可，无需再单独写内连接 -->
         WHERE c.user_id = #{teacherId}
         <if test="manageStatus != null">
             AND i.manage_status = #{manageStatus}
