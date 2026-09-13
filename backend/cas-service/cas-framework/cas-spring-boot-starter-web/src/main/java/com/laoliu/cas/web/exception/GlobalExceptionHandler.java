@@ -81,7 +81,15 @@ public class GlobalExceptionHandler {
         return CommonResult.badRequest(message.toString());
     }
 
+    /**
+     * 业务异常：HTTP 语义与响应体 code 对齐。
+     * <p>
+     * 此前返回 HTTP 200，导致网关/Nginx 按状态码统计时业务失败被算作成功，
+     * 5xx 告警失真；同时前端需要同时判断 status 与 body.code 两套口径。
+     * 现在统一为 400（客户端可预期错误），细分原因仍由 body.code 表达。
+     */
     @ExceptionHandler(BusinessException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
     public CommonResult<?> handleBusinessException(BusinessException e, HttpServletRequest request) {
         log.warn("业务异常: {}", e.getMessage());
         Integer code = e.getCode();
