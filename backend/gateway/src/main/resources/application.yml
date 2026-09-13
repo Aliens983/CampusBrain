@@ -24,13 +24,15 @@ spring:
             - StripPrefix=2
 
 # 与 CAS 共享的 JWT 密钥（网关验签用）
+# 无默认值：未注入即启动失败，避免生产静默回退到仓库里公开的常量密钥
+# 本地开发请在 backend/.env 中填写（.env.example 提供了仅本机可用的占位值）
 jwt:
-  secret: ${JWT_SECRET:dXBzZWNyZXR0aGF0aXN2ZXJ5bG9uZ3RoYW5rYXNkZmdoamtscXh6Y3Zibm0xMjM0NTY3OA==}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
 
 # 内网签名密钥（网关签发、服务端校验）
 auth:
-  internal-sign-secret: ${INTERNAL_SIGN_SECRET:internal-sign-default-secret}
+  internal-sign-secret: ${INTERNAL_SIGN_SECRET}
 
 logging:
   level:

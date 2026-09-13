@@ -23,7 +23,14 @@ import java.util.Base64;
 @Component
 public class InternalSigner {
 
-    @Value("${auth.internal-sign-secret:internal-sign-default-secret}")
+    /**
+     * 内网签名密钥。
+     * <p>
+     * 刻意不给默认值：与 {@code jwt.secret} 同理，一旦缺省就回退到公开常量，
+     * 攻击者即可伪造 {@code X-Internal-Sign} 绕过网关直连服务。
+     * 未注入时启动即失败，本地开发请在 {@code backend/.env} 中填写。
+     */
+    @Value("${auth.internal-sign-secret}")
     private String secret;
 
     /**

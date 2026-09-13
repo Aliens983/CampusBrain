@@ -3,12 +3,13 @@
 # ============================================================
 
 # 与网关共享的内网签名密钥（校验 X-Internal-Sign）
+# 无默认值：未注入即启动失败，避免生产静默回退到仓库里公开的常量密钥
 auth:
-  internal-sign-secret: ${INTERNAL_SIGN_SECRET:internal-sign-default-secret}
+  internal-sign-secret: ${INTERNAL_SIGN_SECRET}
 
 # common-auth 的 JWTUtils 会被扫描实例化（KB 本身不验 JWT，但需占位属性）
 jwt:
-  secret: ${JWT_SECRET:dXBzZWNyZXR0aGF0aXN2ZXJ5bG9uZ3RoYW5rYXNkZmdoamtscXh6Y3Zibm0xMjM0NTY3OA==}
+  secret: ${JWT_SECRET}
   expiration: ${JWT_EXPIRATION:86400000}
 
 spring:
