@@ -66,7 +66,9 @@ public class SecurityAutoConfiguration {
                                 "/favicon.ico",
                                 "/weather/**"
                         ).permitAll()
-                        .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        // 授权唯一来源是方法级 @RequireRole（RoleAspect 实时查库判定角色），
+                        // 路径前缀（/admin、/teacher、/app）不再承载权限语义；
+                        // AdminEndpointAuthorizationGuardTest 守护：所有 /admin/** 映射必须标注 @RequireRole。
                         // 3.4.1：智能助手接口仅供 KB 内网（经 InternalAuthFilter 签名校验、ROLE_INTERNAL）
                         // 调用。普通终端用户 JWT 一律拒绝，避免绕过助手会话直接越权下单/取消。
                         .requestMatchers("/appointments/assistant/**").hasRole("INTERNAL")

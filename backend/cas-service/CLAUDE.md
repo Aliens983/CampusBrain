@@ -30,7 +30,7 @@ frontend → gateway:8888（JWT 验签 + 身份头透传）
              ├─ /api/v1/**（除 /kb）→ cas-service:18080（context-path 也是 /api/v1，不剥前缀）
              └─ /api/v1/kb/**       → kb-service:8081（StripPrefix=2）
 kb-service ──Feign + Nacos + X-Internal-Sign──> GET /appointments/availability（cas 只读接口）
-cas-service ──RabbitMQ appointment.changed──> kb-service（KB 当前仅记日志）
+cas-service ──RabbitMQ appointment.changed──> kb-service（消费后联动失效问答/语义缓存）
 ```
 
 - JWT 由 gateway 统一验签；cas 信任网关注入的身份头。`InternalAuthFilter`（cas-spring-boot-starter-security）校验服务间请求的 `X-Internal-Sign`（HMAC + 时间戳新鲜度），通过后写入 SecurityContext。
@@ -53,7 +53,7 @@ cas-module-infra        文件 / 邮件 / 二维码（依赖 framework + thirdpa
 cas-thirdparty          天气、阿里云 OSS、短信（仅依赖 common；AI 对话链已删除，见下）
 cas-module-system       用户 / 认证 / 角色 / 通知策略（依赖 infra + thirdparty）
 cas-module-appointment  预约核心（依赖 system + infra）
-cas-server              启动入口：CampusAppointmentApplication + application.yml + Flyway + Demo 控制器
+cas-server              启动入口：CampusAppointmentApplication + application.yml + Flyway
 ```
 
 硬约束：`server` 零业务代码；业务模块互不直接依赖（跨模块走 `api/`）；thirdparty 不依赖业务模块。
@@ -66,10 +66,16 @@ application/  service + impl（编排，不直接碰 MyBatis）
 domain/       entity（纯 POJO，无 Spring 注解）+ repository（接口）
 infrastructure/ persistence/{dataobject,mapper,repository/*Impl} + task/mq/config/aspect
 api/          跨模块对外接口 XxxApi + XxxApiImpl + dto（仅 system 模块提供）
-carousel/     appointment 内的独立子域包（controller/service/mapper/dataobject，未严格四层）
 ```
 
-预约模块另有扁平化子域包：`carousel/`（轮播图）；咨询沟通类放在标准四层（ConsultChat* 系列）。
+所有业务子域（含轮播图 carousel、AI 预约助手 assistant）均已统一到上述四层包结构，不再允许新建扁平子域包。assistant 的控制器位于 `interfaces/controller/assistant/`，DTO 位于 `interfaces/dto/`，服务位于 `application/service(+impl)`；carousel 经 domain 实体 `Carousel` + `CarouselRepository` 仓储接入。
+
+### 授权约定（2.3.2，硬约束）
+
+- **路径前缀不承载权限语义**：`/admin`、`/teacher`、`/app` 只表示接口分组，Spring Security 不再对 `/admin/**` 配置任何角色规则。
+- **授权唯一来源**是方法级 `@RequireRole`（`RoleAspect` 每次请求实时查库判定，因此角色调整立即生效，不依赖 JWT 内陈旧 claim）；新端点必须显式标注。
+- 守护测试 `AdminEndpointAuthorizationGuardTest`（cas-server）扫描全部控制器，凡类级路径以 `/admin` 开头的 HTTP 映射方法缺注解即构建失败。
+- 例外：`/appointments/assistant/**` 是 KB 内网接口，由 `ROLE_INTERNAL`（HMAC 签名）保护，不走用户角色体系。
 
 ## 当前各模块真实内容
 
@@ -81,12 +87,12 @@ carousel/     appointment 内的独立子域包（controller/service/mapper/data
 - **教师端**：TeacherAuditController `/teacher/bookings`（GET 我名下申请、`PATCH /{id}/approve|reject`），Service/Impl + TeacherAuditRequest。
 - **咨询沟通**：ConsultChatAppController `/app/chat/consult/conversations/**`（列表、unread-count、open-with-consultant/open-with-student/open-by-booking、消息按 afterId 增量拉取、发消息、已读），参与者本人鉴权。
 - **余量（给 KB）**：AvailabilityController `GET /appointments/availability`（内网签名）+ `/appointments/mine`。
-- **轮播图**：`carousel/` 子包 CarouselAdminController（/admin/carousel，GET/POST/DELETE/{id}/reorder）、CarouselAppController（GET /app/carousel）。
-- **AI 预约助手**（`assistant/` 子包，与 `carousel/` 同级的独立子域）：AppointmentAssistantController（`/appointments/assistant/**`，内网签名供 KB 调用）
+- **轮播图**（四层包，domain 实体 Carousel + CarouselRepository）：CarouselAdminController（/admin/carousel，GET/POST/DELETE/{id}/reorder）、CarouselAppController（GET /app/carousel）。
+- **AI 预约助手**（四层包：`interfaces/controller/assistant` + `application/service` + `interfaces/dto`）：AppointmentAssistantController（`/appointments/assistant/**`，内网签名供 KB 调用）
   - 查询：`GET /services?campus=&category=&keyword=`、`/consultants?campus=&keyword=&date=`、`/consultants/{id}/slots?date=`、`/rooms?campus=&date=&startTime=&endTime=`、`/equipment?campus=&keyword=&date=&startTime=&endTime=`、`/my-bookings?manageStatus=`
-  - 预约（两段式）：`POST /bookings/draft`（只校验预览，草稿存 Redis TTL 10min，key 按 userId 隔离）→ `POST /bookings/{draftId}/confirm`（二次校验后复用 `ConsultationServiceImpl` / `RoomServiceImpl` / `EquipmentServiceImpl` / `BookService` 下单）；`GET|DELETE /bookings/draft/{draftId}`、`POST /bookings/{orderId}/cancel`
+  - 预约（两段式）：`POST /bookings/draft`（只校验预览，草稿存 Redis TTL 10min，key 按 userId 隔离）→ `POST /bookings/{draftId}/confirm`（二次校验后通过 `ConsultationService` / `RoomService` / `EquipmentService` / `BookService` 接口下单）；`GET|DELETE /bookings/draft/{draftId}`、`POST /bookings/{orderId}/cancel`
   - 校验不通过时返回 `valid=false` + `invalidReason`（不抛异常），便于 AI 直接转述给用户。
-- **领域实体**：Service、ServiceCategory、AppointmentRecord、Consultant、TimeSlot、Room、Equipment、ConsultChatConversation、ConsultChatMessage。
+- **领域实体**：ServiceItem、ServiceCategory、AppointmentRecord、Consultant、TimeSlot、Room、Equipment、Carousel、ConsultChatConversation、ConsultChatMessage。
 - **定时/MQ**：infrastructure/task/BookingAutoCompleteTask（60s 扫描过期置 COMPLETED）+ AppointmentScheduleConfig；infrastructure/mq/BookingEventPublisher + RabbitMqConfig + AppointmentChangedEvent（发 appointment.changed）。
 - **MQ 拓扑（2026-09-12 改造）**：显式声明 `DirectExchange cas.appointment.exchange` + Binding，不再依赖默认 exchange 的隐式绑定；队列名沿用 `appointment.changed` 以免存量消息丢失。消息体为 `AppointmentChangedEvent` 经 ObjectMapper 序列化的 JSON（取代手工拼接字符串，后者无转义、易产出非法 JSON），序列化失败只记日志、不影响预约主流程。**KB 侧 `AppointmentEventConfig` 的同名常量需与此处同步。**
 

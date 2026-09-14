@@ -12,6 +12,7 @@ import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.result.PageResult;
 import com.laoliu.cas.common.util.PasswordUtils;
 import com.laoliu.cas.system.application.service.NotificationSettingsService;
+import com.laoliu.cas.system.application.service.RoleService;
 import com.laoliu.cas.system.application.service.UserService;
 import com.laoliu.cas.system.domain.repository.UserRepository;
 import com.laoliu.cas.system.interfaces.convert.UserConvert;
@@ -51,6 +52,7 @@ public class UserController {
     private final GetUserIdViaTokenApi getUserIdViaTokenApi;
     private final UserService userService;
     private final NotificationSettingsService notificationSettings;
+    private final RoleService roleService;
 
     @Operation(summary = "获取当前用户信息", description = "获取当前登录用户的基本信息，包含用户名、邮箱、角色等")
     @GetMapping({"/", "/me"})
@@ -69,6 +71,14 @@ public class UserController {
             log.error("获取用户信息失败", e);
             throw new BusinessException(CommonErrorCode.INTERNAL_ERROR);
         }
+    }
+
+    @Operation(summary = "获取当前用户角色", description = "获取当前登录用户的角色文案（普通用户/管理员等），任何登录用户可查自己")
+    @GetMapping("/me/role")
+    @RequireRole({UserRoleEnum.USER, UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
+    public CommonResult<String> getMyRole() {
+        Long userId = getUserIdViaTokenApi.getUserId();
+        return CommonResult.success("获取用户角色成功", roleService.getRoleByUserId(userId));
     }
 
     @Operation(summary = "获取所有用户列表（分页+筛选）", description = "管理员分页获取用户列表，支持按姓名、邮箱模糊搜索和角色筛选")
