@@ -97,6 +97,10 @@ spring:
 # ---------- Server ----------
 server:
   port: 8081
+  # 与 CAS 一致：服务自带完整上下文前缀，网关原样转发、不剥前缀。
+  # Controller 一律映射相对路径（/qa、/documents、/health），外部访问路径为 /api/v1/kb/**。
+  servlet:
+    context-path: /api/v1/kb
   shutdown: graceful
   tomcat:
     uri-encoding: UTF-8

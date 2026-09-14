@@ -50,13 +50,13 @@ public class SecurityConfig {
                 .sessionManagement(s -> s
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/kb/auth/**").permitAll()
-                        .requestMatchers("/kb/health").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         // 知识库文档的管理（上传/删除）仅限管理员，普通用户只能问答
-                        .requestMatchers(HttpMethod.POST, "/kb/documents/upload")
+                        .requestMatchers(HttpMethod.POST, "/documents/upload")
                             .hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/kb/documents/**")
+                        .requestMatchers(HttpMethod.DELETE, "/documents/**")
                             .hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
@@ -84,7 +84,7 @@ public class SecurityConfig {
         config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/kb/**", config);
+        source.registerCorsConfiguration("/**", config);
         return source;
     }
 }

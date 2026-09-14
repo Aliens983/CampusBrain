@@ -28,7 +28,7 @@ Group/包:    com.laoliu / com.laoliu.cas
 ```
 frontend → gateway:8888（JWT 验签 + 身份头透传）
              ├─ /api/v1/**（除 /kb）→ cas-service:18080（context-path 也是 /api/v1，不剥前缀）
-             └─ /api/v1/kb/**       → kb-service:8081（StripPrefix=2）
+             └─ /api/v1/kb/**       → kb-service:8081（context-path 也是 /api/v1/kb，不剥前缀）
 kb-service ──Feign + Nacos + X-Internal-Sign──> GET /appointments/availability（cas 只读接口）
 cas-service ──RabbitMQ appointment.changed──> kb-service（消费后联动失效问答/语义缓存）
 ```

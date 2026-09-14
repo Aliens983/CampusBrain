@@ -30,7 +30,7 @@ import java.util.List;
 @Tag(name = "智能问答", description = "基于 RAG 的文档问答，支持同步和 SSE 流式两种模式")
 @Slf4j
 @RestController
-@RequestMapping("/kb/qa")
+@RequestMapping("/qa")
 @RequiredArgsConstructor
 public class QaController {
 

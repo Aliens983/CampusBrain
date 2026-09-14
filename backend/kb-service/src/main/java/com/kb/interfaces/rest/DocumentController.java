@@ -19,7 +19,7 @@ import java.util.Map;
  */
 @Tag(name = "文档管理", description = "文档上传、查询、删除等管理接口")
 @RestController
-@RequestMapping("/kb/documents")
+@RequestMapping("/documents")
 @RequiredArgsConstructor
 public class DocumentController {
 

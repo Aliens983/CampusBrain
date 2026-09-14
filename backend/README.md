@@ -7,7 +7,7 @@
 ```
 frontend(统一前端) → gateway :8888  ← 唯一入口，统一 JWT 鉴权
                        ├─ /api/v1/**       → cas-service :18080（自身 context-path=/api/v1）
-                       └─ /api/v1/kb/**    → kb-service  :8081 （StripPrefix=2 后命中 /kb/**）
+                       └─ /api/v1/kb/**    → kb-service  :8081（自身 context-path=/api/v1/kb，网关不剥前缀）
                     Nacos :8848/9848   注册中心 + 配置中心（cas-service.yaml 热更新）
                     Sentinel           限流（Nacos 动态规则 cas-sentinel-flow-rules）
 ```

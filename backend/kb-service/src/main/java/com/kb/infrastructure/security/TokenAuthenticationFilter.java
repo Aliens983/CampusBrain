@@ -31,10 +31,14 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    /** 无需网关身份头的公开路径 */
+    /**
+     * 无需网关身份头的公开路径。
+     * <p>使用 {@link HttpServletRequest#getServletPath()}（context-path 之后的相对路径）匹配，
+     * 因此这里不包含 {@code server.servlet.context-path=/api/v1/kb} 前缀。
+     */
     private static final List<String> PUBLIC_PATHS = List.of(
-            "/kb/health",
-            "/kb/auth/**"
+            "/health",
+            "/auth/**"
     );
 
     private final InternalSigner internalSigner;
@@ -43,7 +47,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                      HttpServletResponse response,
                                      FilterChain chain) throws ServletException, IOException {
-        String path = request.getRequestURI();
+        // 取 context-path 之后的相对路径，避免公开路径与 context-path 配置耦合
+        String path = request.getServletPath();
         if (isPublicPath(path)) {
             chain.doFilter(request, response);
             return;

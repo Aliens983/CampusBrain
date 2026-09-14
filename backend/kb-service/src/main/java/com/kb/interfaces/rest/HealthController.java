@@ -4,7 +4,6 @@ import com.kb.interfaces.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
@@ -15,7 +14,6 @@ import java.util.Map;
  */
 @Tag(name = "系统健康", description = "服务健康检查接口")
 @RestController
-@RequestMapping("/kb")
 public class HealthController {
 
     @Operation(summary = "健康检查", description = "返回服务运行状态和版本信息")
