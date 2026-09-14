@@ -120,6 +120,7 @@ import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/common/stores/user'
 import { API_SUCCESS_CODE } from '@/common/utils/request'
+import { campusLabel, categoryLabel, loadCategoryDictionary } from '@/common/dictionary'
 
 interface DocumentItem { id: number; title: string; fileType?: string; status?: string }
 interface SessionMeta { id: string; title: string; updatedAt: string }
@@ -129,9 +130,6 @@ interface SlotsView { campus?: string; category?: string; date?: string; startTi
 interface PendingView { action: 'BOOK' | 'CANCEL'; draftId?: string; orderId?: number; summary?: string; needAudit?: boolean }
 interface ActionView { status?: string; statusText?: string; message?: string; orderId?: number }
 interface ChatMsg { id?: number; role: 'user' | 'assistant'; content: string; confirm?: PendingView; action?: ActionView }
-
-const CAMPUS_LABEL: Record<string, string> = { cq: '仓前校区', xs: '下沙校区' }
-const CATEGORY_LABEL: Record<string, string> = { teacher: '教师咨询', equipment: '设备借用', space: '教室空间', activity: '活动报名' }
 
 const userStore = useUserStore()
 const isAdmin = computed(() => ['admin', 'super_admin'].includes(userStore.userInfo?.role || ''))
@@ -154,8 +152,8 @@ const pendingIndex = ref<number | null>(null)
 const slotChips = computed(() => {
   const s = slots.value
   const chips: Array<{ key: string; text: string }> = []
-  if (s.campus) chips.push({ key: 'campus', text: CAMPUS_LABEL[s.campus] || s.campus })
-  if (s.category) chips.push({ key: 'category', text: CATEGORY_LABEL[s.category] || s.category })
+  if (s.campus) chips.push({ key: 'campus', text: campusLabel(s.campus) })
+  if (s.category) chips.push({ key: 'category', text: categoryLabel(s.category) })
   if (s.date) chips.push({ key: 'date', text: s.date })
   if (s.startTime && s.endTime) chips.push({ key: 'time', text: `${s.startTime}-${s.endTime}` })
   else if (s.startTime) chips.push({ key: 'time', text: `${s.startTime} 起` })
@@ -297,7 +295,13 @@ function triggerUpload() { fileInput.value?.click() }
 function onFileSelected(event: Event) { const target = event.target as HTMLInputElement; if (target.files) for (const file of Array.from(target.files)) uploadFile(file); target.value = '' }
 async function uploadFile(file: File) { uploading.value = true; try { const formData = new FormData(); formData.append('file', file); const resp = await fetch(`${BASE}/documents/upload`, { method: 'POST', headers: authHeaders(), body: formData }); const result = await resp.json(); if (result.code === API_SUCCESS_CODE) { ElMessage.success('上传成功'); setTimeout(refreshDocuments, 800) } else ElMessage.error(result.message || '上传失败') } catch { ElMessage.error('上传失败，请重试') } finally { uploading.value = false } }
 
-onMounted(async () => { if (isAdmin.value) refreshDocuments(); ensureSession(); await loadHistory(currentSessionId.value) })
+onMounted(async () => {
+  // 1.3.1：分类中文名以后端字典为准（全局只拉一次，失败用兜底）
+  void loadCategoryDictionary()
+  if (isAdmin.value) refreshDocuments()
+  ensureSession()
+  await loadHistory(currentSessionId.value)
+})
 onUnmounted(() => {
   // 离开页面：取消待执行的滚动帧
   if (scrollFrame) cancelAnimationFrame(scrollFrame)
