@@ -70,6 +70,9 @@ public class AssistantBookingDraft implements Serializable {
     @Schema(description = "具体资源名称")
     private String resourceName;
 
+    @Schema(description = "咨询时段ID（仅咨询预约有效）")
+    private Long slotId;
+
     @Schema(description = "日期 yyyy-MM-dd")
     private String date;
 

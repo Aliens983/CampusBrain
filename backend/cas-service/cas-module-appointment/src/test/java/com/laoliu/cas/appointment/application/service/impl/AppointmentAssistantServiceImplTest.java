@@ -13,6 +13,8 @@ import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomVO;
 import com.laoliu.cas.appointment.domain.entity.Room;
 import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
+import com.laoliu.cas.appointment.domain.entity.Consultant;
+import com.laoliu.cas.appointment.domain.entity.TimeSlot;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.domain.repository.EquipmentRepository;
@@ -242,6 +244,38 @@ class AppointmentAssistantServiceImplTest {
 
             assertThrows(BusinessException.class, () -> service.confirmDraft(7L, draft.getDraftId()));
             verify(bookService, never()).bookService(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("咨询预约：草稿保存 slotId，确认时二次校验通过并派发到咨询下单")
+        void shouldConfirmConsultationDraft() throws Exception {
+            stubCategory("teacher");
+            when(serviceRepository.findById(1L)).thenReturn(Optional.of(service(1L, -1, 0)));
+            Consultant consultant = Consultant.builder().id(3L).name("张老师").serviceId(1L).build();
+            when(consultantRepository.findById(3L)).thenReturn(Optional.of(consultant));
+            TimeSlot slot = TimeSlot.builder().id(9L).consultantId(3L)
+                    .slotDate(LocalDate.now().plusDays(1))
+                    .startTime("09:00").endTime("10:00").available(true).build();
+            when(timeSlotRepository.findById(9L)).thenReturn(Optional.of(slot));
+
+            AssistantBookingDraft draft = service.createDraft(7L,
+                    AssistantBookingDraftRequest.builder()
+                            .serviceId(1L).consultantId(3L).slotId(9L).build());
+
+            assertTrue(draft.getValid());
+            assertEquals(9L, draft.getSlotId(),
+                    "草稿必须保存时段ID，否则确认时二次校验拿不到 slotId，咨询预约确认必然失败");
+
+            ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
+            verify(redisUtil).set(anyString(), jsonCaptor.capture(), anyLong(), any());
+            when(redisUtil.get(anyString())).thenReturn(jsonCaptor.getValue());
+            when(consultationService.bookConsultation(eq(7L), eq(3L), eq(9L))).thenReturn(2001L);
+
+            AssistantBookingResult result = service.confirmDraft(7L, draft.getDraftId());
+
+            // 必须派发到咨询下单，且第二个参数是 consultantId 而非 serviceId
+            verify(consultationService).bookConsultation(7L, 3L, 9L);
+            assertEquals(2001L, result.getOrderId());
         }
     }
 

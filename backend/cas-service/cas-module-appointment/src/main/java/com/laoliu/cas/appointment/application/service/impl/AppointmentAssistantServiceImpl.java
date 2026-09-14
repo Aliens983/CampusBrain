@@ -406,10 +406,14 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         if (!slot.isAvailable()) {
             return invalid(service, category, "该时段不可用或刚被他人预约，请重新选择");
         }
-        return valid(AssistantBookingDraft.TYPE_CONSULTATION, "教师咨询", service, category,
+        AssistantBookingDraft draft = valid(AssistantBookingDraft.TYPE_CONSULTATION, "教师咨询", service, category,
                 consultant.getId(), consultant.getName(),
                 String.valueOf(slot.getSlotDate()), slot.getStartTime(), slot.getEndTime(),
                 null, request.getPurpose(), List.of(), Boolean.TRUE);
+        // 时段ID 必须随草稿一起持久化：确认时 toRequest 靠它回填，
+        // 否则二次校验拿不到 slotId，咨询预约确认会 100% 失败
+        draft.setSlotId(slot.getId());
+        return draft;
     }
 
     private AssistantBookingDraft validateRoom(ServiceItem service, ServiceCategory category,
@@ -498,7 +502,10 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             case AssistantBookingDraft.TYPE_CONSULTATION -> {
                 ConsultationBookRequest req = new ConsultationBookRequest();
                 req.setSlotId(resolveSlotId(draft));
-                return consultationService.bookConsultation(userId, draft.getServiceId(), req.getSlotId());
+                // 第二个参数是 consultantId 而非 serviceId：草稿的 resourceId 对咨询类型就是咨询师ID
+                // （见 validateConsultation 的 valid(...) 入参）。此前误传 serviceId，
+                // 会导致查出错误咨询师或直接 CONSULTANT_NOT_FOUND。
+                return consultationService.bookConsultation(userId, draft.getResourceId(), req.getSlotId());
             }
             case AssistantBookingDraft.TYPE_ROOM -> {
                 RoomBookRequest req = new RoomBookRequest();
@@ -525,6 +532,12 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     /** 咨询预约下单只需要 slotId；草稿里存的是咨询师ID，这里反查其可用时段中的同一时段 */
     private Long resolveSlotId(AssistantBookingDraft draft) {
+        // 草稿里保存的就是生成草稿时校验通过的时段ID，直接用，无需再反查。
+        // 反查仅用于兼容历史草稿（slotId 为空），它依赖日期解析与起止时间字符串精确匹配，
+        // 一旦时段被占用或时间格式有出入就会误判为"时段不可用"，因此只作兜底。
+        if (draft.getSlotId() != null) {
+            return draft.getSlotId();
+        }
         LocalDate date = parseDateOrNull(draft.getDate());
         if (date != null) {
             Optional<TimeSlot> matched = timeSlotRepository
@@ -582,7 +595,12 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         req.setQuantity(draft.getQuantity());
         req.setPurpose(draft.getPurpose());
         switch (draft.getResourceType()) {
-            case AssistantBookingDraft.TYPE_CONSULTATION -> req.setConsultantId(draft.getResourceId());
+            case AssistantBookingDraft.TYPE_CONSULTATION -> {
+                req.setConsultantId(draft.getResourceId());
+                // 时段ID 必须回填：确认时的二次校验走 validateConsultation，
+                // 它要求 consultantId 与 slotId 同时非空，缺一则确认必然失败
+                req.setSlotId(draft.getSlotId());
+            }
             case AssistantBookingDraft.TYPE_ROOM -> req.setRoomId(draft.getResourceId());
             case AssistantBookingDraft.TYPE_EQUIPMENT -> req.setEquipmentId(draft.getResourceId());
             default -> { /* 通用服务无需资源ID */ }
