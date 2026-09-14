@@ -19,6 +19,24 @@ spring:
     nacos:
       discovery:
         server-addr: ${NACOS_ADDR:localhost:8848}
+    # Feign 超时：默认是连接 10s / 读取 60s。
+    # 预约确认链路是「SSE → LLM → Feign → CAS」，60s 的读超时在 SSE 场景根本等不到结果，
+    # 只会让 Tomcat 线程一直挂到容器超时；这里按交互式操作收紧。
+    openfeign:
+      client:
+        config:
+          default:
+            connect-timeout: 3000
+            read-timeout: 10000
+          # 预约类调用是用户正盯着等的操作，要求更短，失败快于让人干等
+          cas-service:
+            connect-timeout: 3000
+            read-timeout: 8000
+  # SSE 问答是异步请求：不配的话回落到容器默认（Tomcat 30s），
+  # 而 LLM 与 Feign 的超时都大于 30s，回答稍长就会被容器掐断，前端只拿到半截答案。
+  mvc:
+    async:
+      request-timeout: 120s
   profiles:
     active: dev
 
