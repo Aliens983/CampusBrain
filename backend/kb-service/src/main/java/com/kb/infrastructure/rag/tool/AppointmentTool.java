@@ -383,7 +383,7 @@ public class AppointmentTool {
         if (ctx == null || ctx.sessionId() == null) {
             return;
         }
-        ChatSession session = chatSessionRepository.loadOrCreate(ctx.sessionId(), ctx.userId());
+        ChatSession session = chatSessionRepository.loadForUser(ctx.sessionId(), ctx.userId());
         session.setSlots(session.slotsOrEmpty().merge(learned));
         chatSessionRepository.save(session);
         ChatContextHolder.set(new ChatContextHolder.ChatContext(
@@ -396,7 +396,7 @@ public class AppointmentTool {
             log.warn("缺少会话上下文，无法登记待确认动作");
             return;
         }
-        ChatSession session = chatSessionRepository.loadOrCreate(ctx.sessionId(), ctx.userId());
+        ChatSession session = chatSessionRepository.loadForUser(ctx.sessionId(), ctx.userId());
         session.setPendingBooking(pending);
         chatSessionRepository.save(session);
     }

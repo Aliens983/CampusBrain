@@ -15,6 +15,8 @@ import com.kb.domain.rag.RerankerService;
 import com.kb.infrastructure.client.CasClient;
 import com.kb.infrastructure.client.CasResult;
 import com.kb.infrastructure.client.dto.CasBookingResult;
+import com.kb.infrastructure.common.BusinessException;
+import com.kb.infrastructure.common.ErrorCode;
 import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.rag.graph.GraphAssistedRetriever;
 import com.kb.infrastructure.rag.rewrite.ContextualQueryRewriter;
@@ -132,7 +134,7 @@ public class QaApplicationService implements IQaApplicationService {
         long startTime = System.currentTimeMillis();
         String sid = ensureSessionId(sessionId);
         Long userId = currentUserId != null ? currentUserId : SecurityFrameworkUtils.getLoginUserId();
-        ChatSession session = chatSessionRepository.loadOrCreate(sid, userId);
+        ChatSession session = chatSessionRepository.loadForUser(sid, userId);
 
         try {
             // ---- Step 0: 上一轮遗留的"待确认动作"优先处理 ----
@@ -144,11 +146,11 @@ public class QaApplicationService implements IQaApplicationService {
                 } else {
                     ConfirmIntent intent = detectConfirmIntent(query);
                     if (intent == ConfirmIntent.CONFIRM) {
-                        return executePending(sid, query, session, pending, true,
+                        return executePending(sid, userId, query, session, pending, true,
                                 onToken, onCitations, onMessageId, onEvent, startTime);
                     }
                     if (intent == ConfirmIntent.REJECT) {
-                        return executePending(sid, query, session, pending, false,
+                        return executePending(sid, userId, query, session, pending, false,
                                 onToken, onCitations, onMessageId, onEvent, startTime);
                     }
                     // 用户转移话题：丢弃上一份草稿，避免误确认
@@ -157,7 +159,7 @@ public class QaApplicationService implements IQaApplicationService {
             }
 
             // ---- Step 1: 上下文感知改写（追问补全 + 槽位继承）----
-            List<LlmService.ChatMessage> history = loadHistory(sid);
+            List<LlmService.ChatMessage> history = loadHistory(sid, userId);
             ContextualQueryRewriter.RewriteResult rewrite =
                     contextualRewriter.rewrite(query, history, session.slotsOrEmpty());
             String rewritten = rewrite.query();
@@ -174,7 +176,7 @@ public class QaApplicationService implements IQaApplicationService {
             List<RetrievalResult> reranked = rerankerService.rerank(rewritten, retrieved);
 
             // ---- Step 3: 保存用户消息 ----
-            conversationRepository.save(sid, "user", query);
+            conversationRepository.save(sid, "user", query, userId);
 
             // ---- Step 4: 生成回答 ----
             String fullAnswer = generate(rewritten, reranked, history, session, onToken);
@@ -186,7 +188,7 @@ public class QaApplicationService implements IQaApplicationService {
             List<Conversation.CitationRef> citations = buildCitations(reranked);
 
             Long messageId = conversationRepository.saveWithReferences(
-                    sid, "assistant", fullAnswer, citations);
+                    sid, "assistant", fullAnswer, citations, userId);
             if (onMessageId != null && messageId != null) {
                 onMessageId.accept(messageId);
             }
@@ -211,7 +213,12 @@ public class QaApplicationService implements IQaApplicationService {
         } catch (Exception e) {
             log.error("Q&A failed for query: {}", query, e);
             String errorAnswer = "抱歉，处理您的问题时遇到了错误：" + e.getMessage();
-            conversationRepository.save(sid, "assistant", errorAnswer);
+            try {
+                conversationRepository.save(sid, "assistant", errorAnswer, userId);
+            } catch (Exception saveEx) {
+                // 归属拦截等场景下错误消息也无法落库，不能让二次异常吞掉原始异常
+                log.warn("错误消息落库失败: sessionId={}", sid, saveEx);
+            }
             if (onToken != null) {
                 onToken.accept(errorAnswer);
             }
@@ -242,18 +249,18 @@ public class QaApplicationService implements IQaApplicationService {
         long startTime = System.currentTimeMillis();
         String sid = ensureSessionId(sessionId);
         Long userId = SecurityFrameworkUtils.getLoginUserId();
-        ChatSession session = chatSessionRepository.loadOrCreate(sid, userId);
+        ChatSession session = chatSessionRepository.loadForUser(sid, userId);
 
         try {
             PendingBooking pending = session.getPendingBooking();
             if (pending != null && !pending.isExpired()) {
                 ConfirmIntent intent = detectConfirmIntent(query);
                 if (intent == ConfirmIntent.CONFIRM) {
-                    return executePending(sid, query, session, pending, true,
+                    return executePending(sid, userId, query, session, pending, true,
                             null, null, null, null, startTime);
                 }
                 if (intent == ConfirmIntent.REJECT) {
-                    return executePending(sid, query, session, pending, false,
+                    return executePending(sid, userId, query, session, pending, false,
                             null, null, null, null, startTime);
                 }
                 discardPending(session, pending);
@@ -262,7 +269,7 @@ public class QaApplicationService implements IQaApplicationService {
                 chatSessionRepository.save(session);
             }
 
-            List<LlmService.ChatMessage> history = loadHistory(sid);
+            List<LlmService.ChatMessage> history = loadHistory(sid, userId);
             ContextualQueryRewriter.RewriteResult rewrite =
                     contextualRewriter.rewrite(query, history, session.slotsOrEmpty());
             String rewritten = rewrite.query();
@@ -276,14 +283,14 @@ public class QaApplicationService implements IQaApplicationService {
             metrics.recordRetrievalLatency(System.currentTimeMillis() - retrievalStart);
             List<RetrievalResult> reranked = rerankerService.rerank(rewritten, retrieved);
 
-            conversationRepository.save(sid, "user", query);
+            conversationRepository.save(sid, "user", query, userId);
             String answer = generate(rewritten, reranked, history, session, null);
 
             ChatSession latest = chatSessionRepository.find(sid).orElse(session);
             chatSessionRepository.save(latest);
 
             List<Conversation.CitationRef> citations = buildCitations(reranked);
-            conversationRepository.saveWithReferences(sid, "assistant", answer, citations);
+            conversationRepository.saveWithReferences(sid, "assistant", answer, citations, userId);
 
             metrics.recordQaRequest();
             metrics.recordQaLatency(System.currentTimeMillis() - startTime);
@@ -328,14 +335,14 @@ public class QaApplicationService implements IQaApplicationService {
 
     // ==================== 待确认动作的执行 ====================
 
-    private String executePending(String sid, String query, ChatSession session, PendingBooking pending,
-                                  boolean confirmed,
+    private String executePending(String sid, Long userId, String query, ChatSession session,
+                                  PendingBooking pending, boolean confirmed,
                                   Consumer<String> onToken,
                                   Consumer<List<Conversation.CitationRef>> onCitations,
                                   Consumer<Long> onMessageId,
                                   Consumer<AssistantEvent> onEvent,
                                   long startTime) {
-        conversationRepository.save(sid, "user", query);
+        conversationRepository.save(sid, "user", query, userId);
 
         String answer;
         CasResult<CasBookingResult> result = null;
@@ -388,7 +395,8 @@ public class QaApplicationService implements IQaApplicationService {
             onCitations.accept(List.of());
         }
 
-        Long messageId = conversationRepository.saveWithReferences(sid, "assistant", answer, List.of());
+        Long messageId = conversationRepository.saveWithReferences(
+                sid, "assistant", answer, List.of(), userId);
         if (onMessageId != null && messageId != null) {
             onMessageId.accept(messageId);
         }
@@ -412,8 +420,9 @@ public class QaApplicationService implements IQaApplicationService {
 
     // ==================== 上下文 ====================
 
-    private List<LlmService.ChatMessage> loadHistory(String sessionId) {
-        List<Conversation> messages = conversationRepository.getRecentMessages(sessionId, HISTORY_LIMIT);
+    private List<LlmService.ChatMessage> loadHistory(String sessionId, Long userId) {
+        List<Conversation> messages =
+                conversationRepository.getRecentMessages(sessionId, HISTORY_LIMIT, userId);
         if (messages == null || messages.isEmpty()) {
             return List.of();
         }
@@ -484,25 +493,46 @@ public class QaApplicationService implements IQaApplicationService {
 
     /**
      * Get conversation history for a session.
+     * 归属校验：仅返回当前登录用户自己的消息；他人会话一律返回空，
+     * 不暴露会话是否存在（4.1.13）。
      */
     public List<Conversation> getConversationHistory(String sessionId) {
-        return conversationRepository.findBySessionId(sessionId);
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return conversationRepository.findBySession(sessionId, userId);
     }
 
     /**
      * Record user feedback on an answer.
+     * 归属校验：消息必须属于当前登录用户，否则按"不存在或无权操作"拒绝。
      */
     public void recordFeedback(Long messageId, String feedback) {
-        conversationRepository.updateFeedback(messageId, feedback);
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        boolean updated = conversationRepository.updateFeedback(messageId, feedback, userId);
+        if (!updated) {
+            throw new BusinessException.QaException(ErrorCode.QA_MESSAGE_NOT_FOUND,
+                    "messageId=" + messageId);
+        }
     }
 
     /**
-     * 清空会话上下文（槽位与待确认草稿），消息历史不受影响
+     * 清空会话上下文（槽位与待确认草稿），消息历史不受影响。
+     * 归属校验：仅允许操作当前登录用户自己的会话（4.1.13）。
+     * MySQL 中尚无消息的会话（owner 未知）也允许执行——Redis 侧会再次
+     * 按归属防御，清空一个不存在的 key 是幂等操作。
      */
     public void resetSession(String sessionId) {
-        if (sessionId != null && !sessionId.isBlank()) {
-            chatSessionRepository.clear(sessionId);
+        if (sessionId == null || sessionId.isBlank()) {
+            return;
         }
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        Long owner = conversationRepository.findOwnerIdBySessionId(sessionId);
+        if (owner != null && !owner.equals(userId)) {
+            log.warn("拒绝跨用户重置会话: sessionId={}, owner={}, currentUser={}",
+                    sessionId, owner, userId);
+            throw new BusinessException.QaException(ErrorCode.QA_SESSION_FORBIDDEN,
+                    "sessionId=" + sessionId);
+        }
+        chatSessionRepository.clear(sessionId, userId);
     }
 
     // ========== Private Helpers ==========

@@ -59,13 +59,32 @@ public class RedisChatSessionRepository implements ChatSessionRepository {
     }
 
     @Override
-    public ChatSession loadOrCreate(String sessionId, Long userId) {
-        return find(sessionId).orElseGet(() -> ChatSession.create(sessionId, userId));
+    public ChatSession loadForUser(String sessionId, Long userId) {
+        ChatSession existing = find(sessionId).orElse(null);
+        if (existing == null) {
+            return ChatSession.create(sessionId, userId);
+        }
+        if (userId != null && userId.equals(existing.getUserId())) {
+            return existing;
+        }
+        // sessionId 与上下文归属不一致（泄露/冒用）：返回隔离空会话，
+        // 既不暴露他人槽位/草稿，也不允许后续 save 覆盖他人上下文
+        log.warn("检测到会话上下文归属不一致，返回隔离空会话: sessionId={}, owner={}, currentUser={}",
+                sessionId, existing.getUserId(), userId);
+        return ChatSession.create(sessionId, userId);
     }
 
     @Override
     public void save(ChatSession session) {
         if (session == null || session.getSessionId() == null) {
+            return;
+        }
+        // 防御：Redis 中已存在他人同名会话时绝不覆盖（4.1.13）
+        ChatSession existing = find(session.getSessionId()).orElse(null);
+        if (existing != null && session.getUserId() != null
+                && !session.getUserId().equals(existing.getUserId())) {
+            log.warn("拒绝写入他人会话上下文: sessionId={}, owner={}, currentUser={}",
+                    session.getSessionId(), existing.getUserId(), session.getUserId());
             return;
         }
         session.setUpdatedAt(System.currentTimeMillis());
@@ -82,8 +101,15 @@ public class RedisChatSessionRepository implements ChatSessionRepository {
     }
 
     @Override
-    public void clear(String sessionId) {
+    public void clear(String sessionId, Long userId) {
         if (sessionId == null) {
+            return;
+        }
+        // 仅允许清空归属自己的上下文；key 不存在时 delete 天然幂等
+        ChatSession existing = find(sessionId).orElse(null);
+        if (existing != null && userId != null && !userId.equals(existing.getUserId())) {
+            log.warn("拒绝清空他人会话上下文: sessionId={}, owner={}, currentUser={}",
+                    sessionId, existing.getUserId(), userId);
             return;
         }
         try {

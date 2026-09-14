@@ -24,6 +24,9 @@ public class ConversationDO {
     /** 会话ID */
     private String sessionId;
 
+    /** 会话归属用户 ID（首条消息写入时绑定） */
+    private Long userId;
+
     /** 消息角色（user/assistant） */
     private String role;
 

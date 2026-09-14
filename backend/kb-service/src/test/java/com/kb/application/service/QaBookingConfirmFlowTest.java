@@ -83,7 +83,7 @@ class QaBookingConfirmFlowTest {
                 .confirmPrompt("请确认是否提交以下预约")
                 .needAudit(true)
                 .build());
-        when(chatSessionRepository.loadOrCreate(anyString(), any())).thenReturn(session);
+        when(chatSessionRepository.loadForUser(anyString(), any())).thenReturn(session);
     }
 
     @Test
@@ -93,7 +93,7 @@ class QaBookingConfirmFlowTest {
         ok.setCode(200);
         ok.setData(CasBookingResult.builder().message("预约已提交，等待管理员审核").status("PENDING").build());
         when(casClient.confirmBookingDraft("draft-1")).thenReturn(ok);
-        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
+        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(9L);
 
         List<AssistantEvent> events = new ArrayList<>();
@@ -113,7 +113,7 @@ class QaBookingConfirmFlowTest {
     @Test
     @DisplayName("用户取消 → 丢弃草稿，绝不调下单接口")
     void shouldDiscardDraftWhenUserRejects() {
-        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
+        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(10L);
 
         String answer = service.askStreaming("算了，不要了", "s1", t -> {}, c -> {}, id -> {}, e -> {});
@@ -132,7 +132,7 @@ class QaBookingConfirmFlowTest {
         when(graphRetriever.retrieve("知识库怎么用")).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank("知识库怎么用", List.of())).thenReturn(List.<RetrievalResult>of());
         when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any())).thenReturn("这是知识库用法");
-        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
+        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(11L);
 
         service.askStreaming("知识库怎么用", "s1", t -> {}, c -> {}, id -> {}, e -> {});
@@ -151,7 +151,7 @@ class QaBookingConfirmFlowTest {
         when(graphRetriever.retrieve("确认")).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank("确认", List.of())).thenReturn(List.<RetrievalResult>of());
         when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any())).thenReturn("请问要确认什么？");
-        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
+        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(12L);
 
         service.askStreaming("确认", "s1", t -> {}, c -> {}, id -> {}, e -> {});

@@ -55,6 +55,8 @@ public enum ErrorCode {
     QA_LLM_FAILED(4001, "AI 回答生成失败，请稍后重试"),
     QA_RETRIEVAL_FAILED(4002, "文档检索失败"),
     QA_NO_DOCUMENTS(4003, "知识库中没有相关文档，请先上传文档"),
+    QA_SESSION_FORBIDDEN(4004, "无权访问该会话"),
+    QA_MESSAGE_NOT_FOUND(4005, "消息不存在或无权操作"),
 
     // ---- 系统 ----
     SYSTEM_EXTERNAL_SERVICE_UNAVAILABLE(6001, "外部服务暂不可用，请稍后重试");

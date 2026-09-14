@@ -60,7 +60,7 @@ class QaAppServiceToolRoutingTest {
 
     /** 会话上下文桩：每次返回干净会话，模拟首轮提问 */
     private void stubSession() {
-        when(chatSessionRepository.loadOrCreate(anyString(), any()))
+        when(chatSessionRepository.loadForUser(anyString(), any()))
                 .thenAnswer(inv -> ChatSession.create(inv.getArgument(0), 1L));
     }
 
@@ -70,7 +70,7 @@ class QaAppServiceToolRoutingTest {
                 .thenReturn(new ContextualQueryRewriter.RewriteResult(query, new BookingSlots(), false));
         when(graphRetriever.retrieve(query)).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank(query, List.of())).thenReturn(List.<RetrievalResult>of());
-        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
+        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(1L);
     }
 
@@ -119,7 +119,7 @@ class QaAppServiceToolRoutingTest {
                     .build();
             when(graphRetriever.retrieve(query)).thenReturn(List.of(doc));
             when(rerankerService.rerank(query, List.of(doc))).thenReturn(List.of(doc));
-            when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any()))
+            when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                     .thenReturn(1L);
             when(llmService.generateAnswer(anyString(), anyList(), anyList())).thenReturn("RAG 答案");
 

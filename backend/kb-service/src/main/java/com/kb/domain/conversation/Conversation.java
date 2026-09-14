@@ -28,6 +28,9 @@ public class Conversation {
     /** 会话ID，标识一次多轮对话 */
     private String sessionId;
 
+    /** 会话归属用户 ID（首条消息写入时绑定） */
+    private Long userId;
+
     /** 消息角色：user（用户）、assistant（助手）或 system（系统） */
     private String role;
 
