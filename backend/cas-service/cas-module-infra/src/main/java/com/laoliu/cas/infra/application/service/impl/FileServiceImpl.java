@@ -141,9 +141,25 @@ public class FileServiceImpl implements FileService {
             }
             dir = new File(baseDir, subDir);
         }
-        // 规范化后做目录包含校验，杜绝任何形式的 ../ 穿越
-        File canonicalDir = dir.getAbsoluteFile();
-        String basePath = baseDir.getPath();
+        // 规范化后做目录包含校验，杜绝任何形式的 ../ 穿越。
+        // 必须用 getCanonicalFile()：getAbsoluteFile() 只补全相对路径，
+        // 不解析 .. 也不解析符号链接，起不到"规范化"的作用（此前变量名
+        // 叫 canonicalDir 却用的是 getAbsoluteFile，属于纸糊的防御）。
+        // getCanonicalFile 会抛 IOException，失败时按拒绝处理（fail-closed）。
+        File canonicalDir;
+        try {
+            canonicalDir = dir.getCanonicalFile();
+        } catch (java.io.IOException e) {
+            log.warn("上传目录规范化失败，拒绝写入: subDir={}", subDir, e);
+            throw new BusinessException(CommonErrorCode.FILE_PATH_INVALID);
+        }
+        String basePath;
+        try {
+            basePath = baseDir.getCanonicalFile().getPath();
+        } catch (java.io.IOException e) {
+            log.error("上传根目录规范化失败: {}", uploadDir, e);
+            throw new BusinessException(CommonErrorCode.FILE_PATH_INVALID);
+        }
         String dirPath = canonicalDir.getPath();
         if (!dirPath.equals(basePath) && !dirPath.startsWith(basePath + File.separator)) {
             log.warn("拒绝越界的上传目录: subDir={}, resolved={}", subDir, dirPath);
