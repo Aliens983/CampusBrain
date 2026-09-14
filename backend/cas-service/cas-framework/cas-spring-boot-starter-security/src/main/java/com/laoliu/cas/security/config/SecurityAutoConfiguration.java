@@ -70,6 +70,9 @@ public class SecurityAutoConfiguration {
                                 "/sentinel-demo/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
+                        // 3.4.1：智能助手接口仅供 KB 内网（经 InternalAuthFilter 签名校验、ROLE_INTERNAL）
+                        // 调用。普通终端用户 JWT 一律拒绝，避免绕过助手会话直接越权下单/取消。
+                        .requestMatchers("/appointments/assistant/**").hasRole("INTERNAL")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(internalAuthFilter, UsernamePasswordAuthenticationFilter.class)
