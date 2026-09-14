@@ -1,9 +1,15 @@
 # ============================================================
-# 中间件编排（Nacos + KB 中间件）— 不含业务服务
-# 三个业务服务（gateway/cas-service/kb-service）在本地运行：
-#   IDEA 直接启动，或 `java -jar` 启动
-# CAS 依赖的 MySQL/Redis 使用宿主机（localhost:3306/6379）
-# KB 的中间件全部在此编排
+# 基础设施编排（Nacos + KB 中间件）— 底座文件，不承载业务服务
+#
+# 本地开发（业务进程跑在 IDEA）：
+#   docker compose -f docker-compose.yml up -d
+# 全栈部署必须叠加业务编排（6.2.2：每个服务只在一个文件定义）：
+#   docker compose -f docker-compose.yml \
+#                  -f docker-compose.business.yml \
+#                  [-f docker-compose.observability.yml] up -d
+#
+# CAS 依赖的 MySQL/Redis：本地开发用宿主机（localhost:3306/6379），
+# 全栈部署由 docker-compose.business.yml 提供 cas-mysql/cas-redis。
 # ============================================================
 services:
   nacos:
@@ -15,6 +21,12 @@ services:
     ports:
       - "8848:8848"
       - "9848:9848"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8848/nacos/v1/console/health/readiness || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
 
   kb-mysql:
     image: mysql:8.0

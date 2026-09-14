@@ -105,10 +105,12 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 
 ## 五、数据库与 Flyway 约定
 
-- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图；服务表直接建 `category_id`，不存 `category` 编码串）、`V2__seed_initial_users.sql`（初始账号）、`V3__seed_teacher_users.sql`（教师账号 + 咨询师 user_id 回填）、`V4__service_category.sql`（**仅新增**分类表 `service_category` + 固定 4 类种子：教师咨询/设备借用/教室空间/活动报名）、`V5__consult_chat.sql`（**仅新增**咨询沟通会话表 `consult_chat_conversation` + 消息表 `consult_chat_message`，学生⇄教师 1:1 在线留言）。
+- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图；服务表直接建 `category_id`，不存 `category` 编码串）、`V2__seed_initial_users.sql`（初始账号）、`V3__seed_teacher_users.sql`（教师账号 + 咨询师 user_id 回填）、`V4__service_category.sql`（**仅新增**分类表 `service_category` + 固定 4 类种子：教师咨询/设备借用/教室空间/活动报名）、`V5__consult_chat.sql`（**仅新增**咨询沟通会话表 `consult_chat_conversation` + 消息表 `consult_chat_message`，学生⇄教师 1:1 在线留言）、`V6__services_end_date.sql`（服务上下架结束日期）。
 - **迁移约定**：V*.sql 面向**全新机器**，只含建表/种子等增量，**不写 ALTER/UPDATE 改既有表结构**。服务分类落库 = 服务分类：全新库由 V1 直接建出 `services.category_id`，老库按 `cas-service/UPGRADE-service-category.md` 直接 SQL 演进（ALTER + 回填 + DROP `category`），V4 建表/补种子幂等可重复。
-- KB 迁移位于 `kb-service/src/main/resources/db/migration/`：`V1__init_document_and_conversation.sql`（文档/分块/会话等）。多租户 `tenant_id` 已于 2026-09-12 下线：原 `V4__add_tenant_id_to_business_tables.sql` 连同 `TenantContext`/`TenantFilter` 一并移除，业务代码与 H2 测试 schema 均不再保留租户字段。
+- KB 迁移位于 `kb-service/src/main/resources/db/migration/`：`V1__init_document_and_conversation.sql`（文档/分块/会话等）、`V2__conversation_add_user_id.sql`（AI 会话归属：`conversation.user_id` 绑定 + 历史/重置/反馈归属校验）。多租户 `tenant_id` 已于 2026-09-12 下线：原 `V4__add_tenant_id_to_business_tables.sql` 连同 `TenantContext`/`TenantFilter` 一并移除，业务代码与 H2 测试 schema 均不再保留租户字段。
 - **新机器**：CAS/KB 首次启动自动执行全部迁移，零手工 SQL。
+- **Schema 唯一来源是 Flyway**：容器内 `cas-mysql` 不再挂载 `docker-entrypoint-initdb.d` 初始化脚本（原 `cas-service/sql/` 已删除，避免与 Flyway 双源漂移）。**升级到该版本的存量部署**，若旧卷曾被 initdb 建过旧结构，需一次性清理空业务卷后重建（生产库含数据时勿执行）：
+  `docker compose -f docker-compose.yml -f docker-compose.business.yml down && docker volume rm backend_cas-mysql-data`，再启动由 Flyway 全量建表。
 - **已有库**：迁移文件用于全新环境，已上线的库请直接执行 SQL 演进，**不要改写历史 `V*.sql` 去适配旧库**（否则 Flyway checksum 校验失败）；如需调整结构，本地直接对库执行 SQL 即可。
 
 ## 六、核心能力（对应当前代码）
@@ -156,8 +158,11 @@ cd backend && mvn -B test
 
 | 文件 | 用途 |
 |---|---|
-| `docker-compose.yml` | 开发用基础设施（Nacos + KB 中间件） |
-| `docker-compose.business.yml` | 服务器全栈：`cas-mysql`(cas_db) + `cas-redis` + `gateway`/`cas-service`/`kb-service`/`frontend` 四服务 + `nacos`；镜像 tag 由 `${TAG:-latest}` 注入，`pull_policy: never` 保证用本地刚构建的镜像 |
+| `docker-compose.yml` | 基础设施底座（Nacos + KB 中间件），可单独用于本地开发；全栈部署时作为第一个 `-f` 叠加，**同一服务只在一个文件定义**，不重复维护 |
+| `docker-compose.business.yml` | 服务器全栈业务层（须与上一个叠加）：`cas-mysql`(cas_db) + `cas-redis` + `gateway`/`cas-service`/`kb-service`/`frontend`；镜像 tag 由 `${TAG:-latest}` 注入，`pull_policy: never` 保证用本地刚构建的镜像；库表由 Flyway 自动初始化，无 initdb 脚本 |
+| `docker-compose.observability.yml` | 可观测性层（可选叠加）：Prometheus（:9090），抓取 gateway/cas/kb 的 `/actuator/prometheus`；配置见 `prometheus/prometheus.yml` |
+
+全栈启动：`docker compose -f docker-compose.yml -f docker-compose.business.yml -f docker-compose.observability.yml up -d`（`scripts/deploy-server.sh` 已按此叠加）。
 
 部署约束：**必须在 `/opt/campusbrain/backend` 目录内执行 compose**（卷/网络按目录项目名关联，错位会建空 MySQL 卷）。
 
