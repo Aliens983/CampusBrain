@@ -64,10 +64,7 @@ public class SecurityAutoConfiguration {
                                 "/v3/api-docs",
                                 "/webjars/**",
                                 "/favicon.ico",
-                                "/hello",
-                                "/weather/**",
-                                "/config-demo/**",
-                                "/sentinel-demo/**"
+                                "/weather/**"
                         ).permitAll()
                         .requestMatchers("/admin/**").hasAnyRole("ADMIN", "SUPER_ADMIN")
                         // 3.4.1：智能助手接口仅供 KB 内网（经 InternalAuthFilter 签名校验、ROLE_INTERNAL）
