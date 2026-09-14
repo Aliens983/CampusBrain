@@ -87,6 +87,11 @@ jwt:
 auth:
   internal-sign-secret: ${INTERNAL_SIGN_SECRET}
 
+# 预约模块业务参数
+booking:
+  # 幂等去重窗口（秒）：同一用户对同一资源在该窗口内的待审核重复提交会被去重
+  dedupe-seconds: ${BOOKING_DEDUPE_SECONDS:60}
+
 file:
   upload:
     dir: uploads
