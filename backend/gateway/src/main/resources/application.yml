@@ -9,6 +9,21 @@ spring:
       discovery:
         server-addr: ${NACOS_ADDR:localhost:8848}
     gateway:
+      # CORS 唯一入口（4.1.8）：所有跨域在网关统一处理，
+      # 下游 CAS/KB 不再各自配置，避免「同一域名两处配、漏配一处部分接口失败」。
+      # 预检 OPTIONS 由网关直接应答，不转发下游。
+      # 允许的来源通过环境变量 CORS_ALLOWED_ORIGINS 注入（逗号分隔）。
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origin-patterns: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:80}
+            allowed-methods: "*"
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
+      # 下游误回 CORS 头时去重，避免出现重复 Access-Control-Allow-Origin 头
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Origin Access-Control-Allow-Credentials RETAIN_UNIQUE
       routes:
         # CAS 服务：路径已含 /api/v1（CAS 自身 context-path 也是 /api/v1），不剥前缀
         - id: cas-service

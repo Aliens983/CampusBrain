@@ -11,9 +11,6 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.RestTemplate;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -27,18 +24,6 @@ public class WebAutoConfiguration {
 
     @Value("${file.upload.path:./uploads/}")
     private String uploadPath;
-
-    /**
-     * 允许跨域的站点，逗号分隔。
-     * 默认仅放行本地开发端口；生产/演示需要放开其它域名时（如 cpolar 内网穿透），
-     * 通过环境变量或 Nacos 配置 cas.cors.allowed-origins 覆盖，例如：
-     * cas.cors.allowed-origins=http://localhost:3000,https://xxx.cpolar.cn
-     * <p>
-     * 注意：本服务与 allowCredentials=true 配合，切勿再使用 "*" 全放行，
-     * 否则任意站点都可携带凭证访问本服务接口。
-     */
-    @Value("${cas.cors.allowed-origins:http://localhost:3000,http://localhost:5173,http://localhost:80,http://localhost}")
-    private String[] allowedOrigins;
 
     @Bean
     public WebMvcConfigurer resourceConfigurer() {
@@ -60,24 +45,8 @@ public class WebAutoConfiguration {
         return new RestTemplate();
     }
 
-    @Bean
-    public CorsFilter corsFilter() {
-        CorsConfiguration config = new CorsConfiguration();
-        config.setAllowCredentials(true);
-        for (String origin : allowedOrigins) {
-            String trimmed = origin.trim();
-            if (!trimmed.isEmpty()) {
-                config.addAllowedOriginPattern(trimmed);
-            }
-        }
-        config.addAllowedHeader("*");
-        config.addAllowedMethod("*");
-        config.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", config);
-        return new CorsFilter(source);
-    }
+    // 注：CORS 已统一收口到网关 globalcors（4.1.8），本服务不再注册 CorsFilter。
+    // 预检 OPTIONS 在网关直接应答，业务流量只来自网关内网转发。
 
     // ========== 异常处理 ==========
     //

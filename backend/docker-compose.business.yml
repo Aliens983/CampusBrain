@@ -65,6 +65,8 @@ services:
       NACOS_ADDR: nacos:8848
       JWT_SECRET: ${JWT_SECRET}
       INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
+      # 跨域唯一配置入口（4.1.8）；逗号分隔的前端来源
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:80}
     depends_on:
       nacos:
         condition: service_healthy
