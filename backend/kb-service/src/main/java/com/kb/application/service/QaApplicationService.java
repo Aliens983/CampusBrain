@@ -74,10 +74,14 @@ public class QaApplicationService implements IQaApplicationService {
     /**
      * 判定"确认"的关键词。刻意只收多字词：单字（如"行""对"）在中文里歧义太大，
      * 容易把"换个时间行不行"误判成确认。
+     * <p>
+     * 3.3.3：已移除"提交"——它高度歧义（"怎么提交？""提交按钮在哪"是疑问句而非确认），
+     * 确认提交由"确认/确定/好的/预约吧/帮我约"等明确表达承担；{@link #detectConfirmIntent}
+     * 另对"好的，帮我查余量"这类"应答词 + 新请求分句"做排除。
      */
     private static final List<String> POSITIVE_WORDS = List.of(
             "确认", "确定", "是的", "好的", "可以", "没问题", "就这样", "就这个", "就按",
-            "提交", "预约吧", "帮我约", "帮我订", "ok", "yes");
+            "预约吧", "帮我约", "帮我订", "ok", "yes");
 
     /**
      * 判定"取消"的关键词，其中"不确认/不确定/不行"必须排在肯定词之前判断。
@@ -85,6 +89,18 @@ public class QaApplicationService implements IQaApplicationService {
     private static final List<String> NEGATIVE_WORDS = List.of(
             "不确认", "不确定", "不用", "不要", "不是", "不行", "取消", "算了", "不约",
             "放弃", "先别", "别了", "再想想", "拒绝", "no");
+
+    /**
+     * 3.3.3：应答词之后若接上这些"新请求"信号，说明用户是在借应答口吻发起另一个问题，
+     * 而不是确认当前草稿（如"好的，怎么预约？""可以，帮我查下还有多少名额"）。
+     */
+    private static final List<String> FOLLOW_UP_MARKERS = List.of(
+            "怎么", "如何", "请问", "帮我查", "查一下", "查下", "看看", "能不能",
+            "可不可以", "多少", "哪里", "哪儿", "还有", "换一个", "换个", "再说");
+
+    /** 纯应答词（仅当它们作为开头、后面又跟了新请求时，才需要排除误判） */
+    private static final List<String> ACK_PREFIXES = List.of(
+            "好的", "好吧", "是的", "可以", "没问题", "确定", "确认", "ok", "yes");
 
     // ==================== 流式问答 ====================
 
@@ -426,10 +442,42 @@ public class QaApplicationService implements IQaApplicationService {
         }
         for (String w : POSITIVE_WORDS) {
             if (q.contains(w)) {
+                // 3.3.3："好的/可以 + 后续新请求小句"不判确认（形如"好的，怎么预约？"）；
+                // 但"好的帮我约/确认预约吧"这类仍含明确下单动作的，保持判定为确认
+                if (isAckFollowedByNewRequest(q)) {
+                    return ConfirmIntent.NONE;
+                }
                 return ConfirmIntent.CONFIRM;
             }
         }
         return ConfirmIntent.NONE;
+    }
+
+    /**
+     * 3.3.3：判断是否"应答词开头 + 另起的新请求"。
+     * 条件：以纯应答词开头，其后既非空、也不是明确下单动作（约/订），
+     * 且出现分句标点或新请求标志词。
+     */
+    private boolean isAckFollowedByNewRequest(String q) {
+        for (String ack : ACK_PREFIXES) {
+            if (!q.startsWith(ack)) {
+                continue;
+            }
+            String rest = q.substring(ack.length()).trim();
+            if (rest.isEmpty()) {
+                return false;
+            }
+            // 明确下单动作仍按确认处理
+            if (rest.contains("约") || rest.contains("订")) {
+                return false;
+            }
+            boolean hasClauseBreak = rest.contains("，") || rest.contains(",")
+                    || rest.contains("。") || rest.contains("?") || rest.contains("？")
+                    || rest.contains("!") || rest.contains("！");
+            boolean hasFollowUpWord = FOLLOW_UP_MARKERS.stream().anyMatch(rest::contains);
+            return hasClauseBreak || hasFollowUpWord;
+        }
+        return false;
     }
 
     // ==================== 其余接口 ====================
@@ -460,17 +508,19 @@ public class QaApplicationService implements IQaApplicationService {
     // ========== Private Helpers ==========
 
     /**
-     * 意图路由（Intent Routing）：判断用户问题是否可能涉及"实时预约数据"
-     *
-     * <p>命中关键词的问题会进入带工具集的 Function Calling 链路；
-     * 在工具链路内，<b>是否真正调用工具由 LLM 自主决定</b>。
-     *
-     * <p>关键词覆盖：可预约 / 余量 / 会议室 / 设备借用 / 咨询 / 自习室 / 场地等预约场景
+     * 意图路由（Intent Routing）：判断用户问题是否可能涉及"实时预约数据"。
+     * <p>命中关键词的问题会进入带工具集的 Function Calling 链路；在工具链路内，
+     * 是否真正调用工具由 LLM 自主决定，本方法只做粗筛。
+     * <p>
+     * 3.3.4：路由词表收窄。此前混入了"老师/教师/咨询/设备/仓前/下沙"等可以单独成词的歧义词，
+     * 像"教师招聘政策""设备处报修电话""仓前食堂在哪"这类纯知识库问题也被误路由进预约工具链路。
+     * 现仅保留"单独出现也强烈指向预约动作/资源"的词；校区、人物身份等须与预约词共现，
+     * 宁可不进也不要乱进。
      */
     private static final List<String> APPOINTMENT_KEYWORDS = List.of(
-            "可预约", "预约", "余量", "会议室", "设备", "咨询", "自习室", "场地", "借用",
-            "有哪些服务", "还有哪些", "能不能约", "怎么约", "怎么预约", "空闲", "名额",
-            "仓前", "下沙", "教室", "教师", "老师", "取消预约", "我的预约");
+            "可预约", "预约", "余量", "名额", "会议室", "设备借用", "借用", "自习室",
+            "场地", "空闲", "可约", "档期", "怎么预约", "怎么约", "能不能约",
+            "有哪些服务", "还有哪些", "心理咨询", "教室", "取消预约", "我的预约");
 
     private boolean isAppointmentQuery(String q) {
         if (q == null || q.isEmpty()) {
