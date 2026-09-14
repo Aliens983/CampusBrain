@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.codec.ServerSentEvent;
 import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
 
 import java.util.List;
 
@@ -83,7 +84,8 @@ public class QaController {
         // 不能依赖 SecurityContext 的线程继承
         Long userId = SecurityFrameworkUtils.getLoginUserId();
 
-        return Flux.create(sink -> {
+        // 显式指定泛型：链式调用 subscribeOn 后编译器无法从目标类型反推 T
+        return Flux.<ServerSentEvent<?>>create(sink -> {
             try {
                 qaService.askStreaming(query, sessionId, userId,
                         token -> {
@@ -135,7 +137,11 @@ public class QaController {
                 log.error("SSE streaming error", e);
                 sink.error(e);
             }
-        });
+        })
+        // 订阅到 boundedElastic：本服务是 Servlet 栈，Flux 默认在容器线程上订阅，
+        // 而 askStreaming 全程同步阻塞（检索 + LLM + Feign），会一直占住 Tomcat 工作线程。
+        // 并发问答数因此约等于可用线程数，LLM 变慢时少量请求即可打满、健康检查也挂。
+        .subscribeOn(Schedulers.boundedElastic());
     }
 
     @RateLimit(permits = 30, seconds = 60, message = "问答请求过于频繁，请稍后再试")
