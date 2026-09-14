@@ -13,6 +13,7 @@ import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.infra.application.service.EmailService;
 import com.laoliu.cas.system.application.service.NotificationSettingsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -105,6 +106,8 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    // 审核会改变预约状态（进而影响可用余量判断），让 services 缓存立即失效
+    @CacheEvict(value = "services", allEntries = true)
     public void auditPass(Long orderId, String reason, AuditSource source) {
         long startNanos = System.nanoTime();
         ServiceStatusResponse serviceInfo = getServiceStatusByOrderId(orderId);
@@ -137,6 +140,8 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
+    // 拒绝会回补 booked_count 与咨询时段，同 auditPass 需要让余量快照失效
+    @CacheEvict(value = "services", allEntries = true)
     public void auditReject(Long orderId, String reason, AuditSource source) {
         long startNanos = System.nanoTime();
         if (reason == null || reason.trim().isEmpty()) {

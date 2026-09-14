@@ -17,6 +17,7 @@ import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.system.api.UserInfoApi;
 import com.laoliu.cas.system.api.dto.UserInfoDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,55 +52,63 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    // booked_count 变了，services 缓存里的余量/容量快照立即失效。
+    // 否则助手侧最长 30 分钟内会拿过期快照判断"是否还有名额"，
+    // 出现"显示可约、确认却被拒"或"显示已满、实际可约"。
+    @CacheEvict(value = "services", allEntries = true)
     public BookingSubmitResult bookService(Long userId, List<Long> serviceIds) {
         if (serviceIds == null || serviceIds.isEmpty()) {
             throw new BusinessException(ServiceErrorCode.SERVICE_ID_EMPTY);
         }
 
         List<Integer> activityServiceIds = new ArrayList<>();
-        for (Long sid : serviceIds) {
-            // 防止 Long→Integer 转换溢出（service_id 为 INT）
-            if (sid == null || sid > Integer.MAX_VALUE) {
-                throw new BusinessException(BookErrorCode.BOOKING_FAILED);
-            }
-            ServiceItem service = serviceRepository.findById(sid)
-                    .orElseThrow(() -> new BusinessException(ServiceErrorCode.SERVICE_NOT_EXIST, sid));
-            if (!service.isAvailable()) {
-                throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
-            }
-            // 设备借用必须走专用端点 /app/equipment/{equipmentId}/book。
-            // 通用下单拿不到 equipmentId/时段/数量：既无法参与设备时段占用校验（会超借），
-            // 又会让 services.booked_count 与 equipment.available_stock 两套口径分裂。
-            if (CategoryCode.EQUIPMENT.is(service.getCategoryCode())) {
-                throw new BusinessException(BookErrorCode.EQUIPMENT_REQUIRE_DEDICATED_API, sid);
-            }
-            // 活动预约：容量够即直通，不走人工审核（categoryId → service_category.code）
-            if (CategoryCode.ACTIVITY.is(service.getCategoryCode())) {
-                activityServiceIds.add(sid.intValue());
-            }
-            // 乐观锁扣减库存（同事务）：容量充足才 +1，满则抛异常，事务回滚
-            if (bookingRepository.decrementStock(sid) == 0) {
-                bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_CAPACITY_FULL);
-                throw new BusinessException(BookErrorCode.BOOKING_CAPACITY_FULL, sid);
-            }
-        }
-
+        List<Long> createdOrderIds = new ArrayList<>();
         try {
-            List<Integer> serviceIdInts = serviceIds.stream()
-                    .map(Long::intValue)
-                    .collect(Collectors.toList());
-            // 幂等插入：配置窗口内同用户同服务（待审核/已通过）会被 SQL 去重；
-            // 返回本次真实新建的订单号；一个都没建成说明整单都是重复提交，回滚（含库存扣减）
-            List<Long> createdOrderIds = bookingRepository.insertServices(userId, serviceIdInts);
+            for (Long sid : serviceIds) {
+                // 防止 Long→Integer 转换溢出（service_id 为 INT）
+                if (sid == null || sid > Integer.MAX_VALUE) {
+                    throw new BusinessException(BookErrorCode.BOOKING_FAILED);
+                }
+                ServiceItem service = serviceRepository.findById(sid)
+                        .orElseThrow(() -> new BusinessException(ServiceErrorCode.SERVICE_NOT_EXIST, sid));
+                if (!service.isAvailable()) {
+                    throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
+                }
+                // 设备借用必须走专用端点 /app/equipment/{equipmentId}/book。
+                // 通用下单拿不到 equipmentId/时段/数量：既无法参与设备时段占用校验（会超借），
+                // 又会让 services.booked_count 与 equipment.available_stock 两套口径分裂。
+                if (CategoryCode.EQUIPMENT.is(service.getCategoryCode())) {
+                    throw new BusinessException(BookErrorCode.EQUIPMENT_REQUIRE_DEDICATED_API, sid);
+                }
+                // 乐观锁扣减库存（同事务）：容量充足才 +1，满则抛异常，事务回滚
+                if (bookingRepository.decrementStock(sid) == 0) {
+                    bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_CAPACITY_FULL);
+                    throw new BusinessException(BookErrorCode.BOOKING_CAPACITY_FULL, sid);
+                }
+                List<Long> created = bookingRepository.insertServices(userId, List.of(sid.intValue()));
+                if (created.isEmpty()) {
+                    // 重复预约被 SQL 幂等去重拦下：必须把刚才扣掉的名额还回去。
+                    // 此前批量下单对"被去重的项"不做回补，booked_count 凭空 +1 却没有对应订单，
+                    // 名额只能靠后续某次取消的 GREATEST(x-1,0) 偶然抵消。
+                    bookingRepository.releaseStock(sid);
+                    log.info("预约去重：同用户同服务已存在生效预约，已回补库存: userId={}, serviceId={}",
+                            userId, sid);
+                    continue;
+                }
+                createdOrderIds.addAll(created);
+                // 活动预约：容量够即直通，不走人工审核（categoryId → service_category.code）
+                if (CategoryCode.ACTIVITY.is(service.getCategoryCode())) {
+                    activityServiceIds.add(sid.intValue());
+                }
+                bookingEventPublisher.publishChanged(userId, sid, "BOOKED");
+            }
+            // 一个都没建成说明整单都是重复提交，回滚（此处已无库存可回滚，仅为语义明确的报错）
             if (createdOrderIds.isEmpty()) {
                 throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
             }
             // 免审直通：刚落库的活动预约置为「已通过」，不产生待审核
             if (!activityServiceIds.isEmpty()) {
                 bookingRepository.approveActivityBookings(userId, activityServiceIds);
-            }
-            for (Long sid : serviceIds) {
-                bookingEventPublisher.publishChanged(userId, sid, "BOOKED");
             }
             bookingMetrics.recordCreated(createdOrderIds.size());
             return new BookingSubmitResult(userInfoApi.getUserById(userId), createdOrderIds);
@@ -161,6 +170,8 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    // 取消会回补 booked_count，同 bookService 需要让余量快照立即失效
+    @CacheEvict(value = "services", allEntries = true)
     public boolean cancelBookings(Long userId, List<Long> bookingIds) {
         if (bookingIds == null || bookingIds.isEmpty()) {
             return false;

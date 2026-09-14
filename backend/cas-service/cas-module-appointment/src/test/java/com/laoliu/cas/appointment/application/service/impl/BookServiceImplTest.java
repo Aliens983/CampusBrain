@@ -307,6 +307,30 @@ class BookServiceImplTest {
                 .build();
     }
 
+    @Test
+    @DisplayName("批量预约中某项被幂等去重时，必须回补该项已扣的库存")
+    void shouldReleaseStockWhenItemDeduplicated() {
+        Long otherId = 2L;
+        when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(buildAvailableService(SERVICE_ID)));
+        when(serviceRepository.findById(otherId)).thenReturn(Optional.of(buildAvailableService(otherId)));
+        when(bookingRepository.decrementStock(anyLong())).thenReturn(1);
+        // 1L 被 SQL 幂等去重（返回空），2L 正常建成
+        when(bookingRepository.insertServices(anyLong(), anyList())).thenAnswer(invocation -> {
+            @SuppressWarnings("unchecked")
+            java.util.List<Integer> ids = invocation.getArgument(1);
+            return ids.contains(SERVICE_ID.intValue()) ? java.util.List.of() : java.util.List.of(500L);
+        });
+
+        BookService.BookingSubmitResult result =
+                bookService.bookService(USER_ID, java.util.List.of(SERVICE_ID, otherId));
+
+        // 被去重的 1L 必须回补，否则 booked_count 凭空 +1 且无对应订单
+        verify(bookingRepository).releaseStock(SERVICE_ID);
+        verify(bookingRepository, never()).releaseStock(otherId);
+        assertNotNull(result);
+        assertEquals(1, result.orderIds().size());
+    }
+
     private ServiceItem buildDisabledService(Long id) {
         return ServiceItem.builder()
                 .serviceId(id)
