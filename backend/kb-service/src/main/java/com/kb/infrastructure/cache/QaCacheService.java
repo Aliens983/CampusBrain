@@ -98,4 +98,27 @@ public class QaCacheService {
     public record QaCacheEntry(String answer,
                                List<Conversation.CitationRef> citations,
                                long cachedAt) {}
+
+    /**
+     * 清空问答缓存（L1 本地 + L2 Redis）。
+     * <p>
+     * 3.1.1：预约数据（余量/可约状态/我的预约）变更后，旧的问答缓存可能已过期，
+     * 由预约变更事件调用本方法联动失效。问答缓存全部为可重建的派生数据，直接整体淘汰即可。
+     */
+    public void evictAll() {
+        localCache.invalidateAll();
+        String pattern = "qa:cache:*";
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        try (var cursor = stringRedisTemplate.scan(
+                org.springframework.data.redis.core.ScanOptions.scanOptions()
+                        .match(pattern)
+                        .count(200)
+                        .build())) {
+            cursor.forEachRemaining(keys::add);
+        }
+        if (!keys.isEmpty()) {
+            stringRedisTemplate.delete(keys);
+            log.info("预约变更联动：已清空精确问答缓存 {} 条", keys.size());
+        }
+    }
 }

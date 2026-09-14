@@ -4,6 +4,7 @@ import com.kb.domain.rag.EmbeddingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -90,6 +91,24 @@ public class SemanticCacheService {
             redisTemplate.opsForValue().set(key + ":ans", answer, TTL_HOURS, TimeUnit.HOURS);
         } catch (Exception e) {
             log.warn("Semantic cache store failed: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 清空全部语义缓存（向量 + 答案）。
+     * <p>
+     * 3.1.1：预约变更后语义缓存里涉及实时余量的答案会过期，由预约变更事件联动淘汰。
+     * 用 SCAN 而非 KEYS，避免大 keyspace 下阻塞 Redis。
+     */
+    public void evictAll() {
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        try (var cursor = redisTemplate.scan(
+                ScanOptions.scanOptions().match(PREFIX + "*").count(200).build())) {
+            cursor.forEachRemaining(keys::add);
+        }
+        if (!keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            log.info("预约变更联动：已清空语义问答缓存 {} 条", keys.size());
         }
     }
 
