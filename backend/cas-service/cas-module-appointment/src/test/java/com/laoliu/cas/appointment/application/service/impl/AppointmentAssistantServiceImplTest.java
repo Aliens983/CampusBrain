@@ -1,15 +1,15 @@
-package com.laoliu.cas.appointment.assistant.service.impl;
+package com.laoliu.cas.appointment.application.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laoliu.cas.appointment.application.service.BookService;
 import com.laoliu.cas.appointment.application.service.ServiceItemService;
-import com.laoliu.cas.appointment.application.service.impl.ConsultationServiceImpl;
-import com.laoliu.cas.appointment.application.service.impl.EquipmentServiceImpl;
-import com.laoliu.cas.appointment.application.service.impl.RoomServiceImpl;
-import com.laoliu.cas.appointment.assistant.dto.request.AssistantBookingDraftRequest;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantBookingDraft;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantBookingResult;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantRoomVO;
+import com.laoliu.cas.appointment.application.service.ConsultationService;
+import com.laoliu.cas.appointment.application.service.EquipmentService;
+import com.laoliu.cas.appointment.application.service.RoomService;
+import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomVO;
 import com.laoliu.cas.appointment.domain.entity.Room;
 import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
@@ -75,9 +75,9 @@ class AppointmentAssistantServiceImplTest {
     @Mock private EquipmentRepository equipmentRepository;
     @Mock private BookingRepository bookingRepository;
     @Mock private BookService bookService;
-    @Mock private ConsultationServiceImpl consultationService;
-    @Mock private RoomServiceImpl roomService;
-    @Mock private EquipmentServiceImpl equipmentService;
+    @Mock private ConsultationService consultationService;
+    @Mock private RoomService roomService;
+    @Mock private EquipmentService equipmentService;
     @Mock private RedisUtil redisUtil;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();

@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.application.service.impl.EquipmentServiceImpl;
+import com.laoliu.cas.appointment.application.service.EquipmentService;
 import com.laoliu.cas.appointment.interfaces.dto.request.EquipmentBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.EquipmentResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
@@ -28,7 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class EquipmentAppController {
 
-    private final EquipmentServiceImpl equipmentService;
+    private final EquipmentService equipmentService;
     private final GetUserIdViaTokenApi getUserIdViaTokenApi;
 
     @Operation(summary = "获取设备列表（分页）", description = "分页获取设备，支持按名称/分类/所属服务筛选")

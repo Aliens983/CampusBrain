@@ -1,4 +1,4 @@
-package com.laoliu.cas.appointment.assistant.dto.request;
+package com.laoliu.cas.appointment.interfaces.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;

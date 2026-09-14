@@ -1,12 +1,12 @@
-package com.laoliu.cas.appointment.assistant.service;
+package com.laoliu.cas.appointment.application.service;
 
-import com.laoliu.cas.appointment.assistant.dto.request.AssistantBookingDraftRequest;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantBookingDraft;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantBookingResult;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantConsultantVO;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantEquipmentVO;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantRoomVO;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantServiceVO;
+import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceVO;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 

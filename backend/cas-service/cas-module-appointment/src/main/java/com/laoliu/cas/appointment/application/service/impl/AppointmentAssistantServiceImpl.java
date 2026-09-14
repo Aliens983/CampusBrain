@@ -1,20 +1,20 @@
-package com.laoliu.cas.appointment.assistant.service.impl;
+package com.laoliu.cas.appointment.application.service.impl;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laoliu.cas.appointment.application.service.BookService;
 import com.laoliu.cas.appointment.application.service.ServiceItemService;
-import com.laoliu.cas.appointment.application.service.impl.ConsultationServiceImpl;
-import com.laoliu.cas.appointment.application.service.impl.EquipmentServiceImpl;
-import com.laoliu.cas.appointment.application.service.impl.RoomServiceImpl;
-import com.laoliu.cas.appointment.assistant.dto.request.AssistantBookingDraftRequest;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantBookingDraft;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantBookingResult;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantConsultantVO;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantEquipmentVO;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantRoomVO;
-import com.laoliu.cas.appointment.assistant.dto.response.AssistantServiceVO;
-import com.laoliu.cas.appointment.assistant.service.AppointmentAssistantService;
+import com.laoliu.cas.appointment.application.service.ConsultationService;
+import com.laoliu.cas.appointment.application.service.EquipmentService;
+import com.laoliu.cas.appointment.application.service.RoomService;
+import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceVO;
+import com.laoliu.cas.appointment.application.service.AppointmentAssistantService;
 import com.laoliu.cas.appointment.domain.entity.Consultant;
 import com.laoliu.cas.appointment.domain.entity.Equipment;
 import com.laoliu.cas.appointment.domain.entity.Room;
@@ -82,9 +82,9 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     private final EquipmentRepository equipmentRepository;
     private final BookingRepository bookingRepository;
     private final BookService bookService;
-    private final ConsultationServiceImpl consultationService;
-    private final RoomServiceImpl roomService;
-    private final EquipmentServiceImpl equipmentService;
+    private final ConsultationService consultationService;
+    private final RoomService roomService;
+    private final EquipmentService equipmentService;
     private final RedisUtil redisUtil;
     private final ObjectMapper objectMapper;
 

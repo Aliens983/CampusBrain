@@ -52,6 +52,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     /**
      * 分页查询咨询师，支持按名称/部门/所属服务筛选
      */
+    @Override
     public IPage<ConsultantResponse> getAvailableConsultants(int page, int pageSize, String name, String department, Long serviceId) {
         IPage<Consultant> consultantPage = consultantRepository.findPage(page, pageSize, name, department, serviceId);
         return consultantPage.convert(this::toConsultantResponse);
@@ -79,6 +80,7 @@ public class ConsultationServiceImpl implements ConsultationService {
      * @param slotId 由 /slots 接口返回的时段 ID
      * @return 新预约单 orderId
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Long bookConsultation(Long userId, Long consultantId, Long slotId) {
         if (consultantId == null || slotId == null) {

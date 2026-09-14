@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.application.service.impl.ConsultationServiceImpl;
+import com.laoliu.cas.appointment.application.service.ConsultationService;
 import com.laoliu.cas.appointment.interfaces.dto.request.ConsultationBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ConsultantResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
@@ -29,7 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ConsultationAppController {
 
-    private final ConsultationServiceImpl consultationService;
+    private final ConsultationService consultationService;
     private final GetUserIdViaTokenApi getUserIdViaTokenApi;
 
     @Operation(summary = "获取咨询师列表（分页）", description = "分页获取咨询师，支持按名称/部门/所属服务筛选")

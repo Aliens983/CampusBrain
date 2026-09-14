@@ -47,6 +47,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     /**
      * 分页查询设备，支持按名称/分类/所属服务筛选
      */
+    @Override
     public IPage<EquipmentResponse> getAvailableEquipment(int page, int pageSize, String name, String category, Long serviceId) {
         IPage<Equipment> equipmentPage = equipmentRepository.findPage(page, pageSize, name, category, serviceId);
         return equipmentPage.convert(this::toEquipmentResponse);
@@ -75,6 +76,7 @@ public class EquipmentServiceImpl implements EquipmentService {
      * @param req         数量 + 日期 + 起止时间（HH:mm，单日窗口）
      * @return 新预约单 orderId
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Long bookEquipment(Long userId, Long equipmentId, EquipmentBookRequest req) {
         if (equipmentId == null || req == null || req.getQuantity() == null || req.getQuantity() < 1) {

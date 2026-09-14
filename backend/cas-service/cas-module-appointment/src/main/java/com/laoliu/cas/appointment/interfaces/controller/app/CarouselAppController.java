@@ -1,6 +1,6 @@
-package com.laoliu.cas.appointment.carousel.controller;
+package com.laoliu.cas.appointment.interfaces.controller.app;
 
-import com.laoliu.cas.appointment.carousel.service.CarouselService;
+import com.laoliu.cas.appointment.application.service.CarouselService;
 import com.laoliu.cas.common.result.CommonResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -1,6 +1,6 @@
 package com.laoliu.cas.appointment.interfaces.controller.app;
 
-import com.laoliu.cas.appointment.application.service.impl.RoomServiceImpl;
+import com.laoliu.cas.appointment.application.service.RoomService;
 import com.laoliu.cas.appointment.interfaces.dto.request.RoomBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.RoomResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
@@ -25,7 +25,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class RoomAppController {
 
-    private final RoomServiceImpl roomService;
+    private final RoomService roomService;
     private final GetUserIdViaTokenApi getUserIdViaTokenApi;
 
     @Operation(summary = "某服务下的教室列表", description = "按所属服务（空闲教室）查询教室")

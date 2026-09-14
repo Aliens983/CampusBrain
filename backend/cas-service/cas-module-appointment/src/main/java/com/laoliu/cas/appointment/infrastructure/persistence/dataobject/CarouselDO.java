@@ -1,8 +1,9 @@
-package com.laoliu.cas.appointment.carousel.dataobject;
+package com.laoliu.cas.appointment.infrastructure.persistence.dataobject;
 
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.laoliu.cas.appointment.domain.entity.Carousel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -31,4 +32,22 @@ public class CarouselDO {
 
     /** 是否启用：1是 0否 */
     private Integer enabled;
+
+    public Carousel toEntity() {
+        return Carousel.builder()
+                .id(id).imageUrl(imageUrl).sort(sort).enabled(enabled)
+                .build();
+    }
+
+    public static CarouselDO fromEntity(Carousel entity) {
+        if (entity == null) {
+            return null;
+        }
+        return CarouselDO.builder()
+                .id(entity.getId())
+                .imageUrl(entity.getImageUrl())
+                .sort(entity.getSort())
+                .enabled(entity.getEnabled())
+                .build();
+    }
 }

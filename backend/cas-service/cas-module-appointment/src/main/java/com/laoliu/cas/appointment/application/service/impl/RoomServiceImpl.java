@@ -1,5 +1,6 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.application.service.RoomService;
 import com.laoliu.cas.appointment.domain.entity.Room;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.RoomRepository;
@@ -23,13 +24,14 @@ import java.util.stream.Collectors;
  */
 @Service
 @RequiredArgsConstructor
-public class RoomServiceImpl {
+public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
     private final BookingRepository bookingRepository;
     private final BookingEventPublisher bookingEventPublisher;
 
     /** 某服务（空闲教室）下的教室列表 */
+    @Override
     public List<RoomResponse> listByService(Long serviceId) {
         if (serviceId == null) {
             return List.of();
@@ -45,6 +47,7 @@ public class RoomServiceImpl {
      *
      * @return 新预约单 orderId
      */
+    @Override
     @Transactional(rollbackFor = Exception.class)
     public Long bookRoom(Long userId, Long roomId, RoomBookRequest req) {
         if (req == null || req.getStartTime() == null || req.getEndTime() == null

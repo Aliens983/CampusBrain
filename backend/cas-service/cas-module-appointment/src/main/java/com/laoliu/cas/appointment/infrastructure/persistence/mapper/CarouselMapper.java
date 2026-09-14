@@ -1,7 +1,7 @@
-package com.laoliu.cas.appointment.carousel.mapper;
+package com.laoliu.cas.appointment.infrastructure.persistence.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.laoliu.cas.appointment.carousel.dataobject.CarouselDO;
+import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.CarouselDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Select;
 
