@@ -116,7 +116,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, reactive } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/common/stores/user'
 import { API_SUCCESS_CODE } from '@/common/utils/request'
@@ -167,6 +167,13 @@ const chatBodyRef = ref<HTMLElement | null>(null)
 // 用户是否贴着底部阅读：上滑查看历史时暂停自动跟随，回到底部后恢复
 const stickToBottom = ref(true)
 let scrollFrame = 0
+/** 当前 SSE 连接。保存引用是为了在组件卸载 / 超时 / 出错时能主动关闭，
+ *  否则切路由后连接仍在跑：服务端线程被占、浏览器连接数被占、多次进出会累积。 */
+let es: EventSource | null = null
+/** 流式看门狗定时器句柄 */
+let streamWatchdog = 0
+/** 看门狗阈值：略大于后端 LLM 流式超时（90s），给正常长回答留足余量 */
+const SSE_WATCHDOG_MS = 120_000
 
 function doScrollToBottom() {
   const el = chatBodyRef.value
@@ -205,7 +212,13 @@ function persistSessions() { localStorage.setItem(sessionsKey(), JSON.stringify(
 function persistCurrent() { localStorage.setItem(currentKey(), currentSessionId.value) }
 
 async function fetchRaw(path: string, init?: RequestInit) {
-  const resp = await fetch(`${BASE}${path}`, { headers: authHeaders(), ...init })
+  // headers 必须合并而不是被 init 覆盖：此前 `...init` 在 headers 之后展开，
+  // 调用方传的 { 'Content-Type': ... } 会整体顶掉 authHeaders()，
+  // 请求不带 Authorization，网关返回 401——点赞/点踩 100% 失败。
+  const resp = await fetch(`${BASE}${path}`, {
+    ...init,
+    headers: { ...authHeaders(), ...(init?.headers ?? {}) }
+  })
   const result = await resp.json()
   if (result.code === API_SUCCESS_CODE) return result.data
   throw new Error(result.message || '请求失败')
@@ -250,9 +263,18 @@ function askQuestion() {
   if (!currentSessionId.value) currentSessionId.value = uuid(); registerActive(q); streaming.value = true
   // 新一轮提问即作废上一张确认卡片（后端也会丢弃过期草稿）
   pendingIndex.value = null
-  messages.value.push({ role: 'user', content: q }); const aiMsg: ChatMsg = { role: 'assistant', content: '' }; messages.value.push(aiMsg); query.value = ''
+  messages.value.push({ role: 'user', content: q })
+  // 必须用 reactive 包裹：ref 数组 push 进去的若是普通对象，Vue 的响应式代理只在
+  // "读取元素"时才套一层，直接改这个原始对象不会触发依赖——逐个 token 的追加就不会
+  // 重渲染，表现是转圈半天后整段答案突然蹦出来（常被误报为"流式卡死"）。
+  const aiMsg: ChatMsg = reactive({ role: 'assistant', content: '' })
+  messages.value.push(aiMsg); query.value = ''
   scrollToBottom()
-  const params = new URLSearchParams({ query: q, sessionId: currentSessionId.value, token: userStore.token }); const es = new EventSource(`${BASE}/qa/ask/stream?${params.toString()}`)
+  const params = new URLSearchParams({ query: q, sessionId: currentSessionId.value, token: userStore.token })
+  es = new EventSource(`${BASE}/qa/ask/stream?${params.toString()}`)
+  // 看门狗：服务端既不返回也不关闭连接时（LLM 挂起、网关丢连接），
+  // streaming 会永远为 true，输入框被永久锁死，只能刷新页面。
+  streamWatchdog = window.setTimeout(() => stopStream(aiMsg, q), SSE_WATCHDOG_MS)
   es.addEventListener('messageId', event => { const id = Number((event as MessageEvent).data); if (id) aiMsg.id = id })
   // 槽位更新：展示 AI 当前记住的预约条件
   es.addEventListener('slots', event => {
@@ -274,8 +296,33 @@ function askQuestion() {
     pendingIndex.value = null
     slots.value = {}
   })
-  es.onmessage = event => { if (event.data === '[DONE]') { streaming.value = false; es.close(); touchSessionTitle(q); if (!aiMsg.content) aiMsg.content = '（本次未生成内容，请换个问法试试）'; scrollToBottom(); return }; if (event.data.startsWith('[ERROR]')) { aiMsg.content += `\n\n${event.data.replace('[ERROR] ', '')}`; streaming.value = false; es.close(); scrollToBottom(); return }; aiMsg.content += event.data; scheduleScroll() }
-  es.onerror = () => { if (!aiMsg.content) aiMsg.content = '连接失败，请确认后端服务已启动。'; streaming.value = false; es.close(); scrollToBottom() }
+  es.onmessage = event => {
+    if (event.data === '[DONE]') {
+      if (!aiMsg.content) aiMsg.content = '（本次未生成内容，请换个问法试试）'
+      stopStream(aiMsg, q); return
+    }
+    if (event.data.startsWith('[ERROR]')) {
+      aiMsg.content += `\n\n${event.data.replace('[ERROR] ', '')}`
+      stopStream(aiMsg, q); return
+    }
+    aiMsg.content += event.data; scheduleScroll()
+  }
+  es.onerror = () => {
+    if (!aiMsg.content) aiMsg.content = '连接失败，请确认后端服务已启动。'
+    stopStream(aiMsg, q)
+  }
+}
+
+/** 结束流式：关连接、清看门狗、复位状态。正常结束 / 出错 / 超时 / 卸载共用一条收尾路径 */
+function stopStream(aiMsg?: ChatMsg, title?: string) {
+  if (streamWatchdog) { clearTimeout(streamWatchdog); streamWatchdog = 0 }
+  es?.close(); es = null
+  streaming.value = false
+  // 只有正常收尾才刷新会话标题：异常或超时时答案不完整，
+  // 让会话停留在旧标题反而更利于用户回看
+  if (title) touchSessionTitle(title)
+  if (aiMsg && !aiMsg.content) aiMsg.content = '（连接已中断，请重试）'
+  scrollToBottom()
 }
 const lastAssistantMsgId = computed(() => { for (let i = messages.value.length - 1; i >= 0; i--) if (messages.value[i].role === 'assistant') return messages.value[i].id ?? null; return null })
 const canFeedback = computed(() => !streaming.value && lastAssistantMsgId.value != null)
@@ -305,6 +352,9 @@ onMounted(async () => {
 onUnmounted(() => {
   // 离开页面：取消待执行的滚动帧
   if (scrollFrame) cancelAnimationFrame(scrollFrame)
+  // 关闭仍在进行的 SSE：否则后端会为已离开的用户继续生成完整回答（白耗 token），
+  // 且连接一直挂着占用服务端线程与浏览器连接数
+  stopStream()
 })
 </script>
 
