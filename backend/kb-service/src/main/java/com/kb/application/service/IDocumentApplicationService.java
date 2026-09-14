@@ -16,7 +16,15 @@ public interface IDocumentApplicationService {
 
     Document getDocument(Long id);
 
-    List<Document> getAllDocuments();
+    /**
+     * 列出当前登录用户可见的文档（普通用户仅自己上传的，ADMIN 全部）。
+     */
+    List<Document> listVisibleDocuments();
+
+    /**
+     * 按标题关键词搜索当前登录用户可见的文档。
+     */
+    List<Document> searchVisibleDocuments(String keyword);
 
     void deleteDocument(Long id);
 

@@ -39,6 +39,21 @@ public interface DocumentRepository {
     List<Document> findByStatus(DocumentStatus status);
 
     /**
+     * 按归属用户查询，按创建时间倒序。
+     *
+     * @param ownerId 归属用户ID
+     */
+    List<Document> findByOwnerId(Long ownerId);
+
+    /**
+     * 按归属用户 + 标题关键词查询（下推 SQL，避免全表内存过滤）。
+     *
+     * @param ownerId 归属用户ID
+     * @param keyword 标题关键词
+     */
+    List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword);
+
+    /**
      * Update document status only.
      */
     void updateStatus(Long id, DocumentStatus status, String errorMsg);

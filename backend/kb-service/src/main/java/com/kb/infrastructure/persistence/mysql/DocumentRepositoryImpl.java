@@ -82,6 +82,20 @@ public class DocumentRepositoryImpl implements DocumentRepository {
     }
 
     @Override
+    public List<Document> findByOwnerId(Long ownerId) {
+        return documentMapper.selectByOwnerId(ownerId).stream()
+                .map(this::toDocument)
+                .toList();
+    }
+
+    @Override
+    public List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword) {
+        return documentMapper.selectByOwnerIdAndTitle(ownerId, keyword).stream()
+                .map(this::toDocument)
+                .toList();
+    }
+
+    @Override
     public void updateStatus(Long id, DocumentStatus status, String errorMsg) {
         documentMapper.updateStatus(id, status.name(), errorMsg);
     }

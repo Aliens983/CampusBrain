@@ -26,4 +26,24 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
 
     @Select("SELECT COUNT(*) FROM document WHERE status = #{status}")
     long countByStatus(@Param("status") String status);
+
+    /**
+     * 按归属用户查询。
+     * <p>
+     * 用 {@code owner_id = #{ownerId}} 而非 {@code <=>}：历史数据 owner_id 可能为 NULL，
+     * 这类无主文档对任何用户都不可见（fail-closed），避免被枚举。
+     */
+    @Select("SELECT * FROM document WHERE owner_id = #{ownerId} ORDER BY created_at DESC")
+    List<DocumentDO> selectByOwnerId(@Param("ownerId") Long ownerId);
+
+    /**
+     * 归属 + 标题模糊搜索，下推 SQL。
+     * <p>
+     * 此前是全表加载后在 JVM 里 {@code toLowerCase().contains()}，文档量上来后每次搜索都是全表扫描
+     * 加全量 DTO 构造；下推后只返回命中的行。
+     */
+    @Select("SELECT * FROM document WHERE owner_id = #{ownerId} " +
+            "AND LOWER(title) LIKE CONCAT('%', LOWER(#{keyword}), '%') ORDER BY created_at DESC")
+    List<DocumentDO> selectByOwnerIdAndTitle(@Param("ownerId") Long ownerId,
+                                             @Param("keyword") String keyword);
 }

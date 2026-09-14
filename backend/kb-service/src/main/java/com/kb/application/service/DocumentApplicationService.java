@@ -116,10 +116,57 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * Get all documents.
+     * 列出当前登录用户可见的文档：普通用户只看自己的，ADMIN 看全量（违规内容治理）。
+     * <p>
+     * 此前直接 {@code findAll()} 无任何归属条件，任意登录用户命中
+     * {@code GET /kb/documents} 即可枚举全体用户文档的文件名、大小、状态——
+     * 文件名常含姓名/学号/课题，属于水平越权。
+     *
+     * @return 当前用户有权查看的文档列表
      */
-    public List<Document> getAllDocuments() {
-        return documentRepository.findAll();
+    public List<Document> listVisibleDocuments() {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        if (isAdmin()) {
+            return documentRepository.findAll();
+        }
+        if (userId == null) {
+            // 取不到身份时一律返回空，绝不退化成"全量可见"
+            return List.of();
+        }
+        return documentRepository.findByOwnerId(userId);
+    }
+
+    /**
+     * 按标题关键词搜索当前用户可见的文档。
+     * <p>
+     * 搜索下推到 SQL（{@code owner_id = ? AND title LIKE ?}），不再把整表加载进 JVM 过滤。
+     *
+     * @param keyword 标题关键词
+     * @return 命中的文档列表
+     */
+    public List<Document> searchVisibleDocuments(String keyword) {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        if (keyword == null || keyword.isBlank()) {
+            return listVisibleDocuments();
+        }
+        if (isAdmin()) {
+            // 管理员全量搜索：沿用既有 findAll 后在内存过滤（管理员场景文档量可控），
+            // 但同样做空标题保护，避免 NPE
+            return documentRepository.findAll().stream()
+                    .filter(d -> d.getTitle() != null
+                            && d.getTitle().toLowerCase().contains(keyword.toLowerCase()))
+                    .toList();
+        }
+        if (userId == null) {
+            return List.of();
+        }
+        return documentRepository.searchByOwnerIdAndTitle(userId, keyword);
+    }
+
+    /** 当前登录用户是否为管理员 */
+    private boolean isAdmin() {
+        var loginUser = SecurityFrameworkUtils.getLoginUser();
+        return loginUser != null && "ADMIN".equalsIgnoreCase(loginUser.getRole());
     }
 
     /**

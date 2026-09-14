@@ -49,10 +49,11 @@ public class DocumentController {
         return ApiResponse.success(DocumentDTO.from(documentService.getDocument(id)));
     }
 
-    @Operation(summary = "获取文档列表", description = "列出当前用户所有已上传的文档")
+    @Operation(summary = "获取文档列表",
+            description = "列出当前用户有权查看的文档：普通用户仅返回自己上传的，ADMIN 返回全部")
     @GetMapping
     public ApiResponse<List<DocumentDTO>> listDocuments() {
-        List<DocumentDTO> docs = documentService.getAllDocuments().stream()
+        List<DocumentDTO> docs = documentService.listVisibleDocuments().stream()
                 .map(DocumentDTO::from)
                 .toList();
         return ApiResponse.success(docs);
@@ -67,12 +68,12 @@ public class DocumentController {
         return ApiResponse.success();
     }
 
-    @Operation(summary = "搜索文档", description = "按关键词搜索文档标题和元数据")
+    @Operation(summary = "搜索文档",
+            description = "按标题关键词搜索当前用户有权查看的文档（普通用户仅搜自己的）")
     @GetMapping("/search")
     public ApiResponse<List<DocumentDTO>> searchDocuments(
             @Parameter(description = "搜索关键词") @RequestParam String keyword) {
-        List<DocumentDTO> results = documentService.getAllDocuments().stream()
-                .filter(d -> d.getTitle().toLowerCase().contains(keyword.toLowerCase()))
+        List<DocumentDTO> results = documentService.searchVisibleDocuments(keyword).stream()
                 .map(DocumentDTO::from)
                 .toList();
         return ApiResponse.success(results);
