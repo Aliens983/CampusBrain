@@ -14,9 +14,11 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * 为每个 HTTP 请求注入 TraceId 到 MDC，实现全链路日志追踪
+ * 为每个 HTTP 请求注入 TraceId 到 MDC，实现全链路日志追踪（5.2.1）。
  * <p>
- * 优先级最高，确保后续所有日志都带有 TraceId
+ * 优先级最高，确保后续所有日志都带有 TraceId。traceId 由网关
+ * {@code TraceIdGlobalFilter} 统一生成并经 {@code X-Trace-Id} 头透传；
+ * 直连本服务（本地调试/内网探测）无该头时自行生成。
  * </p>
  * @author forever-king
  */

@@ -51,4 +51,5 @@ logging:
   level:
     com.laoliu.gateway: info
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    # 5.2.1：[%X{traceId}] 与 CAS、KB 对齐；traceId 由 TraceIdGlobalFilter 生成并透传
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"

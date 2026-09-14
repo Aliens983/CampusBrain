@@ -1,10 +1,13 @@
 package com.laoliu.cas.web.config;
 
 import com.laoliu.cas.common.result.CommonResult;
+import com.laoliu.cas.web.filter.TraceIdFilter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.Ordered;
 import org.springframework.http.HttpStatus;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -43,6 +46,19 @@ public class WebAutoConfiguration {
     @Bean
     public RestTemplate restTemplate() {
         return new RestTemplate();
+    }
+
+    /**
+     * 全链路 traceId 过滤器（5.2.1）：最高优先级注册，
+     * 读取网关注入的 X-Trace-Id 写入 MDC 并回写响应头。
+     */
+    @Bean
+    public FilterRegistrationBean<TraceIdFilter> traceIdFilterRegistration() {
+        FilterRegistrationBean<TraceIdFilter> registration =
+                new FilterRegistrationBean<>(new TraceIdFilter());
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registration.addUrlPatterns("/*");
+        return registration;
     }
 
     // 注：CORS 已统一收口到网关 globalcors（4.1.8），本服务不再注册 CorsFilter。

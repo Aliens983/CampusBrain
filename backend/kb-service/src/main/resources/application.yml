@@ -241,9 +241,11 @@ knife4j:
 
 # ---------- Logging ----------
 logging:
+  pattern:
+    # 5.2.1：[%X{traceId}] 与网关、CAS 对齐；traceId 由 TraceIdFilter
+    # 读取网关注入的 X-Trace-Id（无网关直连时自行生成）
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
   level:
     root: INFO
     com.kb: DEBUG
     com.kb.infrastructure.persistence: INFO
-  pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"

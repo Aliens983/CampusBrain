@@ -115,7 +115,8 @@ logging:
   level:
     com.laoliu: info
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+    # 5.2.1：[%X{traceId}] 与网关、KB 对齐，支撑跨服务日志关联
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
 
 weather:
   api:
