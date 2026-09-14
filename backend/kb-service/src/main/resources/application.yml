@@ -247,7 +247,10 @@ springdoc:
     path: /v3/api-docs
   group-configs:
     - group: default
-      paths-to-match: /api/**
+      # 不能写 /api/**：context-path 是 /api/v1/kb，springdoc 按"不含 context-path 的
+      # servlet 路径"匹配，Controller 实际映射的是 /qa/**、/documents/**、/health/**。
+      # 写 /api/** 会过滤出空文档（打开 swagger 一个接口都看不到）。
+      paths-to-match: /qa/**,/documents/**,/health/**
   default-flat-param-object: true
 
 knife4j:
