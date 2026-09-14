@@ -18,6 +18,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 
 /**
@@ -53,6 +55,14 @@ public class LangChain4jLlmService implements LlmService {
     /** 注入 LLM 的历史消息上限（超出部分丢弃最早的记录） */
     private static final int MAX_HISTORY_MESSAGES = 6;
 
+    /**
+     * 流式生成的最长等待时间（秒）。
+     * <p>
+     * 需大于 LLM 自身的超时，正常回答不会被截断；但一旦供应商连接挂起导致
+     * onComplete/onError 都不回调，join() 必须有上限，否则 Tomcat 线程永久泄漏。
+     */
+    private static final int LLM_STREAM_TIMEOUT_SECONDS = 90;
+
     /** 绑定实时查询工具的 AI 助手（AiServices） */
     private ToolAssistant toolAssistant;
 
@@ -84,7 +94,9 @@ public class LangChain4jLlmService implements LlmService {
         for (ChatMessage cm : fullPrompt) {
             messages.add(toLangChainMessage(cm));
         }
-        appendRecentHistory(messages, conversationHistory);
+        // 历史已由 buildFullPrompt 拼入，且上层按 HISTORY_LIMIT 限量取最近若干条，
+        // 此处不能再追加一次：重复注入会让模型把上一轮的问题再答一遍（串题），
+        // 还白白翻倍 token 消耗。
 
         try {
             var response = chatModel.generate(messages);
@@ -116,10 +128,11 @@ public class LangChain4jLlmService implements LlmService {
         for (ChatMessage cm : fullPrompt) {
             messages.add(toLangChainMessage(cm));
         }
-        appendRecentHistory(messages, conversationHistory);
+        // 同 generateAnswer：历史已在 buildFullPrompt 中，此处不重复追加
 
         StringBuilder fullAnswer = new StringBuilder();
 
+        AtomicBoolean streamErrored = new AtomicBoolean(false);
         try {
             CompletableFuture<Void> future = new CompletableFuture<>();
 
@@ -139,16 +152,21 @@ public class LangChain4jLlmService implements LlmService {
                 @Override
                 public void onError(Throwable error) {
                     log.error("Streaming error", error);
+                    streamErrored.set(true);
                     tokenConsumer.accept("\n\n[生成出错，请重试]");
                     future.completeExceptionally(error);
                 }
             });
 
-            future.join();
+            // 必须限时：若供应商连接挂起导致 onComplete/onError 都不触发，join() 会永久阻塞，
+            // 而本方法运行在 Tomcat 线程上（SSE 同步阻塞），少量挂起即可耗尽容器线程。
+            future.orTimeout(LLM_STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
         } catch (Exception e) {
-            log.error("Streaming generation failed, trying fallback", e);
-            String fallback = tryFallback(messages);
-            tokenConsumer.accept(fallback);
+            log.error("Streaming generation failed", e);
+            // 已推过错误提示就不再推 fallback，否则答案里会同时出现错误提示和兜底文案
+            if (!streamErrored.get()) {
+                tokenConsumer.accept(tryFallback(messages));
+            }
         }
 
         return fullAnswer.toString();
