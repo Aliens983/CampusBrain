@@ -21,4 +21,20 @@ public enum ManageStatus {
         this.code = code;
         this.message = message;
     }
+
+    /**
+     * 按状态码解析枚举；非法/未知码返回 null。
+     * 供状态描述展示、状态机入参归一化统一复用，避免各处重复 switch 0..4。
+     */
+    public static ManageStatus of(Integer code) {
+        if (code == null) {
+            return null;
+        }
+        for (ManageStatus status : values()) {
+            if (status.code == code) {
+                return status;
+            }
+        }
+        return null;
+    }
 }
