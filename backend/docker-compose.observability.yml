@@ -1,0 +1,27 @@
+# ============================================================================
+# 可观测性编排 — 与基础设施/业务编排叠加使用，不单独启动
+#
+#   docker compose -f docker-compose.yml \
+#                  -f docker-compose.business.yml \
+#                  -f docker-compose.observability.yml up -d
+#
+# 职责：Prometheus 指标抓取（容器内网直连各服务 actuator，不经网关）。
+# 端口（宿主机）：9090 → Prometheus Web UI / API
+# ============================================================================
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.retention.time=15d"
+    ports:
+      - "9090:9090"
+
+volumes:
+  prometheus-data:

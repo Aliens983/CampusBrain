@@ -95,9 +95,11 @@ for s in ${TO_BUILD}; do
   case "${s}" in gateway) UP_TARGETS="${UP_TARGETS} gateway";; cas) UP_TARGETS="${UP_TARGETS} cas-service";; kb) UP_TARGETS="${UP_TARGETS} kb-service";; frontend) UP_TARGETS="${UP_TARGETS} frontend";; esac
 done
 [ "${INFRA_CHANGED}" = "yes" ] && UP_TARGETS=""   # infra 变 → 全量 up -d 重排
-echo "═══ compose up${UP_TARGETS:+ ${UP_TARGETS}}（TAG=deploy）═══"
+echo "═══ compose up${UP_TARGETS:+ prometheus ${UP_TARGETS}}（TAG=deploy）═══"
+# 增量发布时也显式带上 prometheus，保证可观测性栈随首次部署即拉起（已运行则 No-Op）；
+# INFRA_CHANGED 全量重排时 UP_TARGETS 为空，三个 -f 中的所有服务一并 up
 # shellcheck disable=SC2086
-TAG=deploy docker compose -f docker-compose.yml -f docker-compose.business.yml up -d ${UP_TARGETS}
+TAG=deploy docker compose -f docker-compose.yml -f docker-compose.business.yml -f docker-compose.observability.yml up -d ${UP_TARGETS:+prometheus} ${UP_TARGETS}
 
 # ---------- 4) 冒烟 ----------
 echo "═══ 冒烟测试 ═══"
