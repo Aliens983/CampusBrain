@@ -4,23 +4,50 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ServiceItemMapper">
 
+    <!-- 必须列全：findByUserId / selectUserServices 等走本 resultMap，
+         此前只映射 4 列，导致"我的服务"返回的实体 campus / categoryId / capacity
+         全为 null，前端拿不到校区与分类，容量判断也会失真。 -->
     <resultMap id="BaseResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO">
         <id property="serviceId" column="service_id"/>
         <result property="serviceName" column="service_name"/>
         <result property="serviceDescribe" column="service_describe"/>
         <result property="serviceState" column="service_state"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="campus" column="campus"/>
+        <result property="capacity" column="capacity"/>
+        <result property="bookedCount" column="booked_count"/>
+        <result property="imageUrl" column="image_url"/>
+        <result property="endDate" column="end_date"/>
     </resultMap>
 
     <sql id="Base_Column_List">
-        service_id,service_name,service_describe,service_state
+        service_id,service_name,service_describe,service_state,
+        category_id,campus,capacity,booked_count,image_url,end_date
+    </sql>
+
+    <!-- 带表别名版本：JOIN 查询里 resultMap 按无前缀列名映射，必须用 AS 还原 -->
+    <sql id="Base_Column_List_With_Alias">
+        s.service_id AS service_id,
+        s.service_name AS service_name,
+        s.service_describe AS service_describe,
+        s.service_state AS service_state,
+        s.category_id AS category_id,
+        s.campus AS campus,
+        s.capacity AS capacity,
+        s.booked_count AS booked_count,
+        s.image_url AS image_url,
+        s.end_date AS end_date
     </sql>
 
     <select id="selectAll" resultMap="BaseResultMap">
-        SELECT service_id,service_name,service_describe,service_state FROM services
+        SELECT
+        <include refid="Base_Column_List"/>
+        FROM services
     </select>
 
     <select id="selectByPrimaryKey" resultMap="BaseResultMap">
-        SELECT service_id,service_name,service_describe,service_state
+        SELECT
+        <include refid="Base_Column_List"/>
         FROM services
         WHERE service_id = #{id}
     </select>
@@ -56,20 +83,23 @@
     </update>
 
     <select id="selectUserServices" resultMap="BaseResultMap">
-        SELECT s.service_id, s.service_name, s.service_describe, s.service_state
+        SELECT
+        <include refid="Base_Column_List_With_Alias"/>
         FROM item i
         JOIN services s ON i.service_id = s.service_id
         WHERE i.user_id = #{userId}
     </select>
 
     <select id="selectAllWithPage" resultMap="BaseResultMap">
-        SELECT service_id, service_name, service_describe, service_state
+        SELECT
+        <include refid="Base_Column_List"/>
         FROM services
         ORDER BY service_id DESC
     </select>
 
     <select id="selectUserServicesWithPage" resultMap="BaseResultMap">
-        SELECT s.service_id, s.service_name, s.service_describe, s.service_state
+        SELECT
+        <include refid="Base_Column_List_With_Alias"/>
         FROM item i
         JOIN services s ON i.service_id = s.service_id
         WHERE i.user_id = #{userId}
