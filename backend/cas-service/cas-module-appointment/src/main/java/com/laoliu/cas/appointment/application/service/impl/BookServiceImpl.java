@@ -5,6 +5,7 @@ import com.laoliu.cas.appointment.application.service.BookService;
 import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.enums.CategoryCode;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
+import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.interfaces.dto.response.BookingResponse;
@@ -36,12 +37,16 @@ public class BookServiceImpl implements BookService {
     private final ServiceItemRepository serviceRepository;
     private final UserInfoApi userInfoApi;
     private final BookingEventPublisher bookingEventPublisher;
+    private final BookingMetrics bookingMetrics;
 
-    public BookServiceImpl(BookingRepository bookingRepository, ServiceItemRepository serviceRepository, UserInfoApi userInfoApi, BookingEventPublisher bookingEventPublisher) {
+    public BookServiceImpl(BookingRepository bookingRepository, ServiceItemRepository serviceRepository,
+                           UserInfoApi userInfoApi, BookingEventPublisher bookingEventPublisher,
+                           BookingMetrics bookingMetrics) {
         this.bookingRepository = bookingRepository;
         this.serviceRepository = serviceRepository;
         this.userInfoApi = userInfoApi;
         this.bookingEventPublisher = bookingEventPublisher;
+        this.bookingMetrics = bookingMetrics;
     }
 
     @Override
@@ -74,6 +79,7 @@ public class BookServiceImpl implements BookService {
             }
             // 乐观锁扣减库存（同事务）：容量充足才 +1，满则抛异常，事务回滚
             if (bookingRepository.decrementStock(sid) == 0) {
+                bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_CAPACITY_FULL);
                 throw new BusinessException(BookErrorCode.BOOKING_CAPACITY_FULL, sid);
             }
         }
@@ -95,6 +101,7 @@ public class BookServiceImpl implements BookService {
             for (Long sid : serviceIds) {
                 bookingEventPublisher.publishChanged(userId, sid, "BOOKED");
             }
+            bookingMetrics.recordCreated(createdOrderIds.size());
             return new BookingSubmitResult(userInfoApi.getUserById(userId), createdOrderIds);
         } catch (BusinessException e) {
             throw e;
@@ -158,8 +165,10 @@ public class BookServiceImpl implements BookService {
         if (bookingIds == null || bookingIds.isEmpty()) {
             return false;
         }
-        boolean success = bookingRepository.cancelBookings(userId, bookingIds) > 0;
+        int affected = bookingRepository.cancelBookings(userId, bookingIds);
+        boolean success = affected > 0;
         if (success) {
+            bookingMetrics.recordCancelled(affected);
             // 取消成功：释放这些预约占用的库存（仅当前用户待审核的单，防他人/重复释放）
             List<Long> serviceIds = bookingRepository.selectServiceIdsByBookingIds(userId, bookingIds);
             if (serviceIds != null) {

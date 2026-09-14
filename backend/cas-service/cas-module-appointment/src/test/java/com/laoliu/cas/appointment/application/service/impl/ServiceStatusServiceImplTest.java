@@ -1,5 +1,8 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
@@ -49,7 +52,7 @@ class ServiceStatusServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        serviceStatusService = new ServiceStatusServiceImpl(bookingRepository, emailService, notificationSettings);
+        serviceStatusService = new ServiceStatusServiceImpl(bookingRepository, emailService, notificationSettings, new BookingMetrics(new SimpleMeterRegistry()));
         // 默认"允许发送邮件"（策略与偏好都开）；需要验证"关闭后不发送"的用例再单独覆写
         lenient().when(notificationSettings.isEmailAllowed(any())).thenReturn(true);
     }

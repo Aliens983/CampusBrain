@@ -7,6 +7,7 @@ import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.application.service.ConsultationService;
 import com.laoliu.cas.appointment.application.service.EquipmentService;
 import com.laoliu.cas.appointment.application.service.RoomService;
+import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
@@ -87,6 +88,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     private final EquipmentService equipmentService;
     private final RedisUtil redisUtil;
     private final ObjectMapper objectMapper;
+    private final BookingMetrics bookingMetrics;
 
     // ==================== 查询 ====================
 
@@ -425,6 +427,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             return invalid(service, category, "该教室不属于所选服务，请确认后重试");
         }
         if (bookingRepository.countRoomOverlap(room.getId(), window.date, window.start, window.end) > 0) {
+            bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_SLOT_UNAVAILABLE);
             return invalid(service, category, "该教室此时间段已被预约，请换教室或时段");
         }
         return valid(AssistantBookingDraft.TYPE_ROOM, "教室空间", service, category,
@@ -533,6 +536,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 return matched.get().getId();
             }
         }
+        bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_SLOT_UNAVAILABLE);
         throw new BusinessException(BookErrorCode.SLOT_UNAVAILABLE);
     }
 

@@ -79,6 +79,7 @@ class AppointmentAssistantServiceImplTest {
     @Mock private RoomService roomService;
     @Mock private EquipmentService equipmentService;
     @Mock private RedisUtil redisUtil;
+    @Mock private com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics bookingMetrics;
 
     @Spy private ObjectMapper objectMapper = new ObjectMapper();
 

@@ -53,3 +53,13 @@ logging:
   pattern:
     # 5.2.1：[%X{traceId}] 与 CAS、KB 对齐；traceId 由 TraceIdGlobalFilter 生成并透传
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
+
+# 5.2.2：暴露 Prometheus 指标（/actuator/prometheus 已在 AuthGlobalFilter 白名单）
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: gateway

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
+import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.enums.ManageStatus;
@@ -27,6 +28,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
     private final NotificationSettingsService notificationSettings;
+    private final BookingMetrics bookingMetrics;
 
     @Override
     public List<ServiceStatusResponse> getServiceStatus() {
@@ -104,6 +106,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void auditPass(Long orderId, String reason, AuditSource source) {
+        long startNanos = System.nanoTime();
         ServiceStatusResponse serviceInfo = getServiceStatusByOrderId(orderId);
         if (serviceInfo == null) {
             throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
@@ -115,6 +118,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (!success) {
             throw new BusinessException(BookErrorCode.AUDIT_FAILED);
         }
+        bookingMetrics.recordAudit(true, source, System.nanoTime() - startNanos);
 
         // 3.1.8：邮件措辞区分审核人（咨询师本人 vs 管理员）
         String emailContent = "您好！您的预约已通过" + source.reviewerLabel() + "审核。\n预约服务："
@@ -134,6 +138,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void auditReject(Long orderId, String reason, AuditSource source) {
+        long startNanos = System.nanoTime();
         if (reason == null || reason.trim().isEmpty()) {
             throw new BusinessException(BookErrorCode.AUDIT_REASON_REQUIRED);
         }
@@ -152,6 +157,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (!success) {
             throw new BusinessException(BookErrorCode.AUDIT_FAILED);
         }
+        bookingMetrics.recordAudit(false, source, System.nanoTime() - startNanos);
 
         // 审核拒绝：释放该预约占用的库存
         Long serviceId = bookingRepository.selectServiceIdByOrderId(orderId);

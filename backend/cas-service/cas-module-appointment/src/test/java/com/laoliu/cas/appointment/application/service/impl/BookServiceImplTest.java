@@ -1,5 +1,8 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import com.laoliu.cas.appointment.application.service.BookService;
 import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
@@ -58,7 +61,7 @@ class BookServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        bookService = new BookServiceImpl(bookingRepository, serviceRepository, userInfoApi, bookingEventPublisher);
+        bookService = new BookServiceImpl(bookingRepository, serviceRepository, userInfoApi, bookingEventPublisher, new BookingMetrics(new SimpleMeterRegistry()));
     }
 
     @Nested

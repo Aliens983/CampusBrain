@@ -12,6 +12,7 @@ import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.domain.repository.TimeSlotRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
+import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.interfaces.dto.response.ConsultantResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 import com.laoliu.cas.common.exception.BusinessException;
@@ -36,6 +37,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private final TimeSlotRepository timeSlotRepository;
     private final BookingRepository bookingRepository;
     private final BookingEventPublisher bookingEventPublisher;
+    private final BookingMetrics bookingMetrics;
 
     @Override
     public List<ConsultantResponse> getAvailableConsultants() {
@@ -93,11 +95,13 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .filter(s -> Objects.equals(s.getConsultantId(), consultantId))
                 .orElseThrow(() -> new BusinessException(BookErrorCode.SLOT_MISMATCH));
         if (!slot.isAvailable()) {
+            bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_SLOT_UNAVAILABLE);
             throw new BusinessException(BookErrorCode.SLOT_UNAVAILABLE);
         }
 
         // 原子占用：仅 available=1 时置 0；失败=刚被抢走
         if (!timeSlotRepository.occupy(slotId)) {
+            bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_SLOT_UNAVAILABLE);
             throw new BusinessException(BookErrorCode.SLOT_UNAVAILABLE);
         }
 

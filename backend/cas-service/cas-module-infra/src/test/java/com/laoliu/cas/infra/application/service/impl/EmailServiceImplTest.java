@@ -1,5 +1,7 @@
 package com.laoliu.cas.infra.application.service.impl;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import com.laoliu.cas.infra.application.service.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -41,7 +43,7 @@ class EmailServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        emailService = new EmailServiceImpl(javaMailSender, environment);
+        emailService = new EmailServiceImpl(javaMailSender, environment, new SimpleMeterRegistry());
     }
 
     @Nested
