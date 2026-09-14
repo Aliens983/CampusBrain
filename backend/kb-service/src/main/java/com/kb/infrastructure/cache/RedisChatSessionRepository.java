@@ -79,10 +79,11 @@ public class RedisChatSessionRepository implements ChatSessionRepository {
         if (session == null || session.getSessionId() == null) {
             return;
         }
-        // 防御：Redis 中已存在他人同名会话时绝不覆盖（4.1.13）
+        // 防御：Redis 中已存在他人同名会话时绝不覆盖（4.1.13）。
+        // 同 clear()：会话自身没有 userId 时也拒绝写入，避免无主会话覆盖他人数据
         ChatSession existing = find(session.getSessionId()).orElse(null);
-        if (existing != null && session.getUserId() != null
-                && !session.getUserId().equals(existing.getUserId())) {
+        if (existing != null && (session.getUserId() == null
+                || !session.getUserId().equals(existing.getUserId()))) {
             log.warn("拒绝写入他人会话上下文: sessionId={}, owner={}, currentUser={}",
                     session.getSessionId(), existing.getUserId(), session.getUserId());
             return;
@@ -105,9 +106,12 @@ public class RedisChatSessionRepository implements ChatSessionRepository {
         if (sessionId == null) {
             return;
         }
-        // 仅允许清空归属自己的上下文；key 不存在时 delete 天然幂等
+        // 仅允许清空归属自己的上下文；key 不存在时 delete 天然幂等。
+        // userId 为 null 时必须拒绝（而不是放行）：取不到身份说明调用链上没有登录态，
+        // 放行等于任何人都能清空任意会话。此处与 MySQL 侧（SQL 带 AND user_id = ?，
+        // userId 为 null 时一行都不命中）保持一致的 fail-closed 语义。
         ChatSession existing = find(sessionId).orElse(null);
-        if (existing != null && userId != null && !userId.equals(existing.getUserId())) {
+        if (existing != null && (userId == null || !userId.equals(existing.getUserId()))) {
             log.warn("拒绝清空他人会话上下文: sessionId={}, owner={}, currentUser={}",
                     sessionId, existing.getUserId(), userId);
             return;
