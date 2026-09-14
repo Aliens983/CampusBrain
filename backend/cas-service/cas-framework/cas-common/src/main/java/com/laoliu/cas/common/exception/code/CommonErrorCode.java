@@ -39,4 +39,10 @@ public interface CommonErrorCode {
 
     ErrorCode FILE_EMPTY = new ErrorCode(10015, "文件不能为空");
 
+    ErrorCode FILE_TYPE_NOT_ALLOWED = new ErrorCode(10016, "不支持的文件类型");
+
+    ErrorCode FILE_PATH_INVALID = new ErrorCode(10017, "非法的文件存储路径");
+
+    ErrorCode FILE_TOO_LARGE = new ErrorCode(10018, "文件大小超过限制");
+
 }

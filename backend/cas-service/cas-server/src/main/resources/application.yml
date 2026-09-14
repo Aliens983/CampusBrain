@@ -31,8 +31,10 @@ spring:
     password: ${RABBITMQ_PASSWORD:admin123}
   servlet:
     multipart:
-      max-file-size: 50MB
-      max-request-size: 50MB
+      # 上传仅面向图片/办公文档（轮播图等），10MB 足够；
+      # FileServiceImpl 内还有同名配置的第二道大小校验（4.1.14）
+      max-file-size: 10MB
+      max-request-size: 10MB
   mail:
     host: ${MAIL_HOST:smtp.163.com}
     port: ${MAIL_PORT:465}

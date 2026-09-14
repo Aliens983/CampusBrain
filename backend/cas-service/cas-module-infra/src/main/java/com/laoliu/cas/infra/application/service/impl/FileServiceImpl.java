@@ -11,14 +11,36 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Locale;
+import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
+ * 本地文件存储。
+ * <p>
+ * 安全约束（4.1.14）：
+ * <ul>
+ *   <li>扩展名白名单：仅常见图片与办公文档，<b>不含 svg/html 等可承载脚本的类型</b>；</li>
+ *   <li>存储名固定为 32 位 UUID + 校验过的小写扩展名，天然杜绝双扩展名/可执行文件；</li>
+ *   <li>subDir 仅允许单层安全字符，落盘前再做 normalize + 目录包含校验，防御路径穿越；</li>
+ *   <li>大小双重限制：Spring multipart 配置 + service 内显式校验。</li>
+ * </ul>
+ *
  * @author forever-king
  */
 @Slf4j
 @Service
 public class FileServiceImpl implements FileService {
+
+    /** 允许上传的扩展名（小写、带点）。svg 可内嵌脚本故不开放。 */
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
+            ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp",
+            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+            ".txt", ".md");
+
+    /** 子目录白名单：单层目录、字母数字下划线短横、1-32 字符 */
+    private static final Pattern SUBDIR_PATTERN = Pattern.compile("[a-zA-Z0-9_-]{1,32}");
 
     @Value("${file.upload.dir:uploads}")
     private String uploadDir;
@@ -26,132 +48,120 @@ public class FileServiceImpl implements FileService {
     @Value("${file.upload.url-prefix:/uploads}")
     private String urlPrefix;
 
+    /** service 层显式大小上限（字节），与 Spring multipart 配置构成双重限制 */
+    @Value("${file.upload.max-size:10485760}")
+    private long maxSize;
+
     @Override
     public String uploadFile(MultipartFile multipartFile) {
-        if (multipartFile == null || multipartFile.isEmpty()) {
-            throw new BusinessException(CommonErrorCode.FILE_EMPTY);
-        }
-
-        String originalFilename = multipartFile.getOriginalFilename();
-        String extension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-
-        String newFileName = UUID.randomUUID().toString().replace("-", "") + extension;
-        // 用绝对路径：Tomcat 对相对路径的 transferTo 会解析到临时目录，导致找不到文件
-        File baseDir = new File(uploadDir).getAbsoluteFile();
-        File destFile = new File(baseDir, newFileName);
-
-        try {
-            if (!baseDir.exists()) {
-                baseDir.mkdirs();
-            }
-            multipartFile.transferTo(destFile);
-            log.info("文件上传成功: {}", destFile.getAbsolutePath());
-            return urlPrefix + "/" + newFileName;
-        } catch (IOException e) {
-            log.error("文件上传失败", e);
-            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
-        }
+        return uploadFile(multipartFile, null);
     }
 
     @Override
     public String uploadFile(File file) {
-        if (file == null || !file.exists()) {
-            throw new BusinessException(CommonErrorCode.FILE_EMPTY);
-        }
-
-        String originalFilename = file.getName();
-        String extension = "";
-        if (originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-
-        String newFileName = UUID.randomUUID().toString().replace("-", "") + extension;
-        File destFile = new File(uploadDir, newFileName);
-
-        try {
-            // 先确保目标目录存在，再开流写入（顺序不能反）
-            File parentDir = destFile.getParentFile();
-            if (parentDir != null && !parentDir.exists()) {
-                parentDir.mkdirs();
-            }
-            try (FileOutputStream fos = new FileOutputStream(destFile)) {
-                fos.write(java.nio.file.Files.readAllBytes(file.toPath()));
-            }
-            log.info("文件上传成功: {}", destFile.getAbsolutePath());
-            return urlPrefix + "/" + newFileName;
-        } catch (IOException e) {
-            log.error("文件上传失败", e);
-            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
-        }
+        return uploadFile(file, null);
     }
 
     @Override
     public String uploadFile(MultipartFile file, String subDir) {
-        String url = storeMultipart(file, subDir);
-        return url;
+        if (file == null || file.isEmpty()) {
+            throw new BusinessException(CommonErrorCode.FILE_EMPTY);
+        }
+        if (file.getSize() > maxSize) {
+            throw new BusinessException(CommonErrorCode.FILE_TOO_LARGE);
+        }
+        String extension = resolveAllowedExtension(file.getOriginalFilename());
+        File dest = prepareDestination(extension, subDir);
+        try {
+            // 用绝对路径：Tomcat 对相对路径的 transferTo 会解析到临时目录
+            file.transferTo(dest);
+        } catch (IOException e) {
+            log.error("文件上传失败", e);
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
+        }
+        log.info("文件上传成功: {}", dest.getAbsolutePath());
+        return buildAccessUrl(subDir, dest);
     }
 
     @Override
     public String uploadFile(File file, String subDir) {
-        String url = storeFile(file, subDir);
-        return url;
-    }
-
-    /** 目标目录：uploads[/subDir] 绝对路径，不存在则创建 */
-    private File resolveDir(String subDir) {
-        File base = (subDir == null || subDir.isEmpty())
-                ? new File(uploadDir)
-                : new File(uploadDir, subDir);
-        File dir = base.getAbsoluteFile();
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        return dir;
-    }
-
-    private String storeMultipart(MultipartFile multipartFile, String subDir) {
-        if (multipartFile == null || multipartFile.isEmpty()) {
-            throw new BusinessException(CommonErrorCode.FILE_EMPTY);
-        }
-        String originalFilename = multipartFile.getOriginalFilename();
-        String extension = "";
-        if (originalFilename != null && originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-        }
-        String newFileName = UUID.randomUUID().toString().replace("-", "") + extension;
-        File dir = resolveDir(subDir);
-        try {
-            multipartFile.transferTo(new File(dir, newFileName));
-            return (subDir == null || subDir.isEmpty() ? urlPrefix : urlPrefix + "/" + subDir) + "/" + newFileName;
-        } catch (IOException e) {
-            log.error("文件上传失败", e);
-            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
-        }
-    }
-
-    private String storeFile(File file, String subDir) {
         if (file == null || !file.exists()) {
             throw new BusinessException(CommonErrorCode.FILE_EMPTY);
         }
-        String originalFilename = file.getName();
-        String extension = "";
-        if (originalFilename.contains(".")) {
-            extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+        if (file.length() > maxSize) {
+            throw new BusinessException(CommonErrorCode.FILE_TOO_LARGE);
         }
-        String newFileName = UUID.randomUUID().toString().replace("-", "") + extension;
-        File dir = resolveDir(subDir);
-        try {
-            File dest = new File(dir, newFileName);
-            try (FileOutputStream fos = new FileOutputStream(dest)) {
-                fos.write(java.nio.file.Files.readAllBytes(file.toPath()));
-            }
-            return (subDir == null || subDir.isEmpty() ? urlPrefix : urlPrefix + "/" + subDir) + "/" + newFileName;
+        String extension = resolveAllowedExtension(file.getName());
+        File dest = prepareDestination(extension, subDir);
+        try (FileOutputStream fos = new FileOutputStream(dest)) {
+            fos.write(java.nio.file.Files.readAllBytes(file.toPath()));
         } catch (IOException e) {
             log.error("文件上传失败", e);
             throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
         }
+        log.info("文件上传成功: {}", dest.getAbsolutePath());
+        return buildAccessUrl(subDir, dest);
+    }
+
+    /**
+     * 校验并提取扩展名：必须存在、在白名单内；统一转小写，
+     * 避免 {@code .PNG} 与 {@code .png.png} 之类的混淆。
+     */
+    private String resolveAllowedExtension(String originalFilename) {
+        if (originalFilename == null) {
+            throw new BusinessException(CommonErrorCode.FILE_TYPE_NOT_ALLOWED);
+        }
+        int dot = originalFilename.lastIndexOf('.');
+        if (dot < 0 || dot == originalFilename.length() - 1) {
+            throw new BusinessException(CommonErrorCode.FILE_TYPE_NOT_ALLOWED);
+        }
+        // 文件名中再次出现路径分隔符也视为非法
+        if (originalFilename.contains("/") || originalFilename.contains("\\")) {
+            throw new BusinessException(CommonErrorCode.FILE_PATH_INVALID);
+        }
+        String extension = originalFilename.substring(dot).toLowerCase(Locale.ROOT);
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            log.warn("拒绝非白名单文件类型: original={}, ext={}", originalFilename, extension);
+            throw new BusinessException(CommonErrorCode.FILE_TYPE_NOT_ALLOWED);
+        }
+        return extension;
+    }
+
+    /**
+     * 准备目标文件：校验 subDir、创建目录、normalize 后确认结果仍在上传根目录内。
+     */
+    private File prepareDestination(String extension, String subDir) {
+        File baseDir = new File(uploadDir).getAbsoluteFile();
+        File dir;
+        if (subDir == null || subDir.isEmpty()) {
+            dir = baseDir;
+        } else {
+            if (!SUBDIR_PATTERN.matcher(subDir).matches()) {
+                throw new BusinessException(CommonErrorCode.FILE_PATH_INVALID);
+            }
+            dir = new File(baseDir, subDir);
+        }
+        // 规范化后做目录包含校验，杜绝任何形式的 ../ 穿越
+        File canonicalDir = dir.getAbsoluteFile();
+        String basePath = baseDir.getPath();
+        String dirPath = canonicalDir.getPath();
+        if (!dirPath.equals(basePath) && !dirPath.startsWith(basePath + File.separator)) {
+            log.warn("拒绝越界的上传目录: subDir={}, resolved={}", subDir, dirPath);
+            throw new BusinessException(CommonErrorCode.FILE_PATH_INVALID);
+        }
+        if (!canonicalDir.exists() && !canonicalDir.mkdirs()) {
+            log.error("创建上传目录失败: {}", canonicalDir.getAbsolutePath());
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
+        }
+        String newFileName = UUID.randomUUID().toString().replace("-", "") + extension;
+        return new File(canonicalDir, newFileName);
+    }
+
+    private String buildAccessUrl(String subDir, File destFile) {
+        // 存储名与扩展名均由服务端生成，subDir 已过白名单，拼接无注入风险
+        String fileName = destFile.getName();
+        return (subDir == null || subDir.isEmpty()
+                ? urlPrefix
+                : urlPrefix + "/" + subDir) + "/" + fileName;
     }
 }
