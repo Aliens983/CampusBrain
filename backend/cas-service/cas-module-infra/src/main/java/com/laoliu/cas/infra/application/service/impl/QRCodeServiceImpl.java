@@ -55,7 +55,12 @@ public class QRCodeServiceImpl implements QRCodeService {
             throw new BusinessException(CommonErrorCode.QR_CODE_FAILED);
         } finally {
             if (tempFile != null) {
-                try { Files.deleteIfExists(tempFile.toPath()); } catch (IOException ignored) {}
+                // 1.4.2：临时文件删除失败不应吞掉异常毫无痕迹，记录 warn 便于排查磁盘/句柄泄漏
+                try {
+                    Files.deleteIfExists(tempFile.toPath());
+                } catch (IOException e) {
+                    log.warn("二维码临时文件删除失败: {}", tempFile.getAbsolutePath(), e);
+                }
             }
         }
     }
