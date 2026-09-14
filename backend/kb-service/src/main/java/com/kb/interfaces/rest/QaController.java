@@ -34,6 +34,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class QaController {
 
+    /** 流式结束信号：前端收到后才主动 close，避免 EventSource 走 error 并自动重连 */
+    private static final String DONE_SIGNAL = "[DONE]";
+
     /** Q&A 应用服务 */
     private final IQaApplicationService qaService;
 
@@ -121,6 +124,12 @@ public class QaController {
                             }
                         }
                 );
+                // 显式发一个结束信号再关闭。
+                // 此前直接 complete()：浏览器 EventSource 收到的是"连接被关闭"，
+                // 会触发 error 并准备自动重连，前端只能靠 onerror 里的 es.close() 兜底——
+                // 任何未 close 的错误路径都会把同一轮问答再跑一遍（重复落库用户消息、
+                // 重复调 LLM，甚至重复执行待确认预约）。前端的 [DONE] 分支也一直是死代码。
+                sink.next(ServerSentEvent.builder().data(DONE_SIGNAL).build());
                 sink.complete();
             } catch (Exception e) {
                 log.error("SSE streaming error", e);
