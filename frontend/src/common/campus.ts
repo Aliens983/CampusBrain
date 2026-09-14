@@ -1,5 +1,5 @@
 import request from '@/common/utils/request'
-import type { AdminSummary, BookingRecord, ServiceCard } from '@/common/types'
+import type { AdminSummary, BookingRecord, ServiceCard, UserInfo } from '@/common/types'
 import { normalizeRole, normalizeUserInfo } from '@/common/utils/auth'
 
 type BackendService = {
@@ -192,6 +192,40 @@ export async function fetchServiceCategories(): Promise<ServiceCategoryOption[]>
   return Array.isArray(data) ? data : []
 }
 
+/** 2.2.3：管理端服务列表走 /admin/services 服务端分页（含维护中的服务），只取当前页 */
+export interface AdminServicesPage {
+  records: ServiceCard[]
+  total: number
+}
+
+export async function fetchAdminServicesPage(params: {
+  pageNo: number
+  pageSize: number
+  serviceName?: string
+  serviceState?: number
+  campus?: string
+}): Promise<AdminServicesPage> {
+  const query: Record<string, string | number> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
+  }
+  const serviceName = params.serviceName?.trim()
+  if (serviceName) query.serviceName = serviceName
+  if (params.serviceState !== undefined) query.serviceState = params.serviceState
+  if (params.campus) query.campus = params.campus
+  const data = (await request.get('/admin/services', { params: query })) as
+    | { records?: BackendService[]; total?: number }
+    | BackendService[]
+  if (Array.isArray(data)) {
+    return { records: data.map(mapService), total: data.length }
+  }
+  // 服务端分页后，index 仅在当前页内用于渐变占位，不影响 id
+  return {
+    records: (data.records || []).map((item, index) => mapService(item, index)),
+    total: Number(data.total || 0),
+  }
+}
+
 export async function fetchBookingRecords() {
   const response = (await request.get('/users/me/bookings')) as { bookings?: BackendBooking[]; serviceStatusList?: BackendBooking[] }
   // 后端 UserInfoAndServicesViaMPRespVO 的字段名是 bookings
@@ -202,66 +236,87 @@ export async function fetchBookingRecords() {
   return list.map(mapBooking)
 }
 
-export async function fetchAdminUsers() {
-  // 后端 /users/list 为分页接口（默认 pageSize=10 且按 id DESC 排序），
-  // 不传分页参数会导致最早创建的管理员（id 较小）落在后续页而“消失”。
-  // 这里显式按最大页长翻页拉全，保证管理员自己也出现在用户列表中。
-  const pageSize = 200
-  const fetchPage = (pageNo: number) =>
-    request.get('/users/list', { params: { pageNo, pageSize } }) as Promise<
-      { records?: BackendUser[]; total?: number } | BackendUser[]
-    >
+/** 2.2.3：用户列表改为服务端分页，只拉当前页 */
+export interface AdminUsersPage {
+  records: UserInfo[]
+  total: number
+}
 
-  const first = await fetchPage(1)
-  // 兼容后端直接返回数组的情况
-  if (Array.isArray(first)) {
-    return first.map(mapAdminUser)
+export async function fetchAdminUsersPage(params: { pageNo: number; pageSize: number; name?: string }): Promise<AdminUsersPage> {
+  const query: Record<string, string | number> = {
+    pageNo: params.pageNo,
+    pageSize: params.pageSize,
   }
-  const firstList = first.records
-  if (!Array.isArray(firstList)) {
-    throw new Error('获取用户列表失败')
+  const name = params.name?.trim()
+  if (name) query.name = name
+  const data = (await request.get('/users/list', { params: query })) as
+    | { records?: BackendUser[]; total?: number }
+    | BackendUser[]
+  if (Array.isArray(data)) {
+    // 兼容后端直接返回数组（无 total）的情况
+    return { records: data.map(mapAdminUser), total: data.length }
   }
-
-  const total = Number(first.total ?? firstList.length)
-  const pageCount = Math.max(1, Math.ceil(total / pageSize))
-  const rest: BackendUser[] = []
-  for (let pageNo = 2; pageNo <= pageCount; pageNo++) {
-    const data = await fetchPage(pageNo)
-    if (!Array.isArray(data) && Array.isArray(data.records)) {
-      rest.push(...data.records)
-    }
+  return {
+    records: (data.records || []).map(mapAdminUser),
+    total: Number(data.total || 0),
   }
-  return [...firstList, ...rest].map(mapAdminUser)
 }
 
 /**
- * 获取全部预约（管理端），用于 Admin 摘要统计。
- * 后端 GET /admin/bookings 返回 PageResult，manageStatus: 0待审/1通过/2拒绝/3取消。
+ * 管理端首页统计用：用户总数与管理员数（含超级管理员）。
+ * 仅取各筛选条件下的 total（pageSize=1），不再翻页拉全量用户。
  */
-async function fetchAllBookings(): Promise<{ id: number; status: BookingRecord['status'] }[]> {
-  const data = (await request.get('/admin/bookings', {
-    params: { pageNo: 1, pageSize: 1000 },
-  })) as { records?: Array<{ id?: number; manageStatus?: number }> } | Array<{ id?: number; manageStatus?: number }>
-  const list = Array.isArray(data) ? data : data?.records
-  const statusMap: Record<number, BookingRecord['status']> = { 0: 'pending', 1: 'approved', 2: 'rejected', 3: 'cancelled' }
-  return (list || []).map((item) => ({
-    id: item.id ?? 0,
-    status: statusMap[item.manageStatus ?? 0] || 'pending',
-  }))
+export async function fetchAdminUserCounts(): Promise<{ total: number; admin: number }> {
+  const fetchTotal = (role?: number) =>
+    request.get('/users/list', {
+      params: role === undefined ? { pageNo: 1, pageSize: 1 } : { pageNo: 1, pageSize: 1, role },
+    }) as Promise<{ total?: number } | BackendUser[]>
+
+  const [all, admins, supers] = await Promise.all([fetchTotal(), fetchTotal(1), fetchTotal(2)])
+  const totalOf = (res: { total?: number } | BackendUser[]) => (Array.isArray(res) ? res.length : Number(res.total || 0))
+  return {
+    total: totalOf(all),
+    admin: totalOf(admins) + totalOf(supers),
+  }
+}
+
+/**
+ * 管理端预约状态计数（仅取各筛选条件下的 total，页大小 1）。
+ * 2.2.3：不再用 pageSize=1000 拉全量（还会触发后端每页最多 200 的校验失败）。
+ * 后端 GET /admin/bookings，manageStatus: 0待审/1通过/2拒绝/3取消/4完成。
+ */
+async function fetchAdminBookingCounts(): Promise<{ total: number; pending: number; approved: number }> {
+  const fetchTotal = (manageStatus?: number) =>
+    request.get('/admin/bookings', {
+      params:
+        manageStatus === undefined
+          ? { pageNo: 1, pageSize: 1 }
+          : { pageNo: 1, pageSize: 1, manageStatus },
+    }) as Promise<{ total?: number } | Array<unknown>>
+
+  const [all, pending, approved] = await Promise.all([fetchTotal(), fetchTotal(0), fetchTotal(1)])
+  const totalOf = (res: { total?: number } | Array<unknown>) => (Array.isArray(res) ? res.length : Number(res.total || 0))
+  return { total: totalOf(all), pending: totalOf(pending), approved: totalOf(approved) }
 }
 
 export async function fetchAdminSummary(): Promise<AdminSummary> {
-  const [users, services, bookings] = await Promise.all([fetchAdminUsers(), fetchServiceCards(), fetchAllBookings()])
-  const total = bookings.length
-  const approvedCount = bookings.filter((item) => item.status === 'approved').length
-  const pendingBookings = bookings.filter((item) => item.status === 'pending').length
+  const fetchServiceTotal = request.get('/admin/services', { params: { pageNo: 1, pageSize: 1 } }) as Promise<
+    { total?: number } | Array<unknown>
+  >
+  const [userCounts, servicePage, bookingCounts] = await Promise.all([
+    fetchAdminUserCounts(),
+    fetchServiceTotal,
+    fetchAdminBookingCounts(),
+  ])
+  const totalServices = Array.isArray(servicePage) ? servicePage.length : Number(servicePage.total || 0)
+  const { total, pending, approved } = bookingCounts
 
   return {
-    totalUsers: users.length,
-    totalServices: services.length,
-    activeBookings: bookings.filter((item) => item.status === 'pending' || item.status === 'approved').length,
-    approvalRate: total ? `${Math.round((approvedCount / total) * 1000) / 10}%` : '—',
-    pendingBookings,
+    totalUsers: userCounts.total,
+    totalServices,
+    activeBookings: pending + approved,
+    approvalRate: total ? `${Math.round((approved / total) * 1000) / 10}%` : '—',
+    pendingBookings: pending,
   }
 }
 

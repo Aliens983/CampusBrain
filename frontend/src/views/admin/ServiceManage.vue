@@ -15,10 +15,10 @@
       </div>
       <div class="admin-hero__signal">
         <div class="signal-card">
-          <span>服务总数</span><strong>{{ services.length }}</strong><small>已纳入统一管理</small>
+          <span>服务总数</span><strong>{{ total }}</strong><small>已纳入统一管理</small>
         </div>
         <div class="signal-card">
-          <span>可用服务</span><strong>{{ availableCount }}</strong><small>当前可开放预约</small>
+          <span>可用服务</span><strong>{{ availableTotal }}</strong><small>当前可开放预约</small>
         </div>
       </div>
     </section>
@@ -32,9 +32,18 @@
           <div class="toolbar">
             <el-input
               v-model="keyword"
-              placeholder="搜索服务名称或分类"
+              placeholder="搜索服务名称"
+              class="service-search"
               clearable
-            />
+              @keyup.enter="onSearch"
+              @clear="onSearch"
+            >
+              <template #append>
+                <el-button @click="onSearch">
+                  搜索
+                </el-button>
+              </template>
+            </el-input>
             <el-select
               v-model="statusFilter"
               style="width: 150px"
@@ -63,7 +72,7 @@
           type="button"
           class="campus-seg__item"
           :class="{ 'is-active': campusFilter === opt.value }"
-          @click="campusFilter = opt.value"
+          @click="onCampusChange(opt.value)"
         >
           {{ opt.label }}
           <span class="campus-seg__count">{{ campusCount(opt.value) }}</span>
@@ -72,7 +81,7 @@
 
       <div class="service-stack">
         <article
-          v-for="item in pagedServices"
+          v-for="item in services"
           :key="item.id"
           class="service-item"
         >
@@ -115,18 +124,19 @@
         </article>
 
         <el-empty
-          v-if="!loading && pagedServices.length === 0"
+          v-if="!loading && services.length === 0"
           description="没有符合条件的服务"
         />
       </div>
 
       <el-pagination
+        v-if="total > 0"
         class="list-pagination"
         background
         :current-page="pageNo"
         :page-size="pageSize"
         :page-sizes="[5, 10, 20]"
-        :total="filteredServices.length"
+        :total="total"
         layout="total, sizes, prev, pager, next"
         @current-change="onPageChange"
         @size-change="onPageSizeChange"
@@ -286,14 +296,20 @@
 import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
-import { fetchServiceCards, fetchServiceCategories, type ServiceCategoryOption } from '@/common/campus'
+import { fetchAdminServicesPage, fetchServiceCategories, type ServiceCategoryOption } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
 
 const createDrawer = ref(false)
 const keyword = ref('')
 const statusFilter = ref('')
 const selectedService = ref<ServiceCard | null>(null)
+// 当前服务端返回的一页服务（不再前端过滤/切片）
 const services = ref<ServiceCard[]>([])
+// 当前查询命中总数（分页用）
+const total = ref(0)
+// 顶部统计 + 校区 Tab 计数（与当前筛选页解耦）
+const availableTotal = ref(0)
+const campusCounts = ref<Record<string, number>>({ '': 0, cq: 0, xs: 0 })
 const categories = ref<ServiceCategoryOption[]>([])
 const loading = ref(false)
 const saving = ref(false)
@@ -309,42 +325,76 @@ const campusOptions = [
 const editForm = reactive({ name: '', category: '', categoryId: 0, description: '', image: '' })
 const createForm = reactive({ name: '', categoryId: 0, campus: 'cq', capacity: -1, description: '', location: '', image: '' })
 
-/** 空/未知校区在展示上按仓前算（与列表 location 文案保持一致） */
-function campusOf(item: ServiceCard): string {
-  return item.campus === 'xs' ? 'xs' : 'cq'
-}
-
-const filteredServices = computed(() =>
-  services.value.filter((item) => {
-    const matchKeyword = !keyword.value || [item.name, item.category, item.location].join('|').toLowerCase().includes(keyword.value.toLowerCase())
-    const matchStatus = !statusFilter.value || item.status === statusFilter.value
-    const matchCampus = !campusFilter.value || campusOf(item) === campusFilter.value
-    return matchKeyword && matchStatus && matchCampus
-  }),
-)
-
 // 列表分页：默认每页 5 条，可切换 5 / 10 / 20
 const pageNo = ref(1)
 const pageSize = ref(5)
-const pagedServices = computed(() => {
-  const start = (pageNo.value - 1) * pageSize.value
-  return filteredServices.value.slice(start, start + pageSize.value)
-})
-function onPageChange(page: number) {
-  pageNo.value = page
+
+// 2.2.3：分页、名称搜索、状态、校区全部下沉到服务端
+async function loadServices() {
+  loading.value = true
+  try {
+    const page = await fetchAdminServicesPage({
+      pageNo: pageNo.value,
+      pageSize: pageSize.value,
+      serviceName: keyword.value,
+      // 可用=上架(1) / 维护中=下架(0)；'' 不传
+      serviceState: statusFilter.value === 'available' ? 1 : statusFilter.value === 'maintenance' ? 0 : undefined,
+      campus: campusFilter.value || undefined,
+    })
+    services.value = page.records
+    total.value = page.total
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '获取服务列表失败')
+  } finally {
+    loading.value = false
+  }
 }
-function onPageSizeChange(size: number) {
+
+// 统计卡与校区 Tab 计数：只取各条件下的 total（pageSize=1），不随列表筛选变化
+async function loadCounts() {
+  try {
+    const [all, available, cq, xs] = await Promise.all([
+      fetchAdminServicesPage({ pageNo: 1, pageSize: 1 }),
+      fetchAdminServicesPage({ pageNo: 1, pageSize: 1, serviceState: 1 }),
+      fetchAdminServicesPage({ pageNo: 1, pageSize: 1, campus: 'cq' }),
+      fetchAdminServicesPage({ pageNo: 1, pageSize: 1, campus: 'xs' }),
+    ])
+    total.value = all.total
+    availableTotal.value = available.total
+    campusCounts.value = { '': all.total, cq: cq.total, xs: xs.total }
+  } catch {
+    // 计数失败不阻塞列表
+  }
+}
+
+async function onPageChange(page: number) {
+  pageNo.value = page
+  await loadServices()
+}
+async function onPageSizeChange(size: number) {
   pageSize.value = size
   pageNo.value = 1
+  await loadServices()
 }
-// 搜索 / 状态 / 校区切换后结果变少，回到第一页避免停留在空页
-watch([keyword, statusFilter, campusFilter], () => {
+async function onSearch() {
   pageNo.value = 1
+  await loadServices()
+}
+async function onCampusChange(value: string) {
+  campusFilter.value = value
+  pageNo.value = 1
+  await loadServices()
+}
+/** 各校区 Tab 计数取独立统计（不受当前名称/状态筛选影响） */
+const campusCount = (value: string) => campusCounts.value[value] ?? 0
+
+// 状态下拉切换：回到第一页并重新查询
+watch(statusFilter, async () => {
+  pageNo.value = 1
+  await loadServices()
 })
-/** 各 Tab 计数（不看状态筛选，只按校区统计总量） */
-const campusCount = (value: string) =>
-  value === '' ? services.value.length : services.value.filter((s) => campusOf(s) === value).length
-const availableCount = computed(() => services.value.filter((item) => item.status === 'available').length)
+
 const serviceDrawerVisible = computed({
   get: () => Boolean(selectedService.value),
   set: (value: boolean) => {
@@ -389,18 +439,15 @@ async function uploadImage(file: File, kind: 'edit' | 'create') {
 }
 
 onMounted(async () => {
-  loading.value = true
   try {
     // 分类字典来自后端 service_category，默认选中「教室空间」
     categories.value = await fetchServiceCategories()
     const space = categories.value.find((c) => c.code === 'space')
     createForm.categoryId = space?.id ?? categories.value[0]?.id ?? 0
-    services.value = await fetchServiceCards()
+    await Promise.all([loadServices(), loadCounts()])
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '获取服务列表失败')
-  } finally {
-    loading.value = false
   }
 })
 
@@ -415,18 +462,9 @@ async function saveEdit() {
       categoryId: editForm.categoryId || selectedService.value.categoryId || 0,
     })
     ElMessage.success('服务修改成功')
-    // 先关闭抽屉，再本地更新数据避免闪烁
-    const updated = selectedService.value
+    // 先关闭抽屉，再从服务端重取当前页与计数
     selectedService.value = null
-    const idx = services.value.findIndex(s => s.id === updated.id)
-    if (idx !== -1) {
-      services.value[idx] = {
-        ...services.value[idx],
-        name: editForm.name,
-        description: editForm.description,
-        imageUrl: editForm.image || services.value[idx].imageUrl || '',
-      }
-    }
+    await Promise.all([loadServices(), loadCounts()])
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '修改失败')
@@ -464,8 +502,9 @@ async function saveCreate() {
     createForm.description = ''
     createForm.location = ''
     createForm.image = ''
-    services.value = await fetchServiceCards()
+    // 新增后回到第一页，从服务端重取列表与计数
     pageNo.value = 1
+    await Promise.all([loadServices(), loadCounts()])
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '创建失败')
@@ -506,6 +545,7 @@ async function saveCreate() {
 
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .toolbar { display: flex; gap: 12px; }
+.service-search { width: 240px; max-width: 46vw; }
 .campus-seg { display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 14px; border-radius: 999px; background: #EEF2F7; }
 .campus-seg__item { display: inline-flex; align-items: center; gap: 6px; padding: 6px 18px; border-radius: 999px; border: 0; font-size: 13px; color: var(--text-secondary); background: transparent; cursor: pointer; transition: background .2s, color .2s, box-shadow .2s; }
 .campus-seg__item:hover { color: var(--text-primary); }

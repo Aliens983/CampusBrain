@@ -6,10 +6,10 @@
       </div>
       <div class="admin-hero__signal">
         <div class="signal-card">
-          <span>全部申请</span><strong>{{ bookings.length }}</strong><small>统一接入各类预约业务</small>
+          <span>全部申请</span><strong>{{ total }}</strong><small>统一接入各类预约业务</small>
         </div>
         <div class="signal-card">
-          <span>待审核</span><strong>{{ pendingCount }}</strong><small>建议优先处理</small>
+          <span>待审核</span><strong>{{ pendingTotal }}</strong><small>建议优先处理</small>
         </div>
       </div>
     </section>
@@ -20,16 +20,32 @@
           <h3 class="section-head__title">
             审核队列
           </h3>
-          <el-segmented
-            v-model="filter"
-            :options="filters"
-          />
+          <div class="section-head__filters">
+            <el-input
+              v-model="keyword"
+              class="service-search"
+              placeholder="搜索服务名称"
+              clearable
+              @keyup.enter="onSearch"
+              @clear="onSearch"
+            >
+              <template #append>
+                <el-button @click="onSearch">
+                  搜索
+                </el-button>
+              </template>
+            </el-input>
+            <el-segmented
+              v-model="filter"
+              :options="filters"
+            />
+          </div>
         </div>
       </template>
 
       <div class="booking-stack">
         <article
-          v-for="item in pagedBookings"
+          v-for="item in bookings"
           :key="item.id"
           class="booking-item"
           @click="openBookingDrawer(item)"
@@ -87,18 +103,19 @@
         </article>
 
         <el-empty
-          v-if="!loading && pagedBookings.length === 0"
+          v-if="!loading && bookings.length === 0"
           description="没有符合条件的预约申请"
         />
       </div>
 
       <el-pagination
+        v-if="total > 0"
         class="list-pagination"
         background
         :current-page="pageNo"
         :page-size="pageSize"
         :page-sizes="[5, 10, 20]"
-        :total="filteredBookings.length"
+        :total="total"
         layout="total, sizes, prev, pager, next"
         @current-change="onPageChange"
         @size-change="onPageSizeChange"
@@ -229,7 +246,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
 import type { BookingStatus } from '@/common/types'
@@ -275,11 +292,15 @@ interface BookingItem {
 }
 
 const filter = ref('all')
+const keyword = ref('')
 const overviewVisible = ref(false)
 const overviewTitle = ref('')
 const overviewItems = ref<string[]>([])
 const selectedBooking = ref<BookingItem | null>(null)
+// 当前服务端返回的一页数据（不再前端 slice），total 为服务端命中总数
 const bookings = ref<BookingItem[]>([])
+const total = ref(0)
+const pendingTotal = ref(0)
 const loading = ref(false)
 const auditing = ref(false)
 const auditDialogVisible = ref(false)
@@ -295,6 +316,20 @@ const filters = [
   { label: '已完成', value: 'completed' },
   { label: '已驳回', value: 'rejected' },
 ]
+
+// 前端筛选值 → 后端 manageStatus（不传 = 全部）
+const statusCodeByFilter: Record<string, number | undefined> = {
+  all: undefined,
+  pending: 0,
+  approved: 1,
+  rejected: 2,
+  completed: 4,
+}
+
+interface PageResult<T> {
+  records?: T[]
+  total?: number
+}
 
 function mapAdminBooking(item: AdminBooking): BookingItem {
   const statusMap: Record<number, BookingStatus> = { 0: 'pending', 1: 'approved', 2: 'rejected', 3: 'cancelled', 4: 'completed' }
@@ -323,15 +358,25 @@ function mapAdminBooking(item: AdminBooking): BookingItem {
   }
 }
 
+// 2.2.3 / 3.5.1：分页、状态筛选、服务名搜索全部下沉到服务端，前端只渲染当前页
 async function loadBookings() {
   loading.value = true
   try {
-    const data = await request.get('/admin/bookings') as { records?: AdminBooking[] } | AdminBooking[]
-    const list = Array.isArray(data) ? data : data?.records
-    if (!Array.isArray(list)) {
-      throw new Error('获取预约记录失败')
+    const params: Record<string, string | number> = {
+      pageNo: pageNo.value,
+      pageSize: pageSize.value,
     }
-    bookings.value = list.map(mapAdminBooking)
+    const code = statusCodeByFilter[filter.value]
+    if (code !== undefined) {
+      params.manageStatus = code
+    }
+    const serviceName = keyword.value.trim()
+    if (serviceName) {
+      params.serviceName = serviceName
+    }
+    const data = await request.get('/admin/bookings', { params }) as PageResult<AdminBooking>
+    bookings.value = (data.records || []).map(mapAdminBooking)
+    total.value = Number(data.total || 0)
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '获取预约记录失败')
@@ -340,37 +385,50 @@ async function loadBookings() {
   }
 }
 
-const filteredBookings = computed(() =>
-  filter.value === 'all' ? bookings.value : bookings.value.filter((item) => item.status === filter.value)
-)
+// 待审核数独立按 manageStatus=0 取总数（页大小 1，只取 total），与当前筛选页解耦
+async function loadPendingTotal() {
+  try {
+    const data = await request.get('/admin/bookings', {
+      params: { pageNo: 1, pageSize: 1, manageStatus: 0 },
+    }) as PageResult<AdminBooking>
+    pendingTotal.value = Number(data.total || 0)
+  } catch {
+    // 统计数字失败不阻塞主列表
+  }
+}
 
 // 列表分页：默认每页 5 条，可切换 5 / 10 / 20
 const pageNo = ref(1)
 const pageSize = ref(5)
-const pagedBookings = computed(() => {
-  const start = (pageNo.value - 1) * pageSize.value
-  return filteredBookings.value.slice(start, start + pageSize.value)
-})
-function onPageChange(page: number) {
+
+async function onPageChange(page: number) {
   pageNo.value = page
+  await loadBookings()
 }
-function onPageSizeChange(size: number) {
+async function onPageSizeChange(size: number) {
   pageSize.value = size
   pageNo.value = 1
+  await loadBookings()
 }
-// 切换状态筛选后结果变少，回到第一页避免停留在空页
-watch(filter, () => {
+async function onSearch() {
   pageNo.value = 1
+  await loadBookings()
+}
+// 切换状态筛选后回到第一页并重新查询
+watch(filter, async () => {
+  pageNo.value = 1
+  await loadBookings()
 })
-// 审核后当前页可能为空，自动回退到有效末页
-watch(
-  () => filteredBookings.value.length,
-  (total) => {
-    const maxPage = Math.max(1, Math.ceil(total / pageSize.value))
+
+// 审核/刷新后：当前页可能因状态变更而变空，自动回退到有效末页
+async function reloadAfterMutation() {
+  if (pageNo.value > 1) {
+    const maxPage = Math.max(1, Math.ceil(Math.max(total.value - 1, 0) / pageSize.value))
     if (pageNo.value > maxPage) pageNo.value = maxPage
-  },
-)
-const pendingCount = computed(() => bookings.value.filter((item) => item.status === 'pending').length)
+  }
+  await Promise.all([loadBookings(), loadPendingTotal()])
+}
+
 const bookingDrawerVisible = ref(false)
 
 function openBookingDrawer(item: BookingItem) {
@@ -392,6 +450,7 @@ function closeAuditDialog() {
 
 onMounted(() => {
   void loadBookings()
+  void loadPendingTotal()
 })
 
 function handleAudit(action: '通过' | '驳回', item?: BookingItem) {
@@ -429,17 +488,10 @@ async function confirmAudit() {
       reason: auditReason.value.trim() || '',
     })
     ElMessage.success(`审核${auditAction.value}成功`)
-    // 先关闭弹层，再更新本地数据
+    // 先关闭弹层，再从服务端重取当前页与待审数（状态机/筛选后该单可能已不在当前视图）
     closeBookingDrawer()
     closeAuditDialog()
-    // 本地更新状态，避免全量刷新导致闪烁
-    const idx = bookings.value.findIndex(b => b.id === target.id)
-    if (idx !== -1) {
-      bookings.value[idx] = {
-        ...bookings.value[idx],
-        status: isApproved ? 'approved' : 'rejected',
-      }
-    }
+    await reloadAfterMutation()
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || `审核${auditAction.value}失败`)
@@ -490,6 +542,8 @@ function campusName(c?: string) {
 
 @keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
 .booking-stack, .dialog-list, .drawer-stack { display: grid; gap: 14px; }
+.section-head__filters { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.service-search { width: 240px; max-width: 46vw; }
 
 /* 分页栏固定在列表左下角 */
 .list-pagination {

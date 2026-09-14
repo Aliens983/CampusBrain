@@ -6,10 +6,10 @@
       </div>
       <div class="admin-hero__signal">
         <div class="signal-card">
-          <span>用户总数</span><strong>{{ tableData.length }}</strong><small>所有已注册账号</small>
+          <span>用户总数</span><strong>{{ totalUsers }}</strong><small>所有已注册账号</small>
         </div>
         <div class="signal-card">
-          <span>管理员</span><strong>{{ adminCount }}</strong><small>含超级管理员</small>
+          <span>管理员</span><strong>{{ adminTotal }}</strong><small>含超级管理员</small>
         </div>
       </div>
     </section>
@@ -22,16 +22,18 @@
           </h3>
           <el-input
             v-model="keyword"
-            placeholder="搜索用户名、部门或邮箱"
+            placeholder="搜索用户名"
             clearable
             style="width: 280px"
+            @keyup.enter="onSearch"
+            @clear="onSearch"
           />
         </div>
       </template>
 
       <div class="user-stack">
         <article
-          v-for="item in pagedUsers"
+          v-for="item in tableData"
           :key="item.id"
           class="user-item"
         >
@@ -71,18 +73,19 @@
         </article>
 
         <el-empty
-          v-if="!loading && pagedUsers.length === 0"
+          v-if="!loading && tableData.length === 0"
           description="没有符合条件的用户"
         />
       </div>
 
       <el-pagination
+        v-if="total > 0"
         class="list-pagination"
         background
         :current-page="pageNo"
         :page-size="pageSize"
         :page-sizes="[5, 10, 20]"
-        :total="filteredUsers.length"
+        :total="total"
         layout="total, sizes, prev, pager, next"
         @current-change="onPageChange"
         @size-change="onPageSizeChange"
@@ -161,7 +164,7 @@
 import { computed, ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
-import { fetchAdminUsers } from '@/common/campus'
+import { fetchAdminUsersPage, fetchAdminUserCounts } from '@/common/campus'
 import type { UserInfo, UserRole } from '@/common/types'
 
 const keyword = ref('')
@@ -170,7 +173,13 @@ const overviewTitle = ref('')
 const overviewItems = ref<string[]>([])
 const selectedUser = ref<UserInfo | null>(null)
 const selectedRole = ref<UserRole>('user')
+// 当前服务端返回的一页用户（不再前端过滤/切片）
 const tableData = ref<UserInfo[]>([])
+// 当前查询（含搜索）命中总数，用于分页
+const total = ref(0)
+// 顶部两张统计卡：与当前筛选页解耦
+const totalUsers = ref(0)
+const adminTotal = ref(0)
 const loading = ref(false)
 const roleSaving = ref(false)
 
@@ -178,25 +187,48 @@ const roleSaving = ref(false)
 const pageNo = ref(1)
 const pageSize = ref(5)
 
-const filteredUsers = computed(() =>
-  tableData.value.filter((item) => [item.username, item.department, item.email].join('|').toLowerCase().includes(keyword.value.toLowerCase())),
-)
-const pagedUsers = computed(() => {
-  const start = (pageNo.value - 1) * pageSize.value
-  return filteredUsers.value.slice(start, start + pageSize.value)
-})
-function onPageChange(page: number) {
-  pageNo.value = page
+// 2.2.3：分页 + 用户名搜索全部下沉到服务端
+async function loadUsers() {
+  loading.value = true
+  try {
+    const page = await fetchAdminUsersPage({
+      pageNo: pageNo.value,
+      pageSize: pageSize.value,
+      name: keyword.value,
+    })
+    tableData.value = page.records
+    total.value = page.total
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '获取用户列表失败')
+  } finally {
+    loading.value = false
+  }
 }
-function onPageSizeChange(size: number) {
+
+async function loadCounts() {
+  try {
+    const counts = await fetchAdminUserCounts()
+    totalUsers.value = counts.total
+    adminTotal.value = counts.admin
+  } catch {
+    // 统计卡失败不阻塞列表
+  }
+}
+
+async function onPageChange(page: number) {
+  pageNo.value = page
+  await loadUsers()
+}
+async function onPageSizeChange(size: number) {
   pageSize.value = size
   pageNo.value = 1
+  await loadUsers()
 }
-// 搜索后结果变少，回到第一页避免停留在空页
-watch(keyword, () => {
+async function onSearch() {
   pageNo.value = 1
-})
-const adminCount = computed(() => tableData.value.filter((item) => item.role === 'admin' || item.role === 'super_admin').length)
+  await loadUsers()
+}
 const userDrawerVisible = computed({
   get: () => Boolean(selectedUser.value),
   set: (value: boolean) => {
@@ -216,16 +248,13 @@ watch(selectedUser, (user) => {
 })
 
 onMounted(async () => {
-  loading.value = true
-  try {
-    tableData.value = await fetchAdminUsers()
-  } catch (error: unknown) {
-    const err = error as { message?: string }
-    ElMessage.error(err.message || '获取用户列表失败')
-  } finally {
-    loading.value = false
-  }
+  await Promise.all([loadUsers(), loadCounts()])
 })
+
+// 修改角色后：重取当前页与统计卡（角色变化会影响管理员计数）
+async function reloadAfterRoleChange() {
+  await Promise.all([loadUsers(), loadCounts()])
+}
 
 function detailUser(item: UserInfo) {
   overviewTitle.value = `${item.username} 账号详情`
@@ -238,21 +267,16 @@ async function saveRole() {
   roleSaving.value = true
   try {
     const newRole = selectedRole.value === 'admin' ? 1 : selectedRole.value === 'teacher' ? 3 : 0
-    const newRoleLabel = selectedRole.value === 'admin' ? 'admin' : selectedRole.value === 'teacher' ? 'teacher' : 'user'
     await request.put('/admin/users/role', {
       userId: selectedUser.value.id,
       role: newRole,
     })
     const label = selectedRole.value === 'admin' ? '管理员' : selectedRole.value === 'teacher' ? '教师' : '普通用户'
     ElMessage.success(`已将 ${selectedUser.value.username} 的角色修改为 ${label}`)
-    // 先关闭抽屉，再本地更新数据避免闪烁
-    const updated = selectedUser.value
+    // 先关闭抽屉，再从服务端重取当前页与统计卡
     selectedUser.value = null
     selectedRole.value = 'user'
-    const idx = tableData.value.findIndex(u => u.id === updated.id)
-    if (idx !== -1) {
-      tableData.value[idx] = { ...tableData.value[idx], role: newRoleLabel as UserRole }
-    }
+    await reloadAfterRoleChange()
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '修改角色失败')
