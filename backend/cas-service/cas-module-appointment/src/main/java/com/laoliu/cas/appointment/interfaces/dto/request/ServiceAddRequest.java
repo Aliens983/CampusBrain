@@ -8,6 +8,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+import java.time.LocalDate;
+
 /**
  * 服务添加请求
  *
@@ -45,4 +47,9 @@ public class ServiceAddRequest {
 
     @Schema(description = "服务封面图URL（上传返回的相对路径，可空）")
     private String imageUrl;
+
+    @Schema(description = "服务结束日期（通用/活动类服务的可预约截止日）。"
+            + "到期的「已通过」预约会被定时任务自动置为「已完成」并释放名额；"
+            + "教室/设备/咨询类按时段判定，无需填写", example = "2026-12-31")
+    private LocalDate endDate;
 }

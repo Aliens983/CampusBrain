@@ -249,7 +249,17 @@
     <update id="autoCompleteExpired">
         UPDATE item i
         JOIN services s ON s.service_id = i.service_id
-        SET i.manage_status = #{completedCode}
+        SET i.manage_status = #{completedCode},
+            <!-- 完结即释放名额，否则活动/通用服务会被"僵尸预约"占满：
+                 预约已完结却仍占着 booked_count，decrementStock 的 booked_count < capacity
+                 永久失败，后续用户再也约不上。
+                 但只有容量型预约（通用/活动，下单时真实扣过 booked_count）才回补；
+                 咨询/教室/设备走 FOR UPDATE + 窗口判定，从未扣减，一并回补会把名额凭空减掉。 -->
+            s.booked_count = CASE
+                WHEN i.consultant_id IS NULL AND i.room_id IS NULL AND i.equipment_id IS NULL
+                THEN GREATEST(s.booked_count - 1, 0)
+                ELSE s.booked_count
+            END
         WHERE i.manage_status = #{approvedCode}
           AND (
                 (i.end_time IS NOT NULL

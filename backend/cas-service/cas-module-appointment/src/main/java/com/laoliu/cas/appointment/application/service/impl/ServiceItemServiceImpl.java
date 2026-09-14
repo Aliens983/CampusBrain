@@ -79,6 +79,9 @@ public class ServiceItemServiceImpl implements ServiceItemService {
                 .campus(normalizeCampus(request.getCampus()))
                 .capacity(request.getCapacity() == null ? -1 : request.getCapacity())
                 .imageUrl(request.getImageUrl())
+                // 通用/活动类服务的可预约截止日：定时任务据此把过期预约置为「已完成」。
+                // V6 已建列但此前无写入点，导致 end_date 恒为 NULL，无时段的预约永不完结
+                .endDate(request.getEndDate())
                 .build();
         serviceRepository.save(service);
         return true;
@@ -95,6 +98,7 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         // 分类、校区创建后不可改（避免资源归属错位）；容量、封面可更新
         if (request.getCapacity() != null) existing.setCapacity(request.getCapacity());
         if (request.getImageUrl() != null) existing.setImageUrl(request.getImageUrl());
+        if (request.getEndDate() != null) existing.setEndDate(request.getEndDate());
         serviceRepository.save(existing);
         return true;
     }
