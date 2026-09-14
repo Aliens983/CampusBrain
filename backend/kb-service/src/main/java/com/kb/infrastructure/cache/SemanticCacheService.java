@@ -3,6 +3,7 @@ package com.kb.infrastructure.cache;
 import com.kb.domain.rag.EmbeddingService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,14 @@ public class SemanticCacheService {
     private final RedisTemplate<String, String> redisTemplate;
     private final EmbeddingService embeddingService;
 
+    /**
+     * 与 {@link QaCacheService} 共用同一个开关（默认关闭）。
+     * 语义缓存误命中风险更高（相似度阈值再高也可能把不同问题判成同一问题），
+     * 默认关闭；关闭时 lookup 与 evictAll 均短路，避免空转的向量计算与 SCAN。
+     */
+    @Value("${kb.cache.enabled:false}")
+    private boolean cacheEnabled;
+
     /** Redis key 前缀 */
     private static final String PREFIX = "semantic:qa:";
     /** 默认相似度阈值 */
@@ -47,6 +56,9 @@ public class SemanticCacheService {
      * @return 命中的缓存答案，未命中返回 null
      */
     public String lookup(String question) {
+        if (!cacheEnabled) {
+            return null;
+        }
         try {
             float[] queryVec = embeddingService.embed(question);
             // 用 SCAN 代替 KEYS，避免阻塞 Redis
@@ -101,6 +113,11 @@ public class SemanticCacheService {
      * 用 SCAN 而非 KEYS，避免大 keyspace 下阻塞 Redis。
      */
     public void evictAll() {
+        // 与 QaCacheService 共用一个开关：语义缓存同样从未被写入，
+        // 关闭时 SCAN 纯属空转（每次预约变更都跑一次全库扫描）。
+        if (!cacheEnabled) {
+            return;
+        }
         java.util.Set<String> keys = new java.util.HashSet<>();
         try (var cursor = redisTemplate.scan(
                 ScanOptions.scanOptions().match(PREFIX + "*").count(200).build())) {

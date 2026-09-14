@@ -6,6 +6,7 @@ import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.kb.domain.conversation.Conversation;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +40,20 @@ public class QaCacheService {
     /** L2 Redis TTL */
     private static final Duration REDIS_TTL = Duration.ofHours(1);
 
+    /**
+     * 问答缓存总开关，默认关闭。
+     * <p>
+     * 缓存写入/读取此前从未被调用（死 Bean），但预约变更事件会调 evictAll()——
+     * 后者内部对 qa:cache:* 做 Redis SCAN，在没有缓存可清时是纯空转开销。
+     * 这里加开关：关闭时所有方法短路，既消除空转，也让"缓存是否启用"成为显式配置。
+     * <p>
+     * 为何默认关闭（详见 docs/为什么不用缓存.md）：预约类问答依赖实时余量，
+     * 缓存会导致用户看到过期名额；且同一问题的答案可能来自 Function Calling，
+     * 缓存后无法区分。启用前需先解决"仅对纯知识类问题缓存"的判定。
+     */
+    @Value("${kb.cache.enabled:false}")
+    private boolean cacheEnabled;
+
     public QaCacheService(StringRedisTemplate stringRedisTemplate,
                           CacheKeyBuilder keyBuilder,
                           ObjectMapper objectMapper) {
@@ -52,6 +67,9 @@ public class QaCacheService {
      */
     public void cacheAnswer(String query, String answer,
                              List<Conversation.CitationRef> citations) {
+        if (!cacheEnabled) {
+            return;
+        }
         QaCacheEntry entry = new QaCacheEntry(answer, citations, System.currentTimeMillis());
         String key = keyBuilder.qaCacheKey(query);
 
@@ -68,6 +86,9 @@ public class QaCacheService {
      * 查询缓存（L1 → L2 → 回填）
      */
     public Optional<QaCacheEntry> getCachedAnswer(String query) {
+        if (!cacheEnabled) {
+            return Optional.empty();
+        }
         String key = keyBuilder.qaCacheKey(query);
 
         QaCacheEntry local = localCache.getIfPresent(key);
@@ -107,6 +128,11 @@ public class QaCacheService {
      */
     public void evictAll() {
         localCache.invalidateAll();
+        // 缓存关闭时 Redis 里根本不会有 qa:cache:* 键，
+        // 但 SCAN 仍会执行——每次预约变更都空转一次。短路掉。
+        if (!cacheEnabled) {
+            return;
+        }
         String pattern = "qa:cache:*";
         java.util.Set<String> keys = new java.util.HashSet<>();
         try (var cursor = stringRedisTemplate.scan(
