@@ -58,7 +58,8 @@ public class DocumentController {
         return ApiResponse.success(docs);
     }
 
-    @Operation(summary = "删除文档", description = "删除指定文档及其所有关联数据（向量、索引、分块），需要 ADMIN 权限")
+    @Operation(summary = "删除文档",
+            description = "删除指定文档及其所有关联数据（向量、索引、分块）。文档 owner 本人或 ADMIN 可删除")
     @DeleteMapping("/{id}")
     public ApiResponse<Void> deleteDocument(
             @Parameter(description = "文档 ID") @PathVariable Long id) {

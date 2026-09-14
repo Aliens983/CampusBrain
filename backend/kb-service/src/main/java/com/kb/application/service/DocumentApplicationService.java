@@ -123,11 +123,12 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * 删除文档及所有关联数据（MySQL + 本地文件 + Qdrant向量 + ES索引）
+     * 删除文档及所有关联数据（MySQL + 本地文件 + Qdrant向量 + ES索引）。
+     * 权限：文档 owner 本人，或 ADMIN（违规内容治理）。
      */
     @Transactional
     public void deleteDocument(Long id) {
-        Document doc = getOwnedDocument(id);
+        Document doc = getOwnedOrAdminDocument(id);
         String docIdStr = String.valueOf(id);
 
         // 1. 删除本地文件
@@ -166,12 +167,33 @@ public class DocumentApplicationService implements IDocumentApplicationService {
         Document doc = documentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException.DocumentException(
                         ErrorCode.DOCUMENT_NOT_FOUND, "id=" + id));
-        Long currentUserId = SecurityFrameworkUtils.getLoginUserId();
-        if (currentUserId == null || !currentUserId.equals(doc.getOwnerId())) {
+        if (!isOwner(doc, SecurityFrameworkUtils.getLoginUserId())) {
             throw new BusinessException.DocumentException(
                     ErrorCode.DOCUMENT_NOT_FOUND, "id=" + id);
         }
         return doc;
+    }
+
+    /**
+     * 删除场景的归属校验：文档 owner 本人或 ADMIN 可访问，否则视为不存在。
+     * 非属主统一抛 NOT_FOUND 而非 FORBIDDEN，避免文档存在性被枚举。
+     */
+    private Document getOwnedOrAdminDocument(Long id) {
+        Document doc = documentRepository.findById(id)
+                .orElseThrow(() -> new BusinessException.DocumentException(
+                        ErrorCode.DOCUMENT_NOT_FOUND, "id=" + id));
+        var loginUser = SecurityFrameworkUtils.getLoginUser();
+        Long currentUserId = loginUser != null ? loginUser.getUserId() : null;
+        boolean isAdmin = loginUser != null && "ADMIN".equalsIgnoreCase(loginUser.getRole());
+        if (isAdmin || isOwner(doc, currentUserId)) {
+            return doc;
+        }
+        throw new BusinessException.DocumentException(
+                ErrorCode.DOCUMENT_NOT_FOUND, "id=" + id);
+    }
+
+    private boolean isOwner(Document doc, Long currentUserId) {
+        return currentUserId != null && currentUserId.equals(doc.getOwnerId());
     }
 
     /**

@@ -53,10 +53,9 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/health").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
-                        // 知识库文档的管理（上传/删除）仅限管理员，普通用户只能问答
+                        // 文档上传仅限管理员；删除允许「owner 本人或管理员」，
+                        // 具体归属判定由 DocumentApplicationService 完成（4.1.12）
                         .requestMatchers(HttpMethod.POST, "/documents/upload")
-                            .hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/documents/**")
                             .hasRole("ADMIN")
                         .anyRequest().authenticated()
                 )
