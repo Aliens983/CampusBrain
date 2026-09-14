@@ -1,6 +1,6 @@
 package com.laoliu.cas.appointment.interfaces.controller.app;
 
-import com.laoliu.cas.appointment.application.service.ServiceService;
+import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.*;
 @DisplayName("AvailabilityController 单元测试")
 class AvailabilityControllerTest {
 
-    @Mock private ServiceService serviceService;
+    @Mock private ServiceItemService serviceService;
     @Mock private BookingRepository bookingRepository;
 
     private static final Long LOGIN_USER_ID = 100L;

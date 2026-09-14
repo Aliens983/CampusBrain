@@ -2,10 +2,12 @@ package com.laoliu.cas.appointment.application.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.BookService;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
+import com.laoliu.cas.appointment.domain.enums.CategoryCode;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
-import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
-import com.laoliu.cas.appointment.interfaces.dto.response.BookingDTO;
+import com.laoliu.cas.appointment.interfaces.dto.response.BookingResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
@@ -18,7 +20,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -32,11 +33,11 @@ import java.util.stream.Collectors;
 public class BookServiceImpl implements BookService {
 
     private final BookingRepository bookingRepository;
-    private final ServiceRepository serviceRepository;
+    private final ServiceItemRepository serviceRepository;
     private final UserInfoApi userInfoApi;
     private final BookingEventPublisher bookingEventPublisher;
 
-    public BookServiceImpl(BookingRepository bookingRepository, ServiceRepository serviceRepository, UserInfoApi userInfoApi, BookingEventPublisher bookingEventPublisher) {
+    public BookServiceImpl(BookingRepository bookingRepository, ServiceItemRepository serviceRepository, UserInfoApi userInfoApi, BookingEventPublisher bookingEventPublisher) {
         this.bookingRepository = bookingRepository;
         this.serviceRepository = serviceRepository;
         this.userInfoApi = userInfoApi;
@@ -44,8 +45,8 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    @Transactional
-    public UserInfoDTO bookService(Long userId, List<Long> serviceIds) {
+    @Transactional(rollbackFor = Exception.class)
+    public BookingSubmitResult bookService(Long userId, List<Long> serviceIds) {
         if (serviceIds == null || serviceIds.isEmpty()) {
             throw new BusinessException(ServiceErrorCode.SERVICE_ID_EMPTY);
         }
@@ -56,7 +57,7 @@ public class BookServiceImpl implements BookService {
             if (sid == null || sid > Integer.MAX_VALUE) {
                 throw new BusinessException(BookErrorCode.BOOKING_FAILED);
             }
-            com.laoliu.cas.appointment.domain.entity.Service service = serviceRepository.findById(sid)
+            ServiceItem service = serviceRepository.findById(sid)
                     .orElseThrow(() -> new BusinessException(ServiceErrorCode.SERVICE_NOT_EXIST, sid));
             if (!service.isAvailable()) {
                 throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
@@ -64,11 +65,11 @@ public class BookServiceImpl implements BookService {
             // 设备借用必须走专用端点 /app/equipment/{equipmentId}/book。
             // 通用下单拿不到 equipmentId/时段/数量：既无法参与设备时段占用校验（会超借），
             // 又会让 services.booked_count 与 equipment.available_stock 两套口径分裂。
-            if ("equipment".equals(service.getCategoryCode())) {
+            if (CategoryCode.EQUIPMENT.is(service.getCategoryCode())) {
                 throw new BusinessException(BookErrorCode.EQUIPMENT_REQUIRE_DEDICATED_API, sid);
             }
             // 活动预约：容量够即直通，不走人工审核（categoryId → service_category.code）
-            if ("activity".equals(service.getCategoryCode())) {
+            if (CategoryCode.ACTIVITY.is(service.getCategoryCode())) {
                 activityServiceIds.add(sid.intValue());
             }
             // 乐观锁扣减库存（同事务）：容量充足才 +1，满则抛异常，事务回滚
@@ -81,9 +82,10 @@ public class BookServiceImpl implements BookService {
             List<Integer> serviceIdInts = serviceIds.stream()
                     .map(Long::intValue)
                     .collect(Collectors.toList());
-            // 幂等插入：60 秒内同用户同服务（待审核）会被 SQL 去重；重复则抛异常回滚（含库存扣减）
-            int inserted = bookingRepository.insertServices(userId, serviceIdInts);
-            if (inserted == 0) {
+            // 幂等插入：配置窗口内同用户同服务（待审核/已通过）会被 SQL 去重；
+            // 返回本次真实新建的订单号；一个都没建成说明整单都是重复提交，回滚（含库存扣减）
+            List<Long> createdOrderIds = bookingRepository.insertServices(userId, serviceIdInts);
+            if (createdOrderIds.isEmpty()) {
                 throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
             }
             // 免审直通：刚落库的活动预约置为「已通过」，不产生待审核
@@ -93,7 +95,7 @@ public class BookServiceImpl implements BookService {
             for (Long sid : serviceIds) {
                 bookingEventPublisher.publishChanged(userId, sid, "BOOKED");
             }
-            return userInfoApi.getUserById(userId);
+            return new BookingSubmitResult(userInfoApi.getUserById(userId), createdOrderIds);
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
@@ -103,21 +105,21 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    public List<BookingDTO> getAllBookings(Long userId) {
+    public List<BookingResponse> getAllBookings(Long userId) {
         return bookingRepository.getServiceStatusByUserId(userId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public IPage<BookingDTO> getAllBookings(Long userId, int page, int pageSize) {
+    public IPage<BookingResponse> getAllBookings(Long userId, int page, int pageSize) {
         IPage<ServiceStatusResponse> statusPage = bookingRepository.getServiceStatusByUserId(
                 userId, page, pageSize, null, null);
         return statusPage.convert(this::convertToDTO);
     }
 
-    private BookingDTO convertToDTO(ServiceStatusResponse status) {
-        BookingDTO dto = new BookingDTO();
+    private BookingResponse convertToDTO(ServiceStatusResponse status) {
+        BookingResponse dto = new BookingResponse();
         dto.setOrderId(status.getOrderId());
         dto.setUserId(status.getUserId());
         dto.setServiceName(status.getServiceName());
@@ -140,24 +142,18 @@ public class BookServiceImpl implements BookService {
     }
 
     /**
-     * 状态中文描述统一取自 {@link ManageStatus} 枚举。
+     * 状态中文描述统一取自 {@link ManageStatus} 枚举（{@link ManageStatus#of(Integer)}）。
      * <p>
      * 此前这里与 {@code ServiceStatusServiceImpl#setStatusDescription} 各写一份 switch，
      * 新增状态或改文案时极易只改一处，造成同一状态在列表页与详情页显示不一致。
      */
     private String getStatusDescription(Integer status) {
-        if (status == null) {
-            return "未知状态";
-        }
-        return Arrays.stream(ManageStatus.values())
-                .filter(s -> s.getCode() == status)
-                .map(ManageStatus::getMessage)
-                .findFirst()
-                .orElse("未知状态");
+        ManageStatus manageStatus = ManageStatus.of(status);
+        return manageStatus == null ? "未知状态" : manageStatus.getMessage();
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public boolean cancelBookings(Long userId, List<Long> bookingIds) {
         if (bookingIds == null || bookingIds.isEmpty()) {
             return false;
@@ -179,7 +175,7 @@ public class BookServiceImpl implements BookService {
     }
 
     @Override
-    public BookingDTO getBookingById(Long userId, Long orderId) {
+    public BookingResponse getBookingById(Long userId, Long orderId) {
         ServiceStatusResponse status = bookingRepository.getServiceStatusByOrderIdAndUserId(userId, orderId);
         if (status == null) {
             return null;

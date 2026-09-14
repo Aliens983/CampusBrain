@@ -4,46 +4,55 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
-import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityVO;
+import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO;
+import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
-import java.time.LocalDate;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 
 /**
+ * 预约订单 Mapper。
+ * <p>
+ * 约定：所有状态码都以 {@code xxxCode} 显式入参（由应用/仓储层用
+ * {@link com.laoliu.cas.common.enums.ManageStatus} 枚举传入），SQL 中不写死 0/1/3/4；
+ * 幂等窗口统一为 {@code dedupeSeconds}（来自 booking.dedupe-seconds 配置）。
+ *
  * @author forever-king
  */
 @Mapper
 public interface ItemMapper extends BaseMapper<ItemDO> {
 
-    void setBookingStatus(@Param("userId") Long userId, @Param("bookingId") Long bookingId);
+    /**
+     * 幂等插入单个普通服务预约：同用户同服务仍有生效单（待审核/已通过）则不插入。
+     * 成功时 orderId 通过 useGeneratedKeys 回填到入参 {@code item}。
+     *
+     * @return 实际插入行数（0=重复提交）
+     */
+    int insertSingleService(@Param("item") ItemDO item,
+                            @Param("pendingCode") int pendingCode,
+                            @Param("approvedCode") int approvedCode);
 
     /**
-     * 幂等插入预约：60 秒内同用户对同一服务（待审核状态）不会重复插入
+     * 幂等插入咨询时段预约。成功时 orderId 回填到 {@code item}。
      *
-     * @return 实际插入的行数（用于判断是否全部为重复提交）
+     * @return 实际插入行数（0=重复提交）
      */
-    int insertServices(@Param("userId") Long userId, @Param("serviceId") List<Integer> serviceId);
+    int insertConsultationBooking(@Param("item") ItemDO item,
+                                  @Param("pendingCode") int pendingCode,
+                                  @Param("dedupeSeconds") int dedupeSeconds);
 
     /**
-     * 幂等插入咨询时段预约：同一咨询师同一时段 60 秒内（待审核）不会重复插入。
-     * 调用方需在事务内先原子占用时段，插入失败回滚即释放时段。
+     * 取消：仅待审核单、或已通过的活动单可自助取消。
      *
-     * @return 实际插入的行数（0 表示重复提交）
+     * @return 实际更新行数
      */
-    int insertConsultationBooking(@Param("userId") Long userId,
-                                  @Param("serviceId") Long serviceId,
-                                  @Param("consultantId") Long consultantId,
-                                  @Param("slotId") Long slotId,
-                                  @Param("slotDate") LocalDate slotDate,
-                                  @Param("startTime") String startTime,
-                                  @Param("endTime") String endTime);
-
-    int setBookingStatusByParts(@Param("userId") Long userId, @Param("bookingIds") List<Long> bookingIds);
+    int setBookingStatusByParts(@Param("userId") Long userId,
+                                @Param("bookingIds") List<Long> bookingIds,
+                                @Param("pendingCode") int pendingCode,
+                                @Param("approvedCode") int approvedCode,
+                                @Param("cancelledCode") int cancelledCode);
 
     List<ServiceStatusResponse> getServiceStatus();
 
@@ -63,7 +72,17 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
             @Param("manageStatus") Integer manageStatus,
             @Param("serviceName") String serviceName);
 
-    int auditService(@Param("orderId") Long orderId, @Param("status") Integer status, @Param("reason") String reason);
+    /**
+     * 审核状态流转：仅当订单当前状态属于 {@code fromStatuses} 时才更新（状态机白名单）。
+     *
+     * @param status       目标状态码
+     * @param fromStatuses 允许的来源状态码（由业务状态机决定）
+     * @return 实际更新行数（0=状态非法跃迁/订单不存在）
+     */
+    int auditService(@Param("orderId") Long orderId,
+                     @Param("status") int status,
+                     @Param("reason") String reason,
+                     @Param("fromStatuses") List<Integer> fromStatuses);
 
     ServiceStatusResponse getServiceStatusByOrderId(Long orderId);
 
@@ -79,18 +98,21 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     Long selectConsultantOwnerByOrderId(@Param("orderId") Long orderId);
 
     /**
-     * 免审直通：把当前用户刚提交的「活动」预约由待审核置为已通过
-     * （限 60 秒内刚插入的待审核单，避免误翻历史 pending）
+     * 免审直通：把当前用户 dedupeSeconds 秒内刚插入的「活动」待审核单置为已通过
      */
-    int approveRecentActivityBookings(@Param("userId") Long userId, @Param("serviceIds") List<Integer> serviceIds);
+    int approveRecentActivityBookings(@Param("userId") Long userId,
+                                      @Param("serviceIds") List<Integer> serviceIds,
+                                      @Param("pendingCode") int pendingCode,
+                                      @Param("approvedCode") int approvedCode,
+                                      @Param("dedupeSeconds") int dedupeSeconds);
 
     String getUserEmailByOrderId(@Param("orderId") Long orderId);
 
-    List<ServicesDO> selectUserServices(Long userId);
+    List<ServiceItemDO> selectUserServices(Long userId);
 
-    /** 统计各服务的有效预约数（仅待审核+已通过，与 booked_count 扣减语义一致） */
-    @Select("SELECT service_id AS serviceId, COUNT(*) AS bookingCount FROM item WHERE manage_status IN (0, 1) GROUP BY service_id")
-    List<ServiceAvailabilityVO> countBookingsByService();
+    /** 统计各服务的有效预约数（仅待审核+已通过），与 booked_count 扣减语义一致 */
+    List<ServiceAvailabilityResponse> countBookingsByService(@Param("pendingCode") int pendingCode,
+                                                             @Param("approvedCode") int approvedCode);
 
     /**
      * 乐观锁扣减库存：仅当容量足够时 +1（原子条件更新，防并发超卖）
@@ -99,13 +121,14 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
      */
     int decrementStock(@Param("serviceId") Long serviceId);
 
-    /**
-     * 释放库存：取消/审核拒绝时 -1（最低到 0）
-     */
+    /** 释放库存：取消/审核拒绝时 -1（最低到 0） */
     int releaseStock(@Param("serviceId") Long serviceId);
 
-    /** 查询当前用户一批待审核预约单对应的服务 ID（用于回退库存，防他人/重复释放） */
-    List<Long> selectServiceIdsByBookingIds(@Param("userId") Long userId, @Param("bookingIds") List<Long> bookingIds);
+    /** 查询当前用户一批可取消预约单对应的服务 ID（用于回退库存，防他人/重复释放） */
+    List<Long> selectServiceIdsByBookingIds(@Param("userId") Long userId,
+                                            @Param("bookingIds") List<Long> bookingIds,
+                                            @Param("pendingCode") int pendingCode,
+                                            @Param("approvedCode") int approvedCode);
 
     /** 查询单个预约单对应的服务 ID（用于审核拒绝回退） */
     Long selectServiceIdByOrderId(@Param("orderId") Long orderId);
@@ -117,36 +140,44 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     int releaseSlotsByBookingIds(@Param("userId") Long userId, @Param("bookingIds") List<Long> bookingIds);
 
     /**
-     * 幂等插入设备借用（带设备/数量/窗口），返回实际插入行数（0=重复提交）
+     * 幂等插入设备借用。成功时 orderId 回填到 {@code item}。
+     *
+     * @return 实际插入行数（0=重复提交）
      */
-    int insertEquipmentBooking(@Param("userId") Long userId,
-                               @Param("serviceId") Long serviceId,
-                               @Param("equipmentId") Long equipmentId,
-                               @Param("quantity") Integer quantity,
-                               @Param("date") LocalDate date,
-                               @Param("startTime") String startTime,
-                               @Param("endTime") String endTime);
+    int insertEquipmentBooking(@Param("item") ItemDO item,
+                               @Param("pendingCode") int pendingCode,
+                               @Param("dedupeSeconds") int dedupeSeconds);
 
     /** 统计某设备某日时间段内已占用的台数（待审+已通过） */
     int sumEquipmentOverlap(@Param("equipmentId") Long equipmentId,
-                            @Param("date") LocalDate date,
+                            @Param("date") java.time.LocalDate date,
                             @Param("startTime") String startTime,
-                            @Param("endTime") String endTime);
+                            @Param("endTime") String endTime,
+                            @Param("pendingCode") int pendingCode,
+                            @Param("approvedCode") int approvedCode);
 
-    /** 到点自动归还：已过结束时间且"已通过"的单置为已完成 */
-    int autoCompleteExpired();
+    /**
+     * 到点自动完结：已通过的时段单按结束时间、无时段的活动/通用单按 services.end_date 置为已完成。
+     *
+     * @return 实际完结条数
+     */
+    int autoCompleteExpired(@Param("approvedCode") int approvedCode,
+                            @Param("completedCode") int completedCode);
 
-    /** 幂等插入教室时段预约（一间教室同一时段仅一人），返回实际插入行数（0=重复提交） */
-    int insertRoomBooking(@Param("userId") Long userId,
-                          @Param("serviceId") Long serviceId,
-                          @Param("roomId") Long roomId,
-                          @Param("date") LocalDate date,
-                          @Param("startTime") String startTime,
-                          @Param("endTime") String endTime);
+    /**
+     * 幂等插入教室时段预约。成功时 orderId 回填到 {@code item}。
+     *
+     * @return 实际插入行数（0=重复提交）
+     */
+    int insertRoomBooking(@Param("item") ItemDO item,
+                          @Param("pendingCode") int pendingCode,
+                          @Param("dedupeSeconds") int dedupeSeconds);
 
     /** 统计某教室某日某时段已被占用条数（待审+已通过；>0 表示已被他人预约） */
     int countRoomOverlap(@Param("roomId") Long roomId,
-                         @Param("date") LocalDate date,
+                         @Param("date") java.time.LocalDate date,
                          @Param("startTime") String startTime,
-                         @Param("endTime") String endTime);
+                         @Param("endTime") String endTime,
+                         @Param("pendingCode") int pendingCode,
+                         @Param("approvedCode") int approvedCode);
 }

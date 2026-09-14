@@ -18,7 +18,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 @Builder
 @Schema(description = "服务信息响应")
-public class ServiceRespVO implements Serializable {
+public class ServiceResponse implements Serializable {
 
     @Schema(description = "服务ID", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Long serviceId;

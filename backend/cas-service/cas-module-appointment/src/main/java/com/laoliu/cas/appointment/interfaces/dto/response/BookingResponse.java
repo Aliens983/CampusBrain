@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
  */
 @Data
 @Schema(description = "预约记录响应")
-public class BookingDTO {
+public class BookingResponse {
 
     @Schema(description = "订单ID")
     private Long orderId;

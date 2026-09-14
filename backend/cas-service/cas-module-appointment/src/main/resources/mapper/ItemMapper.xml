@@ -34,7 +34,7 @@
         <result property="roomName" column="roomName"/>
     </resultMap>
 
-    <resultMap id="ServicesDOResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
+    <resultMap id="ServiceItemDOResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO">
         <id property="serviceId" column="service_id"/>
         <result property="serviceName" column="service_name"/>
         <result property="serviceDescribe" column="service_describe"/>
@@ -66,36 +66,34 @@
     </sql>
 
     <!-- 幂等插入：同一用户对同一服务只要还有生效预约（待审核 / 已通过）就不重复插入。
-         此前只排除「60 秒内的待审核单」，导致活动类预约（免审直通、几秒内即变为已通过）
-         在 60 秒后可被同一用户重复提交、重复占名额；改为按"是否存在生效预约"判定后即修复。 -->
-    <insert id="insertServices">
-        INSERT INTO item(user_id,service_id)
-        SELECT #{userId}, s.service_id
-        FROM services s
-        WHERE s.service_id IN
-        <foreach collection="serviceId" item="sid" open="(" separator="," close=")">
-            #{sid}
-        </foreach>
-        AND NOT EXISTS (
+         主键 order_id 通过 useGeneratedKeys 回填到入参 ItemDO，调用方据此拿到真实订单号，
+         不再使用"查用户最新一单"这种存在竞态的绕行方案。 -->
+    <insert id="insertSingleService"
+            useGeneratedKeys="true" keyProperty="item.orderId">
+        INSERT INTO item(user_id, service_id)
+        SELECT #{item.userId}, #{item.serviceId}
+        WHERE NOT EXISTS (
             SELECT 1 FROM item i
-            WHERE i.user_id = #{userId}
-              AND i.service_id = s.service_id
-              AND i.manage_status IN (0, 1)
+            WHERE i.user_id = #{item.userId}
+              AND i.service_id = #{item.serviceId}
+              AND i.manage_status IN (#{pendingCode}, #{approvedCode})
         )
     </insert>
 
-    <!-- 咨询时段预约：幂等插入（同一咨询师同一时段 60 秒内待审核不重复）。
-         时段占用在业务事务内完成，本插入失败回滚即自动释放时段 -->
-    <insert id="insertConsultationBooking">
+    <!-- 咨询时段预约：幂等插入（同一咨询师同一时段 dedupeSeconds 秒内待审核不重复）。
+         时段占用在业务事务内完成，本插入失败回滚即自动释放时段。 -->
+    <insert id="insertConsultationBooking"
+            useGeneratedKeys="true" keyProperty="item.orderId">
         INSERT INTO item(user_id, service_id, consultant_id, slot_id, slot_date, start_time, end_time)
-        SELECT #{userId}, #{serviceId}, #{consultantId}, #{slotId}, #{slotDate}, #{startTime}, #{endTime}
+        SELECT #{item.userId}, #{item.serviceId}, #{item.consultantId}, #{item.slotId},
+               #{item.slotDate}, #{item.startTime}, #{item.endTime}
         WHERE NOT EXISTS (
             SELECT 1 FROM item i
-            WHERE i.user_id = #{userId}
-              AND i.consultant_id = #{consultantId}
-              AND i.slot_id = #{slotId}
-              AND i.manage_status = 0
-              AND i.create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+            WHERE i.user_id = #{item.userId}
+              AND i.consultant_id = #{item.consultantId}
+              AND i.slot_id = #{item.slotId}
+              AND i.manage_status = #{pendingCode}
+              AND i.create_time &gt; DATE_SUB(NOW(), INTERVAL #{dedupeSeconds} SECOND)
         )
     </insert>
 
@@ -136,28 +134,31 @@
         WHERE i.order_id = #{orderId}
     </select>
 
-    <select id="selectUserServices" resultMap="ServicesDOResultMap">
+    <select id="selectUserServices" resultMap="ServiceItemDOResultMap">
         SELECT s.service_id, s.service_name, s.service_describe, s.service_state
         FROM item i
         JOIN services s ON i.service_id = s.service_id
         WHERE i.user_id = #{userId}
     </select>
 
-    <!-- 取消：待审核单可直接取消；已通过的活动(category_id→service_category.code='activity')开始前可自助取消，其它已通过单不可自助取消 -->
+    <!-- 取消：待审核单可直接取消；已通过的活动(category_id→service_category.code='activity')开始前可自助取消，其它已通过单不可自助取消。
+         状态码由 Service 层以枚举 code 传入（pendingCode/approvedCode/cancelledCode），SQL 不写死字面量。 -->
     <update id="setBookingStatusByParts">
         UPDATE item
         JOIN services s ON item.service_id = s.service_id
         LEFT JOIN service_category c ON c.id = s.category_id
-        SET item.manage_status = 3
+        SET item.manage_status = #{cancelledCode}
         WHERE item.user_id = #{userId}
           AND item.order_id IN
         <foreach collection="bookingIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
-          AND ( item.manage_status = 0
-                OR (item.manage_status = 1 AND c.code = 'activity') )
+          AND ( item.manage_status = #{pendingCode}
+                OR (item.manage_status = #{approvedCode} AND c.code = 'activity') )
     </update>
 
+    <!-- 审核：只允许从 fromStatuses 给出的状态流转（由 Service 层状态机决定，
+         如 通过仅允许待审核单，拒绝允许待审核/已通过单），非法跃迁影响 0 行 -->
     <update id="auditService">
         UPDATE item
         SET manage_status = #{status}
@@ -165,7 +166,10 @@
             , reason = #{reason}
         </if>
         WHERE order_id = #{orderId}
-        AND manage_status = 0
+        AND manage_status IN
+        <foreach collection="fromStatuses" item="fromStatus" open="(" separator="," close=")">
+            #{fromStatus}
+        </foreach>
     </update>
 
     <!-- 乐观锁扣减库存：容量充足才 +1（原子条件更新，防并发超卖） -->
@@ -205,19 +209,21 @@
         </foreach>
     </update>
 
-    <!-- 设备借用：幂等插入（同一用户同一设备同一窗口 60 秒内待审核不重复） -->
-    <insert id="insertEquipmentBooking">
+    <!-- 设备借用：幂等插入（同一用户同一设备同一窗口 dedupeSeconds 秒内待审核不重复） -->
+    <insert id="insertEquipmentBooking"
+            useGeneratedKeys="true" keyProperty="item.orderId">
         INSERT INTO item(user_id, service_id, equipment_id, quantity, slot_date, start_time, end_time)
-        SELECT #{userId}, #{serviceId}, #{equipmentId}, #{quantity}, #{date}, #{startTime}, #{endTime}
+        SELECT #{item.userId}, #{item.serviceId}, #{item.equipmentId}, #{item.quantity},
+               #{item.slotDate}, #{item.startTime}, #{item.endTime}
         WHERE NOT EXISTS (
             SELECT 1 FROM item i
-            WHERE i.user_id = #{userId}
-              AND i.equipment_id = #{equipmentId}
-              AND i.slot_date = #{date}
-              AND i.start_time = #{startTime}
-              AND i.end_time = #{endTime}
-              AND i.manage_status = 0
-              AND i.create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+            WHERE i.user_id = #{item.userId}
+              AND i.equipment_id = #{item.equipmentId}
+              AND i.slot_date = #{item.slotDate}
+              AND i.start_time = #{item.startTime}
+              AND i.end_time = #{item.endTime}
+              AND i.manage_status = #{pendingCode}
+              AND i.create_time &gt; DATE_SUB(NOW(), INTERVAL #{dedupeSeconds} SECOND)
         )
     </insert>
 
@@ -230,33 +236,44 @@
         FROM item
         WHERE equipment_id = #{equipmentId}
           AND slot_date = #{date}
-          AND manage_status IN (0, 1)
+          AND manage_status IN (#{pendingCode}, #{approvedCode})
           AND start_time &lt; #{endTime}
           AND end_time &gt; #{startTime}
     </select>
 
-    <!-- 到点自动归还：已过结束时间且已通过的单置为已完成 -->
+    <!-- 到点自动完结：已通过的单置为已完成。
+         两类完结依据：
+         1) 有时段的预约（咨询/设备/教室）：slot_date 已过，或当天且 end_time 已过；
+         2) 无时段的通用/活动预约：所属服务设置了 end_date（活动结束日期）且已过；
+            services.end_date 为 NULL 表示不自动完结（长期有效的通用服务）。 -->
     <update id="autoCompleteExpired">
-        UPDATE item
-        SET manage_status = 4
-        WHERE manage_status = 1
-          AND end_time IS NOT NULL
-          AND (slot_date &lt; CURDATE() OR (slot_date = CURDATE() AND end_time &lt; DATE_FORMAT(NOW(), '%H:%i')))
+        UPDATE item i
+        JOIN services s ON s.service_id = i.service_id
+        SET i.manage_status = #{completedCode}
+        WHERE i.manage_status = #{approvedCode}
+          AND (
+                (i.end_time IS NOT NULL
+                    AND (i.slot_date &lt; CURDATE()
+                         OR (i.slot_date = CURDATE() AND i.end_time &lt; DATE_FORMAT(NOW(), '%H:%i'))))
+                OR (i.end_time IS NULL AND s.end_date IS NOT NULL AND s.end_date &lt; CURDATE())
+              )
     </update>
 
-    <!-- 教室时段预约：幂等插入（同一用户同一教室同一窗口 60 秒内待审核不重复） -->
-    <insert id="insertRoomBooking">
+    <!-- 教室时段预约：幂等插入（同一用户同一教室同一窗口 dedupeSeconds 秒内待审核不重复） -->
+    <insert id="insertRoomBooking"
+            useGeneratedKeys="true" keyProperty="item.orderId">
         INSERT INTO item(user_id, service_id, room_id, slot_date, start_time, end_time)
-        SELECT #{userId}, #{serviceId}, #{roomId}, #{date}, #{startTime}, #{endTime}
+        SELECT #{item.userId}, #{item.serviceId}, #{item.roomId},
+               #{item.slotDate}, #{item.startTime}, #{item.endTime}
         WHERE NOT EXISTS (
             SELECT 1 FROM item i
-            WHERE i.user_id = #{userId}
-              AND i.room_id = #{roomId}
-              AND i.slot_date = #{date}
-              AND i.start_time = #{startTime}
-              AND i.end_time = #{endTime}
-              AND i.manage_status = 0
-              AND i.create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+            WHERE i.user_id = #{item.userId}
+              AND i.room_id = #{item.roomId}
+              AND i.slot_date = #{item.slotDate}
+              AND i.start_time = #{item.startTime}
+              AND i.end_time = #{item.endTime}
+              AND i.manage_status = #{pendingCode}
+              AND i.create_time &gt; DATE_SUB(NOW(), INTERVAL #{dedupeSeconds} SECOND)
         )
     </insert>
 
@@ -269,7 +286,7 @@
         FROM item
         WHERE room_id = #{roomId}
           AND slot_date = #{date}
-          AND manage_status IN (0, 1)
+          AND manage_status IN (#{pendingCode}, #{approvedCode})
           AND start_time &lt; #{endTime}
           AND end_time &gt; #{startTime}
     </select>
@@ -284,20 +301,13 @@
         <foreach collection="bookingIds" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
-          AND ( item.manage_status = 0
-                OR (item.manage_status = 1 AND c.code = 'activity') )
+          AND ( item.manage_status = #{pendingCode}
+                OR (item.manage_status = #{approvedCode} AND c.code = 'activity') )
     </select>
 
     <select id="selectServiceIdByOrderId" resultType="long">
         SELECT service_id FROM item WHERE order_id = #{orderId} LIMIT 1
     </select>
-
-    <update id="setBookingStatus">
-        UPDATE item
-        SET manage_status = 3
-        WHERE user_id = #{userId}
-        AND order_id = #{bookingId}
-    </update>
 
     <!-- 分页查询所有服务预约状态（支持按审核状态、服务名称筛选） -->
     <select id="getServiceStatusWithPage" resultMap="ServiceStatusResultMap">
@@ -330,14 +340,12 @@
         ORDER BY i.create_time DESC
     </select>
 
-    <!-- 教师：其名下咨询师(c.user_id=教师账号)档期的申请列表（可仅看某状态） -->
+    <!-- 教师：其名下咨询师(c.user_id=教师账号)档期的申请列表（可仅看某状态）。
+         c.user_id 条件会把未挂咨询师的单自然排除，共用 LEFT JOIN 版本即可 -->
     <select id="getTeacherBookingsWithPage" resultMap="ServiceStatusResultMap">
-        SELECT i.order_id, i.user_id, u.name AS username,
         SELECT
         <include refid="ServiceStatus_Columns"/>
         <include refid="ServiceStatus_Joins"/>
-        <!-- 教师端只关心咨询预约：c.user_id 条件会把未挂咨询师的单自然排除，
-             因此共用 LEFT JOIN 版本即可，无需再单独写内连接 -->
         WHERE c.user_id = #{teacherId}
         <if test="manageStatus != null">
             AND i.manage_status = #{manageStatus}
@@ -354,17 +362,25 @@
         LIMIT 1
     </select>
 
-    <!-- 免审直通：活动预约提交成功后，把 60 秒内刚落库的待审核活动单置为已通过 -->
+    <!-- 免审直通：活动预约提交成功后，把 dedupeSeconds 秒内刚落库的待审核活动单置为已通过 -->
     <update id="approveRecentActivityBookings">
         UPDATE item
-        SET manage_status = 1
+        SET manage_status = #{approvedCode}
         WHERE user_id = #{userId}
-          AND manage_status = 0
+          AND manage_status = #{pendingCode}
           AND service_id IN
         <foreach collection="serviceIds" item="sid" open="(" separator="," close=")">
             #{sid}
         </foreach>
-          AND create_time > DATE_SUB(NOW(), INTERVAL 60 SECOND)
+          AND create_time &gt; DATE_SUB(NOW(), INTERVAL #{dedupeSeconds} SECOND)
     </update>
+
+    <!-- 各服务有效预约数（待审核+已通过，与 booked_count 扣减语义一致），供余量展示/KB 助手查询 -->
+    <select id="countBookingsByService" resultType="com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse">
+        SELECT service_id AS serviceId, COUNT(*) AS bookingCount
+        FROM item
+        WHERE manage_status IN (#{pendingCode}, #{approvedCode})
+        GROUP BY service_id
+    </select>
 
 </mapper>

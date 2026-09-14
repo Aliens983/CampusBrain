@@ -11,7 +11,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "验证码校验请求")
-public class VerifyCodeReqVO {
+public class VerifyCodeRequest {
 
     @NotBlank(message = "验证码UUID不能为空")
     @Schema(description = "图形验证码UUID（从获取图形验证码接口获得）", requiredMode = Schema.RequiredMode.REQUIRED)

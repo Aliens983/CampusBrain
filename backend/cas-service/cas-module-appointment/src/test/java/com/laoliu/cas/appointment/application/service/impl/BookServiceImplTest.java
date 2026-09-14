@@ -1,9 +1,9 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
 import com.laoliu.cas.appointment.application.service.BookService;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
-import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.exception.BusinessException;
@@ -41,7 +41,7 @@ class BookServiceImplTest {
     private BookingRepository bookingRepository;
 
     @Mock
-    private ServiceRepository serviceRepository;
+    private ServiceItemRepository serviceRepository;
 
     @Mock
     private UserInfoApi userInfoApi;
@@ -70,20 +70,23 @@ class BookServiceImplTest {
         void shouldBookServiceSuccessfully() {
             // Given
             List<Long> serviceIds = List.of(SERVICE_ID);
-            Service availableService = buildAvailableService(SERVICE_ID);
+            ServiceItem availableService = buildAvailableService(SERVICE_ID);
             UserInfoDTO userInfo = buildUserInfo();
 
             when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(availableService));
             when(bookingRepository.decrementStock(SERVICE_ID)).thenReturn(1);
-            when(bookingRepository.insertServices(eq(USER_ID), anyList())).thenReturn(1);
+            when(bookingRepository.insertServices(eq(USER_ID), anyList())).thenReturn(List.of(ORDER_ID));
             when(userInfoApi.getUserById(USER_ID)).thenReturn(userInfo);
 
             // When
-            UserInfoDTO result = bookService.bookService(USER_ID, serviceIds);
+            BookService.BookingSubmitResult result = bookService.bookService(USER_ID, serviceIds);
 
             // Then
             assertNotNull(result);
-            assertEquals("测试用户", result.getName());
+            assertNotNull(result.userInfo());
+            assertEquals("测试用户", result.userInfo().getName());
+            // 3.3.1：返回真实回填的订单号
+            assertEquals(List.of(ORDER_ID), result.orderIds());
             verify(bookingRepository).insertServices(eq(USER_ID), anyList());
             verify(userInfoApi).getUserById(USER_ID);
         }
@@ -123,7 +126,7 @@ class BookServiceImplTest {
         @DisplayName("服务已禁用时应当抛出 SERVICE_DISABLED 异常")
         void shouldThrowExceptionWhenServiceDisabled() {
             // Given
-            Service disabledService = buildDisabledService(SERVICE_ID);
+            ServiceItem disabledService = buildDisabledService(SERVICE_ID);
             when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(disabledService));
 
             // When & Then
@@ -153,7 +156,7 @@ class BookServiceImplTest {
             // Given
             when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(buildAvailableService(SERVICE_ID)));
             when(bookingRepository.decrementStock(SERVICE_ID)).thenReturn(1);
-            when(bookingRepository.insertServices(eq(USER_ID), anyList())).thenReturn(1);
+            when(bookingRepository.insertServices(eq(USER_ID), anyList())).thenReturn(List.of(ORDER_ID));
             when(userInfoApi.getUserById(USER_ID)).thenReturn(buildUserInfo());
 
             // When
@@ -292,8 +295,8 @@ class BookServiceImplTest {
 
     // ======================== 辅助方法 ========================
 
-    private Service buildAvailableService(Long id) {
-        return Service.builder()
+    private ServiceItem buildAvailableService(Long id) {
+        return ServiceItem.builder()
                 .serviceId(id)
                 .serviceName("自习室预约")
                 .serviceDescribe("图书馆自习室")
@@ -301,8 +304,8 @@ class BookServiceImplTest {
                 .build();
     }
 
-    private Service buildDisabledService(Long id) {
-        return Service.builder()
+    private ServiceItem buildDisabledService(Long id) {
+        return ServiceItem.builder()
                 .serviceId(id)
                 .serviceName("已禁用服务")
                 .serviceDescribe("已禁用")

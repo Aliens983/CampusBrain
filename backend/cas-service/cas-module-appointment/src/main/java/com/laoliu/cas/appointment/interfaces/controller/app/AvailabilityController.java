@@ -1,8 +1,8 @@
 package com.laoliu.cas.appointment.interfaces.controller.app;
 
-import com.laoliu.cas.appointment.application.service.ServiceService;
+import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
@@ -28,16 +28,16 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AvailabilityController {
 
-    private final ServiceService serviceService;
+    private final ServiceItemService serviceService;
     private final BookingRepository bookingRepository;
 
     @Operation(summary = "获取可预约服务及实时预约数", description = "供 KB 智能助手查询实时预约数据")
     @GetMapping("/availability")
-    public CommonResult<List<ServiceAvailabilityVO>> getAvailability() {
+    public CommonResult<List<ServiceAvailabilityResponse>> getAvailability() {
         Map<Long, Long> counts = bookingRepository.countBookingsByService();
-        List<ServiceAvailabilityVO> result = serviceService.getAvailableServices().stream()
+        List<ServiceAvailabilityResponse> result = serviceService.getAvailableServices().stream()
                 .map(s -> {
-                    ServiceAvailabilityVO vo = new ServiceAvailabilityVO();
+                    ServiceAvailabilityResponse vo = new ServiceAvailabilityResponse();
                     vo.setServiceId(s.getServiceId());
                     vo.setServiceName(s.getServiceName());
                     vo.setServiceDescribe(s.getServiceDescribe());

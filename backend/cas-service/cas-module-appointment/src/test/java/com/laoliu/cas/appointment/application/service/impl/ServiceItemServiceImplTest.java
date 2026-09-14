@@ -1,11 +1,11 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.application.service.ServiceService;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.application.service.ServiceItemService;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
 import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
-import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
 import com.laoliu.cas.common.result.PageResult;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,21 +24,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * ServiceServiceImpl 单元测试
+ * ServiceItemServiceImpl 单元测试
  *
  * @author forever-king
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("服务管理服务单元测试")
-class ServiceServiceImplTest {
+class ServiceItemServiceImplTest {
 
     @Mock
-    private ServiceRepository serviceRepository;
+    private ServiceItemRepository serviceRepository;
 
     @Mock
     private ServiceCategoryRepository serviceCategoryRepository;
 
-    private ServiceService serviceService;
+    private ServiceItemService serviceService;
 
     private static final Long SERVICE_ID_1 = 1L;
     private static final Long SERVICE_ID_2 = 2L;
@@ -46,7 +46,7 @@ class ServiceServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        serviceService = new ServiceServiceImpl(serviceRepository, serviceCategoryRepository);
+        serviceService = new ServiceItemServiceImpl(serviceRepository, serviceCategoryRepository);
     }
 
     @Nested
@@ -57,12 +57,12 @@ class ServiceServiceImplTest {
         @DisplayName("应当返回所有服务列表")
         void shouldReturnAllServices() {
             // Given
-            Service service1 = buildService(SERVICE_ID_1, "自习室预约", "图书馆自习室", 1);
-            Service service2 = buildService(SERVICE_ID_2, "心理咨询", "心理健康咨询", 1);
+            ServiceItem service1 = buildService(SERVICE_ID_1, "自习室预约", "图书馆自习室", 1);
+            ServiceItem service2 = buildService(SERVICE_ID_2, "心理咨询", "心理健康咨询", 1);
             when(serviceRepository.findAll()).thenReturn(List.of(service1, service2));
 
             // When
-            List<Service> result = serviceService.getAllServices();
+            List<ServiceItem> result = serviceService.getAllServices();
 
             // Then
             assertNotNull(result);
@@ -78,7 +78,7 @@ class ServiceServiceImplTest {
             when(serviceRepository.findAll()).thenReturn(List.of());
 
             // When
-            List<Service> result = serviceService.getAllServices();
+            List<ServiceItem> result = serviceService.getAllServices();
 
             // Then
             assertNotNull(result);
@@ -94,12 +94,12 @@ class ServiceServiceImplTest {
         @DisplayName("应当只返回启用状态的服务")
         void shouldReturnOnlyAvailableServices() {
             // Given
-            Service available1 = buildService(SERVICE_ID_1, "自习室预约", "图书馆自习室", 1);
-            Service disabled = buildService(SERVICE_ID_2, "已下架服务", "已下架", 0);
+            ServiceItem available1 = buildService(SERVICE_ID_1, "自习室预约", "图书馆自习室", 1);
+            ServiceItem disabled = buildService(SERVICE_ID_2, "已下架服务", "已下架", 0);
             when(serviceRepository.findAll()).thenReturn(List.of(available1, disabled));
 
             // When
-            List<Service> result = serviceService.getAvailableServices();
+            List<ServiceItem> result = serviceService.getAvailableServices();
 
             // Then
             assertNotNull(result);
@@ -112,12 +112,12 @@ class ServiceServiceImplTest {
         @DisplayName("所有服务都已禁用时应当返回空列表")
         void shouldReturnEmptyListWhenAllDisabled() {
             // Given
-            Service disabled1 = buildService(SERVICE_ID_1, "已禁用1", "已禁用", 0);
-            Service disabled2 = buildService(SERVICE_ID_2, "已禁用2", "已禁用", 0);
+            ServiceItem disabled1 = buildService(SERVICE_ID_1, "已禁用1", "已禁用", 0);
+            ServiceItem disabled2 = buildService(SERVICE_ID_2, "已禁用2", "已禁用", 0);
             when(serviceRepository.findAll()).thenReturn(List.of(disabled1, disabled2));
 
             // When
-            List<Service> result = serviceService.getAvailableServices();
+            List<ServiceItem> result = serviceService.getAvailableServices();
 
             // Then
             assertNotNull(result);
@@ -133,11 +133,11 @@ class ServiceServiceImplTest {
         @DisplayName("应当返回指定 ID 的服务")
         void shouldReturnServiceById() {
             // Given
-            Service service = buildService(SERVICE_ID_1, "自习室预约", "图书馆自习室", 1);
+            ServiceItem service = buildService(SERVICE_ID_1, "自习室预约", "图书馆自习室", 1);
             when(serviceRepository.findById(SERVICE_ID_1)).thenReturn(Optional.of(service));
 
             // When
-            Optional<Service> result = serviceService.getServiceById(SERVICE_ID_1);
+            Optional<ServiceItem> result = serviceService.getServiceById(SERVICE_ID_1);
 
             // Then
             assertTrue(result.isPresent());
@@ -152,7 +152,7 @@ class ServiceServiceImplTest {
             when(serviceRepository.findById(SERVICE_ID_1)).thenReturn(Optional.empty());
 
             // When
-            Optional<Service> result = serviceService.getServiceById(SERVICE_ID_1);
+            Optional<ServiceItem> result = serviceService.getServiceById(SERVICE_ID_1);
 
             // Then
             assertTrue(result.isEmpty());
@@ -169,14 +169,14 @@ class ServiceServiceImplTest {
             // Given
             ServiceAddRequest request = buildServiceAddRequest("新服务", "新服务描述", 1);
             when(serviceCategoryRepository.findAll()).thenReturn(List.of(buildCategory()));
-            when(serviceRepository.save(any(Service.class))).thenReturn(buildService(3L, "新服务", "新服务描述", 1));
+            when(serviceRepository.save(any(ServiceItem.class))).thenReturn(buildService(3L, "新服务", "新服务描述", 1));
 
             // When
             boolean result = serviceService.addService(request);
 
             // Then
             assertTrue(result);
-            verify(serviceRepository).save(any(Service.class));
+            verify(serviceRepository).save(any(ServiceItem.class));
         }
 
         @Test
@@ -192,14 +192,14 @@ class ServiceServiceImplTest {
 
             // Then
             assertFalse(result);
-            verify(serviceRepository, never()).save(any(Service.class));
+            verify(serviceRepository, never()).save(any(ServiceItem.class));
         }
     }
 
     // ======================== 辅助方法 ========================
 
-    private Service buildService(Long id, String name, String describe, Integer state) {
-        return Service.builder()
+    private ServiceItem buildService(Long id, String name, String describe, Integer state) {
+        return ServiceItem.builder()
                 .serviceId(id)
                 .serviceName(name)
                 .serviceDescribe(describe)

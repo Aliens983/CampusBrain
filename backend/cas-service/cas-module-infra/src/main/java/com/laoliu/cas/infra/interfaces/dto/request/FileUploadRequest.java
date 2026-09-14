@@ -10,7 +10,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @Data
 @Schema(description = "文件上传请求")
-public class FileUploadReqVO {
+public class FileUploadRequest {
 
     @NotNull(message = "文件不能为空")
     @Schema(description = "待上传的文件")

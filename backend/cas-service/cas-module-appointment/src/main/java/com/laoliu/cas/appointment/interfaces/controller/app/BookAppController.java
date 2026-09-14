@@ -2,7 +2,7 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.BookService;
 import com.laoliu.cas.appointment.interfaces.dto.request.BookServiceRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.BookingDTO;
+import com.laoliu.cas.appointment.interfaces.dto.response.BookingResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.BookResultResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
 import com.laoliu.cas.common.pojo.PageParam;
@@ -38,13 +38,13 @@ public class BookAppController {
     public CommonResult<BookResultResponse> bookService(
             @Valid @RequestBody BookServiceRequest request) {
         Long userId = getUserIdViaTokenApi.getUserId();
-        UserInfoDTO userInfo = bookService.bookService(userId, request.getServiceIds());
-        return CommonResult.success("预约成功", buildBookResult(userInfo, userId));
+        BookService.BookingSubmitResult result = bookService.bookService(userId, request.getServiceIds());
+        return CommonResult.success("预约成功", buildBookResult(result.userInfo(), userId));
     }
 
     @Operation(summary = "查看所有预约（分页）", description = "分页获取当前用户的所有预约记录")
     @GetMapping
-    public CommonResult<PageResult<BookingDTO>> getBook(@Valid PageParam pageParam) {
+    public CommonResult<PageResult<BookingResponse>> getBook(@Valid PageParam pageParam) {
         Long userId = getUserIdViaTokenApi.getUserId();
         var page = bookService.getAllBookings(userId, pageParam.getPageNo(), pageParam.getPageSize());
         return CommonResult.success(PageResult.of(page));
@@ -64,9 +64,9 @@ public class BookAppController {
 
     @Operation(summary = "获取预约详情", description = "根据预约ID获取单条预约的详细信息")
     @GetMapping("/{id}")
-    public CommonResult<BookingDTO> getBookingDetail(@PathVariable Long id) {
+    public CommonResult<BookingResponse> getBookingDetail(@PathVariable Long id) {
         Long userId = getUserIdViaTokenApi.getUserId();
-        BookingDTO booking = bookService.getBookingById(userId, id);
+        BookingResponse booking = bookService.getBookingById(userId, id);
         if (booking == null) {
             return CommonResult.notFound("预约记录不存在");
         }

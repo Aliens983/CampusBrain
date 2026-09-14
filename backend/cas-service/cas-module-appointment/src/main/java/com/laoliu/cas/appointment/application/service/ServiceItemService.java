@@ -1,8 +1,8 @@
 package com.laoliu.cas.appointment.application.service;
 
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageReqVO;
+import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageRequest;
 import com.laoliu.cas.common.result.PageResult;
 
 import java.util.List;
@@ -13,21 +13,21 @@ import java.util.Optional;
  *
  * @author forever-king
  */
-public interface ServiceService {
+public interface ServiceItemService {
 
     /** 获取所有服务 */
-    List<Service> getAllServices();
+    List<ServiceItem> getAllServices();
 
     /**
      * 分页获取所有服务（支持筛选）
      */
-    PageResult<Service> getAllServices(ServicePageReqVO reqVO);
+    PageResult<ServiceItem> getAllServices(ServicePageRequest reqVO);
 
     /** 获取可用服务列表 */
-    List<Service> getAvailableServices();
+    List<ServiceItem> getAvailableServices();
 
     /** 根据ID获取服务 */
-    Optional<Service> getServiceById(Long id);
+    Optional<ServiceItem> getServiceById(Long id);
 
     /** 添加服务 */
     boolean addService(ServiceAddRequest request);
@@ -36,10 +36,10 @@ public interface ServiceService {
     boolean updateService(Long id, ServiceAddRequest request);
 
     /** 获取用户已选服务 */
-    List<Service> selectUserServices(Long userId);
+    List<ServiceItem> selectUserServices(Long userId);
 
     /**
      * 分页获取用户的服务
      */
-    PageResult<Service> selectUserServices(Long userId, int page, int pageSize);
+    PageResult<ServiceItem> selectUserServices(Long userId, int page, int pageSize);
 }

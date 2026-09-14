@@ -4,7 +4,7 @@ import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.system.application.service.NotificationSettingsService;
-import com.laoliu.cas.system.interfaces.dto.NotifyPolicyDTO;
+import com.laoliu.cas.system.interfaces.dto.NotifyPolicyRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -34,8 +34,8 @@ public class NotifyPolicyAdminController {
     @Operation(summary = "获取全局通知策略")
     @GetMapping("/notify")
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<NotifyPolicyDTO> getNotifyPolicy() {
-        NotifyPolicyDTO dto = new NotifyPolicyDTO(
+    public CommonResult<NotifyPolicyRequest> getNotifyPolicy() {
+        NotifyPolicyRequest dto = new NotifyPolicyRequest(
                 notificationSettings.isEmailEnabled(),
                 notificationSettings.isSmsEnabled());
         return CommonResult.success(dto);
@@ -44,7 +44,7 @@ public class NotifyPolicyAdminController {
     @Operation(summary = "保存全局通知策略")
     @PutMapping("/notify")
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<Void> saveNotifyPolicy(@RequestBody NotifyPolicyDTO dto) {
+    public CommonResult<Void> saveNotifyPolicy(@RequestBody NotifyPolicyRequest dto) {
         if (dto.getEmailEnabled() != null) {
             notificationSettings.setEmailEnabled(dto.getEmailEnabled());
         }

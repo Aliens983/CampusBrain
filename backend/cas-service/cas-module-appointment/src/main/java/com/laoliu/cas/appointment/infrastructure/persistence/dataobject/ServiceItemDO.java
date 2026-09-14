@@ -3,7 +3,7 @@ package com.laoliu.cas.appointment.infrastructure.persistence.dataobject;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @TableName("services")
-public class ServicesDO {
+public class ServiceItemDO {
 
     @TableId(type = IdType.AUTO)
     private Long serviceId;
@@ -39,6 +39,9 @@ public class ServicesDO {
     /** 已预约数 */
     private Integer bookedCount;
 
+    /** 活动/通用服务完结日期（无时段预约自动完结依据；null=长期有效） */
+    private java.time.LocalDate endDate;
+
     /** 业务分类ID（代码级外键 → service_category.id） */
     private Long categoryId;
 
@@ -48,21 +51,21 @@ public class ServicesDO {
     /** 服务封面图URL */
     private String imageUrl;
 
-    public Service toEntity() {
-        return Service.builder()
+    public ServiceItem toEntity() {
+        return ServiceItem.builder()
                 .serviceId(serviceId).serviceName(serviceName)
                 .serviceDescribe(serviceDescribe).serviceState(serviceState)
-                .capacity(capacity).bookedCount(bookedCount)
+                .capacity(capacity).bookedCount(bookedCount).endDate(endDate)
                 .categoryId(categoryId).campus(campus).imageUrl(imageUrl)
                 .build();
     }
 
-    public static ServicesDO fromEntity(Service entity) {
+    public static ServiceItemDO fromEntity(ServiceItem entity) {
         if (entity == null) return null;
-        return ServicesDO.builder()
+        return ServiceItemDO.builder()
                 .serviceId(entity.getServiceId()).serviceName(entity.getServiceName())
                 .serviceDescribe(entity.getServiceDescribe()).serviceState(entity.getServiceState())
-                .capacity(entity.getCapacity()).bookedCount(entity.getBookedCount())
+                .capacity(entity.getCapacity()).bookedCount(entity.getBookedCount()).endDate(entity.getEndDate())
                 .categoryId(entity.getCategoryId()).campus(entity.getCampus()).imageUrl(entity.getImageUrl())
                 .build();
     }

@@ -13,7 +13,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "预约状态分页请求")
-public class ServiceStatusPageReqVO extends PageParam {
+public class ServiceStatusPageRequest extends PageParam {
 
     @Schema(description = "审核状态（0=待审核, 1=通过, 2=拒绝, 3=取消, 不传=全部）", example = "0")
     private Integer manageStatus;

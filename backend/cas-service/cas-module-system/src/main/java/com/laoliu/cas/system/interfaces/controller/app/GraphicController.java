@@ -3,7 +3,7 @@ package com.laoliu.cas.system.interfaces.controller.app;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.system.application.service.CaptchaService;
 import com.laoliu.cas.system.application.service.vo.CaptchaResult;
-import com.laoliu.cas.system.interfaces.dto.response.CaptchaRespVO;
+import com.laoliu.cas.system.interfaces.dto.response.CaptchaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -26,9 +26,9 @@ public class GraphicController {
 
     @Operation(summary = "获取图形验证码", description = "返回uuid和验证码图片URL，验证码5分钟内有效")
     @GetMapping
-    public CommonResult<CaptchaRespVO> getGraphicCaptcha() {
+    public CommonResult<CaptchaResponse> getGraphicCaptcha() {
         CaptchaResult captchaResult = captchaService.generateCaptcha();
-        CaptchaRespVO respVO = CaptchaRespVO.builder()
+        CaptchaResponse respVO = CaptchaResponse.builder()
                 .uuid(captchaResult.getUuid())
                 .imageUrl(captchaResult.getImageUrl())
                 .build();

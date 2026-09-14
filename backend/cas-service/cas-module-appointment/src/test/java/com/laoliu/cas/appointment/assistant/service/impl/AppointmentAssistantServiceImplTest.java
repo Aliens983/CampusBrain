@@ -2,7 +2,7 @@ package com.laoliu.cas.appointment.assistant.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laoliu.cas.appointment.application.service.BookService;
-import com.laoliu.cas.appointment.application.service.ServiceService;
+import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.application.service.impl.ConsultationServiceImpl;
 import com.laoliu.cas.appointment.application.service.impl.EquipmentServiceImpl;
 import com.laoliu.cas.appointment.application.service.impl.RoomServiceImpl;
@@ -11,14 +11,14 @@ import com.laoliu.cas.appointment.assistant.dto.response.AssistantBookingDraft;
 import com.laoliu.cas.appointment.assistant.dto.response.AssistantBookingResult;
 import com.laoliu.cas.appointment.assistant.dto.response.AssistantRoomVO;
 import com.laoliu.cas.appointment.domain.entity.Room;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.domain.repository.EquipmentRepository;
 import com.laoliu.cas.appointment.domain.repository.RoomRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
-import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.domain.repository.TimeSlotRepository;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.redis.util.RedisUtil;
@@ -66,9 +66,9 @@ import static org.mockito.Mockito.when;
 @DisplayName("预约助手服务")
 class AppointmentAssistantServiceImplTest {
 
-    @Mock private ServiceRepository serviceRepository;
+    @Mock private ServiceItemRepository serviceRepository;
     @Mock private ServiceCategoryRepository serviceCategoryRepository;
-    @Mock private ServiceService serviceService;
+    @Mock private ServiceItemService serviceService;
     @Mock private ConsultantRepository consultantRepository;
     @Mock private TimeSlotRepository timeSlotRepository;
     @Mock private RoomRepository roomRepository;
@@ -88,8 +88,8 @@ class AppointmentAssistantServiceImplTest {
         return ServiceCategory.builder().id(1L).code(code).name(code).sort(1).build();
     }
 
-    private Service service(Long id, Integer capacity, Integer booked) {
-        return Service.builder()
+    private ServiceItem service(Long id, Integer capacity, Integer booked) {
+        return ServiceItem.builder()
                 .serviceId(id).serviceName("测试服务").serviceState(1)
                 .categoryId(1L).campus("cq")
                 .capacity(capacity).bookedCount(booked)
@@ -202,12 +202,16 @@ class AppointmentAssistantServiceImplTest {
             ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
             verify(redisUtil).set(anyString(), jsonCaptor.capture(), anyLong(), any());
             when(redisUtil.get(anyString())).thenReturn(jsonCaptor.getValue());
+            // 3.3.1：下单服务返回真实回填 orderId 的提交结果（不再由助手事后猜测最新单）
+            when(bookService.bookService(eq(7L), any()))
+                    .thenReturn(new BookService.BookingSubmitResult(null, List.of(1001L)));
 
             AssistantBookingResult result = service.confirmDraft(7L, draft.getDraftId());
 
             verify(bookService).bookService(eq(7L), any());
             verify(redisUtil).delete(anyString());
             assertNotNull(result);
+            assertEquals(1001L, result.getOrderId());
         }
 
         @Test
@@ -223,7 +227,7 @@ class AppointmentAssistantServiceImplTest {
         @DisplayName("确认时二次校验失败 → 不落库")
         void shouldRevalidateOnConfirm() throws Exception {
             stubCategory("activity");
-            Service svc = service(1L, -1, 0);
+            ServiceItem svc = service(1L, -1, 0);
             when(serviceRepository.findById(1L)).thenReturn(Optional.of(svc));
 
             AssistantBookingDraft draft = service.createDraft(7L,
@@ -264,8 +268,8 @@ class AppointmentAssistantServiceImplTest {
         @DisplayName("按校区过滤教室")
         void shouldFilterRoomsByCampus() {
             when(serviceService.getAvailableServices()).thenReturn(List.of(
-                    Service.builder().serviceId(1L).serviceName("仓前").serviceState(1).campus("cq").build(),
-                    Service.builder().serviceId(2L).serviceName("下沙").serviceState(1).campus("xs").build()));
+                    ServiceItem.builder().serviceId(1L).serviceName("仓前").serviceState(1).campus("cq").build(),
+                    ServiceItem.builder().serviceId(2L).serviceName("下沙").serviceState(1).campus("xs").build()));
             when(roomRepository.findAll()).thenReturn(List.of(
                     Room.builder().id(1L).name("A101").serviceId(1L).build(),
                     Room.builder().id(3L).name("B101").serviceId(2L).build()));

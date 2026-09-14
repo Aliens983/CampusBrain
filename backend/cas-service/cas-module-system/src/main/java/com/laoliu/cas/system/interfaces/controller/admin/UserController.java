@@ -15,12 +15,12 @@ import com.laoliu.cas.system.application.service.NotificationSettingsService;
 import com.laoliu.cas.system.application.service.UserService;
 import com.laoliu.cas.system.domain.repository.UserRepository;
 import com.laoliu.cas.system.interfaces.convert.UserConvert;
-import com.laoliu.cas.system.interfaces.dto.NotifyPrefDTO;
+import com.laoliu.cas.system.interfaces.dto.NotifyPrefRequest;
 import com.laoliu.cas.system.interfaces.dto.request.AdminCreateUserRequest;
 import com.laoliu.cas.system.interfaces.dto.request.ChangePasswordRequest;
 import com.laoliu.cas.system.interfaces.dto.request.UpdateProfileRequest;
-import com.laoliu.cas.system.interfaces.dto.request.UserPageReqVO;
-import com.laoliu.cas.system.interfaces.dto.response.UserInfoAndServicesViaMPRespVO;
+import com.laoliu.cas.system.interfaces.dto.request.UserPageRequest;
+import com.laoliu.cas.system.interfaces.dto.response.UserInfoAndServicesViaMPResponse;
 import com.laoliu.cas.system.interfaces.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -74,7 +74,7 @@ public class UserController {
     @Operation(summary = "获取所有用户列表（分页+筛选）", description = "管理员分页获取用户列表，支持按姓名、邮箱模糊搜索和角色筛选")
     @GetMapping("/list")
     @RequireRole(UserRoleEnum.ADMIN)
-    public CommonResult<PageResult<UserResponse>> getAllUsers(@Valid UserPageReqVO reqVO) {
+    public CommonResult<PageResult<UserResponse>> getAllUsers(@Valid UserPageRequest reqVO) {
         try {
             IPage<User> userPage = userRepository.getAllUsers(
                     reqVO.getPageNo(), reqVO.getPageSize(),
@@ -145,19 +145,19 @@ public class UserController {
     @Operation(summary = "获取我的通知偏好", description = "获取当前用户的邮件/站内通知接收偏好")
     @GetMapping("/me/notify")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<NotifyPrefDTO> getMyNotifyPref() {
+    public CommonResult<NotifyPrefRequest> getMyNotifyPref() {
         Long userId = getUserIdViaTokenApi.getUserId();
         if (userId == null) {
             return CommonResult.unauthorized("用户未登录或登录已过期");
         }
-        NotifyPrefDTO dto = new NotifyPrefDTO(notificationSettings.isEmailOn(userId));
+        NotifyPrefRequest dto = new NotifyPrefRequest(notificationSettings.isEmailOn(userId));
         return CommonResult.success(dto);
     }
 
     @Operation(summary = "保存我的通知偏好", description = "保存当前用户的邮件/站内通知接收偏好")
     @PutMapping("/me/notify")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<Void> saveMyNotifyPref(@RequestBody NotifyPrefDTO dto) {
+    public CommonResult<Void> saveMyNotifyPref(@RequestBody NotifyPrefRequest dto) {
         Long userId = getUserIdViaTokenApi.getUserId();
         if (userId == null) {
             return CommonResult.unauthorized("用户未登录或登录已过期");
@@ -192,10 +192,10 @@ public class UserController {
     @GetMapping("/me/bookings")
     @Operation(summary = "用户查看自己预约的所有服务（分页）")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<UserInfoAndServicesViaMPRespVO> getAllBookings(@Valid PageParam pageParam) {
+    public CommonResult<UserInfoAndServicesViaMPResponse> getAllBookings(@Valid PageParam pageParam) {
         Long userId = getUserIdViaTokenApi.getUserId();
         var bookingsPage = userService.getUserBookings(userId, pageParam.getPageNo(), pageParam.getPageSize());
-        UserInfoAndServicesViaMPRespVO respVO = new UserInfoAndServicesViaMPRespVO();
+        UserInfoAndServicesViaMPResponse respVO = new UserInfoAndServicesViaMPResponse();
         respVO.setUser(userRepository.findById(userId).orElse(null));
         respVO.setBookings(bookingsPage.getRecords());
         return CommonResult.success(respVO);

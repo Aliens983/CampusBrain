@@ -3,7 +3,7 @@ package com.laoliu.cas.appointment.assistant.service.impl;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laoliu.cas.appointment.application.service.BookService;
-import com.laoliu.cas.appointment.application.service.ServiceService;
+import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.application.service.impl.ConsultationServiceImpl;
 import com.laoliu.cas.appointment.application.service.impl.EquipmentServiceImpl;
 import com.laoliu.cas.appointment.application.service.impl.RoomServiceImpl;
@@ -18,21 +18,23 @@ import com.laoliu.cas.appointment.assistant.service.AppointmentAssistantService;
 import com.laoliu.cas.appointment.domain.entity.Consultant;
 import com.laoliu.cas.appointment.domain.entity.Equipment;
 import com.laoliu.cas.appointment.domain.entity.Room;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
+import org.springframework.stereotype.Service;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
 import com.laoliu.cas.appointment.domain.entity.TimeSlot;
+import com.laoliu.cas.appointment.domain.enums.CategoryCode;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.domain.repository.EquipmentRepository;
 import com.laoliu.cas.appointment.domain.repository.RoomRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
-import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.domain.repository.TimeSlotRepository;
 import com.laoliu.cas.appointment.interfaces.dto.request.ConsultationBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.request.EquipmentBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.request.RoomBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotRespVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.redis.util.RedisUtil;
@@ -60,7 +62,7 @@ import java.util.stream.Collectors;
  * @author forever-king
  */
 @Slf4j
-@org.springframework.stereotype.Service
+@Service
 @RequiredArgsConstructor
 public class AppointmentAssistantServiceImpl implements AppointmentAssistantService {
 
@@ -70,10 +72,10 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     /** 草稿 Redis key 前缀（按用户隔离，防越权读取他人草稿） */
     private static final String DRAFT_KEY_PREFIX = "assistant:booking:draft:";
 
-    private final ServiceRepository serviceRepository;
+    private final ServiceItemRepository serviceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     /** 走应用服务（带 @Cacheable）而非直接查库，避免每次助手问答全表扫服务 */
-    private final ServiceService serviceService;
+    private final ServiceItemService serviceService;
     private final ConsultantRepository consultantRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final RoomRepository roomRepository;
@@ -92,9 +94,9 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     public List<AssistantServiceVO> findServices(String campus, String category, String keyword) {
         Map<Long, ServiceCategory> categories = categoryIndex();
         List<AssistantServiceVO> result = new ArrayList<>();
-        // 走 ServiceService 而非 repository：前者带 @Cacheable("services")，
+        // 走 ServiceItemService 而非 repository：前者带 @Cacheable("services")，
         // 避免每次助手问答都全表扫 services
-        for (Service s : serviceService.getAvailableServices()) {
+        for (ServiceItem s : serviceService.getAvailableServices()) {
             ServiceCategory cat = categories.get(s.getCategoryId());
             String categoryCode = cat == null ? null : cat.getCode();
             if (!matchesCampus(s.getCampus(), campus) || !matchesCategory(categoryCode, category)) {
@@ -110,11 +112,11 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     @Override
     public List<AssistantConsultantVO> findConsultants(String campus, String keyword, String date) {
-        Map<Long, Service> serviceIndex = serviceIndex();
+        Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
         List<AssistantConsultantVO> result = new ArrayList<>();
         for (Consultant c : consultantRepository.findAll()) {
-            Service s = c.getServiceId() == null ? null : serviceIndex.get(c.getServiceId());
+            ServiceItem s = c.getServiceId() == null ? null : serviceIndex.get(c.getServiceId());
             if (s != null && !matchesCampus(s.getCampus(), campus)) {
                 continue;
             }
@@ -147,7 +149,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     }
 
     @Override
-    public List<TimeSlotRespVO> findConsultantSlots(Long consultantId, String date) {
+    public List<TimeSlotResponse> findConsultantSlots(Long consultantId, String date) {
         if (consultantId == null || date == null || date.isBlank()) {
             return Collections.emptyList();
         }
@@ -156,7 +158,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     @Override
     public List<AssistantRoomVO> findRooms(String campus, String date, String startTime, String endTime) {
-        Map<Long, Service> serviceIndex = serviceIndex();
+        Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
         boolean withWindow = parsedDate != null && startTime != null && endTime != null
                 && !startTime.isBlank() && !endTime.isBlank() && startTime.compareTo(endTime) < 0;
@@ -166,7 +168,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 .collect(Collectors.groupingBy(Room::getServiceId, LinkedHashMap::new, Collectors.toList()));
 
         List<AssistantRoomVO> result = new ArrayList<>();
-        for (Service s : serviceService.getAvailableServices()) {
+        for (ServiceItem s : serviceService.getAvailableServices()) {
             if (!matchesCampus(s.getCampus(), campus)) {
                 continue;
             }
@@ -194,14 +196,14 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     @Override
     public List<AssistantEquipmentVO> findEquipment(String campus, String keyword, String date,
                                                     String startTime, String endTime) {
-        Map<Long, Service> serviceIndex = serviceIndex();
+        Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
         boolean withWindow = parsedDate != null && startTime != null && endTime != null
                 && !startTime.isBlank() && !endTime.isBlank() && startTime.compareTo(endTime) < 0;
 
         List<AssistantEquipmentVO> result = new ArrayList<>();
         for (Equipment e : equipmentRepository.findAll()) {
-            Service s = e.getServiceId() == null ? null : serviceIndex.get(e.getServiceId());
+            ServiceItem s = e.getServiceId() == null ? null : serviceIndex.get(e.getServiceId());
             if (s != null && !matchesCampus(s.getCampus(), campus)) {
                 continue;
             }
@@ -292,10 +294,9 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                     revalidated.getInvalidReason());
         }
 
-        executeBooking(userId, stored);
+        Long orderId = executeBooking(userId, stored);
         discardDraft(userId, draftId);
 
-        Long orderId = findLatestOrderId(userId);
         return AssistantBookingResult.builder()
                 .orderId(orderId)
                 .status(Boolean.TRUE.equals(stored.getNeedAudit()) ? "PENDING" : "APPROVED")
@@ -347,7 +348,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         if (request == null || request.getServiceId() == null) {
             return invalid(null, null, "缺少服务ID，无法预约");
         }
-        Service service = serviceRepository.findById(request.getServiceId()).orElse(null);
+        ServiceItem service = serviceRepository.findById(request.getServiceId()).orElse(null);
         if (service == null) {
             return invalid(null, null, "服务不存在");
         }
@@ -380,7 +381,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         return AssistantBookingDraft.TYPE_SERVICE;
     }
 
-    private AssistantBookingDraft validateConsultation(Service service, ServiceCategory category,
+    private AssistantBookingDraft validateConsultation(ServiceItem service, ServiceCategory category,
                                                        AssistantBookingDraftRequest request) {
         if (request.getConsultantId() == null || request.getSlotId() == null) {
             return invalid(service, category, "咨询预约需要同时提供咨询师ID与时段ID");
@@ -390,6 +391,8 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             return invalid(service, category, "咨询师不存在");
         }
         if (!service.getServiceId().equals(consultant.getServiceId())) {
+            // 先校验"资源归属"再校验"时段占用"：归属错误属于参数串台，必须最早拦下，
+            // 否则后续按错误咨询师去判时段会给出误导性的"时段可用/已约"结论
             return invalid(service, category, "该咨询师不属于所选服务，请确认后重试");
         }
         TimeSlot slot = timeSlotRepository.findById(request.getSlotId())
@@ -407,7 +410,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 null, request.getPurpose(), List.of(), Boolean.TRUE);
     }
 
-    private AssistantBookingDraft validateRoom(Service service, ServiceCategory category,
+    private AssistantBookingDraft validateRoom(ServiceItem service, ServiceCategory category,
                                                AssistantBookingDraftRequest request) {
         TimeWindow window = TimeWindow.of(request.getDate(), request.getStartTime(), request.getEndTime());
         if (window.error != null) {
@@ -418,6 +421,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             return invalid(service, category, "教室不存在");
         }
         if (!service.getServiceId().equals(room.getServiceId())) {
+            // 先校验归属再查占用：跨服务的教室根本不在本服务资源域内，不应参与时段冲突判定
             return invalid(service, category, "该教室不属于所选服务，请确认后重试");
         }
         if (bookingRepository.countRoomOverlap(room.getId(), window.date, window.start, window.end) > 0) {
@@ -428,7 +432,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 null, request.getPurpose(), List.of(), Boolean.TRUE);
     }
 
-    private AssistantBookingDraft validateEquipment(Service service, ServiceCategory category,
+    private AssistantBookingDraft validateEquipment(ServiceItem service, ServiceCategory category,
                                                     AssistantBookingDraftRequest request) {
         int quantity = request.getQuantity() == null || request.getQuantity() < 1 ? 1 : request.getQuantity();
         TimeWindow window = TimeWindow.of(request.getDate(), request.getStartTime(), request.getEndTime());
@@ -440,6 +444,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             return invalid(service, category, "设备不存在");
         }
         if (!service.getServiceId().equals(equipment.getServiceId())) {
+            // 先校验归属再算库存：跨服务设备不在本服务资源域内，其库存与本服务无关
             return invalid(service, category, "该设备不属于所选服务，请确认后重试");
         }
         int stock = equipment.getAvailableStock() == null ? 0 : equipment.getAvailableStock();
@@ -457,7 +462,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 quantity, request.getPurpose(), warnings, Boolean.TRUE);
     }
 
-    private AssistantBookingDraft validatePlainService(Service service, ServiceCategory category,
+    private AssistantBookingDraft validatePlainService(ServiceItem service, ServiceCategory category,
                                                        AssistantBookingDraftRequest request) {
         if (!service.hasCapacity()) {
             return invalid(service, category, "该服务预约名额已满，请选择其他服务");
@@ -469,8 +474,8 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 warnings.add("该服务仅剩 " + remaining + " 个名额，请尽快确认");
             }
         }
-        // 活动报名免审直通（category.code = 'activity'），其余需人工审核
-        boolean needAudit = !"activity".equals(category == null ? null : category.getCode());
+        // 活动报名免审直通（category.code = activity），其余需人工审核
+        boolean needAudit = !CategoryCode.ACTIVITY.is(category == null ? null : category.getCode());
         return valid(AssistantBookingDraft.TYPE_SERVICE,
                 category == null ? "校园服务" : category.getName(), service, category,
                 service.getServiceId(), service.getServiceName(),
@@ -480,20 +485,24 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     // ==================== 下单执行 ====================
 
-    /** 按资源类型派发到既有下单服务，与用户端共用同一套防冲突 / 防超卖逻辑 */
-    private void executeBooking(Long userId, AssistantBookingDraft draft) {
+    /**
+     * 按资源类型派发到既有下单服务，与用户端共用同一套防冲突 / 防超卖逻辑。
+     * 返回各下单服务回填的真实 orderId（3.3.1：不再用"查用户最新一单"猜测，
+     * 避免并发下拿到他人/他单订单号）。
+     */
+    private Long executeBooking(Long userId, AssistantBookingDraft draft) {
         switch (draft.getResourceType()) {
             case AssistantBookingDraft.TYPE_CONSULTATION -> {
                 ConsultationBookRequest req = new ConsultationBookRequest();
                 req.setSlotId(resolveSlotId(draft));
-                consultationService.bookConsultation(userId, draft.getServiceId(), req.getSlotId());
+                return consultationService.bookConsultation(userId, draft.getServiceId(), req.getSlotId());
             }
             case AssistantBookingDraft.TYPE_ROOM -> {
                 RoomBookRequest req = new RoomBookRequest();
                 req.setDate(draft.getDate());
                 req.setStartTime(draft.getStartTime());
                 req.setEndTime(draft.getEndTime());
-                roomService.bookRoom(userId, draft.getResourceId(), req);
+                return roomService.bookRoom(userId, draft.getResourceId(), req);
             }
             case AssistantBookingDraft.TYPE_EQUIPMENT -> {
                 EquipmentBookRequest req = new EquipmentBookRequest();
@@ -501,9 +510,13 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 req.setDate(draft.getDate());
                 req.setStartTime(draft.getStartTime());
                 req.setEndTime(draft.getEndTime());
-                equipmentService.bookEquipment(userId, draft.getResourceId(), req);
+                return equipmentService.bookEquipment(userId, draft.getResourceId(), req);
             }
-            default -> bookService.bookService(userId, Collections.singletonList(draft.getServiceId()));
+            default -> {
+                // 通用/活动单：助手场景恒为单个 serviceId，取该单回填的 orderId
+                return bookService.bookService(userId, Collections.singletonList(draft.getServiceId()))
+                        .orderIds().stream().findFirst().orElse(null);
+            }
         }
     }
 
@@ -521,12 +534,6 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             }
         }
         throw new BusinessException(BookErrorCode.SLOT_UNAVAILABLE);
-    }
-
-    /** 取用户最新一条预约单号（各下单服务不返回单号，统一按创建时间倒序取第一条） */
-    private Long findLatestOrderId(Long userId) {
-        List<ServiceStatusResponse> bookings = bookingRepository.getServiceStatusByUserId(userId);
-        return bookings.isEmpty() ? null : bookings.get(0).getOrderId();
     }
 
     // ==================== 草稿持久化 ====================
@@ -581,7 +588,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     // ==================== 草稿构建辅助 ====================
 
-    private AssistantBookingDraft valid(String type, String typeName, Service service, ServiceCategory category,
+    private AssistantBookingDraft valid(String type, String typeName, ServiceItem service, ServiceCategory category,
                                         Long resourceId, String resourceName, String date, String start, String end,
                                         Integer quantity, String purpose, List<String> warnings, Boolean needAudit) {
         String campus = service.getCampus();
@@ -610,7 +617,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         return draft;
     }
 
-    private AssistantBookingDraft invalid(Service service, ServiceCategory category, String reason) {
+    private AssistantBookingDraft invalid(ServiceItem service, ServiceCategory category, String reason) {
         return AssistantBookingDraft.builder()
                 .valid(Boolean.FALSE)
                 .invalidReason(reason)
@@ -666,7 +673,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     // ==================== 通用工具 ====================
 
-    private AssistantServiceVO toServiceVO(Service s, ServiceCategory cat) {
+    private AssistantServiceVO toServiceVO(ServiceItem s, ServiceCategory cat) {
         int booked = s.getBookedCount() == null ? 0 : s.getBookedCount();
         Integer capacity = s.getCapacity();
         Integer remaining = capacity == null || capacity == -1 ? -1 : Math.max(capacity - booked, 0);
@@ -695,9 +702,9 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         return index;
     }
 
-    private Map<Long, Service> serviceIndex() {
-        Map<Long, Service> index = new LinkedHashMap<>();
-        for (Service s : serviceRepository.findAll()) {
+    private Map<Long, ServiceItem> serviceIndex() {
+        Map<Long, ServiceItem> index = new LinkedHashMap<>();
+        for (ServiceItem s : serviceRepository.findAll()) {
             index.put(s.getServiceId(), s);
         }
         return index;

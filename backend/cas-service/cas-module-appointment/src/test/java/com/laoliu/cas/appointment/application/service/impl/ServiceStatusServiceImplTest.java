@@ -1,5 +1,6 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
@@ -15,6 +16,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -63,15 +66,17 @@ class ServiceStatusServiceImplTest {
             // Given
             ServiceStatusResponse status = buildPendingStatus();
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
-            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), isNull()))
+            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), isNull(),
+                    eq(List.of(ManageStatus.SUBMIT))))
                     .thenReturn(true);
             when(bookingRepository.getUserEmailByOrderId(VALID_ORDER_ID)).thenReturn("test@example.com");
 
             // When
-            assertDoesNotThrow(() -> serviceStatusService.auditPass(VALID_ORDER_ID, null));
+            assertDoesNotThrow(() -> serviceStatusService.auditPass(VALID_ORDER_ID, null, AuditSource.ADMIN));
 
             // Then
-            verify(bookingRepository).auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), isNull());
+            verify(bookingRepository).auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), isNull(),
+                    eq(List.of(ManageStatus.SUBMIT)));
             verify(bookingRepository).getUserEmailByOrderId(VALID_ORDER_ID);
             verify(emailService).sendEmail(eq("test@example.com"), contains("通过"), anyString());
         }
@@ -83,15 +88,17 @@ class ServiceStatusServiceImplTest {
             ServiceStatusResponse status = buildPendingStatus();
             String reason = "预约信息完整，予以通过";
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
-            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), eq(reason)))
+            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), eq(reason),
+                    eq(List.of(ManageStatus.SUBMIT))))
                     .thenReturn(true);
             when(bookingRepository.getUserEmailByOrderId(VALID_ORDER_ID)).thenReturn("test@example.com");
 
             // When
-            assertDoesNotThrow(() -> serviceStatusService.auditPass(VALID_ORDER_ID, reason));
+            assertDoesNotThrow(() -> serviceStatusService.auditPass(VALID_ORDER_ID, reason, AuditSource.ADMIN));
 
             // Then
-            verify(bookingRepository).auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), eq(reason));
+            verify(bookingRepository).auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), eq(reason),
+                    eq(List.of(ManageStatus.SUBMIT)));
             verify(emailService).sendEmail(eq("test@example.com"), contains("通过"), contains(reason));
         }
 
@@ -103,9 +110,9 @@ class ServiceStatusServiceImplTest {
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> serviceStatusService.auditPass(INVALID_ORDER_ID, null));
+                    () -> serviceStatusService.auditPass(INVALID_ORDER_ID, null, AuditSource.ADMIN));
             assertEquals(BookErrorCode.STATUS_NOT_FOUND.getCode(), exception.getCode());
-            verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any());
+            verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any(), anyList());
         }
 
         @Test
@@ -114,11 +121,11 @@ class ServiceStatusServiceImplTest {
             // Given
             ServiceStatusResponse status = buildPendingStatus();
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
-            when(bookingRepository.auditService(eq(VALID_ORDER_ID), anyInt(), any())).thenReturn(false);
+            when(bookingRepository.auditService(eq(VALID_ORDER_ID), anyInt(), any(), anyList())).thenReturn(false);
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> serviceStatusService.auditPass(VALID_ORDER_ID, null));
+                    () -> serviceStatusService.auditPass(VALID_ORDER_ID, null, AuditSource.ADMIN));
             assertEquals(BookErrorCode.AUDIT_FAILED.getCode(), exception.getCode());
             verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());
         }
@@ -137,15 +144,17 @@ class ServiceStatusServiceImplTest {
             ServiceStatusResponse status = buildPendingStatus();
             String reason = "预约时间与其他安排冲突";
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
-            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason)))
+            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason),
+                    eq(List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED))))
                     .thenReturn(true);
             when(bookingRepository.getUserEmailByOrderId(VALID_ORDER_ID)).thenReturn("student@example.com");
 
             // When
-            assertDoesNotThrow(() -> serviceStatusService.auditReject(VALID_ORDER_ID, reason));
+            assertDoesNotThrow(() -> serviceStatusService.auditReject(VALID_ORDER_ID, reason, AuditSource.ADMIN));
 
             // Then
-            verify(bookingRepository).auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason));
+            verify(bookingRepository).auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason),
+                    eq(List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED)));
             verify(emailService).sendEmail(eq("student@example.com"), contains("未通过"), contains(reason));
         }
 
@@ -156,12 +165,13 @@ class ServiceStatusServiceImplTest {
             ServiceStatusResponse status = buildPendingStatus();
             String reason = "预约信息不完整";
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
-            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason)))
+            when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason),
+                    eq(List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED))))
                     .thenReturn(true);
             when(bookingRepository.selectServiceIdByOrderId(VALID_ORDER_ID)).thenReturn(1L);
 
             // When
-            assertDoesNotThrow(() -> serviceStatusService.auditReject(VALID_ORDER_ID, reason));
+            assertDoesNotThrow(() -> serviceStatusService.auditReject(VALID_ORDER_ID, reason, AuditSource.ADMIN));
 
             // Then：释放该预约对应的服务库存
             verify(bookingRepository).selectServiceIdByOrderId(VALID_ORDER_ID);
@@ -173,9 +183,9 @@ class ServiceStatusServiceImplTest {
         void shouldThrowExceptionWhenReasonIsNull() {
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> serviceStatusService.auditReject(VALID_ORDER_ID, null));
+                    () -> serviceStatusService.auditReject(VALID_ORDER_ID, null, AuditSource.ADMIN));
             assertEquals(BookErrorCode.AUDIT_REASON_REQUIRED.getCode(), exception.getCode());
-            verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any());
+            verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any(), anyList());
         }
 
         @Test
@@ -183,7 +193,7 @@ class ServiceStatusServiceImplTest {
         void shouldThrowExceptionWhenReasonIsEmpty() {
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> serviceStatusService.auditReject(VALID_ORDER_ID, ""));
+                    () -> serviceStatusService.auditReject(VALID_ORDER_ID, "", AuditSource.ADMIN));
             assertEquals(BookErrorCode.AUDIT_REASON_REQUIRED.getCode(), exception.getCode());
         }
 
@@ -192,7 +202,7 @@ class ServiceStatusServiceImplTest {
         void shouldThrowExceptionWhenReasonIsBlank() {
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> serviceStatusService.auditReject(VALID_ORDER_ID, "   "));
+                    () -> serviceStatusService.auditReject(VALID_ORDER_ID, "   ", AuditSource.ADMIN));
             assertEquals(BookErrorCode.AUDIT_REASON_REQUIRED.getCode(), exception.getCode());
         }
 
@@ -204,9 +214,9 @@ class ServiceStatusServiceImplTest {
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
-                    () -> serviceStatusService.auditReject(INVALID_ORDER_ID, "有原因但订单不存在"));
+                    () -> serviceStatusService.auditReject(INVALID_ORDER_ID, "有原因但订单不存在", AuditSource.ADMIN));
             assertEquals(BookErrorCode.STATUS_NOT_FOUND.getCode(), exception.getCode());
-            verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any());
+            verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any(), anyList());
         }
     }
 

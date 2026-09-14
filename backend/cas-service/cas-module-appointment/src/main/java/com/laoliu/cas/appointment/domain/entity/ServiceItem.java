@@ -18,7 +18,7 @@ import java.util.Objects;
 @EqualsAndHashCode()
 @ToString
 @Builder
-public class Service implements Serializable {
+public class ServiceItem implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -35,6 +35,12 @@ public class Service implements Serializable {
     private Integer capacity;
     /** 已预约数 */
     private Integer bookedCount;
+
+    /**
+     * 活动/通用服务完结日期（无时段预约的自动完结依据）。
+     * 早于该日期的次日，其已通过预约由定时任务自动置为完成；null=长期有效，不自动完结。
+     */
+    private java.time.LocalDate endDate;
 
     /** 业务分类ID（代码级外键 → service_category.id） */
     private Long categoryId;

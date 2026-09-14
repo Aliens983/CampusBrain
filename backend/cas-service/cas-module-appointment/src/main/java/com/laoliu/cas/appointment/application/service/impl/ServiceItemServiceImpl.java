@@ -1,13 +1,14 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.application.service.ServiceService;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.application.service.ServiceItemService;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
+import org.springframework.stereotype.Service;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
 import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
-import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageReqVO;
+import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageRequest;
 import com.laoliu.cas.common.result.PageResult;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -22,39 +23,39 @@ import java.util.Optional;
  *
  * @author forever-king
  */
-@org.springframework.stereotype.Service
+@Service
 @RequiredArgsConstructor
-public class ServiceServiceImpl implements ServiceService {
+public class ServiceItemServiceImpl implements ServiceItemService {
 
-    private final ServiceRepository serviceRepository;
+    private final ServiceItemRepository serviceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
 
     @Override
-    public List<Service> getAllServices() {
+    public List<ServiceItem> getAllServices() {
         return serviceRepository.findAll();
     }
 
     @Override
-    public PageResult<Service> getAllServices(ServicePageReqVO reqVO) {
-        IPage<Service> result = serviceRepository.findAll(
+    public PageResult<ServiceItem> getAllServices(ServicePageRequest reqVO) {
+        IPage<ServiceItem> result = serviceRepository.findAll(
                 reqVO.getPageNo(), reqVO.getPageSize(),
-                reqVO.getServiceName(), reqVO.getServiceState());
+                reqVO.getServiceName(), reqVO.getServiceState(), reqVO.getCampus());
         return PageResult.of(result);
     }
 
     @Override
     @Cacheable(value = "services", key = "'available'")
-    public List<Service> getAvailableServices() {
+    public List<ServiceItem> getAvailableServices() {
         // 必须返回可变的 ArrayList：JDK16 Stream.toList() 是不可变(final) List，
         // 在 NON_FINAL 类型策略下顶层不带类型包装 → 缓存二次读 SerializationException(2026-09-08)。
         return new ArrayList<>(serviceRepository.findAll().stream()
-                .filter(Service::isAvailable)
+                .filter(ServiceItem::isAvailable)
                 .toList());
     }
 
     @Override
     @Cacheable(value = "services", key = "#id")
-    public Optional<Service> getServiceById(Long id) {
+    public Optional<ServiceItem> getServiceById(Long id) {
         return serviceRepository.findById(id);
     }
 
@@ -70,7 +71,7 @@ public class ServiceServiceImpl implements ServiceService {
         if (category == null) {
             return false;
         }
-        Service service = Service.builder()
+        ServiceItem service = ServiceItem.builder()
                 .serviceName(request.getServiceName())
                 .serviceDescribe(request.getServiceDescribe())
                 .serviceState(request.getServiceState() == null ? 1 : request.getServiceState())
@@ -86,7 +87,7 @@ public class ServiceServiceImpl implements ServiceService {
     @Override
     @CacheEvict(value = "services", allEntries = true)
     public boolean updateService(Long id, ServiceAddRequest request) {
-        Service existing = serviceRepository.findById(id).orElse(null);
+        ServiceItem existing = serviceRepository.findById(id).orElse(null);
         if (existing == null) return false;
         existing.setServiceName(request.getServiceName());
         existing.setServiceDescribe(request.getServiceDescribe());
@@ -104,13 +105,13 @@ public class ServiceServiceImpl implements ServiceService {
     }
 
     @Override
-    public List<Service> selectUserServices(Long userId) {
+    public List<ServiceItem> selectUserServices(Long userId) {
         return serviceRepository.findByUserId(userId);
     }
 
     @Override
-    public PageResult<Service> selectUserServices(Long userId, int page, int pageSize) {
-        IPage<Service> result = serviceRepository.findByUserId(userId, page, pageSize);
+    public PageResult<ServiceItem> selectUserServices(Long userId, int page, int pageSize) {
+        IPage<ServiceItem> result = serviceRepository.findByUserId(userId, page, pageSize);
         return PageResult.of(result);
     }
 }

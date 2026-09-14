@@ -9,7 +9,7 @@ import com.laoliu.cas.system.infrastructure.persistence.dataobject.BookingRecord
 import com.laoliu.cas.system.infrastructure.persistence.dataobject.UserDO;
 import com.laoliu.cas.system.infrastructure.persistence.mapper.UserMapper;
 import com.laoliu.cas.system.interfaces.convert.BookingRecordConvert;
-import com.laoliu.cas.system.interfaces.dto.response.BookingRecordRespVO;
+import com.laoliu.cas.system.interfaces.dto.response.BookingRecordResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
@@ -135,12 +135,12 @@ public class UserRepositoryImpl implements UserRepository {
     }
 
     @Override
-    public List<BookingRecordRespVO> getAllBookings(Long userId) {
+    public List<BookingRecordResponse> getAllBookings(Long userId) {
         return BookingRecordConvert.INSTANCE.convertList(userMapper.getAllBookings(userId));
     }
 
     @Override
-    public IPage<BookingRecordRespVO> getAllBookings(Long userId, int page, int pageSize) {
+    public IPage<BookingRecordResponse> getAllBookings(Long userId, int page, int pageSize) {
         Page<BookingRecordDO> pageParam = new Page<>(page, pageSize);
         IPage<BookingRecordDO> doPage = userMapper.getAllBookingsWithPage(userId, pageParam);
         return doPage.convert(BookingRecordConvert.INSTANCE::convert);

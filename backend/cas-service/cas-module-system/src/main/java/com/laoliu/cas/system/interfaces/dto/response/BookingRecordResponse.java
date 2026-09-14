@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Schema(description = "预约记录响应")
-public class BookingRecordRespVO implements Serializable {
+public class BookingRecordResponse implements Serializable {
 
     @Schema(description = "订单ID", example = "1001")
     private Long orderId;

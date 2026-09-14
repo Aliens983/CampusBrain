@@ -1,5 +1,6 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.application.service.TeacherAuditService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
@@ -50,7 +51,7 @@ class TeacherAuditServiceImplTest {
 
             teacherAuditService.approve(7L, 100L, null);
 
-            verify(serviceStatusService).auditPass(100L, null);
+            verify(serviceStatusService).auditPass(100L, null, AuditSource.TEACHER);
         }
 
         @Test
@@ -60,7 +61,7 @@ class TeacherAuditServiceImplTest {
 
             assertThrows(ForbiddenException.class, () -> teacherAuditService.approve(7L, 100L, null));
 
-            verify(serviceStatusService, never()).auditPass(100L, null);
+            verify(serviceStatusService, never()).auditPass(100L, null, AuditSource.TEACHER);
         }
 
         @Test
@@ -70,7 +71,7 @@ class TeacherAuditServiceImplTest {
 
             assertThrows(ForbiddenException.class, () -> teacherAuditService.approve(7L, 100L, null));
 
-            verify(serviceStatusService, never()).auditPass(100L, null);
+            verify(serviceStatusService, never()).auditPass(100L, null, AuditSource.TEACHER);
         }
     }
 
@@ -85,7 +86,7 @@ class TeacherAuditServiceImplTest {
 
             teacherAuditService.reject(7L, 100L, "该时段已有安排");
 
-            verify(serviceStatusService).auditReject(100L, "该时段已有安排");
+            verify(serviceStatusService).auditReject(100L, "该时段已有安排", AuditSource.TEACHER);
         }
 
         @Test
@@ -95,7 +96,7 @@ class TeacherAuditServiceImplTest {
 
             assertThrows(ForbiddenException.class, () -> teacherAuditService.reject(7L, 100L, "原因"));
 
-            verify(serviceStatusService, never()).auditReject(100L, "原因");
+            verify(serviceStatusService, never()).auditReject(100L, "原因", AuditSource.TEACHER);
         }
     }
 }

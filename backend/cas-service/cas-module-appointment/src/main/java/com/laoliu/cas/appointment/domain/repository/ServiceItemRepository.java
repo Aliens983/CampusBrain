@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.domain.repository;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import java.util.List;
 import java.util.Optional;
 
@@ -11,37 +11,37 @@ import java.util.Optional;
  *
  * @author forever-king
  */
-public interface ServiceRepository {
+public interface ServiceItemRepository {
 
     /**
      * 根据 ID 查找服务
      */
-    Optional<Service> findById(Long id);
+    Optional<ServiceItem> findById(Long id);
 
     /**
      * 查找所有服务
      */
-    List<Service> findAll();
+    List<ServiceItem> findAll();
 
     /**
-     * 分页查找所有服务（支持按名称模糊搜索、按状态筛选）
+     * 分页查找所有服务（支持按名称模糊搜索、按状态、按校区筛选）
      */
-    IPage<Service> findAll(int page, int pageSize, String serviceName, Integer serviceState);
+    IPage<ServiceItem> findAll(int page, int pageSize, String serviceName, Integer serviceState, String campus);
 
     /**
      * 根据创建者 ID 查找服务
      */
-    List<Service> findByUserId(Long userId);
+    List<ServiceItem> findByUserId(Long userId);
 
     /**
      * 分页查找用户的服务
      */
-    IPage<Service> findByUserId(Long userId, int page, int pageSize);
+    IPage<ServiceItem> findByUserId(Long userId, int page, int pageSize);
 
     /**
      * 保存服务（新增或更新）
      */
-    Service save(Service service);
+    ServiceItem save(ServiceItem service);
 
     /**
      * 根据 ID 删除服务

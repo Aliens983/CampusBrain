@@ -3,7 +3,7 @@ package com.laoliu.cas.system.domain.repository;
 import com.laoliu.cas.system.domain.entity.User;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.system.interfaces.dto.response.BookingRecordRespVO;
+import com.laoliu.cas.system.interfaces.dto.response.BookingRecordResponse;
 
 import java.util.List;
 import java.util.Optional;
@@ -48,10 +48,10 @@ public interface UserRepository {
      */
     IPage<User> getAllUsers(int page, int pageSize, String name, String email, Integer role);
 
-    List<BookingRecordRespVO> getAllBookings(Long userId);
+    List<BookingRecordResponse> getAllBookings(Long userId);
 
     /**
      * 分页查询用户的预约记录
      */
-    IPage<BookingRecordRespVO> getAllBookings(Long userId, int page, int pageSize);
+    IPage<BookingRecordResponse> getAllBookings(Long userId, int page, int pageSize);
 }

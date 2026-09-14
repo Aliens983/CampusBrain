@@ -3,10 +3,12 @@ package com.laoliu.cas.appointment.application.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.EquipmentService;
 import com.laoliu.cas.appointment.domain.entity.Equipment;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
+import org.springframework.stereotype.Service;
+import com.laoliu.cas.appointment.domain.enums.CategoryCode;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.EquipmentRepository;
-import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.interfaces.dto.request.EquipmentBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.EquipmentResponse;
@@ -25,11 +27,11 @@ import java.util.stream.Collectors;
  *
  * @author forever-king
  */
-@org.springframework.stereotype.Service
+@Service
 @RequiredArgsConstructor
 public class EquipmentServiceImpl implements EquipmentService {
 
-    private final ServiceRepository serviceRepository;
+    private final ServiceItemRepository serviceRepository;
     private final EquipmentRepository equipmentRepository;
     private final BookingRepository bookingRepository;
     private final BookingEventPublisher bookingEventPublisher;
@@ -71,9 +73,10 @@ public class EquipmentServiceImpl implements EquipmentService {
      *
      * @param equipmentId 设备ID
      * @param req         数量 + 日期 + 起止时间（HH:mm，单日窗口）
+     * @return 新预约单 orderId
      */
     @Transactional(rollbackFor = Exception.class)
-    public void bookEquipment(Long userId, Long equipmentId, EquipmentBookRequest req) {
+    public Long bookEquipment(Long userId, Long equipmentId, EquipmentBookRequest req) {
         if (equipmentId == null || req == null || req.getQuantity() == null || req.getQuantity() < 1) {
             throw new BusinessException(BookErrorCode.BORROW_TIME_INVALID);
         }
@@ -101,19 +104,24 @@ public class EquipmentServiceImpl implements EquipmentService {
             throw new BusinessException(BookErrorCode.EQUIPMENT_STOCK_NOT_ENOUGH);
         }
 
-        int inserted = bookingRepository.insertEquipmentBooking(
+        // orderId 由 insert 回填；null=重复提交
+        Long orderId = bookingRepository.insertEquipmentBooking(
                 userId, equipment.getServiceId(), equipmentId, req.getQuantity(),
                 date, req.getStartTime(), req.getEndTime());
-        if (inserted == 0) {
+        if (orderId == null) {
             throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
         }
         bookingEventPublisher.publishChanged(userId, equipment.getServiceId(), "BOOKED");
+        return orderId;
     }
 
     private List<Long> getEquipmentServiceIds() {
         return serviceRepository.findAll().stream()
-                .filter(Service::isAvailable)
-                .map(Service::getServiceId)
+                .filter(ServiceItem::isAvailable)
+                // 3.1.6：此前返回了所有上架服务，导致非设备类服务下查不到设备尚可接受，
+                // 但口径应与"设备借用"分类一致；现按业务分类编码 equipment 过滤
+                .filter(s -> CategoryCode.EQUIPMENT.is(s.getCategoryCode()))
+                .map(ServiceItem::getServiceId)
                 .collect(Collectors.toList());
     }
 

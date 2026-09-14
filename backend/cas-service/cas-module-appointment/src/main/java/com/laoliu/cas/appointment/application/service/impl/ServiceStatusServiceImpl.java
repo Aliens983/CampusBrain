@@ -1,9 +1,10 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageReqVO;
+import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;
@@ -33,7 +34,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageReqVO reqVO) {
+    public IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest reqVO) {
         IPage<ServiceStatusResponse> result = bookingRepository.getServiceStatus(
                 reqVO.getPageNo(), reqVO.getPageSize(),
                 reqVO.getManageStatus(), reqVO.getServiceName());
@@ -47,7 +48,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageReqVO reqVO) {
+    public IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest reqVO) {
         return bookingRepository.getServiceStatusByUserId(userId, reqVO.getPageNo(), reqVO.getPageSize(),
                 reqVO.getManageStatus(), reqVO.getServiceName());
     }
@@ -60,7 +61,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageReqVO reqVO) {
+    public IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest reqVO) {
         IPage<ServiceStatusResponse> statusPage = bookingRepository.getServiceStatusByUserId(
                 userId, reqVO.getPageNo(), reqVO.getPageSize(),
                 reqVO.getManageStatus(), reqVO.getServiceName());
@@ -70,7 +71,15 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
 
     @Override
     public boolean auditService(Long orderId, Integer status, String reason) {
-        return bookingRepository.auditService(orderId, status, reason);
+        // 3.1.5 状态机：允许的来源状态由"目标状态"决定。
+        //  · 置为通过：仅待审核单可通过；
+        //  · 置为拒绝：待审核或已通过单都可被修正拒绝（此前已通过单无法纠正）；
+        //  · 其它目标：保守地只允许待审核单发起。
+        ManageStatus target = ManageStatus.of(status);
+        List<ManageStatus> allowedFrom = target == ManageStatus.REJECTED
+                ? List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED)
+                : List.of(ManageStatus.SUBMIT);
+        return bookingRepository.auditService(orderId, status, reason, allowedFrom);
     }
 
     @Override
@@ -94,18 +103,22 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void auditPass(Long orderId, String reason) {
+    public void auditPass(Long orderId, String reason, AuditSource source) {
         ServiceStatusResponse serviceInfo = getServiceStatusByOrderId(orderId);
         if (serviceInfo == null) {
             throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
         }
 
-        boolean success = bookingRepository.auditService(orderId, ManageStatus.APPROVED.getCode(), reason);
+        // 通过仅允许待审核单（状态机白名单）；已通过/已取消等单再点通过会失败
+        boolean success = bookingRepository.auditService(
+                orderId, ManageStatus.APPROVED.getCode(), reason, List.of(ManageStatus.SUBMIT));
         if (!success) {
             throw new BusinessException(BookErrorCode.AUDIT_FAILED);
         }
 
-        String emailContent = "您好！您的预约已通过。\n预约服务：" + serviceInfo.getServiceName()
+        // 3.1.8：邮件措辞区分审核人（咨询师本人 vs 管理员）
+        String emailContent = "您好！您的预约已通过" + source.reviewerLabel() + "审核。\n预约服务："
+                + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
                 + slotLine(serviceInfo)
                 + (reason == null || reason.trim().isEmpty() ? "" : "\n备注：" + reason);
@@ -120,7 +133,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void auditReject(Long orderId, String reason) {
+    public void auditReject(Long orderId, String reason, AuditSource source) {
         if (reason == null || reason.trim().isEmpty()) {
             throw new BusinessException(BookErrorCode.AUDIT_REASON_REQUIRED);
         }
@@ -130,7 +143,12 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
             throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
         }
 
-        boolean success = bookingRepository.auditService(orderId, ManageStatus.REJECTED.getCode(), reason);
+        // 3.1.5：拒绝允许待审核单与已通过单（已通过单可被修正）。
+        // 下方的释放库存/时段对两种来源都幂等安全：待审核单释放其占用，
+        // 已通过单同样曾占用库存/时段，拒绝时一并回收。
+        boolean success = bookingRepository.auditService(
+                orderId, ManageStatus.REJECTED.getCode(), reason,
+                List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED));
         if (!success) {
             throw new BusinessException(BookErrorCode.AUDIT_FAILED);
         }
@@ -143,7 +161,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         // 咨询时段预约：同时释放占用的老师时段
         bookingRepository.releaseSlotByOrderId(orderId);
 
-        String emailContent = "您好！您的预约未通过。\n预约服务：" + serviceInfo.getServiceName()
+        // 3.1.8：邮件措辞区分审核人（咨询师本人 vs 管理员）
+        String emailContent = "您好！您的预约未通过" + source.reviewerLabel() + "审核。\n预约服务："
+                + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
                 + slotLine(serviceInfo)
                 + "\n拒绝原因：" + reason;
@@ -170,16 +190,12 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         return sb.toString();
     }
 
+    /**
+     * 状态中文描述统一经 {@link ManageStatus#of(Integer)} 取自枚举，
+     * 与 {@code BookServiceImpl#getStatusDescription} 同源，消除重复的 switch 0..4。
+     */
     private void setStatusDescription(ServiceStatusResponse response) {
-        if (response.getManageStatus() != null) {
-            switch (response.getManageStatus()) {
-                case 0 -> response.setStatusDescription(ManageStatus.SUBMIT.getMessage());
-                case 1 -> response.setStatusDescription(ManageStatus.APPROVED.getMessage());
-                case 2 -> response.setStatusDescription(ManageStatus.REJECTED.getMessage());
-                case 3 -> response.setStatusDescription(ManageStatus.CANCELLED.getMessage());
-                case 4 -> response.setStatusDescription(ManageStatus.COMPLETED.getMessage());
-                default -> response.setStatusDescription("未知状态");
-            }
-        }
+        ManageStatus status = ManageStatus.of(response.getManageStatus());
+        response.setStatusDescription(status == null ? "未知状态" : status.getMessage());
     }
 }

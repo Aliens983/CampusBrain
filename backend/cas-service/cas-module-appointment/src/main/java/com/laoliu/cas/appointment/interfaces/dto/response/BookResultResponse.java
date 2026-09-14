@@ -30,5 +30,5 @@ public class BookResultResponse {
     private String grade;
 
     @Schema(description = "用户预约的服务列表")
-    private List<BookingDTO> allBookedServices;
+    private List<BookingResponse> allBookedServices;
 }

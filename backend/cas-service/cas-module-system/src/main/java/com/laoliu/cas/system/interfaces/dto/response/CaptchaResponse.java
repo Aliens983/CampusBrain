@@ -18,7 +18,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 @Builder
 @Schema(description = "图形验证码响应")
-public class CaptchaRespVO implements Serializable {
+public class CaptchaResponse implements Serializable {
 
     @Schema(description = "验证码唯一标识", requiredMode = Schema.RequiredMode.REQUIRED, example = "abc123-uuid")
     private String uuid;

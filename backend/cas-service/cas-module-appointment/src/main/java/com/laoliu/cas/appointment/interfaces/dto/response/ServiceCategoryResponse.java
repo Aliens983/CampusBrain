@@ -18,7 +18,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "服务业务分类")
-public class ServiceCategoryRespVO implements Serializable {
+public class ServiceCategoryResponse implements Serializable {
 
     @Schema(description = "分类ID（services.category_id 引用）", example = "1")
     private Long id;

@@ -3,8 +3,8 @@ package com.laoliu.cas.system.application.service.impl;
 import com.laoliu.cas.system.application.service.UserService;
 import com.laoliu.cas.system.domain.entity.User;
 import com.laoliu.cas.system.domain.repository.UserRepository;
-import com.laoliu.cas.system.interfaces.dto.response.BookingRecordRespVO;
-import com.laoliu.cas.system.interfaces.dto.response.UserInfoAndServicesViaMPRespVO;
+import com.laoliu.cas.system.interfaces.dto.response.BookingRecordResponse;
+import com.laoliu.cas.system.interfaces.dto.response.UserInfoAndServicesViaMPResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -50,15 +50,15 @@ class UserServiceImplTest {
             User user = buildUser(USER_ID);
             when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
 
-            BookingRecordRespVO b1 = BookingRecordRespVO.builder()
+            BookingRecordResponse b1 = BookingRecordResponse.builder()
                     .serviceName("自习室预约").manageStatus(1).build();
-            BookingRecordRespVO b2 = BookingRecordRespVO.builder()
+            BookingRecordResponse b2 = BookingRecordResponse.builder()
                     .serviceName("心理咨询").manageStatus(0).build();
-            List<BookingRecordRespVO> bookings = List.of(b1, b2);
+            List<BookingRecordResponse> bookings = List.of(b1, b2);
             when(userRepository.getAllBookings(USER_ID)).thenReturn(bookings);
 
             // When
-            UserInfoAndServicesViaMPRespVO result = userService.getUserInfoAndBookings(USER_ID);
+            UserInfoAndServicesViaMPResponse result = userService.getUserInfoAndBookings(USER_ID);
 
             // Then
             assertNotNull(result);
@@ -79,7 +79,7 @@ class UserServiceImplTest {
             when(userRepository.getAllBookings(USER_ID)).thenReturn(Collections.emptyList());
 
             // When
-            UserInfoAndServicesViaMPRespVO result = userService.getUserInfoAndBookings(USER_ID);
+            UserInfoAndServicesViaMPResponse result = userService.getUserInfoAndBookings(USER_ID);
 
             // Then
             assertNotNull(result);

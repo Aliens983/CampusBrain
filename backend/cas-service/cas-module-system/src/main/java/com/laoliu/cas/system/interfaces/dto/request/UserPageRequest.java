@@ -13,7 +13,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Schema(description = "用户列表分页请求")
-public class UserPageReqVO extends PageParam {
+public class UserPageRequest extends PageParam {
 
     @Schema(description = "用户名（模糊搜索）", example = "张三")
     private String name;

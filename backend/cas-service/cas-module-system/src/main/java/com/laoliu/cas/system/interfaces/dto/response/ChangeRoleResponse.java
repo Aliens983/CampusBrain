@@ -11,7 +11,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "角色变更响应")
-public class ChangeRoleRespVO {
+public class ChangeRoleResponse {
 
     @Schema(description = "用户信息")
     private User user;
@@ -19,8 +19,8 @@ public class ChangeRoleRespVO {
     @Schema(description = "变更后的角色名称")
     private String role;
 
-    public static ChangeRoleRespVO of(User user, String role) {
-        ChangeRoleRespVO vo = new ChangeRoleRespVO();
+    public static ChangeRoleResponse of(User user, String role) {
+        ChangeRoleResponse vo = new ChangeRoleResponse();
         vo.setUser(user);
         vo.setRole(role);
         return vo;

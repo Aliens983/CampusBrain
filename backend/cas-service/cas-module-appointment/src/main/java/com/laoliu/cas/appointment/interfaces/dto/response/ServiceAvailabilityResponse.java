@@ -8,7 +8,7 @@ import lombok.Data;
  * @author forever-king
  */
 @Data
-public class ServiceAvailabilityVO {
+public class ServiceAvailabilityResponse {
 
     private Long serviceId;
 

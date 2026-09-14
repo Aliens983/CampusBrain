@@ -9,7 +9,7 @@ import com.laoliu.cas.appointment.assistant.dto.response.AssistantRoomVO;
 import com.laoliu.cas.appointment.assistant.dto.response.AssistantServiceVO;
 import com.laoliu.cas.appointment.assistant.service.AppointmentAssistantService;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotRespVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -74,7 +74,7 @@ public class AppointmentAssistantController {
 
     @Operation(summary = "查询某咨询师某日的可预约时段")
     @GetMapping("/consultants/{consultantId}/slots")
-    public CommonResult<List<TimeSlotRespVO>> consultantSlots(
+    public CommonResult<List<TimeSlotResponse>> consultantSlots(
             @Parameter(description = "咨询师ID", required = true) @PathVariable Long consultantId,
             @Parameter(description = "日期 yyyy-MM-dd", required = true) @RequestParam String date) {
         return CommonResult.success(assistantService.findConsultantSlots(consultantId, date));

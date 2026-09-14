@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class NotifyPrefDTO {
+public class NotifyPrefRequest {
 
     /** 是否接收邮件通知 */
     private Boolean emailOn = true;

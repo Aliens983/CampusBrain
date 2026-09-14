@@ -18,7 +18,7 @@ import java.io.Serializable;
 @AllArgsConstructor
 @Builder
 @Schema(description = "可用时段响应")
-public class TimeSlotRespVO implements Serializable {
+public class TimeSlotResponse implements Serializable {
 
     @Schema(description = "时段ID", example = "1")
     private Long slotId;

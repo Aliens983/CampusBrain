@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "咨询沟通会话")
-public class ConversationRespVO implements Serializable {
+public class ConversationResponse implements Serializable {
 
     @Schema(description = "会话ID")
     private Long id;

@@ -5,8 +5,8 @@ import com.laoliu.cas.appointment.interfaces.dto.request.OpenChatByBookingReques
 import com.laoliu.cas.appointment.interfaces.dto.request.OpenChatRequest;
 import com.laoliu.cas.appointment.interfaces.dto.request.OpenChatWithStudentRequest;
 import com.laoliu.cas.appointment.interfaces.dto.request.SendMessageRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ConversationRespVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.MessageRespVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.ConversationResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.MessageResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.result.CommonResult;
@@ -45,7 +45,7 @@ public class ConsultChatAppController {
     @Operation(summary = "我的会话列表")
     @GetMapping("/conversations")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.TEACHER})
-    public CommonResult<List<ConversationRespVO>> listConversations() {
+    public CommonResult<List<ConversationResponse>> listConversations() {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         Integer role = SecurityFrameworkUtils.getLoginUserRole();
         return CommonResult.success(consultChatService.listConversations(userId, role));
@@ -61,7 +61,7 @@ public class ConsultChatAppController {
     @Operation(summary = "学生从选咨询师卡片打开/创建会话（仅教师咨询类咨询师）")
     @PostMapping("/conversations/open-with-consultant")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.TEACHER})
-    public CommonResult<ConversationRespVO> openWithConsultant(@Valid @RequestBody OpenChatRequest request) {
+    public CommonResult<ConversationResponse> openWithConsultant(@Valid @RequestBody OpenChatRequest request) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         Integer role = SecurityFrameworkUtils.getLoginUserRole();
         return CommonResult.success(consultChatService.openWithConsultant(userId, role, request.getConsultantId()));
@@ -70,7 +70,7 @@ public class ConsultChatAppController {
     @Operation(summary = "教师对其名下咨询档期的学生打开/创建会话")
     @PostMapping("/conversations/open-with-student")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.TEACHER})
-    public CommonResult<ConversationRespVO> openWithStudent(@Valid @RequestBody OpenChatWithStudentRequest request) {
+    public CommonResult<ConversationResponse> openWithStudent(@Valid @RequestBody OpenChatWithStudentRequest request) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         Integer role = SecurityFrameworkUtils.getLoginUserRole();
         return CommonResult.success(consultChatService.openWithStudent(userId, role, request.getStudentId()));
@@ -79,7 +79,7 @@ public class ConsultChatAppController {
     @Operation(summary = "学生凭自己的咨询预约单打开/创建会话（我的预约进入）")
     @PostMapping("/conversations/open-by-booking")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.TEACHER})
-    public CommonResult<ConversationRespVO> openByBooking(@Valid @RequestBody OpenChatByBookingRequest request) {
+    public CommonResult<ConversationResponse> openByBooking(@Valid @RequestBody OpenChatByBookingRequest request) {
         return CommonResult.success(
                 consultChatService.openByBooking(SecurityFrameworkUtils.getLoginUserId(), request.getOrderId()));
     }
@@ -87,7 +87,7 @@ public class ConsultChatAppController {
     @Operation(summary = "拉取会话消息", description = "afterId 为空=全量历史（升序）；非空=拉取 id 大于该值的增量（轮询）")
     @GetMapping("/conversations/{id}/messages")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.TEACHER})
-    public CommonResult<List<MessageRespVO>> listMessages(@PathVariable Long id,
+    public CommonResult<List<MessageResponse>> listMessages(@PathVariable Long id,
                                                           @RequestParam(required = false) Long afterId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return CommonResult.success(consultChatService.listMessages(userId, id, afterId));
@@ -96,7 +96,7 @@ public class ConsultChatAppController {
     @Operation(summary = "发送消息")
     @PostMapping("/conversations/{id}/messages")
     @RequireRole({UserRoleEnum.USER, UserRoleEnum.TEACHER})
-    public CommonResult<MessageRespVO> sendMessage(@PathVariable Long id,
+    public CommonResult<MessageResponse> sendMessage(@PathVariable Long id,
                                                    @Valid @RequestBody SendMessageRequest request) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return CommonResult.success(consultChatService.sendMessage(userId, id, request.getContent()));

@@ -2,7 +2,7 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.ServiceCategoryService;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceCategoryRespVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.ServiceCategoryResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -28,15 +28,15 @@ public class ServiceCategoryController {
 
     @Operation(summary = "获取全部业务分类", description = "固定 4 类：教师咨询/设备借用/教室空间/活动报名")
     @GetMapping
-    public CommonResult<List<ServiceCategoryRespVO>> listCategories() {
-        List<ServiceCategoryRespVO> list = serviceCategoryService.listCategories().stream()
+    public CommonResult<List<ServiceCategoryResponse>> listCategories() {
+        List<ServiceCategoryResponse> list = serviceCategoryService.listCategories().stream()
                 .map(this::toVO)
                 .toList();
         return CommonResult.success(list);
     }
 
-    private ServiceCategoryRespVO toVO(ServiceCategory c) {
-        return ServiceCategoryRespVO.builder()
+    private ServiceCategoryResponse toVO(ServiceCategory c) {
+        return ServiceCategoryResponse.builder()
                 .id(c.getId()).code(c.getCode()).name(c.getName()).sort(c.getSort())
                 .build();
     }

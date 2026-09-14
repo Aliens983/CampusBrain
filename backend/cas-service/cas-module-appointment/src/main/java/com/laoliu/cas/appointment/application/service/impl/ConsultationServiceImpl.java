@@ -3,15 +3,17 @@ package com.laoliu.cas.appointment.application.service.impl;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.ConsultationService;
 import com.laoliu.cas.appointment.domain.entity.Consultant;
-import com.laoliu.cas.appointment.domain.entity.Service;
+import com.laoliu.cas.appointment.domain.entity.ServiceItem;
+import org.springframework.stereotype.Service;
 import com.laoliu.cas.appointment.domain.entity.TimeSlot;
+import com.laoliu.cas.appointment.domain.enums.CategoryCode;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
-import com.laoliu.cas.appointment.domain.repository.ServiceRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.domain.repository.TimeSlotRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.interfaces.dto.response.ConsultantResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotRespVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -25,19 +27,15 @@ import java.util.stream.Collectors;
  *
  * @author forever-king
  */
-@org.springframework.stereotype.Service
+@Service
 @RequiredArgsConstructor
 public class ConsultationServiceImpl implements ConsultationService {
 
-    private final ServiceRepository serviceRepository;
+    private final ServiceItemRepository serviceRepository;
     private final ConsultantRepository consultantRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final BookingRepository bookingRepository;
     private final BookingEventPublisher bookingEventPublisher;
-
-    private static final List<String> CONSULTATION_KEYWORDS = Arrays.asList(
-            "咨询", "辅导", "指导", "心理"
-    );
 
     @Override
     public List<ConsultantResponse> getAvailableConsultants() {
@@ -67,7 +65,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
-    public List<TimeSlotRespVO> getAvailableTimeSlots(Long consultantId, String date) {
+    public List<TimeSlotResponse> getAvailableTimeSlots(Long consultantId, String date) {
         return consultantRepository.findTimeSlots(consultantId, date);
     }
 
@@ -79,9 +77,10 @@ public class ConsultationServiceImpl implements ConsultationService {
      * 其余拿到 {@code SLOT_UNAVAILABLE}。
      *
      * @param slotId 由 /slots 接口返回的时段 ID
+     * @return 新预约单 orderId
      */
     @Transactional(rollbackFor = Exception.class)
-    public void bookConsultation(Long userId, Long consultantId, Long slotId) {
+    public Long bookConsultation(Long userId, Long consultantId, Long slotId) {
         if (consultantId == null || slotId == null) {
             throw new BusinessException(BookErrorCode.BOOKING_FAILED);
         }
@@ -100,31 +99,26 @@ public class ConsultationServiceImpl implements ConsultationService {
             throw new BusinessException(BookErrorCode.SLOT_UNAVAILABLE);
         }
 
-        // 幂等插入（同一咨询师同一时段 60s 内同用户去重）；n=0 → 重复提交，回滚释放时段
-        int inserted = bookingRepository.insertConsultationBooking(
+        // 幂等插入（同咨询师同时段配置窗口内同用户去重）；null → 重复提交，回滚释放时段。
+        // orderId 由 insert 回填，直接返回真实订单号（助手确认预约不再靠"查最新一单"猜测）
+        Long orderId = bookingRepository.insertConsultationBooking(
                 userId, consultant.getServiceId(), consultantId, slotId,
                 slot.getSlotDate(), slot.getStartTime(), slot.getEndTime());
-        if (inserted == 0) {
+        if (orderId == null) {
             throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
         }
 
         bookingEventPublisher.publishChanged(userId, consultant.getServiceId(), "BOOKED");
+        return orderId;
     }
 
     private List<Long> getConsultationServiceIds() {
         return serviceRepository.findAll().stream()
-                .filter(Service::isAvailable)
-                .filter(this::isConsultation)
-                .map(Service::getServiceId)
+                .filter(ServiceItem::isAvailable)
+                // 3.1.6：按业务分类编码判定，而非在服务名里匹配"咨询/辅导"等关键词
+                .filter(s -> CategoryCode.TEACHER.is(s.getCategoryCode()))
+                .map(ServiceItem::getServiceId)
                 .collect(Collectors.toList());
-    }
-
-    private boolean isConsultation(Service service) {
-        if (service.getServiceName() == null) {
-            return false;
-        }
-        return CONSULTATION_KEYWORDS.stream()
-                .anyMatch(keyword -> service.getServiceName().contains(keyword));
     }
 
     private ConsultantResponse toConsultantResponse(Consultant consultant) {

@@ -1,11 +1,11 @@
 package com.laoliu.cas.appointment.interfaces.controller.admin;
 
-import com.laoliu.cas.appointment.application.service.ServiceService;
+import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.interfaces.convert.ServiceConvert;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageReqVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceRespVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.UserServicesRespVO;
+import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageRequest;
+import com.laoliu.cas.appointment.interfaces.dto.response.ServiceResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.UserServicesResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.pojo.PageParam;
 import com.laoliu.cas.system.api.UserInfoApi;
@@ -33,13 +33,13 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ServiceAdminController {
 
-    private final ServiceService serviceService;
+    private final ServiceItemService serviceService;
     private final UserInfoApi userInfoApi;
 
     @Operation(summary = "获取所有服务（分页+筛选）", description = "分页获取服务列表，支持按名称模糊搜索和状态筛选")
     @GetMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<PageResult<ServiceRespVO>> getService(@Valid ServicePageReqVO reqVO) {
+    public CommonResult<PageResult<ServiceResponse>> getService(@Valid ServicePageRequest reqVO) {
         return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceService.getAllServices(reqVO)));
     }
 
@@ -70,16 +70,16 @@ public class ServiceAdminController {
     @Operation(summary = "获取指定用户的所有已预约服务（分页）", description = "管理员根据用户ID分页查询该用户预约的所有服务详情")
     @GetMapping("/by-user")
     @RequireRole(UserRoleEnum.ADMIN)
-    public CommonResult<UserServicesRespVO> getUserServices(
+    public CommonResult<UserServicesResponse> getUserServices(
             @Parameter(description = "用户ID", required = true) @RequestParam Long userId,
             @Valid PageParam pageParam) {
         UserInfoDTO userInfo = userInfoApi.getUserById(userId);
         if (userInfo == null) {
             return CommonResult.error(ServiceErrorCode.SERVICE_NOT_FOUND);
         }
-        PageResult<ServiceRespVO> servicesPage = ServiceConvert.INSTANCE.convertPage(
+        PageResult<ServiceResponse> servicesPage = ServiceConvert.INSTANCE.convertPage(
                 serviceService.selectUserServices(userId, pageParam.getPageNo(), pageParam.getPageSize()));
-        UserServicesRespVO respVO = UserServicesRespVO.of(
+        UserServicesResponse respVO = UserServicesResponse.of(
                 userInfo.getName(), userId, userInfo.getRole(), userInfo.getEmail(), servicesPage);
         return CommonResult.success(respVO);
     }

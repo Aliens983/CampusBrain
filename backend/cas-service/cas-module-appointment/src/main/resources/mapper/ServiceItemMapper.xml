@@ -2,9 +2,9 @@
 <!DOCTYPE mapper
         PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ServiceMapper">
+<mapper namespace="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ServiceItemMapper">
 
-    <resultMap id="BaseResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
+    <resultMap id="BaseResultMap" type="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO">
         <id property="serviceId" column="service_id"/>
         <result property="serviceName" column="service_name"/>
         <result property="serviceDescribe" column="service_describe"/>
@@ -25,13 +25,13 @@
         WHERE service_id = #{id}
     </select>
 
-    <insert id="insertSelective" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO"
+    <insert id="insertSelective" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO"
             useGeneratedKeys="true" keyProperty="serviceId">
         INSERT INTO services (service_name, service_describe, service_state)
         VALUES (#{serviceName}, #{serviceDescribe}, #{serviceState})
     </insert>
 
-    <update id="updateByPrimaryKeySelective" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
+    <update id="updateByPrimaryKeySelective" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO">
         UPDATE services
         <set>
             <if test="serviceName != null">
@@ -47,7 +47,7 @@
         WHERE service_id = #{serviceId}
     </update>
 
-    <update id="updateByPrimaryKey" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServicesDO">
+    <update id="updateByPrimaryKey" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO">
         UPDATE services
         SET service_name = #{serviceName},
             service_describe = #{serviceDescribe},

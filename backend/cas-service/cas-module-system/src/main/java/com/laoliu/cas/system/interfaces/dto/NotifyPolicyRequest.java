@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class NotifyPolicyDTO {
+public class NotifyPolicyRequest {
 
     /** 全局是否启用邮件通知 */
     private Boolean emailEnabled = true;

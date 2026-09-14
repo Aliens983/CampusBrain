@@ -1,6 +1,6 @@
 package com.laoliu.cas.appointment.application.service;
 
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageReqVO;
+import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
@@ -20,7 +20,7 @@ public interface ServiceStatusService {
     /**
      * 分页查询所有服务预约状态（支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageReqVO reqVO);
+    IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest reqVO);
 
     /** 根据用户ID获取预约状态 */
     List<ServiceStatusResponse> getServiceStatusByUserId(Long userId);
@@ -28,7 +28,7 @@ public interface ServiceStatusService {
     /**
      * 分页查询用户的预约状态（支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageReqVO reqVO);
+    IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest reqVO);
 
     /** 获取用户预约状态（含描述） */
     List<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId);
@@ -36,7 +36,7 @@ public interface ServiceStatusService {
     /**
      * 分页查询用户的预约状态（含状态描述，支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageReqVO reqVO);
+    IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest reqVO);
 
     /** 审核服务预约 */
     boolean auditService(Long orderId, Integer status, String reason);
@@ -52,14 +52,16 @@ public interface ServiceStatusService {
      *
      * @param orderId 订单ID
      * @param reason  审核备注（可选）
+     * @param source  审核人身份（管理员 / 咨询师），用于区分邮件措辞，3.1.8
      */
-    void auditPass(Long orderId, String reason);
+    void auditPass(Long orderId, String reason, AuditSource source);
 
     /**
      * 审核驳回预约，发送通知邮件
      *
      * @param orderId 订单ID
      * @param reason  驳回原因（必填）
+     * @param source  审核人身份（管理员 / 咨询师），用于区分邮件措辞，3.1.8
      */
-    void auditReject(Long orderId, String reason);
+    void auditReject(Long orderId, String reason, AuditSource source);
 }

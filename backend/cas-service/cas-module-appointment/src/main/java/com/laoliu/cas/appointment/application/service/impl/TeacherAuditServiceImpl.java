@@ -1,6 +1,7 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.application.service.TeacherAuditService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
@@ -29,13 +30,13 @@ public class TeacherAuditServiceImpl implements TeacherAuditService {
     @Override
     public void approve(Long teacherId, Long orderId, String reason) {
         assertOwner(teacherId, orderId);
-        serviceStatusService.auditPass(orderId, reason);
+        serviceStatusService.auditPass(orderId, reason, AuditSource.TEACHER);
     }
 
     @Override
     public void reject(Long teacherId, Long orderId, String reason) {
         assertOwner(teacherId, orderId);
-        serviceStatusService.auditReject(orderId, reason);
+        serviceStatusService.auditReject(orderId, reason, AuditSource.TEACHER);
     }
 
     private void assertOwner(Long teacherId, Long orderId) {

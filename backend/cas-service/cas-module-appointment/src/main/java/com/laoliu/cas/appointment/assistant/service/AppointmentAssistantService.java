@@ -8,7 +8,7 @@ import com.laoliu.cas.appointment.assistant.dto.response.AssistantEquipmentVO;
 import com.laoliu.cas.appointment.assistant.dto.response.AssistantRoomVO;
 import com.laoliu.cas.appointment.assistant.dto.response.AssistantServiceVO;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotRespVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 
 import java.util.List;
 
@@ -34,7 +34,7 @@ public interface AppointmentAssistantService {
     List<AssistantConsultantVO> findConsultants(String campus, String keyword, String date);
 
     /** 查询某咨询师某日的可预约时段 */
-    List<TimeSlotRespVO> findConsultantSlots(Long consultantId, String date);
+    List<TimeSlotResponse> findConsultantSlots(Long consultantId, String date);
 
     /** 查询教室（传 date+起止时间时附带是否空闲） */
     List<AssistantRoomVO> findRooms(String campus, String date, String startTime, String endTime);

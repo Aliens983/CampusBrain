@@ -1,9 +1,10 @@
 package com.laoliu.cas.appointment.interfaces.controller.admin;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.interfaces.dto.request.AuditRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageReqVO;
+import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.ManageStatus;
@@ -38,7 +39,7 @@ public class ServiceStatusAdminController {
     @Operation(summary = "获取所有预约记录（分页+筛选）", description = "管理员分页获取所有用户的预约记录，支持按审核状态和服务名称筛选")
     @GetMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<PageResult<ServiceStatusResponse>> getAllBookings(@Valid ServiceStatusPageReqVO reqVO) {
+    public CommonResult<PageResult<ServiceStatusResponse>> getAllBookings(@Valid ServiceStatusPageRequest reqVO) {
         IPage<ServiceStatusResponse> statusPage = serviceStatusService.getServiceStatus(reqVO);
         return CommonResult.success(PageResult.of(statusPage));
     }
@@ -50,7 +51,7 @@ public class ServiceStatusAdminController {
         if (auditRequest.getStatus() == null || auditRequest.getStatus() != ManageStatus.APPROVED.getCode()) {
             return CommonResult.error(BookErrorCode.INVALID_AUDIT_STATUS);
         }
-        serviceStatusService.auditPass(id, auditRequest.getReason());
+        serviceStatusService.auditPass(id, auditRequest.getReason(), AuditSource.ADMIN);
         return CommonResult.success("审核通过成功", null);
     }
 
@@ -64,7 +65,7 @@ public class ServiceStatusAdminController {
         if (auditRequest.getReason() == null || auditRequest.getReason().trim().isEmpty()) {
             return CommonResult.error(BookErrorCode.AUDIT_REASON_REQUIRED);
         }
-        serviceStatusService.auditReject(id, auditRequest.getReason());
+        serviceStatusService.auditReject(id, auditRequest.getReason(), AuditSource.ADMIN);
         return CommonResult.success("审核驳回成功", null);
     }
 }

@@ -42,9 +42,11 @@ public class RoomServiceImpl {
     /**
      * 教室时段预约：一个教室同一时间段只允许一人。
      * 并发安全：事务内对教室行加锁，再校验"该教室该时段无其它活跃预约"，才幂等落单。
+     *
+     * @return 新预约单 orderId
      */
     @Transactional(rollbackFor = Exception.class)
-    public void bookRoom(Long userId, Long roomId, RoomBookRequest req) {
+    public Long bookRoom(Long userId, Long roomId, RoomBookRequest req) {
         if (req == null || req.getStartTime() == null || req.getEndTime() == null
                 || req.getStartTime().compareTo(req.getEndTime()) >= 0) {
             throw new BusinessException(BookErrorCode.BOOK_TIME_INVALID);
@@ -67,12 +69,14 @@ public class RoomServiceImpl {
             throw new BusinessException(BookErrorCode.ROOM_OCCUPIED);
         }
 
-        int inserted = bookingRepository.insertRoomBooking(
+        // orderId 由 insert 回填；null=重复提交
+        Long orderId = bookingRepository.insertRoomBooking(
                 userId, room.getServiceId(), roomId, date, req.getStartTime(), req.getEndTime());
-        if (inserted == 0) {
+        if (orderId == null) {
             throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
         }
         bookingEventPublisher.publishChanged(userId, room.getServiceId(), "BOOKED");
+        return orderId;
     }
 
     private RoomResponse toResponse(Room r) {

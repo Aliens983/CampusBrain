@@ -2,7 +2,7 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageReqVO;
+import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
 import com.laoliu.cas.common.exception.BusinessException;
@@ -33,7 +33,7 @@ public class ServiceStatusController {
 
     @Operation(summary = "获取当前用户的预约状态（分页+筛选）", description = "分页获取当前登录用户的预约记录，支持按审核状态和服务名称筛选")
     @GetMapping("/mine")
-    public CommonResult<PageResult<ServiceStatusResponse>> getServiceStatusByUser(@Valid ServiceStatusPageReqVO reqVO) {
+    public CommonResult<PageResult<ServiceStatusResponse>> getServiceStatusByUser(@Valid ServiceStatusPageRequest reqVO) {
         try {
             Long userId = getUserIdViaTokenApi.getUserId();
             if (userId == null) {

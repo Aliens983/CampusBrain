@@ -2,7 +2,7 @@ package com.laoliu.cas.system.interfaces.convert;
 
 import com.laoliu.cas.common.result.PageResult;
 import com.laoliu.cas.system.infrastructure.persistence.dataobject.BookingRecordDO;
-import com.laoliu.cas.system.interfaces.dto.response.BookingRecordRespVO;
+import com.laoliu.cas.system.interfaces.dto.response.BookingRecordResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -10,7 +10,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * BookingRecordDO → BookingRecordRespVO 转换器（MapStruct）
+ * BookingRecordDO → BookingRecordResponse 转换器（MapStruct）
  *
  * @author forever-king
  */
@@ -21,11 +21,11 @@ public interface BookingRecordConvert {
 
     @Mapping(target = "createTime", source = "createTime", dateFormat = "yyyy-MM-dd HH:mm:ss")
     @Mapping(target = "updateTime", source = "updateTime", dateFormat = "yyyy-MM-dd HH:mm:ss")
-    BookingRecordRespVO convert(BookingRecordDO bookingRecordDO);
+    BookingRecordResponse convert(BookingRecordDO bookingRecordDO);
 
-    List<BookingRecordRespVO> convertList(List<BookingRecordDO> list);
+    List<BookingRecordResponse> convertList(List<BookingRecordDO> list);
 
-    default PageResult<BookingRecordRespVO> convertPage(PageResult<BookingRecordDO> page) {
+    default PageResult<BookingRecordResponse> convertPage(PageResult<BookingRecordDO> page) {
         if (page == null) {
             return null;
         }

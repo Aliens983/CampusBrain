@@ -11,7 +11,7 @@ import lombok.Data;
  */
 @Data
 @Schema(description = "用户已预约服务响应")
-public class UserServicesRespVO {
+public class UserServicesResponse {
 
     @Schema(description = "用户名")
     private String userName;
@@ -26,10 +26,10 @@ public class UserServicesRespVO {
     private String userEmail;
 
     @Schema(description = "已预约服务（分页）")
-    private PageResult<ServiceRespVO> services;
+    private PageResult<ServiceResponse> services;
 
-    public static UserServicesRespVO of(String userName, Long userId, Integer role, String email, PageResult<ServiceRespVO> services) {
-        UserServicesRespVO vo = new UserServicesRespVO();
+    public static UserServicesResponse of(String userName, Long userId, Integer role, String email, PageResult<ServiceResponse> services) {
+        UserServicesResponse vo = new UserServicesResponse();
         vo.setUserName(userName);
         vo.setUserId(userId);
         vo.setUserRole(role);

@@ -4,7 +4,7 @@ import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.infra.application.service.FileService;
-import com.laoliu.cas.infra.interfaces.dto.request.FileUploadReqVO;
+import com.laoliu.cas.infra.interfaces.dto.request.FileUploadRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +29,7 @@ public class FileAdminController {
     @Operation(summary = "上传文件", description = "上传本地文件并获取文件的访问URL地址")
     @PostMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<String> uploadFile(@Validated FileUploadReqVO fileUploadReqVO) {
+    public CommonResult<String> uploadFile(@Validated FileUploadRequest fileUploadReqVO) {
         String fileUrl = fileService.uploadFile(fileUploadReqVO.getFile(), fileUploadReqVO.getSubDir());
         return CommonResult.success(fileUrl);
     }

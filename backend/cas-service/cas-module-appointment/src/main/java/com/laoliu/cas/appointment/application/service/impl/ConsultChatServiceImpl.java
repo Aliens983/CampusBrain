@@ -7,8 +7,8 @@ import com.laoliu.cas.appointment.domain.entity.Consultant;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultChatRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
-import com.laoliu.cas.appointment.interfaces.dto.response.ConversationRespVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.MessageRespVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.ConversationResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.MessageResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.exception.BusinessException;
@@ -36,21 +36,21 @@ public class ConsultChatServiceImpl implements ConsultChatService {
     private final BookingRepository bookingRepository;
 
     @Override
-    public List<ConversationRespVO> listConversations(Long userId, Integer userRole) {
+    public List<ConversationResponse> listConversations(Long userId, Integer userRole) {
         requireChatRole(userRole);
         return consultChatRepository.listByUserId(userId).stream()
                 .map(conv -> toConversationVO(conv, userId))
                 // 有消息的会话按最后消息时间倒序，无消息的沉底
                 .sorted(Comparator
-                        .comparing((ConversationRespVO vo) -> vo.getLastTime() == null)
-                        .thenComparing(ConversationRespVO::getLastTime,
+                        .comparing((ConversationResponse vo) -> vo.getLastTime() == null)
+                        .thenComparing(ConversationResponse::getLastTime,
                                 Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
     }
 
     @Override
     @Transactional
-    public ConversationRespVO openWithConsultant(Long callerId, Integer callerRole, Long consultantId) {
+    public ConversationResponse openWithConsultant(Long callerId, Integer callerRole, Long consultantId) {
         if (callerRole == null || UserRoleEnum.getByCode(callerRole) != UserRoleEnum.USER) {
             throw new BusinessException(ChatErrorCode.ROLE_NOT_ALLOWED);
         }
@@ -67,7 +67,7 @@ public class ConsultChatServiceImpl implements ConsultChatService {
 
     @Override
     @Transactional
-    public ConversationRespVO openWithStudent(Long callerId, Integer callerRole, Long studentId) {
+    public ConversationResponse openWithStudent(Long callerId, Integer callerRole, Long studentId) {
         if (callerRole == null || UserRoleEnum.getByCode(callerRole) != UserRoleEnum.TEACHER) {
             throw new BusinessException(ChatErrorCode.ROLE_NOT_ALLOWED);
         }
@@ -84,7 +84,7 @@ public class ConsultChatServiceImpl implements ConsultChatService {
 
     @Override
     @Transactional
-    public ConversationRespVO openByBooking(Long callerId, Long orderId) {
+    public ConversationResponse openByBooking(Long callerId, Long orderId) {
         ServiceStatusResponse booking = bookingRepository.getServiceStatusByOrderIdAndUserId(callerId, orderId);
         if (booking == null) {
             throw new BusinessException(ChatErrorCode.BOOKING_NOT_FOUND);
@@ -99,7 +99,7 @@ public class ConsultChatServiceImpl implements ConsultChatService {
 
     @Override
     @Transactional
-    public List<MessageRespVO> listMessages(Long callerId, Long conversationId, Long afterId) {
+    public List<MessageResponse> listMessages(Long callerId, Long conversationId, Long afterId) {
         requireParticipant(conversationId, callerId);
         // 拉取时顺带把发给我的置读，未读数随之清零
         consultChatRepository.markConversationRead(conversationId, callerId);
@@ -110,7 +110,7 @@ public class ConsultChatServiceImpl implements ConsultChatService {
 
     @Override
     @Transactional
-    public MessageRespVO sendMessage(Long callerId, Long conversationId, String content) {
+    public MessageResponse sendMessage(Long callerId, Long conversationId, String content) {
         requireParticipant(conversationId, callerId);
         String text = content == null ? "" : content.trim();
         if (!StringUtils.hasText(text)) {
@@ -155,7 +155,7 @@ public class ConsultChatServiceImpl implements ConsultChatService {
         return conversation;
     }
 
-    private ConversationRespVO toConversationVO(ConsultChatConversation conversation, Long viewerId) {
+    private ConversationResponse toConversationVO(ConsultChatConversation conversation, Long viewerId) {
         boolean viewerIsStudent = Objects.equals(conversation.getStudentId(), viewerId);
         Long peerUserId = viewerIsStudent ? conversation.getTeacherId() : conversation.getStudentId();
         String peerRole = viewerIsStudent ? "teacher" : "student";
@@ -164,7 +164,7 @@ public class ConsultChatServiceImpl implements ConsultChatService {
         ConsultChatMessage last = consultChatRepository.lastMessage(conversation.getId()).orElse(null);
         long unread = consultChatRepository.countUnread(conversation.getId(), viewerId);
 
-        return ConversationRespVO.builder()
+        return ConversationResponse.builder()
                 .id(conversation.getId())
                 .peerUserId(peerUserId)
                 .peerRole(peerRole)
@@ -175,8 +175,8 @@ public class ConsultChatServiceImpl implements ConsultChatService {
                 .build();
     }
 
-    private MessageRespVO toMessageVO(ConsultChatMessage message, Long viewerId) {
-        return MessageRespVO.builder()
+    private MessageResponse toMessageVO(ConsultChatMessage message, Long viewerId) {
+        return MessageResponse.builder()
                 .id(message.getId())
                 .senderId(message.getSenderId())
                 .content(message.getContent())
