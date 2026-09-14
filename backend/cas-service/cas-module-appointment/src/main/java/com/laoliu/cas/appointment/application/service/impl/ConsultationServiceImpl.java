@@ -17,6 +17,7 @@ import com.laoliu.cas.appointment.interfaces.dto.response.ConsultantResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
+import com.laoliu.cas.common.exception.code.ServiceErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,6 +91,8 @@ public class ConsultationServiceImpl implements ConsultationService {
         }
         Consultant consultant = consultantRepository.findById(consultantId)
                 .orElseThrow(() -> new BusinessException(BookErrorCode.CONSULTANT_NOT_FOUND));
+        // 服务下架后不再接受咨询预约：与通用下单的 isAvailable 校验口径保持一致
+        assertServiceAvailable(consultant.getServiceId());
 
         TimeSlot slot = timeSlotRepository.findById(slotId)
                 .filter(s -> Objects.equals(s.getConsultantId(), consultantId))
@@ -140,5 +143,17 @@ public class ConsultationServiceImpl implements ConsultationService {
                 .available(consultant.hasRatings())
                 .avatar(consultant.getAvatarUrl() != null ? consultant.getAvatarUrl() : "")
                 .build();
+    }
+
+    /**
+     * 校验服务处于上架状态（理由同 {@code RoomServiceImpl#assertServiceAvailable}）。
+     */
+    private void assertServiceAvailable(Long serviceId) {
+        if (serviceId == null) {
+            return;
+        }
+        serviceRepository.findById(serviceId)
+                .filter(com.laoliu.cas.appointment.domain.entity.ServiceItem::isAvailable)
+                .orElseThrow(() -> new BusinessException(ServiceErrorCode.SERVICE_DISABLED, serviceId));
     }
 }

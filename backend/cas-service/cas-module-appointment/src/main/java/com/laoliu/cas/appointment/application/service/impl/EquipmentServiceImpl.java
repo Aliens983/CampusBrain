@@ -14,6 +14,7 @@ import com.laoliu.cas.appointment.interfaces.dto.request.EquipmentBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.EquipmentResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
+import com.laoliu.cas.common.exception.code.ServiceErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -99,6 +100,8 @@ public class EquipmentServiceImpl implements EquipmentService {
         // 行锁读取设备，串行化同一设备的借用判定，防并发超借
         Equipment equipment = equipmentRepository.findByIdForUpdate(equipmentId)
                 .orElseThrow(() -> new BusinessException(BookErrorCode.EQUIPMENT_NOT_FOUND));
+        // 服务下架后不再接受借用：与通用下单的 isAvailable 校验口径保持一致
+        assertServiceAvailable(equipment.getServiceId());
         int stock = equipment.getAvailableStock() == null ? 0 : equipment.getAvailableStock();
         int occupied = bookingRepository.sumEquipmentOverlap(
                 equipmentId, date, req.getStartTime(), req.getEndTime());
@@ -115,6 +118,18 @@ public class EquipmentServiceImpl implements EquipmentService {
         }
         bookingEventPublisher.publishChanged(userId, equipment.getServiceId(), "BOOKED");
         return orderId;
+    }
+
+    /**
+     * 校验服务处于上架状态（理由同 {@code RoomServiceImpl#assertServiceAvailable}）。
+     */
+    private void assertServiceAvailable(Long serviceId) {
+        if (serviceId == null) {
+            return;
+        }
+        serviceRepository.findById(serviceId)
+                .filter(com.laoliu.cas.appointment.domain.entity.ServiceItem::isAvailable)
+                .orElseThrow(() -> new BusinessException(ServiceErrorCode.SERVICE_DISABLED, serviceId));
     }
 
     private List<Long> getEquipmentServiceIds() {

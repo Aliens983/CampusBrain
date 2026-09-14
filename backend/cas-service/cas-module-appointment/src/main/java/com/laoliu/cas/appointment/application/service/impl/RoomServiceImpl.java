@@ -4,11 +4,13 @@ import com.laoliu.cas.appointment.application.service.RoomService;
 import com.laoliu.cas.appointment.domain.entity.Room;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.RoomRepository;
+import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.interfaces.dto.request.RoomBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.RoomResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
+import com.laoliu.cas.common.exception.code.ServiceErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ import java.util.stream.Collectors;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
+    private final ServiceItemRepository serviceRepository;
     private final BookingRepository bookingRepository;
     private final BookingEventPublisher bookingEventPublisher;
 
@@ -66,6 +69,9 @@ public class RoomServiceImpl implements RoomService {
 
         Room room = roomRepository.findByIdForUpdate(roomId)
                 .orElseThrow(() -> new BusinessException(BookErrorCode.ROOM_NOT_FOUND));
+        // 服务被下架后不再接受新预约：否则管理员下架"教室空间"服务后，
+        // 用户仍可通过专用端点约到教室，且这些预约会照常出现在列表中
+        assertServiceAvailable(room.getServiceId());
 
         int occupied = bookingRepository.countRoomOverlap(roomId, date, req.getStartTime(), req.getEndTime());
         if (occupied > 0) {
@@ -80,6 +86,22 @@ public class RoomServiceImpl implements RoomService {
         }
         bookingEventPublisher.publishChanged(userId, room.getServiceId(), "BOOKED");
         return orderId;
+    }
+
+    /**
+     * 校验服务处于上架状态。
+     * <p>
+     * 通用下单（{@code /app/bookings}）会校验 isAvailable，但教室/设备/咨询三条资源专用
+     * 端点此前都不校验——管理员下架服务后用户照样能约，且这些预约会照常出现在列表里。
+     * 这里统一补齐，与通用下单口径一致。
+     */
+    private void assertServiceAvailable(Long serviceId) {
+        if (serviceId == null) {
+            return;
+        }
+        serviceRepository.findById(serviceId)
+                .filter(com.laoliu.cas.appointment.domain.entity.ServiceItem::isAvailable)
+                .orElseThrow(() -> new BusinessException(ServiceErrorCode.SERVICE_DISABLED, serviceId));
     }
 
     private RoomResponse toResponse(Room r) {
