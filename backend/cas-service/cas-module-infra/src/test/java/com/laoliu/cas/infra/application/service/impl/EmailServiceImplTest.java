@@ -1,7 +1,5 @@
 package com.laoliu.cas.infra.application.service.impl;
 
-import com.laoliu.cas.common.exception.BusinessException;
-import com.laoliu.cas.common.exception.code.CommonErrorCode;
 import com.laoliu.cas.infra.application.service.EmailService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -66,17 +64,17 @@ class EmailServiceImplTest {
         }
 
         @Test
-        @DisplayName("邮件发送失败时应当抛出 EMAIL_SEND_FAILED 异常")
-        void shouldThrowExceptionWhenSendFails() {
+        @DisplayName("邮件发送失败时不应向上抛出异常（异步通知失败不影响主流程）")
+        void shouldNotThrowWhenSendFails() {
             // Given
             when(environment.getProperty(SPRING_MAIL_USERNAME)).thenReturn(FROM);
             doThrow(new RuntimeException("SMTP connection failed"))
                     .when(javaMailSender).send(any(SimpleMailMessage.class));
 
             // When & Then
-            BusinessException exception = assertThrows(BusinessException.class,
-                    () -> emailService.sendEmail(TO, SUBJECT, CONTENT));
-            assertEquals(CommonErrorCode.EMAIL_SEND_FAILED.getCode(), exception.getCode());
+            // 1.5.1：邮件是 @Async 旁路通知，发送失败仅记录日志，绝不能把异常抛回
+            // 调用方（否则会让"审核通过"等主事务因邮件故障而回滚）。
+            assertDoesNotThrow(() -> emailService.sendEmail(TO, SUBJECT, CONTENT));
             verify(javaMailSender).send(any(SimpleMailMessage.class));
         }
     }
