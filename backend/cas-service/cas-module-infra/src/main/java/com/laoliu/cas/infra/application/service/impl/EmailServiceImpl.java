@@ -53,7 +53,9 @@ public class EmailServiceImpl implements EmailService {
             message.setText(content);
             javaMailSender.send(message);
             sentCounter.increment();
-            log.info("邮件发送成功，发件人：{}，收件人：{}，主题：{}，内容：{}", fromEmail, to, subject, content);
+            // 不打 content：验证码类邮件的正文就是明文验证码（"您的验证码是：123456"），
+            // 落日志等于把重置密码的凭据写给运维、日志平台和 docker logs
+            log.info("邮件发送成功，发件人：{}，收件人：{}，主题：{}", fromEmail, to, subject);
         } catch (Exception e) {
             failedCounter.increment();
             // 1.5.1：本方法为 @Async 异步执行，调用方不会也无法捕获这里抛出的异常，
