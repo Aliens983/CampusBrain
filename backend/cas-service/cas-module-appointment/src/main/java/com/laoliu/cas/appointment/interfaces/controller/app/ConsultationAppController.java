@@ -68,6 +68,10 @@ public class ConsultationAppController {
             @Parameter(description = "咨询师ID", required = true) @PathVariable Long consultantId,
             @Valid @RequestBody ConsultationBookRequest request) {
         Long userId = getUserIdViaTokenApi.getUserId();
+        // 未取到身份时明确返回 400，避免 null 传入 service 触发 NPE 500（7.3.6）
+        if (userId == null) {
+            return CommonResult.badRequest("无法获取用户信息，请重新登录");
+        }
         consultationService.bookConsultation(userId, consultantId, request.getSlotId());
         return CommonResult.success("预约成功，等待管理员审核", null);
     }

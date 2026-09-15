@@ -180,13 +180,8 @@ public class BookServiceImpl implements BookService {
         boolean success = affected > 0;
         if (success) {
             bookingMetrics.recordCancelled(affected);
-            // 取消成功：释放这些预约占用的库存（仅当前用户待审核的单，防他人/重复释放）
-            List<Long> serviceIds = bookingRepository.selectServiceIdsByBookingIds(userId, bookingIds);
-            if (serviceIds != null) {
-                serviceIds.forEach(bookingRepository::releaseStock);
-            }
-            // 咨询时段预约：同时释放占用的老师时段
-            bookingRepository.releaseSlotsByBookingIds(userId, bookingIds);
+            // 库存回补与咨询时段释放已在 cancelBookings 的一条多表 UPDATE 内原子完成：
+            // 只释放本次真正取消的通用单/咨询单，资源单不误扣、历史单不重复释放（7.3.6）。
             for (Long id : bookingIds) {
                 bookingEventPublisher.publishChanged(userId, id, "CANCELLED");
             }

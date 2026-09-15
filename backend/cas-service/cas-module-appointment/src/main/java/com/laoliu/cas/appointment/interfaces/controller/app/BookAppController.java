@@ -38,6 +38,11 @@ public class BookAppController {
     public CommonResult<BookResultResponse> bookService(
             @Valid @RequestBody BookServiceRequest request) {
         Long userId = getUserIdViaTokenApi.getUserId();
+        // 未取到身份时明确返回 400 而不是把 null 传下去：
+        // 下游会把 null userId 直接写进 SQL，最终表现为 NPE 500 而非"请重新登录"
+        if (userId == null) {
+            return CommonResult.badRequest("无法获取用户信息，请重新登录");
+        }
         BookService.BookingSubmitResult result = bookService.bookService(userId, request.getServiceIds());
         return CommonResult.success("预约成功", buildBookResult(result.userInfo(), userId));
     }

@@ -162,7 +162,7 @@ class ServiceStatusServiceImplTest {
         }
 
         @Test
-        @DisplayName("驳回成功时应释放该预约占用的库存")
+        @DisplayName("驳回成功时按订单释放库存（仅通用类预约在 SQL 层命中）")
         void shouldReleaseStockOnReject() {
             // Given
             ServiceStatusResponse status = buildPendingStatus();
@@ -171,14 +171,14 @@ class ServiceStatusServiceImplTest {
             when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason),
                     eq(List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED))))
                     .thenReturn(true);
-            when(bookingRepository.selectServiceIdByOrderId(VALID_ORDER_ID)).thenReturn(1L);
 
             // When
             assertDoesNotThrow(() -> serviceStatusService.auditReject(VALID_ORDER_ID, reason, AuditSource.ADMIN));
 
-            // Then：释放该预约对应的服务库存
-            verify(bookingRepository).selectServiceIdByOrderId(VALID_ORDER_ID);
-            verify(bookingRepository).releaseStock(1L);
+            // Then：按订单维度释放（是否真扣减由 SQL 中资源外键 IS NULL 判定，7.3.6），并释放咨询时段
+            verify(bookingRepository).releaseStockByOrderId(VALID_ORDER_ID);
+            verify(bookingRepository).releaseSlotByOrderId(VALID_ORDER_ID);
+            verify(bookingRepository, never()).releaseStock(anyLong());
         }
 
         @Test

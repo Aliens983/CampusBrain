@@ -84,8 +84,8 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public int releaseSlotsByBookingIds(Long userId, List<Long> bookingIds) {
-        return itemMapper.releaseSlotsByBookingIds(userId, bookingIds);
+    public int releaseStockByOrderId(Long orderId) {
+        return itemMapper.releaseStockByOrderId(orderId);
     }
 
     @Override
@@ -134,18 +134,8 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public List<Long> selectServiceIdsByBookingIds(Long userId, List<Long> bookingIds) {
-        return itemMapper.selectServiceIdsByBookingIds(userId, bookingIds, PENDING, APPROVED);
-    }
-
-    @Override
-    public Long selectServiceIdByOrderId(Long orderId) {
-        return itemMapper.selectServiceIdByOrderId(orderId);
-    }
-
-    @Override
     public int cancelBookings(Long userId, List<Long> bookingIds) {
-        return itemMapper.setBookingStatusByParts(userId, bookingIds, PENDING, APPROVED, CANCELLED);
+        return itemMapper.cancelBookingsAndRelease(userId, bookingIds, PENDING, APPROVED, CANCELLED);
     }
 
     @Override

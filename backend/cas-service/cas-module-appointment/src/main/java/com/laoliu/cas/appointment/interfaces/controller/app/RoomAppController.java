@@ -40,6 +40,10 @@ public class RoomAppController {
             @Parameter(description = "教室ID", required = true) @PathVariable Long roomId,
             @Valid @RequestBody RoomBookRequest request) {
         Long userId = getUserIdViaTokenApi.getUserId();
+        // 未取到身份时明确返回 400，避免 null 传入 service 触发 NPE 500（7.3.6）
+        if (userId == null) {
+            return CommonResult.badRequest("无法获取用户信息，请重新登录");
+        }
         roomService.bookRoom(userId, roomId, request);
         return CommonResult.success("教室预约已提交，等待管理员审核", null);
     }

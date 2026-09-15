@@ -191,37 +191,34 @@ class BookServiceImplTest {
         }
 
         @Test
-        @DisplayName("取消成功时应释放对应服务库存")
-        void shouldReleaseStockOnCancel() {
+        @DisplayName("取消成功时发布变更事件，库存与时段释放已由原子 SQL 完成")
+        void shouldPublishChangedEventOnCancel() {
             // Given
             List<Long> bookingIds = List.of(ORDER_ID);
             when(bookingRepository.cancelBookings(USER_ID, bookingIds)).thenReturn(1);
-            when(bookingRepository.selectServiceIdsByBookingIds(USER_ID, bookingIds))
-                    .thenReturn(List.of(SERVICE_ID));
 
             // When
             boolean result = bookService.cancelBookings(USER_ID, bookingIds);
 
-            // Then：查待审核单的 serviceId 并回退库存
+            // Then：service 层不再单独回补（已在 cancelBookings 的多表 UPDATE 内原子完成，7.3.6）
             assertTrue(result);
-            verify(bookingRepository).selectServiceIdsByBookingIds(USER_ID, bookingIds);
-            verify(bookingRepository).releaseStock(SERVICE_ID);
+            verify(bookingEventPublisher).publishChanged(USER_ID, ORDER_ID, "CANCELLED");
+            verify(bookingRepository, never()).releaseStock(anyLong());
         }
 
         @Test
-        @DisplayName("取消失败时不应释放库存")
-        void shouldNotReleaseStockWhenCancelFailed() {
-            // Given：cancelBookings 返回 0（无待审核单可取消）
+        @DisplayName("取消影响 0 行时不发布变更事件")
+        void shouldNotPublishEventWhenCancelFailed() {
+            // Given：cancelBookings 返回 0（无待审核单/活动单可取消）
             List<Long> bookingIds = List.of(ORDER_ID);
             when(bookingRepository.cancelBookings(USER_ID, bookingIds)).thenReturn(0);
 
             // When
             boolean result = bookService.cancelBookings(USER_ID, bookingIds);
 
-            // Then：不查 serviceId、不释放库存
+            // Then
             assertFalse(result);
-            verify(bookingRepository, never()).selectServiceIdsByBookingIds(anyLong(), anyList());
-            verify(bookingRepository, never()).releaseStock(anyLong());
+            verify(bookingEventPublisher, never()).publishChanged(anyLong(), anyLong(), anyString());
         }
 
         @Test

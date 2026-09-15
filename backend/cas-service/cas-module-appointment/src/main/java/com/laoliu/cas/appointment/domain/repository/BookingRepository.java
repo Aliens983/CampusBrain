@@ -25,7 +25,7 @@ public interface BookingRepository {
     /** 乐观锁扣减库存（容量充足才 +1），返回 0 表示容量满 */
     int decrementStock(Long serviceId);
 
-    /** 释放库存（取消/审核拒绝时 -1，最低到 0） */
+    /** 释放库存（通用下单去重回滚时 -1，最低到 0） */
     int releaseStock(Long serviceId);
 
     /**
@@ -37,8 +37,8 @@ public interface BookingRepository {
     /** 释放单个预约单占用的咨询时段（审核拒绝时调用；非咨询预约自动跳过） */
     int releaseSlotByOrderId(Long orderId);
 
-    /** 释放当前用户一批预约单占用的咨询时段（取消预约时调用） */
-    int releaseSlotsByBookingIds(Long userId, List<Long> bookingIds);
+    /** 审核拒绝时按订单释放库存：仅通用类预约命中，资源类预约（咨询/教室/设备）不扣不补（7.3.6） */
+    int releaseStockByOrderId(Long orderId);
 
     /**
      * 幂等插入设备借用（带设备/数量/窗口），返回新订单 orderId；重复提交返回 null。
@@ -60,12 +60,12 @@ public interface BookingRepository {
     /** 统计某教室某日某时段已被占用条数（>0=已被预约） */
     int countRoomOverlap(Long roomId, LocalDate date, String startTime, String endTime);
 
-    /** 查询当前用户一批待审核预约单对应的服务 ID（用于回退库存，防他人/重复释放） */
-    List<Long> selectServiceIdsByBookingIds(Long userId, List<Long> bookingIds);
-
-    /** 查询单个预约单对应的服务 ID（用于审核拒绝回退） */
-    Long selectServiceIdByOrderId(Long orderId);
-
+    /**
+     * 取消预约（原子完成状态置取消 + 通用单回补 booked_count + 咨询单释放时段，7.3.6）。
+     * 仅当前用户的待审核单、或已通过的活动单命中；重复调用幂等。
+     *
+     * @return 实际取消的订单行数
+     */
     int cancelBookings(Long userId, List<Long> bookingIds);
 
     List<ServiceStatusResponse> getServiceStatus();

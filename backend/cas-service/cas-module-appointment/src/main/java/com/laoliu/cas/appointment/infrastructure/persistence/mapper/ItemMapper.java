@@ -44,15 +44,16 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                   @Param("dedupeSeconds") int dedupeSeconds);
 
     /**
-     * 取消：仅待审核单、或已通过的活动单可自助取消。
+     * 取消并释放资源（7.3.6）：一条多表 UPDATE 原子完成「状态置取消 + 通用单回补库存 +
+     * 咨询单释放时段」，仅待审核单、或已通过的活动单命中。
      *
-     * @return 实际更新行数
+     * @return 实际取消的订单行数
      */
-    int setBookingStatusByParts(@Param("userId") Long userId,
-                                @Param("bookingIds") List<Long> bookingIds,
-                                @Param("pendingCode") int pendingCode,
-                                @Param("approvedCode") int approvedCode,
-                                @Param("cancelledCode") int cancelledCode);
+    int cancelBookingsAndRelease(@Param("userId") Long userId,
+                                 @Param("bookingIds") List<Long> bookingIds,
+                                 @Param("pendingCode") int pendingCode,
+                                 @Param("approvedCode") int approvedCode,
+                                 @Param("cancelledCode") int cancelledCode);
 
     List<ServiceStatusResponse> getServiceStatus();
 
@@ -121,23 +122,14 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
      */
     int decrementStock(@Param("serviceId") Long serviceId);
 
-    /** 释放库存：取消/审核拒绝时 -1（最低到 0） */
+    /** 释放库存：通用下单去重回滚时 -1（最低到 0） */
     int releaseStock(@Param("serviceId") Long serviceId);
 
-    /** 查询当前用户一批可取消预约单对应的服务 ID（用于回退库存，防他人/重复释放） */
-    List<Long> selectServiceIdsByBookingIds(@Param("userId") Long userId,
-                                            @Param("bookingIds") List<Long> bookingIds,
-                                            @Param("pendingCode") int pendingCode,
-                                            @Param("approvedCode") int approvedCode);
-
-    /** 查询单个预约单对应的服务 ID（用于审核拒绝回退） */
-    Long selectServiceIdByOrderId(@Param("orderId") Long orderId);
+    /** 审核拒绝：按订单释放库存，仅通用类预约命中（资源类预约从未扣减，7.3.6） */
+    int releaseStockByOrderId(@Param("orderId") Long orderId);
 
     /** 释放单个预约单占用的咨询时段（审核拒绝时调用，非咨询预约自动跳过） */
     int releaseSlotByOrderId(@Param("orderId") Long orderId);
-
-    /** 释放当前用户一批预约单占用的咨询时段（取消预约时调用） */
-    int releaseSlotsByBookingIds(@Param("userId") Long userId, @Param("bookingIds") List<Long> bookingIds);
 
     /**
      * 幂等插入设备借用。成功时 orderId 回填到 {@code item}。

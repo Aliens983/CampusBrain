@@ -164,11 +164,8 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         }
         bookingMetrics.recordAudit(false, source, System.nanoTime() - startNanos);
 
-        // 审核拒绝：释放该预约占用的库存
-        Long serviceId = bookingRepository.selectServiceIdByOrderId(orderId);
-        if (serviceId != null) {
-            bookingRepository.releaseStock(serviceId);
-        }
+        // 审核拒绝：仅当该订单是通用类预约时回补库存（资源类预约下单从未扣减 booked_count，7.3.6）
+        bookingRepository.releaseStockByOrderId(orderId);
         // 咨询时段预约：同时释放占用的老师时段
         bookingRepository.releaseSlotByOrderId(orderId);
 
