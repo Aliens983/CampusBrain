@@ -280,6 +280,9 @@ public class LangChain4jLlmService implements LlmService {
                                                 Consumer<String> tokenConsumer) {
         List<dev.langchain4j.data.message.ChatMessage> messages = buildDirectMessages(query, conversationHistory);
         StringBuilder fullAnswer = new StringBuilder();
+        // 与 RAG 主链路一致（7.2.8）：区分"供应商已 onError"与"join 超时/中断"，
+        // 已向用户推过错误提示就不再推 fallback，避免答案里错误提示与兜底文案同时出现。
+        AtomicBoolean streamErrored = new AtomicBoolean(false);
         try {
             CompletableFuture<Void> future = new CompletableFuture<>();
             streamingChatModel.generate(messages, new dev.langchain4j.model.StreamingResponseHandler<>() {
@@ -296,15 +299,18 @@ public class LangChain4jLlmService implements LlmService {
                 @Override
                 public void onError(Throwable error) {
                     log.error("Direct streaming error", error);
+                    streamErrored.set(true);
                     tokenConsumer.accept("\n\n[生成出错，请重试]");
                     future.completeExceptionally(error);
                 }
             });
-            future.join();
+            // 必须限时：供应商连接挂起（onComplete/onError 均不触发）时裸 join() 会永久阻塞调用线程
+            future.orTimeout(LLM_STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
         } catch (Exception e) {
             log.error("Direct streaming failed, trying fallback", e);
-            String fallback = tryFallback(messages);
-            tokenConsumer.accept(fallback);
+            if (!streamErrored.get()) {
+                tokenConsumer.accept(tryFallback(messages));
+            }
         }
         return fullAnswer.toString();
     }
