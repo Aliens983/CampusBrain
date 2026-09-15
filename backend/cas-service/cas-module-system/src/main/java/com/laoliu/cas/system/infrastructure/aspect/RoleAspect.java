@@ -20,8 +20,8 @@ import java.util.Arrays;
 /**
  * 角色权限校验切面
  * <p>
- * 拦截所有标注 {@link RequireRole} 的方法，校验当前用户是否具备所需角色
- * 权限不足时直接抛出异常，由 {@code GlobalExceptionHandler} 统一处理
+ * 拦截方法级或类级标注 {@link RequireRole} 的端点（方法级优先），校验当前用户是否具备所需角色；
+ * 权限不足时直接抛出异常，由 {@code GlobalExceptionHandler} 统一处理。
  *
  * @author forever-king
  */
@@ -34,14 +34,23 @@ public class RoleAspect {
     private final GetUserIdViaTokenApi getUserIdViaTokenApi;
     private final UserMapper userMapper;
 
-    @Pointcut("@annotation(com.laoliu.cas.common.annotation.RequireRole)")
+    /**
+     * 方法级注解（@annotation）或类级注解（@within）均触发；Spring AOP 代理只拦 public 方法（7.3.1）。
+     */
+    @Pointcut("@annotation(com.laoliu.cas.common.annotation.RequireRole) "
+            + "|| @within(com.laoliu.cas.common.annotation.RequireRole)")
     public void requireRolePointcut() {
     }
 
     @Around("requireRolePointcut()")
     public Object aroundAdvice(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        // 方法级标注优先；缺省时回退类级标注（7.3.1：类级 @RequireRole 此前因 @Target 不含 TYPE 且
+        // 切面只读方法注解而成为死代码，守护测试的 classLevelGuarded 分支永远为 false）
         RequireRole requireRole = signature.getMethod().getAnnotation(RequireRole.class);
+        if (requireRole == null) {
+            requireRole = joinPoint.getTarget().getClass().getAnnotation(RequireRole.class);
+        }
 
         if (requireRole == null) {
             return joinPoint.proceed();
@@ -57,22 +66,31 @@ public class RoleAspect {
             throw new ForbiddenException(403, "无法获取用户角色信息");
         }
 
+        // 角色列正常只会是数字编码；脏数据/手工改库可能写入非数字，
+        // 此前 parseInt 直接抛 NumberFormatException → 500。此处收敛为 403（7.3.6）。
+        int currentRoleCode;
+        try {
+            currentRoleCode = Integer.parseInt(userRole);
+        } catch (NumberFormatException e) {
+            log.warn("用户角色编码非数字，拒绝访问：userId={}, role={}", userId, userRole);
+            throw new ForbiddenException(403, "用户角色数据异常，请联系管理员");
+        }
+
         UserRoleEnum[] requiredRoles = requireRole.value();
-        boolean hasPermission = hasPermission(userRole, requiredRoles);
+        boolean hasPermission = hasPermission(currentRoleCode, requiredRoles);
 
         if (!hasPermission) {
             log.warn("用户权限不足，当前角色: {}, 需要角色: {}",
-                    UserRoleEnum.getByCode(Integer.parseInt(userRole)).getDescription(),
+                    UserRoleEnum.getByCode(currentRoleCode).getDescription(),
                     Arrays.toString(requiredRoles));
             throw new ForbiddenException(403, "权限不足，无法访问该接口");
         }
 
-        log.debug("权限验证通过，用户角色: {}", UserRoleEnum.getByCode(Integer.parseInt(userRole)).getDescription());
+        log.debug("权限验证通过，用户角色: {}", UserRoleEnum.getByCode(currentRoleCode).getDescription());
         return joinPoint.proceed();
     }
 
-    private boolean hasPermission(String userRole, UserRoleEnum[] requiredRoles) {
-        int currentRoleCode = Integer.parseInt(userRole);
+    private boolean hasPermission(int currentRoleCode, UserRoleEnum[] requiredRoles) {
         // 超级管理员拥有全部权限，直接放行
         if (currentRoleCode == UserRoleEnum.SUPER_ADMIN.getCode()) {
             return true;
