@@ -30,7 +30,6 @@
         <qdrant.version>1.9.0</qdrant.version>
         <langchain4j.version>0.34.0</langchain4j.version>
         <tika.version>2.9.2</tika.version>
-        <minio.version>8.5.10</minio.version>
         <lombok.version>1.18.32</lombok.version>
         <jackson.version>2.17.1</jackson.version>
         <hutool.version>5.8.28</hutool.version>
@@ -104,13 +103,6 @@
                 <groupId>org.apache.tika</groupId>
                 <artifactId>tika-parsers-standard-package</artifactId>
                 <version>${tika.version}</version>
-            </dependency>
-
-            <!-- MinIO -->
-            <dependency>
-                <groupId>io.minio</groupId>
-                <artifactId>minio</artifactId>
-                <version>${minio.version}</version>
             </dependency>
 
             <!-- Lombok -->
@@ -310,12 +302,6 @@
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
             <version>5.2.5</version>
-        </dependency>
-
-        <!-- ========== Object Storage ========== -->
-        <dependency>
-            <groupId>io.minio</groupId>
-            <artifactId>minio</artifactId>
         </dependency>
 
         <!-- ========== API Documentation ========== -->
