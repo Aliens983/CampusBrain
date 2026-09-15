@@ -1,6 +1,6 @@
 package com.laoliu.cas.system.application.service;
 
-import com.laoliu.cas.system.application.service.vo.CaptchaResult;
+import com.laoliu.cas.system.interfaces.dto.response.CaptchaResponse;
 
 /**
  * @author forever-king
@@ -8,7 +8,7 @@ import com.laoliu.cas.system.application.service.vo.CaptchaResult;
 public interface CaptchaService {
 
     /** 生成图形验证码 */
-    CaptchaResult generateCaptcha();
+    CaptchaResponse generateCaptcha();
 
     /**
      * 校验图形验证码。

@@ -9,7 +9,7 @@ import com.laoliu.cas.common.exception.code.UserErrorCode;
 import com.laoliu.cas.infra.application.service.FileService;
 import com.laoliu.cas.redis.util.RedisUtil;
 import com.laoliu.cas.system.application.service.CaptchaService;
-import com.laoliu.cas.system.application.service.vo.CaptchaResult;
+import com.laoliu.cas.system.interfaces.dto.response.CaptchaResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,7 +40,7 @@ public class CaptchaServiceImpl implements CaptchaService {
     private static final String CAPTCHA_KEY_PREFIX = "captcha:";
 
     @Override
-    public CaptchaResult generateCaptcha() {
+    public CaptchaResponse generateCaptcha() {
         String uuid = UUID.randomUUID().toString();
         String redisKey = CAPTCHA_KEY_PREFIX + uuid;
 
@@ -63,7 +63,7 @@ public class CaptchaServiceImpl implements CaptchaService {
 
             String imageUrl = serverAddress + contextPath + fileUrl;
 
-            return CaptchaResult.builder()
+            return CaptchaResponse.builder()
                     .uuid(uuid)
                     .imageUrl(imageUrl)
                     .build();

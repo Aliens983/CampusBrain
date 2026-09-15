@@ -39,8 +39,8 @@ public class ServiceAdminController {
     @Operation(summary = "获取所有服务（分页+筛选）", description = "分页获取服务列表，支持按名称模糊搜索和状态筛选")
     @GetMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<PageResult<ServiceResponse>> getService(@Valid ServicePageRequest reqVO) {
-        return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceService.getAllServices(reqVO)));
+    public CommonResult<PageResult<ServiceResponse>> getService(@Valid ServicePageRequest req) {
+        return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceService.getAllServices(req)));
     }
 
     @Operation(summary = "添加服务", description = "管理员添加新的服务项目，包含服务名称、描述和状态")
@@ -79,8 +79,8 @@ public class ServiceAdminController {
         }
         PageResult<ServiceResponse> servicesPage = ServiceConvert.INSTANCE.convertPage(
                 serviceService.selectUserServices(userId, pageParam.getPageNo(), pageParam.getPageSize()));
-        UserServicesResponse respVO = UserServicesResponse.of(
+        UserServicesResponse resp = UserServicesResponse.of(
                 userInfo.getName(), userId, userInfo.getRole(), userInfo.getEmail(), servicesPage);
-        return CommonResult.success(respVO);
+        return CommonResult.success(resp);
     }
 }

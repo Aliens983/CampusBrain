@@ -21,7 +21,7 @@ public interface ServiceItemService {
     /**
      * 分页获取所有服务（支持筛选）
      */
-    PageResult<ServiceItem> getAllServices(ServicePageRequest reqVO);
+    PageResult<ServiceItem> getAllServices(ServicePageRequest req);
 
     /** 获取可用服务列表 */
     List<ServiceItem> getAvailableServices();

@@ -39,19 +39,6 @@
         s.end_date AS end_date
     </sql>
 
-    <select id="selectAll" resultMap="BaseResultMap">
-        SELECT
-        <include refid="Base_Column_List"/>
-        FROM services
-    </select>
-
-    <select id="selectByPrimaryKey" resultMap="BaseResultMap">
-        SELECT
-        <include refid="Base_Column_List"/>
-        FROM services
-        WHERE service_id = #{id}
-    </select>
-
     <insert id="insertSelective" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO"
             useGeneratedKeys="true" keyProperty="serviceId">
         INSERT INTO services (service_name, service_describe, service_state)
@@ -88,13 +75,6 @@
         FROM item i
         JOIN services s ON i.service_id = s.service_id
         WHERE i.user_id = #{userId}
-    </select>
-
-    <select id="selectAllWithPage" resultMap="BaseResultMap">
-        SELECT
-        <include refid="Base_Column_List"/>
-        FROM services
-        ORDER BY service_id DESC
     </select>
 
     <select id="selectUserServicesWithPage" resultMap="BaseResultMap">

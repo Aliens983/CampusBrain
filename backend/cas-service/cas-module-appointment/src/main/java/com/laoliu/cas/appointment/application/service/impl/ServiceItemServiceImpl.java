@@ -36,10 +36,10 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     }
 
     @Override
-    public PageResult<ServiceItem> getAllServices(ServicePageRequest reqVO) {
+    public PageResult<ServiceItem> getAllServices(ServicePageRequest req) {
         IPage<ServiceItem> result = serviceRepository.findAll(
-                reqVO.getPageNo(), reqVO.getPageSize(),
-                reqVO.getServiceName(), reqVO.getServiceState(), reqVO.getCampus());
+                req.getPageNo(), req.getPageSize(),
+                req.getServiceName(), req.getServiceState(), req.getCampus());
         return PageResult.of(result);
     }
 

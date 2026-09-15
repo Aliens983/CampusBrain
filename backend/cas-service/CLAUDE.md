@@ -13,12 +13,12 @@ ORM:         MyBatis-Plus 3.5.5
 DB:          MySQL 8，库 cas_db（本地开发用宿主机 3306；compose 全栈用 cas-mysql）
 Cache:       Redis（本地 6379 db0）：验证码 / 邮箱限频
 MQ:          RabbitMQ：发布 appointment.changed
-迁移:        Flyway（classpath:db/migration，V1~V5）
+迁移:        Flyway（classpath:db/migration，V1~V6）
 API 文档:    Knife4j → http://localhost:18080/api/v1/doc.html（经网关放行）
 Group/包:    com.laoliu / com.laoliu.cas
 构建运行:    mvn -pl cas-service/cas-server -am package -DskipTests
              java -jar cas-server/target/cas-server-1.0.0.jar（无 mvnw，用系统 mvn）
-测试:        cd cas-service && mvn -B test → 84 个 @Test（13 个测试类）
+测试:        cd cas-service && mvn -B test → 109 个 @Test（16 个测试类）
              ⚠ 用 -pl cas-service -am 只会构建聚合 pom、不跑子模块测试，必须进 cas-service 目录跑
 密钥:        全部 ${ENV_VAR} 注入（application.yml 仅内置本地示例默认值，生产必须覆盖）
 ```
@@ -35,7 +35,7 @@ cas-service ──RabbitMQ appointment.changed──> kb-service（消费后联�
 
 - JWT 由 gateway 统一验签；cas 信任网关注入的身份头。`InternalAuthFilter`（cas-spring-boot-starter-security）校验服务间请求的 `X-Internal-Sign`（HMAC + 时间戳新鲜度），通过后写入 SecurityContext。
 - 放行路径在 `SecurityAutoConfiguration` 配置（auth/captcha/swagger/error/uploads 等）。
-- **CORS 不在 SecurityAutoConfiguration**，而在 `cas-spring-boot-starter-web` 的 `WebAutoConfiguration.corsFilter()`；白名单由 `cas.cors.allowed-origins` 配置（默认仅本地 3000/5173/80）。因配了 `allowCredentials=true`，**切勿**改回 `allowedOriginPattern("*")`。
+- **CORS 统一在网关 globalcors 处理**（4.1.8），业务服务不再注册 CorsFilter：`WebAutoConfiguration` 中只留有说明注释，预检 OPTIONS 由网关直接应答，业务流量只来自网关内网转发。如需调整跨域白名单，改 gateway 配置而非本服务。
 
 ## Maven 模块依赖图（自底向上）
 
@@ -115,11 +115,11 @@ api/          跨模块对外接口 XxxApi + XxxApiImpl + dto（仅 system 模�
 
 ### cas-server
 - CampusAppointmentApplication（@SpringBootApplication + @MapperScan("com.laoliu.cas.**.mapper") + @ComponentScan("com.laoliu.cas")）。
-- DbResetConfig：仅当环境变量 `APP_DB_RESET_ON_STARTUP=true`（compose 演示模式）时启动 clean+migrate。
+- DbResetConfig：仅当环境变量 `APP_DB_RESET_ON_STARTUP=true` 且 `FLYWAY_CLEAN_DISABLED=false`（compose 演示模式）时启动 clean+migrate；两个开关矛盾时 Bean 初始化即 fail-fast。
 - controller/ConfigDemoController（`GET /config-demo/greeting`，Nacos 热更新演示）、SentinelDemoController（`GET /sentinel-demo/limited`）。
-- resources：application.yml（无 application.yml.example，无明文密钥，全部环境变量 + 本地默认值）、db/migration/V1~V5。
+- resources：application.yml（无 application.yml.example，无明文密钥，全部环境变量 + 本地默认值）、db/migration/V1~V6。
 
-## 数据库（Flyway V1~V5，全新机器零手工 SQL）
+## 数据库（Flyway V1~V6，全新机器零手工 SQL）
 
 | 表 | 要点 |
 |---|---|
@@ -159,11 +159,12 @@ Don't：cas-server/cas-common 写业务；跨模块直接注入 Mapper；注入 
 
 ## 测试现状
 
-84 个 `@Test` / 13 个测试类（JUnit5 + Mockito，纯单元测试，不起 Docker）：
-- appointment（41）：BookServiceImplTest 15、ServiceStatusServiceImplTest 10、ServiceServiceImplTest 8、TeacherAuditServiceImplTest 5、AvailabilityControllerTest 3。
-- system（32）：AuthServiceTest 17、RoleServiceImplTest 10、EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
+109 个 `@Test` / 16 个测试类（JUnit5 + Mockito，纯单元测试，不起 Docker）：
+- appointment（54）：BookServiceImplTest 16、AppointmentAssistantServiceImplTest 12、ServiceStatusServiceImplTest 10、ServiceItemServiceImplTest 8、TeacherAuditServiceImplTest 5、AvailabilityControllerTest 3。
+- system（43）：AuthServiceTest 17、RoleServiceImplTest 10、RoleAspectTest 11（AspectJProxyFactory 真实织入，验证类级/方法级 @RequireRole 与 401/403）、EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
 - infra（5）：QRCodeServiceImplTest 3、EmailServiceImplTest 2。
 - thirdparty（6）：WeatherApiImplTest 4、SmsServiceImplTest 2。
+- cas-server（1）：AdminEndpointAuthorizationGuardTest（管理端控制器授权守护，纯反射）。
 
 ## 仍存在的已知限制（真实，未修）
 

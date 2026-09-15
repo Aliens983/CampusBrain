@@ -84,11 +84,11 @@ public class UserController {
     @Operation(summary = "获取所有用户列表（分页+筛选）", description = "管理员分页获取用户列表，支持按姓名、邮箱模糊搜索和角色筛选")
     @GetMapping("/list")
     @RequireRole(UserRoleEnum.ADMIN)
-    public CommonResult<PageResult<UserResponse>> getAllUsers(@Valid UserPageRequest reqVO) {
+    public CommonResult<PageResult<UserResponse>> getAllUsers(@Valid UserPageRequest req) {
         try {
             IPage<User> userPage = userRepository.getAllUsers(
-                    reqVO.getPageNo(), reqVO.getPageSize(),
-                    reqVO.getName(), reqVO.getEmail(), reqVO.getRole());
+                    req.getPageNo(), req.getPageSize(),
+                    req.getName(), req.getEmail(), req.getRole());
             PageResult<User> pageResult = PageResult.of(userPage);
             return CommonResult.success(UserConvert.INSTANCE.convertPage(pageResult));
         } catch (Exception e) {
@@ -205,9 +205,9 @@ public class UserController {
     public CommonResult<UserInfoAndServicesViaMPResponse> getAllBookings(@Valid PageParam pageParam) {
         Long userId = getUserIdViaTokenApi.getUserId();
         var bookingsPage = userService.getUserBookings(userId, pageParam.getPageNo(), pageParam.getPageSize());
-        UserInfoAndServicesViaMPResponse respVO = new UserInfoAndServicesViaMPResponse();
-        respVO.setUser(userRepository.findById(userId).orElse(null));
-        respVO.setBookings(bookingsPage.getRecords());
-        return CommonResult.success(respVO);
+        UserInfoAndServicesViaMPResponse resp = new UserInfoAndServicesViaMPResponse();
+        resp.setUser(userRepository.findById(userId).orElse(null));
+        resp.setBookings(bookingsPage.getRecords());
+        return CommonResult.success(resp);
     }
 }

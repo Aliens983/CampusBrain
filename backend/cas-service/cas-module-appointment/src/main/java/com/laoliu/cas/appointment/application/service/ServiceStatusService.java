@@ -20,7 +20,7 @@ public interface ServiceStatusService {
     /**
      * 分页查询所有服务预约状态（支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest reqVO);
+    IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest req);
 
     /** 根据用户ID获取预约状态 */
     List<ServiceStatusResponse> getServiceStatusByUserId(Long userId);
@@ -28,7 +28,7 @@ public interface ServiceStatusService {
     /**
      * 分页查询用户的预约状态（支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest reqVO);
+    IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest req);
 
     /** 获取用户预约状态（含描述） */
     List<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId);
@@ -36,10 +36,7 @@ public interface ServiceStatusService {
     /**
      * 分页查询用户的预约状态（含状态描述，支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest reqVO);
-
-    /** 审核服务预约 */
-    boolean auditService(Long orderId, Integer status, String reason);
+    IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req);
 
     /** 根据订单ID获取预约状态 */
     ServiceStatusResponse getServiceStatusByOrderId(Long orderId);

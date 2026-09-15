@@ -11,10 +11,10 @@ import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceResponse;
 import com.laoliu.cas.appointment.application.service.AppointmentAssistantService;
 import com.laoliu.cas.appointment.domain.entity.Consultant;
 import com.laoliu.cas.appointment.domain.entity.Equipment;
@@ -93,9 +93,9 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     // ==================== 查询 ====================
 
     @Override
-    public List<AssistantServiceVO> findServices(String campus, String category, String keyword) {
+    public List<AssistantServiceResponse> findServices(String campus, String category, String keyword) {
         Map<Long, ServiceCategory> categories = categoryIndex();
-        List<AssistantServiceVO> result = new ArrayList<>();
+        List<AssistantServiceResponse> result = new ArrayList<>();
         // 走 ServiceItemService 而非 repository：前者带 @Cacheable("services")，
         // 避免每次助手问答都全表扫 services
         for (ServiceItem s : serviceService.getAvailableServices()) {
@@ -107,16 +107,16 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             if (keyword != null && !keyword.isBlank() && !containsKeyword(s.getServiceName(), s.getServiceDescribe(), keyword)) {
                 continue;
             }
-            result.add(toServiceVO(s, cat));
+            result.add(toServiceResponse(s, cat));
         }
         return result;
     }
 
     @Override
-    public List<AssistantConsultantVO> findConsultants(String campus, String keyword, String date) {
+    public List<AssistantConsultantResponse> findConsultants(String campus, String keyword, String date) {
         Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
-        List<AssistantConsultantVO> result = new ArrayList<>();
+        List<AssistantConsultantResponse> result = new ArrayList<>();
         for (Consultant c : consultantRepository.findAll()) {
             ServiceItem s = c.getServiceId() == null ? null : serviceIndex.get(c.getServiceId());
             if (s != null && !matchesCampus(s.getCampus(), campus)) {
@@ -134,7 +134,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             if (parsedDate != null) {
                 slotCount = timeSlotRepository.findAvailable(c.getId(), parsedDate).size();
             }
-            result.add(AssistantConsultantVO.builder()
+            result.add(AssistantConsultantResponse.builder()
                     .consultantId(c.getId())
                     .name(c.getName())
                     .title(c.getTitle())
@@ -159,7 +159,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     }
 
     @Override
-    public List<AssistantRoomVO> findRooms(String campus, String date, String startTime, String endTime) {
+    public List<AssistantRoomResponse> findRooms(String campus, String date, String startTime, String endTime) {
         Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
         boolean withWindow = parsedDate != null && startTime != null && endTime != null
@@ -169,7 +169,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         Map<Long, List<Room>> roomsByService = roomRepository.findAll().stream()
                 .collect(Collectors.groupingBy(Room::getServiceId, LinkedHashMap::new, Collectors.toList()));
 
-        List<AssistantRoomVO> result = new ArrayList<>();
+        List<AssistantRoomResponse> result = new ArrayList<>();
         for (ServiceItem s : serviceService.getAvailableServices()) {
             if (!matchesCampus(s.getCampus(), campus)) {
                 continue;
@@ -179,7 +179,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 if (withWindow) {
                     free = bookingRepository.countRoomOverlap(r.getId(), parsedDate, startTime, endTime) == 0;
                 }
-                result.add(AssistantRoomVO.builder()
+                result.add(AssistantRoomResponse.builder()
                         .roomId(r.getId())
                         .name(r.getName())
                         .location(r.getLocation())
@@ -196,14 +196,14 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     }
 
     @Override
-    public List<AssistantEquipmentVO> findEquipment(String campus, String keyword, String date,
+    public List<AssistantEquipmentResponse> findEquipment(String campus, String keyword, String date,
                                                     String startTime, String endTime) {
         Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
         boolean withWindow = parsedDate != null && startTime != null && endTime != null
                 && !startTime.isBlank() && !endTime.isBlank() && startTime.compareTo(endTime) < 0;
 
-        List<AssistantEquipmentVO> result = new ArrayList<>();
+        List<AssistantEquipmentResponse> result = new ArrayList<>();
         for (Equipment e : equipmentRepository.findAll()) {
             ServiceItem s = e.getServiceId() == null ? null : serviceIndex.get(e.getServiceId());
             if (s != null && !matchesCampus(s.getCampus(), campus)) {
@@ -222,7 +222,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 int stock = e.getAvailableStock() == null ? 0 : e.getAvailableStock();
                 remaining = Math.max(stock - occupied, 0);
             }
-            result.add(AssistantEquipmentVO.builder()
+            result.add(AssistantEquipmentResponse.builder()
                     .equipmentId(e.getId())
                     .name(e.getName())
                     .category(e.getCategory())
@@ -695,12 +695,12 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     // ==================== 通用工具 ====================
 
-    private AssistantServiceVO toServiceVO(ServiceItem s, ServiceCategory cat) {
+    private AssistantServiceResponse toServiceResponse(ServiceItem s, ServiceCategory cat) {
         int booked = s.getBookedCount() == null ? 0 : s.getBookedCount();
         Integer capacity = s.getCapacity();
         Integer remaining = capacity == null || capacity == -1 ? -1 : Math.max(capacity - booked, 0);
         boolean bookable = s.hasCapacity();
-        return AssistantServiceVO.builder()
+        return AssistantServiceResponse.builder()
                 .serviceId(s.getServiceId())
                 .serviceName(s.getServiceName())
                 .serviceDescribe(s.getServiceDescribe())

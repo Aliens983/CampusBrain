@@ -3,10 +3,10 @@ package com.laoliu.cas.appointment.application.service;
 import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 
@@ -28,19 +28,19 @@ import java.util.List;
 public interface AppointmentAssistantService {
 
     /** 查询可预约服务（校区 / 分类 / 关键词过滤，带实时余量） */
-    List<AssistantServiceVO> findServices(String campus, String category, String keyword);
+    List<AssistantServiceResponse> findServices(String campus, String category, String keyword);
 
     /** 查询咨询师（校区由所属服务继承；传 date 时附带该日可用时段数） */
-    List<AssistantConsultantVO> findConsultants(String campus, String keyword, String date);
+    List<AssistantConsultantResponse> findConsultants(String campus, String keyword, String date);
 
     /** 查询某咨询师某日的可预约时段 */
     List<TimeSlotResponse> findConsultantSlots(Long consultantId, String date);
 
     /** 查询教室（传 date+起止时间时附带是否空闲） */
-    List<AssistantRoomVO> findRooms(String campus, String date, String startTime, String endTime);
+    List<AssistantRoomResponse> findRooms(String campus, String date, String startTime, String endTime);
 
     /** 查询设备（传借用窗口时附带该窗口剩余可借数量） */
-    List<AssistantEquipmentVO> findEquipment(String campus, String keyword, String date,
+    List<AssistantEquipmentResponse> findEquipment(String campus, String keyword, String date,
                                              String startTime, String endTime);
 
     /** 查询我的预约（manageStatus 为空表示全部） */

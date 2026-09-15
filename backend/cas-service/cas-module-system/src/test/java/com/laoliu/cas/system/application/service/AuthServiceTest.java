@@ -6,7 +6,7 @@ import com.laoliu.cas.common.security.JWTUtils;
 import com.laoliu.cas.common.security.LoginUser;
 import com.laoliu.cas.common.util.PasswordUtils;
 import com.laoliu.cas.redis.util.RedisUtil;
-import com.laoliu.cas.system.application.service.vo.UserRegisterVO;
+import com.laoliu.cas.system.interfaces.dto.request.UserRegisterRequest;
 import com.laoliu.cas.system.domain.entity.User;
 import com.laoliu.cas.system.domain.repository.UserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -291,7 +291,7 @@ class AuthServiceTest {
         @DisplayName("应当成功注册并返回用户 ID")
         void shouldRegisterSuccessfully() {
             // Given
-            UserRegisterVO request = buildRegisterRequest();
+            UserRegisterRequest request = buildRegisterRequest();
             String redisKey = "verification_code:" + EMAIL;
 
             when(userRepository.getUserIdByEmail(EMAIL)).thenReturn(null);
@@ -314,7 +314,7 @@ class AuthServiceTest {
         @DisplayName("邮箱已存在时应当抛出 USER_ALREADY_EXISTS 异常")
         void shouldThrowExceptionWhenEmailAlreadyExists() {
             // Given
-            UserRegisterVO request = buildRegisterRequest();
+            UserRegisterRequest request = buildRegisterRequest();
             when(userRepository.getUserIdByEmail(EMAIL)).thenReturn(USER_ID);
 
             // When & Then
@@ -327,7 +327,7 @@ class AuthServiceTest {
         @DisplayName("验证码过期时应当抛出 VERIFICATION_CODE_EXPIRED 异常")
         void shouldThrowExceptionWhenRegisterCodeExpired() {
             // Given
-            UserRegisterVO request = buildRegisterRequest();
+            UserRegisterRequest request = buildRegisterRequest();
             String redisKey = "verification_code:" + EMAIL;
 
             when(userRepository.getUserIdByEmail(EMAIL)).thenReturn(null);
@@ -343,7 +343,7 @@ class AuthServiceTest {
         @DisplayName("验证码错误时应当抛出 VERIFICATION_CODE_ERROR 异常")
         void shouldThrowExceptionWhenRegisterCodeError() {
             // Given
-            UserRegisterVO request = buildRegisterRequest();
+            UserRegisterRequest request = buildRegisterRequest();
             String redisKey = "verification_code:" + EMAIL;
 
             when(userRepository.getUserIdByEmail(EMAIL)).thenReturn(null);
@@ -371,15 +371,15 @@ class AuthServiceTest {
                 .build();
     }
 
-    private UserRegisterVO buildRegisterRequest() {
-        UserRegisterVO vo = new UserRegisterVO();
-        vo.setName("测试用户");
-        vo.setEmail(EMAIL);
-        vo.setCode(VERIFICATION_CODE);
-        vo.setPassword(PASSWORD);
-        vo.setGrade("大一");
-        vo.setSex("男");
-        vo.setAge(18);
-        return vo;
+    private UserRegisterRequest buildRegisterRequest() {
+        UserRegisterRequest request = new UserRegisterRequest();
+        request.setName("测试用户");
+        request.setEmail(EMAIL);
+        request.setCode(VERIFICATION_CODE);
+        request.setPassword(PASSWORD);
+        request.setGrade("大一");
+        request.setSex("男");
+        request.setAge(18);
+        return request;
     }
 }

@@ -9,7 +9,7 @@ import com.laoliu.cas.appointment.application.service.RoomService;
 import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomResponse;
 import com.laoliu.cas.appointment.domain.entity.Room;
 import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
@@ -292,7 +292,7 @@ class AppointmentAssistantServiceImplTest {
                     Room.builder().id(2L).name("A102").serviceId(1L).build(),
                     Room.builder().id(3L).name("B101").serviceId(2L).build()));
 
-            List<AssistantRoomVO> rooms = service.findRooms(null, null, null, null);
+            List<AssistantRoomResponse> rooms = service.findRooms(null, null, null, null);
 
             assertEquals(3, rooms.size());
             verify(roomRepository, times(1)).findAll();
@@ -309,7 +309,7 @@ class AppointmentAssistantServiceImplTest {
                     Room.builder().id(1L).name("A101").serviceId(1L).build(),
                     Room.builder().id(3L).name("B101").serviceId(2L).build()));
 
-            List<AssistantRoomVO> rooms = service.findRooms("xs", null, null, null);
+            List<AssistantRoomResponse> rooms = service.findRooms("xs", null, null, null);
 
             assertEquals(1, rooms.size());
             assertEquals("B101", rooms.get(0).getName());

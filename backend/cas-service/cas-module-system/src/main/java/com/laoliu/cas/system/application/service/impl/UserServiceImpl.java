@@ -22,10 +22,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserInfoAndServicesViaMPResponse getUserInfoAndBookings(Long userId) {
         User user = userRepository.findById(userId).orElse(null);
-        UserInfoAndServicesViaMPResponse respVO = new UserInfoAndServicesViaMPResponse();
-        respVO.setUser(user);
-        respVO.setBookings(userRepository.getAllBookings(userId));
-        return respVO;
+        UserInfoAndServicesViaMPResponse resp = new UserInfoAndServicesViaMPResponse();
+        resp.setUser(user);
+        resp.setBookings(userRepository.getAllBookings(userId));
+        return resp;
     }
 
     @Override

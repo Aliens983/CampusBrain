@@ -39,8 +39,8 @@ public class ServiceStatusAdminController {
     @Operation(summary = "获取所有预约记录（分页+筛选）", description = "管理员分页获取所有用户的预约记录，支持按审核状态和服务名称筛选")
     @GetMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<PageResult<ServiceStatusResponse>> getAllBookings(@Valid ServiceStatusPageRequest reqVO) {
-        IPage<ServiceStatusResponse> statusPage = serviceStatusService.getServiceStatus(reqVO);
+    public CommonResult<PageResult<ServiceStatusResponse>> getAllBookings(@Valid ServiceStatusPageRequest req) {
+        IPage<ServiceStatusResponse> statusPage = serviceStatusService.getServiceStatus(req);
         return CommonResult.success(PageResult.of(statusPage));
     }
 

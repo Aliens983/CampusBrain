@@ -8,7 +8,7 @@ import com.laoliu.cas.common.util.PasswordUtils;
 import com.laoliu.cas.redis.util.RedisUtil;
 import com.laoliu.cas.common.security.JWTUtils;
 import com.laoliu.cas.common.security.LoginUser;
-import com.laoliu.cas.system.application.service.vo.UserRegisterVO;
+import com.laoliu.cas.system.interfaces.dto.request.UserRegisterRequest;
 import com.laoliu.cas.system.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -122,7 +122,7 @@ public class AuthService {
     }
 
     /** 用户注册 */
-    public Long register(UserRegisterVO request) {
+    public Long register(UserRegisterRequest request) {
         String email = request.getEmail();
         String code = request.getCode();
 

@@ -6,7 +6,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
 
 import java.util.List;
 
@@ -17,15 +16,6 @@ import java.util.List;
  */
 @Mapper
 public interface ServiceItemMapper extends BaseMapper<ServiceItemDO> {
-
-    ServiceItemDO selectByPrimaryKey(Long id);
-
-    List<ServiceItemDO> selectAll();
-
-    /**
-     * 分页查询所有服务
-     */
-    IPage<ServiceItemDO> selectAllWithPage(Page<ServiceItemDO> page);
 
     int insertSelective(ServiceItemDO record);
 
@@ -39,10 +29,4 @@ public interface ServiceItemMapper extends BaseMapper<ServiceItemDO> {
      * 分页查询用户预约的服务
      */
     IPage<ServiceItemDO> selectUserServicesWithPage(@Param("userId") Long userId, Page<ServiceItemDO> page);
-
-    @Select("SELECT * FROM services WHERE service_state = 1")
-    List<ServiceItemDO> selectEnabledServices();
-
-    @Select("SELECT * FROM services WHERE service_id = #{serviceId}")
-    ServiceItemDO selectByServiceId(@Param("serviceId") Long serviceId);
 }

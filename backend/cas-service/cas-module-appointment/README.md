@@ -18,7 +18,7 @@ com.laoliu.cas.appointment
 ├── carousel/                    # 轮播图子域
 ├── interfaces/controller/       # admin（/admin/services /admin/bookings）· app（/app/services /app/bookings …）
 ├── interfaces/dto/              # request / response
-├── application/service/         # 应用编排（impl），含 @EnableScheduling 自动完成任务
+├── application/service/         # 应用编排（impl）；自动完成任务的 @EnableScheduling 在 infrastructure/config/
 ├── domain/                      # 纯实体 + repository 接口（零框架注解）
 └── infrastructure/              # persistence：dataobject / mapper / repositoryImpl
 ```

@@ -3,10 +3,10 @@ package com.laoliu.cas.appointment.interfaces.controller.assistant;
 import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomVO;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceVO;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceResponse;
 import com.laoliu.cas.appointment.application.service.AppointmentAssistantService;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
@@ -56,7 +56,7 @@ public class AppointmentAssistantController {
 
     @Operation(summary = "查询可预约服务（带校区、分类与实时余量）")
     @GetMapping("/services")
-    public CommonResult<List<AssistantServiceVO>> services(
+    public CommonResult<List<AssistantServiceResponse>> services(
             @Parameter(description = "校区 cq仓前 / xs下沙，不传=全部") @RequestParam(required = false) String campus,
             @Parameter(description = "分类编码 teacher/equipment/space/activity，不传=全部") @RequestParam(required = false) String category,
             @Parameter(description = "名称/描述关键词，不传=全部") @RequestParam(required = false) String keyword) {
@@ -65,7 +65,7 @@ public class AppointmentAssistantController {
 
     @Operation(summary = "查询咨询师（校区由所属服务继承）")
     @GetMapping("/consultants")
-    public CommonResult<List<AssistantConsultantVO>> consultants(
+    public CommonResult<List<AssistantConsultantResponse>> consultants(
             @Parameter(description = "校区 cq/xs") @RequestParam(required = false) String campus,
             @Parameter(description = "姓名/部门/职称/简介关键词") @RequestParam(required = false) String keyword,
             @Parameter(description = "日期 yyyy-MM-dd，传了则附带该日可用时段数") @RequestParam(required = false) String date) {
@@ -82,7 +82,7 @@ public class AppointmentAssistantController {
 
     @Operation(summary = "查询教室（传日期时段则附带是否空闲）")
     @GetMapping("/rooms")
-    public CommonResult<List<AssistantRoomVO>> rooms(
+    public CommonResult<List<AssistantRoomResponse>> rooms(
             @Parameter(description = "校区 cq/xs") @RequestParam(required = false) String campus,
             @Parameter(description = "日期 yyyy-MM-dd") @RequestParam(required = false) String date,
             @Parameter(description = "开始时间 HH:mm") @RequestParam(required = false) String startTime,
@@ -92,7 +92,7 @@ public class AppointmentAssistantController {
 
     @Operation(summary = "查询设备（传借用窗口则附带该窗口剩余可借数量）")
     @GetMapping("/equipment")
-    public CommonResult<List<AssistantEquipmentVO>> equipment(
+    public CommonResult<List<AssistantEquipmentResponse>> equipment(
             @Parameter(description = "校区 cq/xs") @RequestParam(required = false) String campus,
             @Parameter(description = "名称/分类/描述关键词") @RequestParam(required = false) String keyword,
             @Parameter(description = "日期 yyyy-MM-dd") @RequestParam(required = false) String date,

@@ -2,7 +2,6 @@ package com.laoliu.cas.system.interfaces.controller.app;
 
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.system.application.service.CaptchaService;
-import com.laoliu.cas.system.application.service.vo.CaptchaResult;
 import com.laoliu.cas.system.interfaces.dto.response.CaptchaResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,11 +26,7 @@ public class GraphicController {
     @Operation(summary = "获取图形验证码", description = "返回uuid和验证码图片URL，验证码5分钟内有效")
     @GetMapping
     public CommonResult<CaptchaResponse> getGraphicCaptcha() {
-        CaptchaResult captchaResult = captchaService.generateCaptcha();
-        CaptchaResponse respVO = CaptchaResponse.builder()
-                .uuid(captchaResult.getUuid())
-                .imageUrl(captchaResult.getImageUrl())
-                .build();
-        return CommonResult.success(respVO);
+        // CaptchaService 已直接返回 CaptchaResponse，无需在 Controller 二次拼装（7.3.3）
+        return CommonResult.success(captchaService.generateCaptcha());
     }
 }

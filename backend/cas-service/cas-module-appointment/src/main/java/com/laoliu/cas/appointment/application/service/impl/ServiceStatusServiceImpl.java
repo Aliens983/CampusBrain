@@ -37,10 +37,10 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest reqVO) {
+    public IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest req) {
         IPage<ServiceStatusResponse> result = bookingRepository.getServiceStatus(
-                reqVO.getPageNo(), reqVO.getPageSize(),
-                reqVO.getManageStatus(), reqVO.getServiceName());
+                req.getPageNo(), req.getPageSize(),
+                req.getManageStatus(), req.getServiceName());
         result.getRecords().forEach(this::setStatusDescription);
         return result;
     }
@@ -51,9 +51,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest reqVO) {
-        return bookingRepository.getServiceStatusByUserId(userId, reqVO.getPageNo(), reqVO.getPageSize(),
-                reqVO.getManageStatus(), reqVO.getServiceName());
+    public IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest req) {
+        return bookingRepository.getServiceStatusByUserId(userId, req.getPageNo(), req.getPageSize(),
+                req.getManageStatus(), req.getServiceName());
     }
 
     @Override
@@ -64,25 +64,12 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest reqVO) {
+    public IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req) {
         IPage<ServiceStatusResponse> statusPage = bookingRepository.getServiceStatusByUserId(
-                userId, reqVO.getPageNo(), reqVO.getPageSize(),
-                reqVO.getManageStatus(), reqVO.getServiceName());
+                userId, req.getPageNo(), req.getPageSize(),
+                req.getManageStatus(), req.getServiceName());
         statusPage.getRecords().forEach(this::setStatusDescription);
         return statusPage;
-    }
-
-    @Override
-    public boolean auditService(Long orderId, Integer status, String reason) {
-        // 3.1.5 状态机：允许的来源状态由"目标状态"决定。
-        //  · 置为通过：仅待审核单可通过；
-        //  · 置为拒绝：待审核或已通过单都可被修正拒绝（此前已通过单无法纠正）；
-        //  · 其它目标：保守地只允许待审核单发起。
-        ManageStatus target = ManageStatus.of(status);
-        List<ManageStatus> allowedFrom = target == ManageStatus.REJECTED
-                ? List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED)
-                : List.of(ManageStatus.SUBMIT);
-        return bookingRepository.auditService(orderId, status, reason, allowedFrom);
     }
 
     @Override

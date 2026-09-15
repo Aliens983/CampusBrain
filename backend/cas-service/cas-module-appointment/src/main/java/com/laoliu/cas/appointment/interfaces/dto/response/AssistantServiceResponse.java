@@ -19,7 +19,7 @@ import java.io.Serializable;
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "预约助手·可预约服务")
-public class AssistantServiceVO implements Serializable {
+public class AssistantServiceResponse implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;

@@ -33,8 +33,8 @@ public class ServiceController {
 
     @Operation(summary = "获取可预约服务列表（分页+筛选）", description = "分页查询服务，支持按名称模糊搜索和状态筛选")
     @GetMapping
-    public CommonResult<PageResult<ServiceResponse>> getEnabledServices(@Valid ServicePageRequest reqVO) {
-        return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceService.getAllServices(reqVO)));
+    public CommonResult<PageResult<ServiceResponse>> getEnabledServices(@Valid ServicePageRequest req) {
+        return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceService.getAllServices(req)));
     }
 
     @Operation(summary = "根据ID获取服务详情", description = "获取单个服务的详细信息")
