@@ -2,7 +2,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
-import { fetchServiceCards } from '@/common/campus'
+import { fetchServiceCardById } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
 import { openChatWithConsultant } from '@/common/consultChat'
 
@@ -91,8 +91,8 @@ export function useServiceDetail() {
   onMounted(async () => {
     const id = Number(route.params.id)
     try {
-      const services = await fetchServiceCards()
-      service.value = services.find(s => s.id === id) || null
+      // 7.3.11：改走单条详情接口，不再拉整页服务列表后前端 find
+      service.value = await fetchServiceCardById(id)
       if (!service.value) {
         ElMessage.warning('未找到该服务')
         return

@@ -274,7 +274,10 @@ function askQuestion() {
   es = new EventSource(`${BASE}/qa/ask/stream?${params.toString()}`)
   // 看门狗：服务端既不返回也不关闭连接时（LLM 挂起、网关丢连接），
   // streaming 会永远为 true，输入框被永久锁死，只能刷新页面。
-  streamWatchdog = window.setTimeout(() => stopStream(aiMsg, q), SSE_WATCHDOG_MS)
+  streamWatchdog = window.setTimeout(() => {
+    ElMessage.warning('响应超时，已中断本次生成，请重试')
+    stopStream(aiMsg, q, '（响应超时（120 秒无数据），已中断，请重试）')
+  }, SSE_WATCHDOG_MS)
   es.addEventListener('messageId', event => { const id = Number((event as MessageEvent).data); if (id) aiMsg.id = id })
   // 槽位更新：展示 AI 当前记住的预约条件
   es.addEventListener('slots', event => {
@@ -314,14 +317,17 @@ function askQuestion() {
 }
 
 /** 结束流式：关连接、清看门狗、复位状态。正常结束 / 出错 / 超时 / 卸载共用一条收尾路径 */
-function stopStream(aiMsg?: ChatMsg, title?: string) {
+function stopStream(aiMsg?: ChatMsg, title?: string, hint?: string) {
   if (streamWatchdog) { clearTimeout(streamWatchdog); streamWatchdog = 0 }
   es?.close(); es = null
   streaming.value = false
   // 只有正常收尾才刷新会话标题：异常或超时时答案不完整，
   // 让会话停留在旧标题反而更利于用户回看
   if (title) touchSessionTitle(title)
-  if (aiMsg && !aiMsg.content) aiMsg.content = '（连接已中断，请重试）'
+  if (aiMsg) {
+    if (hint) aiMsg.content += (aiMsg.content ? '\n\n' : '') + hint
+    else if (!aiMsg.content) aiMsg.content = '（连接已中断，请重试）'
+  }
   scrollToBottom()
 }
 const lastAssistantMsgId = computed(() => { for (let i = messages.value.length - 1; i >= 0; i--) if (messages.value[i].role === 'assistant') return messages.value[i].id ?? null; return null })

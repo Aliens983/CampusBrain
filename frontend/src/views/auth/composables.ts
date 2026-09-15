@@ -19,6 +19,17 @@ export interface ResetFormState {
   confirmPassword: string
 }
 
+/**
+ * 校验登录回跳地址（7.3.11）：只接受站内单斜杠路径，
+ * 拒绝 //host 协议相对 URL 与外链，避免开放重定向。
+ */
+function safeRedirect(redirect: unknown): string | null {
+  if (typeof redirect !== 'string' || !redirect.startsWith('/') || redirect.startsWith('//')) {
+    return null
+  }
+  return redirect
+}
+
 export function useAuthPage() {
   const router = useRouter()
   const userStore = useUserStore()
@@ -103,7 +114,9 @@ export function useAuthPage() {
       userStore.setToken(token)
       userStore.setUserInfo(await fetchUserProfile())
       ElMessage.success('登录成功')
-      router.push(resolveHomeByRole(userStore.userInfo?.role))
+      // 7.3.11：优先回跳登录前被守卫拦下的目标页；query 缺失/非法时回角色首页
+      router.push(safeRedirect(router.currentRoute.value.query.redirect)
+        || resolveHomeByRole(userStore.userInfo?.role))
     } catch (error: unknown) {
       const err = error as { message?: string }
       ElMessage.error(err.message || '登录失败，请检查账号和密码')

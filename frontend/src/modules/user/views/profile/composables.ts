@@ -88,12 +88,16 @@ export function usePasswordChange(visible: Ref<boolean>) {
 }
 
 /** 个人通知偏好（与后端 /users/me/notify 同步） */
+interface NotifyPrefsResponse {
+  emailOn?: boolean
+}
+
 export function useNotifyPrefs() {
   const prefs = reactive({ emailOn: true })
 
   async function loadPrefs() {
     try {
-      const d = await request.get('/users/me/notify') as any
+      const d = (await request.get('/users/me/notify')) as NotifyPrefsResponse | null
       if (d && typeof d.emailOn === 'boolean') {
         prefs.emailOn = d.emailOn
       }

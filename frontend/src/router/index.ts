@@ -73,7 +73,8 @@ router.beforeEach((to, _from, next) => {
   const userStore = useUserStore()
 
   if (to.meta.requiresAuth && !userStore.isLogin) {
-    next('/login')
+    // 7.3.11：带上原目标地址，登录成功后回跳，避免深层链接登录后只回首页
+    next({ path: '/login', query: { redirect: to.fullPath } })
     return
   }
 

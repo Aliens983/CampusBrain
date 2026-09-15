@@ -171,6 +171,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { UploadFile, UploadUserFile } from 'element-plus'
 import { UploadFilled } from '@element-plus/icons-vue'
 import request from '@/common/utils/request'
 import axios from 'axios'
@@ -179,13 +180,14 @@ import axios from 'axios'
 const weatherSheng = ref('')
 const weatherPlace = ref('')
 const weatherLoading = ref(false)
-const weather = ref<{ shi: string; qu: string; weather1: string; temp: string; name: string } | null>(null)
+type WeatherResult = { shi: string; qu: string; weather1: string; temp: string; name: string }
+const weather = ref<WeatherResult | null>(null)
 
 async function fetchWeather() {
   if (!weatherSheng.value || !weatherPlace.value) { ElMessage.warning('请输入省份和城市'); return }
   weatherLoading.value = true
   try {
-    weather.value = await request.get('/weather', { params: { sheng: weatherSheng.value, place: weatherPlace.value } }) as any
+    weather.value = (await request.get('/weather', { params: { sheng: weatherSheng.value, place: weatherPlace.value } })) as WeatherResult | null
   } catch { ElMessage.error('天气查询失败') }
   finally { weatherLoading.value = false }
 }
@@ -225,11 +227,16 @@ function downloadQr() {
 
 // ====== OSS ======
 const ossFile = ref<File | null>(null)
-const ossFileList = ref<any[]>([])
+const ossFileList = ref<UploadUserFile[]>([])
 const ossLoading = ref(false)
 const ossUploaded = ref(false)
 
-function handleFileChange(file: any) { ossFile.value = file.raw; ossFileList.value = [file]; ossUploaded.value = false }
+function handleFileChange(file: UploadFile) {
+  if (!file.raw) return
+  ossFile.value = file.raw as File
+  ossFileList.value = [file]
+  ossUploaded.value = false
+}
 async function uploadOss() {
   if (!ossFile.value) return
   ossLoading.value = true

@@ -68,6 +68,7 @@
 </template>
 
 <script setup lang="ts">
+import type { CarouselInstance } from 'element-plus'
 import { ref } from 'vue'
 import type { BookingRecord } from '@/common/types'
 
@@ -81,7 +82,7 @@ const emit = defineEmits<{
   (e: 'open-booking', id: number): void
 }>()
 
-const carouselRef = ref<any>(null)
+const carouselRef = ref<CarouselInstance | null>(null)
 let dragStartX: number | null = null
 function onBannerDown(e: MouseEvent) {
   dragStartX = e.clientX

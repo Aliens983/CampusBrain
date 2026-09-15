@@ -77,7 +77,9 @@ const weather = ref<{ shi: string; weather1: string; temp: string } | null>(null
 let unreadTimer: number | undefined
 
 onMounted(async () => {
-  try { weather.value = await request.get('/weather/local') as any } catch { /* 静默 */ }
+  try {
+    weather.value = (await request.get('/weather/local')) as { shi: string; weather1: string; temp: string } | null
+  } catch { /* 静默 */ }
   refreshChatUnread()
   unreadTimer = window.setInterval(refreshChatUnread, 20000)
 })

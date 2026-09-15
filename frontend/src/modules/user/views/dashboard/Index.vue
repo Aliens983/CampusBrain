@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard-page">
+  <div v-loading="loading" class="dashboard-page" element-loading-text="加载首页数据…">
     <HeroSection
       :banners="banners"
       :today-bookings="todayBookings"
@@ -68,6 +68,7 @@ import ServiceDrawer from './components/ServiceDrawer.vue'
 const router = useRouter()
 
 const {
+  loading,
   banners,
   services,
   activeService,

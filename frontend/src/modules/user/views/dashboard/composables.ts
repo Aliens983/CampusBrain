@@ -58,8 +58,9 @@ export function useDashboard() {
   onMounted(async () => {
     void loadBanners()
     loading.value = true
-    loading.value = true
     try {
+      // 仪表盘统计卡片/最近预约/推荐均基于「我的预约 + 可预约服务」全量派生，
+      // 后端暂无聚合仪表盘接口，此处保留双列表拉取（7.3.11 评估结论）
       const [bookingData, serviceData] = await Promise.all([fetchBookingRecords(), fetchServiceCards()])
       bookings.value = bookingData
       services.value = serviceData
@@ -126,6 +127,7 @@ export function useDashboard() {
   }
 
   return {
+    loading,
     banners,
     bookings,
     services,

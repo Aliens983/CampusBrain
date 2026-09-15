@@ -1,6 +1,8 @@
 import request from '@/common/utils/request'
 import type { AdminSummary, BookingRecord, ServiceCard, UserInfo } from '@/common/types'
 import { normalizeRole, normalizeUserInfo } from '@/common/utils/auth'
+// 分类中文名全局唯一来源在 common/dictionary（7.3.11），此处不再私有维护一份
+import { categoryLabel } from '@/common/dictionary'
 
 type BackendService = {
   serviceId?: number
@@ -76,15 +78,6 @@ const categoryToType: Record<string, ServiceCard['type']> = {
   other: 'printing',
 }
 
-const categoryLabel: Record<string, string> = {
-  teacher: '教师咨询',
-  equipment: '设备借用',
-  space: '教室空间',
-  activity: '活动报名',
-  exam: '考试报名',
-  other: '其他服务',
-}
-
 /** 后端没返回分类编码时的兜底归类（老数据按名称推断） */
 function resolveCategory(serviceName: string, raw: string | undefined, type: ServiceCard['type']): string {
   if (raw && categoryToType[raw]) return raw
@@ -114,7 +107,7 @@ function mapService(item: BackendService, index: number): ServiceCard {
     campus: item.campus,
     imageUrl: item.imageUrl,
     capacity: item.capacity,
-    category: item.categoryName || categoryLabel[catKey] || '其他服务',
+    category: item.categoryName || categoryLabel(catKey) || '其他服务',
     location: item.campus === 'xs' ? '下沙校区' : '仓前校区',
     priceLabel: item.serviceState === 1 ? '可预约' : '维护中',
     status: item.serviceState === 1 ? 'available' : 'maintenance',
@@ -179,18 +172,20 @@ export async function fetchServiceCards() {
   return list.map(mapService)
 }
 
-/** 服务业务分类（后端 service_category 固定 4 类：教师咨询/设备借用/教室空间/活动报名） */
-export interface ServiceCategoryOption {
-  id: number
-  code: string
-  name: string
-  sort: number
+/**
+ * 服务详情：直接走 GET /app/services/{id} 单条接口（7.3.11）。
+ * 此前详情页只能拉整页列表再前端 find，数据量大时既慢又受分页口径影响。
+ */
+export async function fetchServiceCardById(id: number): Promise<ServiceCard | null> {
+  const data = (await request.get(`/app/services/${id}`)) as BackendService | null
+  return data ? mapService(data, 0) : null
 }
 
-export async function fetchServiceCategories(): Promise<ServiceCategoryOption[]> {
-  const data = (await request.get('/app/service-categories')) as ServiceCategoryOption[]
-  return Array.isArray(data) ? data : []
-}
+/**
+ * 服务业务分类接口与类型定义已收敛到 common/dictionary（7.3.11），
+ * 此处保留转出以兼容既有 import 路径。
+ */
+export { fetchServiceCategories, type ServiceCategoryOption } from '@/common/dictionary'
 
 /** 2.2.3：管理端服务列表走 /admin/services 服务端分页（含维护中的服务），只取当前页 */
 export interface AdminServicesPage {

@@ -168,7 +168,7 @@
             <el-upload
               :show-file-list="false"
               accept="image/*"
-              :http-request="(o: any) => uploadImage(o.file, 'edit')"
+              :http-request="(o: UploadRequestOptions) => uploadImage(o.file as File, 'edit')"
             >
               <img
                 v-if="editForm.image"
@@ -265,7 +265,7 @@
           <el-upload
             :show-file-list="false"
             accept="image/*"
-            :http-request="(o: any) => uploadImage(o.file, 'create')"
+            :http-request="(o: UploadRequestOptions) => uploadImage(o.file as File, 'create')"
           >
             <img
               v-if="createForm.image"
@@ -295,6 +295,7 @@
 <script setup lang="ts">
 import { computed, reactive, ref, onMounted, watch } from 'vue'
 import { ElMessage } from 'element-plus'
+import type { UploadRequestOptions } from 'element-plus'
 import request from '@/common/utils/request'
 import { fetchAdminServicesPage, fetchServiceCategories, type ServiceCategoryOption } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
