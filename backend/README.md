@@ -46,7 +46,8 @@ cas-server               启动入口(application.yml/@MapperScan)，含 Flyway 
 | Elasticsearch | localhost:9200 | KB 关键词检索（`kb-es`） |
 | Qdrant | localhost:6334 | KB 向量检索（`kb-qdrant`） |
 | RabbitMQ | localhost:5672 | 事件总线，admin/admin123（`kb-rabbitmq`） |
-| MinIO | localhost:9000 | KB 文档存储，bucket `knowledge-base-docs`（`kb-minio`） |
+
+> KB 上传文档存本地磁盘（`FILE_STORAGE_PATH`，容器部署为命名卷 `kb-file-data:/file`），项目不部署 MinIO。
 
 ## 三、环境变量（backend/.env）
 
@@ -58,7 +59,6 @@ cas-server               启动入口(application.yml/@MapperScan)，含 Flyway 
 | `JWT_SECRET` / `INTERNAL_SIGN_SECRET` | JWT / 内网签名密钥，生产必改 | 内置示例 |
 | `KB_MYSQL_ROOT_PASSWORD` | KB MySQL 密码 | root123 |
 | `RABBITMQ_PASSWORD` | RabbitMQ | admin123 |
-| `MINIO_ACCESS_KEY` / `MINIO_ROOT_PASSWORD` | MinIO | minioadmin / minioadmin123 |
 | `MAIL_HOST` / `MAIL_PORT` / `MAIL_USERNAME` / `MAIL_PASSWORD` | SMTP 发信（可选） | smtp.163.com / 465 |
 | `WEATHER_API_ID` / `WEATHER_API_KEY` | 天气 API（可选） | — |
 | `DEEPSEEK_API_KEY` | 预留：CAS 侧旧 Qwen `/ai/chat` 已下线（2026-09-07），当前无消费方 | — |
@@ -72,7 +72,7 @@ cas-server               启动入口(application.yml/@MapperScan)，含 Flyway 
 ```bash
 cd backend
 cp .env.example .env      # 填 MYSQL_ROOT_PASSWORD 等
-docker compose up -d      # nacos + kb-mysql/redis/es/qdrant/rabbitmq/minio
+docker compose up -d      # nacos + kb-mysql/redis/es/qdrant/rabbitmq
 ```
 > CAS 的 MySQL/Redis 用宿主机实例；库 `cas_db` 无需手工建表，**Flyway 会在 CAS 首次启动时自动建表并灌种子**。
 
@@ -131,7 +131,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 ### KB 知识库
 - 文档上传 → 解析 → 分块（sliding_window 512/50）→ Embedding（硅基流动 Qwen3-Embedding-0.6B，1024 维）
 - 检索：ES 关键词（top10）+ Qdrant 向量（top10）→ RRF 融合（top5）→ DeepSeek（`deepseek-chat`）生成，Resilience4j 熔断。
-- 存储：KB 元数据在 `knowledge_base`(MySQL)，文档正文在 MinIO，关键词索引 ES，向量 Qdrant。
+- 存储：KB 元数据在 `knowledge_base`(MySQL)，文档正文在本地磁盘卷，关键词索引 ES，向量 Qdrant。
 
 ### KB × CAS 预约集成（AI 助手）
 - **多轮上下文**：`ChatSession`（槽位 + 待确认动作）存 Redis（TTL 6h）；

@@ -88,12 +88,6 @@ jwt:
 auth:
   internal-sign-secret: test-internal-sign-secret
 
-minio:
-  endpoint: http://localhost:19000
-  access-key: minioadmin
-  secret-key: minioadmin123
-  bucket: test-bucket
-
 langchain4j:
   openai:
     api-key: test-key-not-used

@@ -6,9 +6,12 @@
 #                  [-f docker-compose.observability.yml] up -d
 #
 # 职责边界（每个服务只允许在一个文件中定义，6.2.2）：
-#   - docker-compose.yml：基础设施底座（Nacos / KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO）
+#   - docker-compose.yml：基础设施底座（Nacos / KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ）
 #   - 本文件：业务服务（gateway / cas-service / kb-service / frontend）
 #     及 CAS 专属中间件（cas-mysql / cas-redis；开发时 CAS 用宿主机 MySQL/Redis）
+#
+# 文档文件存储：kb-service 使用本地磁盘（容器内 /file，命名卷 kb-file-data 持久化），
+# CAS 上传文件使用 cas-uploads 卷；项目不部署 MinIO。
 #
 # Schema 唯一来源是 Flyway（6.2.4）：cas-mysql 不再挂载 initdb 脚本，
 # 全新空库由 cas-service 启动时 Flyway 自动建表（V1~V6）。
@@ -141,9 +144,8 @@ services:
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: admin
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
-      MINIO_ENDPOINT: http://kb-minio:9000
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      # 文档落地到容器内 /file（命名卷持久化），重启不丢；FILE_STORAGE_PATH 为绝对路径时直接使用
+      FILE_STORAGE_PATH: /file
       ES_HOST: kb-es
       ES_PORT: 9200
       QDRANT_HOST: kb-qdrant
@@ -172,8 +174,8 @@ services:
         condition: service_healthy
       kb-rabbitmq:
         condition: service_healthy
-      kb-minio:
-        condition: service_healthy
+    volumes:
+      - kb-file-data:/file
 
   frontend:
     image: frontend:${TAG:-latest}
@@ -190,3 +192,4 @@ volumes:
   cas-mysql-data:
   cas-redis-data:
   cas-uploads:
+  kb-file-data:
