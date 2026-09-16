@@ -97,13 +97,6 @@
         )
     </insert>
 
-    <select id="getServiceStatus" resultMap="ServiceStatusResultMap">
-        SELECT
-        <include refid="ServiceStatus_Columns"/>
-        <include refid="ServiceStatus_Joins"/>
-        ORDER BY i.create_time DESC
-    </select>
-
     <select id="getServiceStatusByUserId" resultMap="ServiceStatusResultMap">
         SELECT
         <include refid="ServiceStatus_Columns"/>

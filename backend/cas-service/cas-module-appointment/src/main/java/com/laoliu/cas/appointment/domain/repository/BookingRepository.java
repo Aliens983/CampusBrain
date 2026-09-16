@@ -68,8 +68,6 @@ public interface BookingRepository {
      */
     int cancelBookings(Long userId, List<Long> bookingIds);
 
-    List<ServiceStatusResponse> getServiceStatus();
-
     /**
      * 分页查询所有服务预约状态（支持按审核状态、服务名称筛选）
      */

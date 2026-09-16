@@ -14,9 +14,6 @@ import java.util.List;
  */
 public interface ServiceStatusService {
 
-    /** 获取所有服务预约状态 */
-    List<ServiceStatusResponse> getServiceStatus();
-
     /**
      * 分页查询所有服务预约状态（支持筛选）
      */

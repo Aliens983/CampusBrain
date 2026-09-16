@@ -139,11 +139,6 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public List<ServiceStatusResponse> getServiceStatus() {
-        return itemMapper.getServiceStatus();
-    }
-
-    @Override
     public IPage<ServiceStatusResponse> getServiceStatus(int page, int pageSize, Integer manageStatus, String serviceName) {
         return itemMapper.getServiceStatusWithPage(new Page<>(page, pageSize), manageStatus, serviceName);
     }

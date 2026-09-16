@@ -32,11 +32,6 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     private final BookingMetrics bookingMetrics;
 
     @Override
-    public List<ServiceStatusResponse> getServiceStatus() {
-        return bookingRepository.getServiceStatus();
-    }
-
-    @Override
     public IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest req) {
         IPage<ServiceStatusResponse> result = bookingRepository.getServiceStatus(
                 req.getPageNo(), req.getPageSize(),

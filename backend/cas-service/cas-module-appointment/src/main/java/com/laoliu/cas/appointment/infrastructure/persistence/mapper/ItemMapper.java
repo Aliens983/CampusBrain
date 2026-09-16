@@ -55,8 +55,6 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                  @Param("approvedCode") int approvedCode,
                                  @Param("cancelledCode") int cancelledCode);
 
-    List<ServiceStatusResponse> getServiceStatus();
-
     /**
      * 分页查询所有服务预约状态（支持筛选）
      */
