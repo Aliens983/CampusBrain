@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/Elasticsearch-8.12-005571?style=for-the-badge&logo=elasticsearch&logoColor=white" alt="Elasticsearch" />
   <img src="https://img.shields.io/badge/Qdrant-1.9-DC244C?style=for-the-badge&logo=qdrant&logoColor=white" alt="Qdrant" />
   <img src="https://img.shields.io/badge/RabbitMQ-3.13-FF6600?style=for-the-badge&logo=rabbitmq&logoColor=white" alt="RabbitMQ" />
-  <img src="https://img.shields.io/badge/MinIO-latest-C72E49?style=for-the-badge&logo=minio&logoColor=white" alt="MinIO" />
+  <img src="https://img.shields.io/badge/Doc_Storage-Local_Disk-0969da?style=for-the-badge" alt="Document Storage: Local Disk" />
   <img src="https://img.shields.io/badge/Docker-%F0%9F%90%B3-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
 </p>
 
@@ -107,7 +107,7 @@
                             │ RabbitMQ appointment.changed（KB 监听）
                             └───────────►──────┘
    Nacos(8848) 注册/配置  ·  MySQL(cas_db / knowledge_base)  ·  Redis
-   Elasticsearch + Qdrant（KB 检索）· RabbitMQ · MinIO（KB 文档存储）
+   Elasticsearch + Qdrant（KB 检索）· RabbitMQ · KB 文档本地磁盘存储（kb-file-data 卷）
 ```
 
 **服务间协作**
@@ -157,7 +157,7 @@ cp .env.example .env        # 至少填 MYSQL_ROOT_PASSWORD；JWT_SECRET / INTER
 ### 3. 启动基础设施 + 三个服务
 ```bash
 cd backend
-docker compose up -d                                  # Nacos + KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ/MinIO
+docker compose up -d                                  # Nacos + KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ
 ./scripts/run-local.sh gateway   # :8888  （网关）
 ./scripts/run-local.sh cas       # :18080 （预约 CAS，Flyway 自动建表 + 种子）
 ./scripts/run-local.sh kb        # :8081  （知识库 KB）
