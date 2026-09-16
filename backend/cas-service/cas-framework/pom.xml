@@ -23,7 +23,6 @@
         <module>cas-spring-boot-starter-redis</module>
         <module>cas-spring-boot-starter-mq</module>
         <module>cas-spring-boot-starter-security</module>
-        <module>cas-spring-boot-starter-test</module>
     </modules>
 
 </project>
