@@ -21,13 +21,7 @@ public interface DocumentRepository {
     Optional<Document> findById(Long id);
 
     /**
-     * Find all documents, ordered by creation time descending.
-     * Use {@link #findAll(int, int)} for paginated queries.
-     */
-    List<Document> findAll();
-
-    /**
-     * Find documents with pagination.
+     * Find documents with pagination, ordered by creation time descending.
      * @param page 0-based page number
      * @param size page size
      */
@@ -39,19 +33,32 @@ public interface DocumentRepository {
     List<Document> findByStatus(DocumentStatus status);
 
     /**
-     * 按归属用户查询，按创建时间倒序。
+     * 按归属用户分页查询，按创建时间倒序。
      *
      * @param ownerId 归属用户ID
+     * @param page    0 基页码
+     * @param size    每页条数
      */
-    List<Document> findByOwnerId(Long ownerId);
+    List<Document> findByOwnerId(Long ownerId, int page, int size);
 
     /**
-     * 按归属用户 + 标题关键词查询（下推 SQL，避免全表内存过滤）。
+     * 按归属用户 + 标题关键词分页查询（下推 SQL，避免全表内存过滤）。
      *
      * @param ownerId 归属用户ID
      * @param keyword 标题关键词
+     * @param page    0 基页码
+     * @param size    每页条数
      */
-    List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword);
+    List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword, int page, int size);
+
+    /**
+     * 管理员视角：全量标题关键词分页查询（无 owner 条件，下推 SQL）。
+     *
+     * @param keyword 标题关键词
+     * @param page    0 基页码
+     * @param size    每页条数
+     */
+    List<Document> searchAllByTitle(String keyword, int page, int size);
 
     /**
      * Update document status only.

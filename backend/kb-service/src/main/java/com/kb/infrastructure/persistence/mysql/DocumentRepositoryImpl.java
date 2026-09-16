@@ -61,17 +61,10 @@ public class DocumentRepositoryImpl implements DocumentRepository {
     }
 
     @Override
-    public List<Document> findAll() {
-        return documentMapper.selectList(null).stream()
+    public List<Document> findAll(int page, int size) {
+        return documentMapper.selectPageAll((long) page * size, size).stream()
                 .map(this::toDocument)
                 .toList();
-    }
-
-    @Override
-    public List<Document> findAll(int page, int size) {
-        var pageQuery = new com.baomidou.mybatisplus.extension.plugins.pagination.Page<DocumentDO>(page + 1, size);
-        var result = documentMapper.selectPage(pageQuery, null);
-        return result.getRecords().stream().map(this::toDocument).toList();
     }
 
     @Override
@@ -82,15 +75,21 @@ public class DocumentRepositoryImpl implements DocumentRepository {
     }
 
     @Override
-    public List<Document> findByOwnerId(Long ownerId) {
-        return documentMapper.selectByOwnerId(ownerId).stream()
+    public List<Document> findByOwnerId(Long ownerId, int page, int size) {
+        return documentMapper.selectPageByOwnerId(ownerId, (long) page * size, size).stream()
                 .map(this::toDocument)
                 .toList();
     }
 
     @Override
-    public List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword) {
-        return documentMapper.selectByOwnerIdAndTitle(ownerId, keyword).stream()
+    public List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword, int page, int size) {
+        return documentMapper.selectPageByOwnerIdAndTitle(ownerId, keyword, (long) page * size, size)
+                .stream().map(this::toDocument).toList();
+    }
+
+    @Override
+    public List<Document> searchAllByTitle(String keyword, int page, int size) {
+        return documentMapper.selectPageByTitle(keyword, (long) page * size, size).stream()
                 .map(this::toDocument)
                 .toList();
     }

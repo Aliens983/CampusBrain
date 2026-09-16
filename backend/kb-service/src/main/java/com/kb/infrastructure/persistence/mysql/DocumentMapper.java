@@ -28,22 +28,37 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
     long countByStatus(@Param("status") String status);
 
     /**
-     * 按归属用户查询。
-     * <p>
-     * 用 {@code owner_id = #{ownerId}} 而非 {@code <=>}：历史数据 owner_id 可能为 NULL，
-     * 这类无主文档对任何用户都不可见（fail-closed），避免被枚举。
-     */
-    @Select("SELECT * FROM document WHERE owner_id = #{ownerId} ORDER BY created_at DESC")
-    List<DocumentDO> selectByOwnerId(@Param("ownerId") Long ownerId);
-
-    /**
-     * 归属 + 标题模糊搜索，下推 SQL。
-     * <p>
-     * 此前是全表加载后在 JVM 里 {@code toLowerCase().contains()}，文档量上来后每次搜索都是全表扫描
-     * 加全量 DTO 构造；下推后只返回命中的行。
+     * 按归属用户分页查询。
      */
     @Select("SELECT * FROM document WHERE owner_id = #{ownerId} " +
-            "AND LOWER(title) LIKE CONCAT('%', LOWER(#{keyword}), '%') ORDER BY created_at DESC")
-    List<DocumentDO> selectByOwnerIdAndTitle(@Param("ownerId") Long ownerId,
-                                             @Param("keyword") String keyword);
+            "ORDER BY created_at DESC LIMIT #{offset}, #{size}")
+    List<DocumentDO> selectPageByOwnerId(@Param("ownerId") Long ownerId,
+                                         @Param("offset") long offset,
+                                         @Param("size") int size);
+
+    /**
+     * 全量分页查询（管理员列表）。
+     */
+    @Select("SELECT * FROM document ORDER BY created_at DESC LIMIT #{offset}, #{size}")
+    List<DocumentDO> selectPageAll(@Param("offset") long offset, @Param("size") int size);
+
+    /**
+     * 归属 + 标题关键词分页搜索。
+     */
+    @Select("SELECT * FROM document WHERE owner_id = #{ownerId} " +
+            "AND LOWER(title) LIKE CONCAT('%', LOWER(#{keyword}), '%') " +
+            "ORDER BY created_at DESC LIMIT #{offset}, #{size}")
+    List<DocumentDO> selectPageByOwnerIdAndTitle(@Param("ownerId") Long ownerId,
+                                                 @Param("keyword") String keyword,
+                                                 @Param("offset") long offset,
+                                                 @Param("size") int size);
+
+    /**
+     * 全量标题关键词分页搜索（管理员）。
+     */
+    @Select("SELECT * FROM document WHERE LOWER(title) LIKE CONCAT('%', LOWER(#{keyword}), '%') " +
+            "ORDER BY created_at DESC LIMIT #{offset}, #{size}")
+    List<DocumentDO> selectPageByTitle(@Param("keyword") String keyword,
+                                       @Param("offset") long offset,
+                                       @Param("size") int size);
 }

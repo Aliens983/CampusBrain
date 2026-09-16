@@ -50,10 +50,12 @@ public class DocumentController {
     }
 
     @Operation(summary = "获取文档列表",
-            description = "列出当前用户有权查看的文档：普通用户仅返回自己上传的，ADMIN 返回全部")
+            description = "分页列出当前用户有权查看的文档：普通用户仅返回自己上传的，ADMIN 返回全部")
     @GetMapping
-    public ApiResponse<List<DocumentDTO>> listDocuments() {
-        List<DocumentDTO> docs = documentService.listVisibleDocuments().stream()
+    public ApiResponse<List<DocumentDTO>> listDocuments(
+            @Parameter(description = "页码，0 基") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每页条数，最大 100") @RequestParam(defaultValue = "20") int size) {
+        List<DocumentDTO> docs = documentService.listVisibleDocuments(page, size).stream()
                 .map(DocumentDTO::from)
                 .toList();
         return ApiResponse.success(docs);
@@ -69,11 +71,13 @@ public class DocumentController {
     }
 
     @Operation(summary = "搜索文档",
-            description = "按标题关键词搜索当前用户有权查看的文档（普通用户仅搜自己的）")
+            description = "按标题关键词分页搜索当前用户有权查看的文档（模糊匹配下推 SQL，普通用户仅搜自己的）")
     @GetMapping("/search")
     public ApiResponse<List<DocumentDTO>> searchDocuments(
-            @Parameter(description = "搜索关键词") @RequestParam String keyword) {
-        List<DocumentDTO> results = documentService.searchVisibleDocuments(keyword).stream()
+            @Parameter(description = "搜索关键词") @RequestParam String keyword,
+            @Parameter(description = "页码，0 基") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "每页条数，最大 100") @RequestParam(defaultValue = "20") int size) {
+        List<DocumentDTO> results = documentService.searchVisibleDocuments(keyword, page, size).stream()
                 .map(DocumentDTO::from)
                 .toList();
         return ApiResponse.success(results);

@@ -17,14 +17,21 @@ public interface IDocumentApplicationService {
     Document getDocument(Long id);
 
     /**
-     * 列出当前登录用户可见的文档（普通用户仅自己上传的，ADMIN 全部）。
+     * 列出当前登录用户可见的文档（普通用户仅自己上传的，ADMIN 全部），分页下推 SQL。
+     *
+     * @param page 0 基页码
+     * @param size 每页条数
      */
-    List<Document> listVisibleDocuments();
+    List<Document> listVisibleDocuments(int page, int size);
 
     /**
-     * 按标题关键词搜索当前登录用户可见的文档。
+     * 按标题关键词搜索当前登录用户可见的文档，分页下推 SQL。
+     *
+     * @param keyword 标题关键词
+     * @param page    0 基页码
+     * @param size    每页条数
      */
-    List<Document> searchVisibleDocuments(String keyword);
+    List<Document> searchVisibleDocuments(String keyword, int page, int size);
 
     void deleteDocument(Long id);
 

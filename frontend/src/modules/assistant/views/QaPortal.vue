@@ -334,7 +334,7 @@ const lastAssistantMsgId = computed(() => { for (let i = messages.value.length -
 const canFeedback = computed(() => !streaming.value && lastAssistantMsgId.value != null)
 async function recordFeedback(type: 'like' | 'dislike') { const id = lastAssistantMsgId.value; if (id == null) return; try { await fetchRaw('/qa/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId: currentSessionId.value, messageId: id, feedback: type }) }); ElMessage.success(type === 'like' ? '感谢你的点赞' : '已记录反馈') } catch (e) { ElMessage.error((e as Error).message || '反馈提交失败，请重试') } }
 
-async function refreshDocuments() { try { documents.value = await fetchRaw('/documents') } catch (e) { console.error('获取文档失败', e) } }
+async function refreshDocuments() { try { documents.value = await fetchRaw('/documents?page=0&size=100') } catch (e) { console.error('获取文档失败', e) } }
 async function deleteDocument(doc: DocumentItem) { try { await fetchRaw(`/documents/${doc.id}`, { method: 'DELETE' }); ElMessage.success('已删除'); await refreshDocuments() } catch (e) { ElMessage.error((e as Error).message || '删除失败') } }
 function statusType(status?: string): 'success' | 'warning' | 'danger' | 'info' {
   const map: Record<string, 'success' | 'warning' | 'danger' | 'info'> = { READY: 'success', UPLOADED: 'info', PARSING: 'warning', CHUNKING: 'warning', EMBEDDING: 'warning', FAILED: 'danger' }
