@@ -3,7 +3,7 @@
     <article
       v-for="stat in stats"
       :key="stat.label"
-      class="metric-card"
+      class="metric-card spot-tilt"
       @click="emit('select', stat.label)"
     >
       <span class="metric-card__label">{{ stat.label }}</span>
@@ -50,7 +50,7 @@ function toneClass(tone: DashboardStat['tone']) {
   box-shadow: var(--shadow-card);
   overflow: hidden;
   cursor: pointer;
-  transition: transform .26s ease, box-shadow .26s ease;
+  transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .26s ease;
 }
 
 .metric-card::after {
@@ -76,11 +76,26 @@ function toneClass(tone: DashboardStat['tone']) {
 .metric-card__value {
   font-size: 34px;
   font-weight: 700;
-  color: var(--text-primary);
+  background: linear-gradient(135deg, #0E6CD6 0%, #3FB6FF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .metric-card__trend {
   font-size: 12px;
   width: fit-content;
+}
+
+@media (max-width: 1100px) {
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .metric-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

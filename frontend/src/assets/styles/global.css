@@ -1132,3 +1132,216 @@ h1, h2, h3, h4, h5 {
   font-weight: 600;
   letter-spacing: 0.02em;
 }
+
+/* ============================================================
+   鼠标追光系统（Spotlight）
+   配合 src/common/directives/spotlight.ts：JS 负责追踪光标并向宿主
+   注入 .spot-flood（内发光）/ .spot-ring（边框辉光）两层，
+   通过 --spot-x / --spot-y 自定义属性让光效跟随光标。
+   ============================================================ */
+
+/* 宿主建立独立层叠上下文 + 定位基准，保证 z-index:-1 的光层
+   始终压在宿主背景之上、内容之下，不会“漏”到祖先元素后面 */
+.metric-card,
+.shortcut-card,
+.resource-card,
+.panel-card,
+.el-card,
+.dashboard-hero,
+.page-hero,
+.auth-hero,
+.campus-card,
+.nav__item,
+.el-button:not(.is-text):not(.is-link) {
+  position: relative;
+  isolation: isolate;
+}
+
+/* 扫光需要裁切在按钮圆角内（outline 不受 overflow 影响，焦点态不受损） */
+.el-button:not(.is-text):not(.is-link) {
+  overflow: hidden;
+}
+
+.spot-flood,
+.spot-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+
+/* 卡片默认内发光：亮芯 + 外层柔光，校徽蓝，压在内容之下 */
+.spot-flood {
+  z-index: -1;
+  background:
+    radial-gradient(
+      100px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(63, 182, 255, 0.2),
+      rgba(63, 182, 255, 0) 70%
+    ),
+    radial-gradient(
+      320px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(63, 182, 255, 0.12),
+      rgba(63, 182, 255, 0) 62%
+    );
+}
+
+/* 边框辉光：mask 裁剪为约 1px 描边，只有靠近光标的那圈边缘发亮 */
+.spot-ring {
+  z-index: 3;
+  padding: 1.2px;
+  background: radial-gradient(
+    200px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(63, 182, 255, 0.5),
+    rgba(63, 182, 255, 0) 70%
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.is-spotlit .spot-flood,
+.is-spotlit .spot-ring {
+  opacity: 1;
+}
+
+/* 渐变 hero / 登录区 / 校区图片卡：深色底上用白色流光（亮芯 + 大光晕） */
+.dashboard-hero > .spot-flood,
+.page-hero > .spot-flood,
+.auth-hero > .spot-flood {
+  background:
+    radial-gradient(
+      130px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(255, 255, 255, 0.3),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    radial-gradient(
+      440px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(255, 255, 255, 0.17),
+      rgba(255, 255, 255, 0) 62%
+    );
+}
+
+.campus-card > .spot-flood {
+  background:
+    radial-gradient(
+      120px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(255, 255, 255, 0.32),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    radial-gradient(
+      320px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(255, 255, 255, 0.15),
+      rgba(255, 255, 255, 0) 62%
+    );
+}
+
+/* hero / 图片卡 / 导航胶囊没有可见描边，关闭边框光 */
+.dashboard-hero > .spot-ring,
+.page-hero > .spot-ring,
+.auth-hero > .spot-ring,
+.campus-card > .spot-ring,
+.nav__item > .spot-ring {
+  display: none;
+}
+
+/* 顶部导航胶囊：蓝色柔光；激活态（渐变底）用白色柔光 */
+.nav__item > .spot-flood {
+  background: radial-gradient(
+    130px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(63, 182, 255, 0.16),
+    rgba(63, 182, 255, 0) 60%
+  );
+}
+
+.nav__item.is-active > .spot-flood {
+  background: radial-gradient(
+    130px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0) 60%
+  );
+}
+
+.nav__item.is-active {
+  box-shadow: 0 6px 18px rgba(63, 182, 255, 0.25);
+}
+
+/* 按钮：白色玻璃高光浮在内容上方，呈现“光泽随指走”的质感 */
+.el-button > .spot-ring {
+  display: none;
+}
+
+.el-button:not(.is-text):not(.is-link) > .spot-flood {
+  z-index: 0;
+  background:
+    radial-gradient(
+      70px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(255, 255, 255, 0.45),
+      rgba(255, 255, 255, 0) 70%
+    ),
+    radial-gradient(
+      150px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(255, 255, 255, 0.22),
+      rgba(255, 255, 255, 0) 58%
+    );
+}
+
+/* 浅色按钮（默认/描边/plain）：高光改为淡蓝，压在内容之下避免冲淡文字 */
+.el-button--default > .spot-flood,
+.el-button.is-plain > .spot-flood {
+  z-index: -1;
+  background:
+    radial-gradient(
+      70px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(63, 182, 255, 0.22),
+      rgba(63, 182, 255, 0) 70%
+    ),
+    radial-gradient(
+      150px circle at var(--spot-x, 50%) var(--spot-y, 50%),
+      rgba(63, 182, 255, 0.14),
+      rgba(63, 182, 255, 0) 60%
+    );
+}
+
+/* 实色渐变按钮：hover 瞬间一道斜向高光扫过（只播一次） */
+.el-button--primary:not(.is-disabled):not(.is-plain)::before,
+.el-button--success:not(.is-disabled):not(.is-plain)::before,
+.el-button--warning:not(.is-disabled):not(.is-plain)::before,
+.el-button--danger:not(.is-disabled):not(.is-plain)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 32%,
+    rgba(255, 255, 255, 0.22) 46%,
+    rgba(255, 255, 255, 0.42) 50%,
+    rgba(255, 255, 255, 0.22) 54%,
+    transparent 68%
+  );
+  transform: translateX(-130%);
+  transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.el-button--primary:not(.is-disabled):not(.is-plain):hover::before,
+.el-button--success:not(.is-disabled):not(.is-plain):hover::before,
+.el-button--warning:not(.is-disabled):not(.is-plain):hover::before,
+.el-button--danger:not(.is-disabled):not(.is-plain):hover::before {
+  transform: translateX(130%);
+}
+
+/* spot-tilt：由 JS 直接写 transform（含 perspective/rotate/位移），
+   离开时清空 inline transform，交回组件自身的 hover 过渡平滑复位。
+   reduced-motion 设备 JS 不会写倾斜，这里仅做保险。 */
+@media (prefers-reduced-motion: reduce) {
+  .spot-flood,
+  .spot-ring {
+    transition: none;
+  }
+}

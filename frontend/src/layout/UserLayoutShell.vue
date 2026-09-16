@@ -194,7 +194,17 @@ function handleCommand(command: string) {
 
 @media (max-width: 960px) {
   .shell__header { flex-wrap: wrap; gap: 10px; }
-  .nav { order: 3; flex-basis: 100%; justify-content: flex-start; }
+  .nav {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav__item { flex-shrink: 0; }
   .brand__title { display: none; }
   .user-name { display: none; }
 }

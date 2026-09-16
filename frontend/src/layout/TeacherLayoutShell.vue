@@ -203,7 +203,13 @@ function handleCommand(command: string) {
     order: 3;
     flex-basis: 100%;
     justify-content: flex-start;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
   }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav__item { flex-shrink: 0; }
   .user-name {
     display: none;
   }

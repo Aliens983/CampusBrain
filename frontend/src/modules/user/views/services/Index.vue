@@ -100,7 +100,7 @@
       <article
         v-for="item in filteredServices"
         :key="item.id"
-        class="resource-card"
+        class="resource-card spot-tilt"
       >
         <div class="resource-card__pulse" />
         <img
@@ -324,7 +324,7 @@ function assetUrl(path?: string) {
 .hero-panel__item span { font-size: 13px; color: rgba(255,255,255,0.7); }
 
 .loading-state { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 40px; color: var(--text-secondary); }
-.resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; }
+.resource-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 20px; }
 .resource-card { position: relative; padding: 22px; border-radius: 22px; background: rgba(255,255,255,.92); border: 1px solid var(--border-soft); box-shadow: var(--shadow-card); }
 .resource-card__pulse { position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: 22px 22px 0 0; background: linear-gradient(90deg, #ADE2FF, #7BD0FF); }
 .service-cover { width: 100%; height: 150px; object-fit: cover; border-radius: 14px; border: 1px solid var(--border-soft); }

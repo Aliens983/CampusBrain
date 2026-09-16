@@ -120,6 +120,12 @@ function goShortcut(item: DashboardShortcut) {
   align-content: start;
 }
 
+@media (max-width: 1100px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .weather-widget { background: linear-gradient(180deg, #F1F7FF, #fff) !important; }
 .weather-mini { display: flex; align-items: center; gap: 14px; }
 .weather-mini__icon { font-size: 36px; }

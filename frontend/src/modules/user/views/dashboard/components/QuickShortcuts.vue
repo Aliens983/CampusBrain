@@ -12,7 +12,7 @@
       <button
         v-for="item in shortcuts"
         :key="item.title"
-        class="shortcut-card"
+        class="shortcut-card spot-tilt"
         @click="emit('navigate', item)"
       >
         <div class="shortcut-card__orb" />
@@ -79,7 +79,7 @@ const emit = defineEmits<{
   border: 1px solid var(--border-soft);
   background: linear-gradient(180deg, #fff, #F9FCFF);
   cursor: pointer;
-  transition: transform .24s ease, box-shadow .24s ease;
+  transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .24s ease;
   overflow: hidden;
 }
 
@@ -123,5 +123,11 @@ const emit = defineEmits<{
 .shortcut-card span {
   font-size: 11px;
   color: var(--text-secondary);
+}
+
+@media (max-width: 720px) {
+  .shortcut-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>
