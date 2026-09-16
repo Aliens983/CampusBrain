@@ -23,6 +23,10 @@ spring:
     # 预约确认链路是「SSE → LLM → Feign → CAS」，60s 的读超时在 SSE 场景根本等不到结果，
     # 只会让 Tomcat 线程一直挂到容器超时；这里按交互式操作收紧。
     openfeign:
+      # 启用 Feign 熔断器支持：否则 @FeignClient 上配置的 fallbackFactory 不会生效，
+      # CAS 不可用时调用方会一直等到读超时（8s），SSE 链路被慢调用占满。
+      circuitbreaker:
+        enabled: true
       client:
         config:
           default:

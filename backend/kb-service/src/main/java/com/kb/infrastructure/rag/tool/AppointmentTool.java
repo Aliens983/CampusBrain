@@ -17,7 +17,6 @@ import com.kb.infrastructure.client.dto.CasTimeSlot;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -37,9 +36,12 @@ import java.util.Locale;
  * <p>参数缺失时自动回退到会话上下文中已累积的槽位（{@link ChatContextHolder}），
  * 这样用户说"就按刚才那个约"也能正确执行。
  *
+ * <p>错误处理：CAS 不可用/超时由 {@code CasClientFallbackFactory} 统一返回
+ * {@code code=503} 与用户可读提示，本类不再逐个方法 try-catch；业务失败
+ * （CAS 返回非 200）同样透传其 message。
+ *
  * @author forever-king
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AppointmentTool {
@@ -56,37 +58,36 @@ public class AppointmentTool {
             @P("服务名称关键词，如'自习室''心理咨询'。不确定时留空字符串") String keyword) {
         String resolvedCampus = normalizeCampus(firstNonBlank(campus, contextCampus()));
         String resolvedCategory = firstNonBlank(category, contextCategory());
-        try {
-            CasResult<List<CasServiceOption>> result = casClient.getAssistantServices(
-                    resolvedCampus, resolvedCategory, blankToNull(keyword));
-            if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
-                return "没有查到符合条件的可预约服务。可换个校区（cq 仓前 / xs 下沙）或换个关键词试试。";
-            }
-            StringBuilder sb = new StringBuilder("可预约服务如下（共 " + result.getData().size() + " 项）：\n");
-            for (CasServiceOption s : result.getData()) {
-                sb.append("- [服务ID ").append(s.getServiceId()).append("] ")
-                        .append(s.getServiceName())
-                        .append("（").append(nullToDash(s.getCampusName()))
-                        .append(" / ").append(nullToDash(s.getCategoryName())).append("）");
-                if (s.getRemaining() != null && s.getRemaining() >= 0) {
-                    sb.append("，剩余 ").append(s.getRemaining()).append(" 个名额");
-                } else {
-                    sb.append("，名额不限");
-                }
-                if (Boolean.FALSE.equals(s.getBookable())) {
-                    sb.append("，当前不可约：").append(nullToDash(s.getBookableReason()));
-                }
-                sb.append("\n");
-            }
-            remember(BookingSlots.builder()
-                    .campus(resolvedCampus)
-                    .category(resolvedCategory)
-                    .build());
-            return sb.toString().trim();
-        } catch (Exception e) {
-            log.error("查询可预约服务失败", e);
-            return "预约数据服务暂时不可用，请稍后再试。";
+        CasResult<List<CasServiceOption>> result = casClient.getAssistantServices(
+                resolvedCampus, resolvedCategory, blankToNull(keyword));
+        if (!result.isSuccess()) {
+            return result.getMessage();
         }
+        List<CasServiceOption> services = result.getData();
+        if (services == null || services.isEmpty()) {
+            return "没有查到符合条件的可预约服务。可换个校区（cq 仓前 / xs 下沙）或换个关键词试试。";
+        }
+        StringBuilder sb = new StringBuilder("可预约服务如下（共 " + services.size() + " 项）：\n");
+        for (CasServiceOption s : services) {
+            sb.append("- [服务ID ").append(s.getServiceId()).append("] ")
+                    .append(s.getServiceName())
+                    .append("（").append(nullToDash(s.getCampusName()))
+                    .append(" / ").append(nullToDash(s.getCategoryName())).append("）");
+            if (s.getRemaining() != null && s.getRemaining() >= 0) {
+                sb.append("，剩余 ").append(s.getRemaining()).append(" 个名额");
+            } else {
+                sb.append("，名额不限");
+            }
+            if (Boolean.FALSE.equals(s.getBookable())) {
+                sb.append("，当前不可约：").append(nullToDash(s.getBookableReason()));
+            }
+            sb.append("\n");
+        }
+        remember(BookingSlots.builder()
+                .campus(resolvedCampus)
+                .category(resolvedCategory)
+                .build());
+        return sb.toString().trim();
     }
 
     @Tool("查询可预约的教师咨询师（心理咨询、学业辅导等），可按校区和关键词过滤；传日期可查看每人当天剩余可约时段数。")
@@ -96,30 +97,29 @@ public class AppointmentTool {
             @P("日期 yyyy-MM-dd，用于统计当天可用时段数。不确定时留空字符串") String date) {
         String resolvedCampus = normalizeCampus(firstNonBlank(campus, contextCampus()));
         String resolvedDate = firstNonBlank(date, contextDate());
-        try {
-            CasResult<List<CasConsultantOption>> result = casClient.getAssistantConsultants(
-                    resolvedCampus, blankToNull(keyword), blankToNull(resolvedDate));
-            if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
-                return "没有查到符合条件的咨询师。可换个校区或放宽关键词。";
-            }
-            StringBuilder sb = new StringBuilder("可预约咨询师（共 " + result.getData().size() + " 位）：\n");
-            for (CasConsultantOption c : result.getData()) {
-                sb.append("- [咨询师ID ").append(c.getConsultantId()).append("] ")
-                        .append(c.getName())
-                        .append(c.getTitle() == null ? "" : "（" + c.getTitle() + "）")
-                        .append(" · ").append(nullToDash(c.getDepartment()))
-                        .append(" · 所属服务 ").append(nullToDash(c.getServiceName()));
-                if (c.getAvailableSlotCount() != null) {
-                    sb.append(" · ").append(resolvedDate).append(" 可约时段 ").append(c.getAvailableSlotCount()).append(" 个");
-                }
-                sb.append("\n");
-            }
-            remember(BookingSlots.builder().campus(resolvedCampus).category("teacher").date(resolvedDate).build());
-            return sb.toString().trim();
-        } catch (Exception e) {
-            log.error("查询咨询师失败", e);
-            return "预约数据服务暂时不可用，请稍后再试。";
+        CasResult<List<CasConsultantOption>> result = casClient.getAssistantConsultants(
+                resolvedCampus, blankToNull(keyword), blankToNull(resolvedDate));
+        if (!result.isSuccess()) {
+            return result.getMessage();
         }
+        List<CasConsultantOption> consultants = result.getData();
+        if (consultants == null || consultants.isEmpty()) {
+            return "没有查到符合条件的咨询师。可换个校区或放宽关键词。";
+        }
+        StringBuilder sb = new StringBuilder("可预约咨询师（共 " + consultants.size() + " 位）：\n");
+        for (CasConsultantOption c : consultants) {
+            sb.append("- [咨询师ID ").append(c.getConsultantId()).append("] ")
+                    .append(c.getName())
+                    .append(c.getTitle() == null ? "" : "（" + c.getTitle() + "）")
+                    .append(" · ").append(nullToDash(c.getDepartment()))
+                    .append(" · 所属服务 ").append(nullToDash(c.getServiceName()));
+            if (c.getAvailableSlotCount() != null) {
+                sb.append(" · ").append(resolvedDate).append(" 可约时段 ").append(c.getAvailableSlotCount()).append(" 个");
+            }
+            sb.append("\n");
+        }
+        remember(BookingSlots.builder().campus(resolvedCampus).category("teacher").date(resolvedDate).build());
+        return sb.toString().trim();
     }
 
     @Tool("查询某位咨询师在指定日期的可预约时段，返回时段ID，预约咨询时需要使用该ID。")
@@ -133,22 +133,21 @@ public class AppointmentTool {
         if (resolvedDate == null || resolvedDate.isBlank()) {
             return "缺少日期，请告诉我要查哪一天（如'明天'、'2026-09-12'）。";
         }
-        try {
-            CasResult<List<CasTimeSlot>> result = casClient.getConsultantSlots(consultantId, resolvedDate);
-            if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
-                return "该咨询师在 " + resolvedDate + " 没有可预约时段，换个日期或换一位咨询师试试。";
-            }
-            StringBuilder sb = new StringBuilder("咨询师 " + consultantId + " 在 " + resolvedDate + " 的可预约时段：\n");
-            for (CasTimeSlot t : result.getData()) {
-                sb.append("- [时段ID ").append(t.getSlotId()).append("] ")
-                        .append(t.getStartTime()).append("-").append(t.getEndTime()).append("\n");
-            }
-            remember(BookingSlots.builder().date(resolvedDate).consultantId(consultantId).category("teacher").build());
-            return sb.toString().trim();
-        } catch (Exception e) {
-            log.error("查询咨询时段失败", e);
-            return "预约数据服务暂时不可用，请稍后再试。";
+        CasResult<List<CasTimeSlot>> result = casClient.getConsultantSlots(consultantId, resolvedDate);
+        if (!result.isSuccess()) {
+            return result.getMessage();
         }
+        List<CasTimeSlot> slots = result.getData();
+        if (slots == null || slots.isEmpty()) {
+            return "该咨询师在 " + resolvedDate + " 没有可预约时段，换个日期或换一位咨询师试试。";
+        }
+        StringBuilder sb = new StringBuilder("咨询师 " + consultantId + " 在 " + resolvedDate + " 的可预约时段：\n");
+        for (CasTimeSlot t : slots) {
+            sb.append("- [时段ID ").append(t.getSlotId()).append("] ")
+                    .append(t.getStartTime()).append("-").append(t.getEndTime()).append("\n");
+        }
+        remember(BookingSlots.builder().date(resolvedDate).consultantId(consultantId).category("teacher").build());
+        return sb.toString().trim();
     }
 
     @Tool("查询可预约的教室/自习室；传日期与起止时间可判断哪些教室在该时段空闲。")
@@ -161,32 +160,31 @@ public class AppointmentTool {
         String resolvedDate = firstNonBlank(date, contextDate());
         String resolvedStart = firstNonBlank(startTime, contextStartTime());
         String resolvedEnd = firstNonBlank(endTime, contextEndTime());
-        try {
-            CasResult<List<CasRoomOption>> result = casClient.getAssistantRooms(
-                    resolvedCampus, blankToNull(resolvedDate), blankToNull(resolvedStart), blankToNull(resolvedEnd));
-            if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
-                return "没有查到符合条件的教室。可换个校区试试。";
-            }
-            StringBuilder sb = new StringBuilder("教室列表（共 " + result.getData().size() + " 间）：\n");
-            for (CasRoomOption r : result.getData()) {
-                sb.append("- [教室ID ").append(r.getRoomId()).append("] ").append(r.getName())
-                        .append(" · ").append(nullToDash(r.getLocation()))
-                        .append(" · 容纳 ").append(r.getSeats() == null ? "未知" : r.getSeats()).append(" 人")
-                        .append(" · ").append(nullToDash(r.getCampusName()));
-                if (r.getFree() != null) {
-                    sb.append(" · ").append(resolvedDate).append(" ").append(resolvedStart).append("-")
-                            .append(resolvedEnd).append(Boolean.TRUE.equals(r.getFree()) ? " 空闲" : " 已被占用");
-                }
-                sb.append("\n");
-            }
-            remember(BookingSlots.builder()
-                    .campus(resolvedCampus).category("space").date(resolvedDate)
-                    .startTime(resolvedStart).endTime(resolvedEnd).build());
-            return sb.toString().trim();
-        } catch (Exception e) {
-            log.error("查询教室失败", e);
-            return "预约数据服务暂时不可用，请稍后再试。";
+        CasResult<List<CasRoomOption>> result = casClient.getAssistantRooms(
+                resolvedCampus, blankToNull(resolvedDate), blankToNull(resolvedStart), blankToNull(resolvedEnd));
+        if (!result.isSuccess()) {
+            return result.getMessage();
         }
+        List<CasRoomOption> rooms = result.getData();
+        if (rooms == null || rooms.isEmpty()) {
+            return "没有查到符合条件的教室。可换个校区试试。";
+        }
+        StringBuilder sb = new StringBuilder("教室列表（共 " + rooms.size() + " 间）：\n");
+        for (CasRoomOption r : rooms) {
+            sb.append("- [教室ID ").append(r.getRoomId()).append("] ").append(r.getName())
+                    .append(" · ").append(nullToDash(r.getLocation()))
+                    .append(" · 容纳 ").append(r.getSeats() == null ? "未知" : r.getSeats()).append(" 人")
+                    .append(" · ").append(nullToDash(r.getCampusName()));
+            if (r.getFree() != null) {
+                sb.append(" · ").append(resolvedDate).append(" ").append(resolvedStart).append("-")
+                        .append(resolvedEnd).append(Boolean.TRUE.equals(r.getFree()) ? " 空闲" : " 已被占用");
+            }
+            sb.append("\n");
+        }
+        remember(BookingSlots.builder()
+                .campus(resolvedCampus).category("space").date(resolvedDate)
+                .startTime(resolvedStart).endTime(resolvedEnd).build());
+        return sb.toString().trim();
     }
 
     @Tool("查询可借用的设备（投影仪、实验器材等）；传借用窗口可查看该时段还剩多少可借。")
@@ -200,75 +198,73 @@ public class AppointmentTool {
         String resolvedDate = firstNonBlank(date, contextDate());
         String resolvedStart = firstNonBlank(startTime, contextStartTime());
         String resolvedEnd = firstNonBlank(endTime, contextEndTime());
-        try {
-            CasResult<List<CasEquipmentOption>> result = casClient.getAssistantEquipment(
-                    resolvedCampus, blankToNull(keyword),
-                    blankToNull(resolvedDate), blankToNull(resolvedStart), blankToNull(resolvedEnd));
-            if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
-                return "没有查到符合条件的设备。可换个校区或关键词试试。";
-            }
-            StringBuilder sb = new StringBuilder("设备列表（共 " + result.getData().size() + " 项）：\n");
-            for (CasEquipmentOption e : result.getData()) {
-                sb.append("- [设备ID ").append(e.getEquipmentId()).append("] ").append(e.getName())
-                        .append(" · ").append(nullToDash(e.getCategory()))
-                        .append(" · ").append(nullToDash(e.getCampusName()))
-                        .append(" · 可借 ").append(e.getAvailableStock() == null ? 0 : e.getAvailableStock())
-                        .append(nullToDash(e.getUnit()));
-                if (e.getRemainingForWindow() != null) {
-                    sb.append(" · 该时段剩余 ").append(e.getRemainingForWindow());
-                }
-                sb.append("\n");
-            }
-            remember(BookingSlots.builder()
-                    .campus(resolvedCampus).category("equipment").date(resolvedDate)
-                    .startTime(resolvedStart).endTime(resolvedEnd).build());
-            return sb.toString().trim();
-        } catch (Exception e) {
-            log.error("查询设备失败", e);
-            return "预约数据服务暂时不可用，请稍后再试。";
+        CasResult<List<CasEquipmentOption>> result = casClient.getAssistantEquipment(
+                resolvedCampus, blankToNull(keyword),
+                blankToNull(resolvedDate), blankToNull(resolvedStart), blankToNull(resolvedEnd));
+        if (!result.isSuccess()) {
+            return result.getMessage();
         }
+        List<CasEquipmentOption> equipment = result.getData();
+        if (equipment == null || equipment.isEmpty()) {
+            return "没有查到符合条件的设备。可换个校区或关键词试试。";
+        }
+        StringBuilder sb = new StringBuilder("设备列表（共 " + equipment.size() + " 项）：\n");
+        for (CasEquipmentOption e : equipment) {
+            sb.append("- [设备ID ").append(e.getEquipmentId()).append("] ").append(e.getName())
+                    .append(" · ").append(nullToDash(e.getCategory()))
+                    .append(" · ").append(nullToDash(e.getCampusName()))
+                    .append(" · 可借 ").append(e.getAvailableStock() == null ? 0 : e.getAvailableStock())
+                    .append(nullToDash(e.getUnit()));
+            if (e.getRemainingForWindow() != null) {
+                sb.append(" · 该时段剩余 ").append(e.getRemainingForWindow());
+            }
+            sb.append("\n");
+        }
+        remember(BookingSlots.builder()
+                .campus(resolvedCampus).category("equipment").date(resolvedDate)
+                .startTime(resolvedStart).endTime(resolvedEnd).build());
+        return sb.toString().trim();
     }
 
     @Tool("查询当前登录用户自己的预约记录，可按状态过滤。")
     public String searchMyBookings(
             @P("状态：0=待审核，1=已通过，2=已拒绝，3=已取消，4=已完成。不传则查全部；不确定时传 null") Integer status) {
-        try {
-            // 不传状态时走精简接口：避免 Feign 把 null 序列化成 `manageStatus=` 造成参数绑定歧义
-            CasResult<List<com.kb.infrastructure.client.CasBooking>> result = status == null
-                    ? casClient.getMyBookings()
-                    : casClient.getMyBookingsByStatus(status);
-            if (!result.isSuccess() || result.getData() == null || result.getData().isEmpty()) {
-                return "你当前没有符合条件的预约记录。";
-            }
-            StringBuilder sb = new StringBuilder("你的预约记录（共 " + result.getData().size() + " 条）：\n");
-            for (com.kb.infrastructure.client.CasBooking b : result.getData()) {
-                sb.append("- [预约号 ").append(b.getOrderId()).append("] ")
-                        .append(b.getServiceName())
-                        .append("（状态：").append(statusLabel(b.getManageStatus())).append("）");
-                if (b.getConsultantName() != null) {
-                    sb.append(" · 咨询师 ").append(b.getConsultantName());
-                }
-                if (b.getRoomName() != null) {
-                    sb.append(" · 教室 ").append(b.getRoomName());
-                }
-                if (b.getEquipmentName() != null) {
-                    sb.append(" · 设备 ").append(b.getEquipmentName())
-                            .append(b.getQuantity() == null ? "" : " ×" + b.getQuantity());
-                }
-                if (b.getSlotDate() != null) {
-                    sb.append(" · ").append(b.getSlotDate()).append(" ")
-                            .append(nullToDash(b.getStartTime())).append("-").append(nullToDash(b.getEndTime()));
-                }
-                if (b.getReason() != null && !b.getReason().isBlank()) {
-                    sb.append(" · 备注：").append(b.getReason());
-                }
-                sb.append("\n");
-            }
-            return sb.toString().trim();
-        } catch (Exception e) {
-            log.error("查询我的预约失败", e);
-            return "预约数据服务暂时不可用，请稍后再试。";
+        // 不传状态时走精简接口：避免 Feign 把 null 序列化成 `manageStatus=` 造成参数绑定歧义
+        CasResult<List<com.kb.infrastructure.client.CasBooking>> result = status == null
+                ? casClient.getMyBookings()
+                : casClient.getMyBookingsByStatus(status);
+        if (!result.isSuccess()) {
+            return result.getMessage();
         }
+        List<com.kb.infrastructure.client.CasBooking> bookings = result.getData();
+        if (bookings == null || bookings.isEmpty()) {
+            return "你当前没有符合条件的预约记录。";
+        }
+        StringBuilder sb = new StringBuilder("你的预约记录（共 " + bookings.size() + " 条）：\n");
+        for (com.kb.infrastructure.client.CasBooking b : bookings) {
+            sb.append("- [预约号 ").append(b.getOrderId()).append("] ")
+                    .append(b.getServiceName())
+                    .append("（状态：").append(statusLabel(b.getManageStatus())).append("）");
+            if (b.getConsultantName() != null) {
+                sb.append(" · 咨询师 ").append(b.getConsultantName());
+            }
+            if (b.getRoomName() != null) {
+                sb.append(" · 教室 ").append(b.getRoomName());
+            }
+            if (b.getEquipmentName() != null) {
+                sb.append(" · 设备 ").append(b.getEquipmentName())
+                        .append(b.getQuantity() == null ? "" : " ×" + b.getQuantity());
+            }
+            if (b.getSlotDate() != null) {
+                sb.append(" · ").append(b.getSlotDate()).append(" ")
+                        .append(nullToDash(b.getStartTime())).append("-").append(nullToDash(b.getEndTime()));
+            }
+            if (b.getReason() != null && !b.getReason().isBlank()) {
+                sb.append(" · 备注：").append(b.getReason());
+            }
+            sb.append("\n");
+        }
+        return sb.toString().trim();
     }
 
     // ==================== 动作类工具（均需用户二次确认） ====================
@@ -306,52 +302,50 @@ public class AppointmentTool {
                 .endTime(firstNonBlank(endTime, contextEndTime()))
                 .purpose(purpose)
                 .build();
-        try {
-            CasResult<CasBookingDraft> result = casClient.createBookingDraft(request);
-            if (!result.isSuccess() || result.getData() == null) {
-                return "预约草稿生成失败：" + nullToDash(result.getMessage());
-            }
-            CasBookingDraft draft = result.getData();
-            if (Boolean.FALSE.equals(draft.getValid())) {
-                return "很抱歉，这个预约暂不可提交：" + nullToDash(draft.getInvalidReason())
-                        + "。请换个时间、换个资源或调整数量后重试。";
-            }
-            PendingBooking pending = PendingBooking.builder()
-                    .action(PendingBooking.ACTION_BOOK)
-                    .draftId(draft.getDraftId())
-                    .resourceType(draft.getResourceType())
-                    .resourceTypeName(draft.getResourceTypeName())
-                    .serviceId(draft.getServiceId())
-                    .serviceName(draft.getServiceName())
-                    .resourceId(draft.getResourceId())
-                    .resourceName(draft.getResourceName())
-                    .campusName(draft.getCampusName())
-                    .date(draft.getDate())
-                    .startTime(draft.getStartTime())
-                    .endTime(draft.getEndTime())
-                    .quantity(draft.getQuantity())
-                    .needAudit(draft.getNeedAudit())
-                    .summary(draft.getSummary())
-                    .confirmPrompt(draft.getConfirmPrompt())
-                    .expiresAt(draft.getExpiresAt())
-                    .build();
-            savePending(pending);
-            remember(BookingSlots.builder()
-                    .serviceId(draft.getServiceId())
-                    .campus(draft.getCampus())
-                    .category(draft.getCategoryCode())
-                    .date(draft.getDate())
-                    .startTime(draft.getStartTime())
-                    .endTime(draft.getEndTime())
-                    .quantity(draft.getQuantity())
-                    .build());
-            return "已为你生成预约草稿，等待确认：\n" + draft.getSummary() + "\n"
-                    + "请向用户复述以上信息，并明确询问「是否确认预约？」。"
-                    + "在用户明确答复之前，不要执行任何下单操作。";
-        } catch (Exception e) {
-            log.error("生成预约草稿失败", e);
-            return "预约数据服务暂时不可用，请稍后再试。";
+        CasResult<CasBookingDraft> result = casClient.createBookingDraft(request);
+        if (!result.isSuccess()) {
+            return result.getMessage();
         }
+        CasBookingDraft draft = result.getData();
+        if (draft == null) {
+            return "预约草稿生成失败，请稍后再试。";
+        }
+        if (Boolean.FALSE.equals(draft.getValid())) {
+            return "很抱歉，这个预约暂不可提交：" + nullToDash(draft.getInvalidReason())
+                    + "。请换个时间、换个资源或调整数量后重试。";
+        }
+        PendingBooking pending = PendingBooking.builder()
+                .action(PendingBooking.ACTION_BOOK)
+                .draftId(draft.getDraftId())
+                .resourceType(draft.getResourceType())
+                .resourceTypeName(draft.getResourceTypeName())
+                .serviceId(draft.getServiceId())
+                .serviceName(draft.getServiceName())
+                .resourceId(draft.getResourceId())
+                .resourceName(draft.getResourceName())
+                .campusName(draft.getCampusName())
+                .date(draft.getDate())
+                .startTime(draft.getStartTime())
+                .endTime(draft.getEndTime())
+                .quantity(draft.getQuantity())
+                .needAudit(draft.getNeedAudit())
+                .summary(draft.getSummary())
+                .confirmPrompt(draft.getConfirmPrompt())
+                .expiresAt(draft.getExpiresAt())
+                .build();
+        savePending(pending);
+        remember(BookingSlots.builder()
+                .serviceId(draft.getServiceId())
+                .campus(draft.getCampus())
+                .category(draft.getCategoryCode())
+                .date(draft.getDate())
+                .startTime(draft.getStartTime())
+                .endTime(draft.getEndTime())
+                .quantity(draft.getQuantity())
+                .build());
+        return "已为你生成预约草稿，等待确认：\n" + draft.getSummary() + "\n"
+                + "请向用户复述以上信息，并明确询问「是否确认预约？」。"
+                + "在用户明确答复之前，不要执行任何下单操作。";
     }
 
     /**
@@ -393,7 +387,6 @@ public class AppointmentTool {
     private void savePending(PendingBooking pending) {
         ChatContextHolder.ChatContext ctx = ChatContextHolder.get();
         if (ctx == null || ctx.sessionId() == null) {
-            log.warn("缺少会话上下文，无法登记待确认动作");
             return;
         }
         ChatSession session = chatSessionRepository.loadForUser(ctx.sessionId(), ctx.userId());

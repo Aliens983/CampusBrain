@@ -347,25 +347,17 @@ public class QaApplicationService implements IQaApplicationService {
         String answer;
         CasResult<CasBookingResult> result = null;
         if (!confirmed) {
-            // 放弃：BOOK 动作需要通知 CAS 丢弃草稿，CANCEL 动作本来就还没执行
+            // 放弃：BOOK 动作需要通知 CAS 丢弃草稿，CANCEL 动作本来就还没执行。
+            // CAS 不可用时 fallback 返回 503 结果（放弃草稿是尽力而为的清理动作，忽略结果）。
             if (PendingBooking.ACTION_BOOK.equals(pending.getAction()) && pending.getDraftId() != null) {
-                try {
-                    casClient.discardBookingDraft(pending.getDraftId());
-                } catch (Exception e) {
-                    log.warn("丢弃预约草稿失败: draftId={}", pending.getDraftId(), e);
-                }
+                casClient.discardBookingDraft(pending.getDraftId());
             }
             answer = "好的，已取消本次操作，没有产生任何变更。"
                     + "如果你想换时间、换校区或换其他服务，直接告诉我就行。";
         } else {
-            try {
-                result = PendingBooking.ACTION_CANCEL.equals(pending.getAction())
-                        ? casClient.cancelBooking(pending.getOrderId())
-                        : casClient.confirmBookingDraft(pending.getDraftId());
-            } catch (Exception e) {
-                log.error("执行预约动作失败", e);
-                answer = "操作失败：预约服务暂时不可用，请稍后再试。";
-            }
+            result = PendingBooking.ACTION_CANCEL.equals(pending.getAction())
+                    ? casClient.cancelBooking(pending.getOrderId())
+                    : casClient.confirmBookingDraft(pending.getDraftId());
             if (result == null) {
                 answer = "操作失败：预约服务暂时不可用，请稍后再试。";
             } else if (result.isSuccess() && result.getData() != null) {
@@ -408,11 +400,8 @@ public class QaApplicationService implements IQaApplicationService {
 
     private void discardPending(ChatSession session, PendingBooking pending) {
         if (PendingBooking.ACTION_BOOK.equals(pending.getAction()) && pending.getDraftId() != null) {
-            try {
-                casClient.discardBookingDraft(pending.getDraftId());
-            } catch (Exception e) {
-                log.warn("丢弃过期预约草稿失败: draftId={}", pending.getDraftId(), e);
-            }
+            // 尽力而为的清理：CAS 不可用时 fallbackFactory 内部已记录原因
+            casClient.discardBookingDraft(pending.getDraftId());
         }
         session.setPendingBooking(null);
         chatSessionRepository.save(session);

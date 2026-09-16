@@ -34,7 +34,8 @@ import java.util.List;
  *
  * @author forever-king
  */
-@FeignClient(name = "cas-service", configuration = CasFeignConfig.class)
+@FeignClient(name = "cas-service", configuration = CasFeignConfig.class,
+        fallbackFactory = CasClientFallbackFactory.class)
 public interface CasClient {
 
     // ==================== 原有精简接口 ====================
