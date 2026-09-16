@@ -1,0 +1,92 @@
+# ============================================================
+# CampusBrain 告警规则（Prometheus RuleFiles）
+#
+# 挂载：docker-compose.observability.yml 将本目录只读挂载到
+#       /etc/prometheus/rules，prometheus.yml 通过 rule_files 加载。
+# 校验：promtool check rules alert.rules.yml
+# ============================================================
+groups:
+  # ---------------- 应用熔断与业务失败 ----------------
+  - name: campusbrain-application
+    rules:
+      # LLM / Embedding 熔断器打开：DeepSeek 或硅基流动持续失败，
+      # 知识问答与文档向量化正在走降级，需立即关注下游模型服务。
+      - alert: ModelCircuitBreakerOpen
+        expr: resilience4j_circuitbreaker_state{name=~"llmService|embeddingService",state="open"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "模型熔断器打开（{{ $labels.name }}）"
+          description: "实例 {{ $labels.instance }} 的 {{ $labels.name }} 熔断器处于 open 已超过 1 分钟，问答/向量化正在降级。"
+
+      # 文档处理失败计数：kb.document.failures 同时覆盖文档处理失败、
+      # MQ 投递失败与删除后外部存储清理失败，10 分钟内累计 3 次即告警。
+      - alert: DocumentProcessingFailures
+        expr: increase(kb_document_failures_total[10m]) >= 3
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "文档处理/清理连续失败"
+          description: "实例 {{ $labels.instance }} 近 10 分钟文档失败计数累计 {{ $value }} 次（处理失败、MQ 投递失败或向量/索引清理失败）。"
+
+      # SSE 在途连接接近上限：新问答即将收到 503，需扩容或排查慢请求。
+      - alert: SseConcurrencyNearLimit
+        expr: kb_sse_active_connections / kb_sse_max_connections > 0.9
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "流式问答并发接近实例上限"
+          description: "实例 {{ $labels.instance }} 在途 SSE 连接占上限的 {{ $value | humanizePercentage }} 已持续 5 分钟。"
+
+  # ---------------- HTTP 5xx ----------------
+  - name: campusbrain-http
+    rules:
+      # 任一抓取目标的服务端 5xx 占比超过 5%（要求持续有流量，避免冷启动误报）。
+      - alert: HighHttp5xxRate
+        expr: |
+          (
+            sum by (service) (rate(http_server_requests_seconds_count{outcome="SERVER_ERROR"}[5m]))
+            /
+            sum by (service) (rate(http_server_requests_seconds_count[5m])) > 0.05
+          )
+          and
+          sum by (service) (rate(http_server_requests_seconds_count[5m])) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} 5xx 错误率过高"
+          description: "{{ $labels.service }} 近 5 分钟 5xx 占比 {{ $value | humanizePercentage }}，超过 5% 阈值。"
+
+  # ---------------- RabbitMQ 队列积压 ----------------
+  - name: campusbrain-queue
+    rules:
+      # rabbitmq_prometheus 插件指标（:15692/metrics）。
+      # 预约变更事件积压会导致问答余量缓存过期不被淘汰；
+      # 文档处理队列积压意味着上传后长时间无法就绪。
+      - alert: RabbitMqQueueBacklog
+        expr: |
+          max by (queue_name) (
+            rabbitmq_queue_messages_ready{queue_name=~"appointment.changed|kb.document.processing.queue"}
+          ) > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RabbitMQ 队列积压：{{ $labels.queue_name }}"
+          description: "队列 {{ $labels.queue_name }} ready 消息数 {{ $value }}（>50）已持续 5 分钟，消费端可能卡住或处理变慢。"
+
+  # ---------------- 抓取目标存活 ----------------
+  - name: campusbrain-targets
+    rules:
+      - alert: TargetDown
+        expr: up{job=~"gateway|cas-service|kb-service|rabbitmq"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "监控目标不可达：{{ $labels.job }}"
+          description: "Prometheus 连续 2 分钟无法抓取 {{ $labels.instance }}（job={{ $labels.job }}）。"

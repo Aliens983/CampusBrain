@@ -1,0 +1,40 @@
+# ============================================================
+# Alertmanager 配置（最小可用版）
+#
+# 默认 receiver 不配置任何通知渠道：告警在 Alertmanager UI（:9093）
+# 可见并完成分组/静默/抑制。生产环境在 default receiver 下补充
+# webhook_configs（钉钉/企业微信/飞书机器人）或 email_configs，
+# 例如：
+#
+# receivers:
+#   - name: default
+#     webhook_configs:
+#       - url: 'https://oapi.dingtalk.com/robot/send?access_token=xxx'
+#         send_resolved: true
+# ============================================================
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default
+  group_by: ['alertname', 'service', 'severity']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    # 严重告警立即重复推送间隔更短
+    - matchers:
+        - severity = critical
+      receiver: default
+      repeat_interval: 1h
+
+inhibit_rules:
+  # 服务整体不可达时，抑制该服务的 5xx/积压等派生告警，减少噪声
+  - source_matchers:
+      - alertname = TargetDown
+    target_matchers:
+      - severity =~ "warning|critical"
+    equal: ['service']
+
+receivers:
+  - name: default

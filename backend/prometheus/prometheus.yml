@@ -12,6 +12,16 @@ global:
   external_labels:
     environment: campusbrain
 
+# 告警规则（挂载于 /etc/prometheus/rules）
+rule_files:
+  - rules/*.yml
+
+# Alertmanager（与 Prometheus 同在可观测性编排内）
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   - job_name: gateway
     metrics_path: /actuator/prometheus
@@ -33,6 +43,14 @@ scrape_configs:
       - targets: ["kb-service:8081"]
         labels:
           service: kb-service
+
+  # RabbitMQ 内置 rabbitmq_prometheus 插件（15692 端口，编排中已启用）
+  - job_name: rabbitmq
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["kb-rabbitmq:15692"]
+        labels:
+          service: rabbitmq
 
   # Prometheus 自监控
   - job_name: prometheus

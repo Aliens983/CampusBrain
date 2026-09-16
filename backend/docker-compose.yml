@@ -108,6 +108,8 @@ services:
       - "15672:15672"
     volumes:
       - kb-rabbitmq-data:/var/lib/rabbitmq
+      # 除管理插件外启用内置 rabbitmq_prometheus（容器内 15692/metrics，供 Prometheus 抓队列积压）
+      - ./rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins:ro
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s

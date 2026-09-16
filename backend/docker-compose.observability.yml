@@ -5,8 +5,12 @@
 #                  -f docker-compose.business.yml \
 #                  -f docker-compose.observability.yml up -d
 #
-# 职责：Prometheus 指标抓取（容器内网直连各服务 actuator，不经网关）。
-# 端口（宿主机）：9090 → Prometheus Web UI / API
+# 职责：Prometheus 指标抓取（容器内网直连各服务 actuator，不经网关）+
+#       告警规则评估（rules/）+ Alertmanager 告警分发（:9093 UI）。
+# 端口（宿主机）：9090 → Prometheus Web UI / API；9093 → Alertmanager UI
+#
+# 前置：rabbitmq_prometheus 插件在基础设施编排的 kb-rabbitmq 中已启用，
+#       队列积压指标经 kb-rabbitmq:15692/metrics 抓取。
 # ============================================================================
 
 services:
@@ -16,12 +20,29 @@ services:
     restart: unless-stopped
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
       - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.retention.time=15d"
     ports:
       - "9090:9090"
+    depends_on:
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager-data:/alertmanager
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    ports:
+      - "9093:9093"
 
 volumes:
   prometheus-data:
+  alertmanager-data:
