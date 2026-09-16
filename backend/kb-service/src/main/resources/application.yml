@@ -231,6 +231,10 @@ kb:
     # 仅纯知识类问题（未命中预约意图且会话无预约槽位、本地资料有命中）读写缓存；
     # 余量/档期/我的预约等实时数据绝不缓存。预约变更事件会整体淘汰存量缓存。
     enabled: ${KB_CACHE_ENABLED:true}
+  sse:
+    # 单实例同时在途的流式问答连接上限；超限新请求在响应建立前直接收到 503。
+    # 50 路并发 × 单轮约 30s ≈ 100 QPM 的持续吞吐，配合单用户频控与 boundedElastic 使用。
+    max-concurrent: ${KB_SSE_MAX_CONCURRENT:50}
 
 # ---------- App Config ----------
 app:

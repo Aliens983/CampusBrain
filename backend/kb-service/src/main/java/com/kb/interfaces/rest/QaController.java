@@ -8,6 +8,7 @@ import com.kb.interfaces.dto.ApiResponse;
 import com.kb.interfaces.dto.FeedbackRequest;
 import com.kb.interfaces.dto.QaRequest;
 import com.kb.interfaces.dto.QaResponse;
+import com.kb.infrastructure.concurrency.SseConcurrencyLimiter;
 import com.kb.infrastructure.ratelimit.annotations.RateLimit;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import io.swagger.v3.oas.annotations.Operation;
@@ -16,9 +17,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
@@ -43,6 +46,9 @@ public class QaController {
 
     /** JSON 序列化/反序列化工具 */
     private final ObjectMapper objectMapper;
+
+    /** SSE 在途连接的全局限流器：并发问答数超出上限时快速失败，防止慢 LLM 拖垮实例 */
+    private final SseConcurrencyLimiter sseConcurrencyLimiter;
 
     /**
      * Streaming Q&A via Server-Sent Events.
@@ -83,6 +89,14 @@ public class QaController {
         // 在 Servlet 线程内解析身份：SSE 的 Flux 会在异步线程执行，
         // 不能依赖 SecurityContext 的线程继承
         Long userId = SecurityFrameworkUtils.getLoginUserId();
+
+        // 实例级 SSE 并发兜底：在响应头未提交前拒绝，直接返回 HTTP 503
+        // （此时还未建立 text/event-stream 响应，前端可按普通错误提示重试）
+        if (!sseConcurrencyLimiter.tryAcquire()) {
+            log.warn("SSE 问答并发已达上限 {}，拒绝新连接", sseConcurrencyLimiter.getMaxConcurrent());
+            return Flux.error(new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "当前问答用户较多，请稍后再试"));
+        }
 
         // 显式指定泛型：链式调用 subscribeOn 后编译器无法从目标类型反推 T
         return Flux.<ServerSentEvent<?>>create(sink -> {
@@ -141,7 +155,10 @@ public class QaController {
         // 订阅到 boundedElastic：本服务是 Servlet 栈，Flux 默认在容器线程上订阅，
         // 而 askStreaming 全程同步阻塞（检索 + LLM + Feign），会一直占住 Tomcat 工作线程。
         // 并发问答数因此约等于可用线程数，LLM 变慢时少量请求即可打满、健康检查也挂。
-        .subscribeOn(Schedulers.boundedElastic());
+        .subscribeOn(Schedulers.boundedElastic())
+        // 无论正常结束、异常还是客户端断开（cancel），都归还并发名额。
+        // 许可在控制器方法体内、Flux 订阅前获取，doFinally 恰好触发一次，保证不漏不重。
+        .doFinally(signal -> sseConcurrencyLimiter.release());
     }
 
     @RateLimit(permits = 30, seconds = 60, message = "问答请求过于频繁，请稍后再试")
