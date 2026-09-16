@@ -29,7 +29,7 @@ import java.util.*;
  * <p>
  * Full ingestion pipeline:
  * <ol>
- *   <li>Fetch file from MinIO</li>
+ *   <li>从本地存储目录读取文件（文档保存目录由 app.file-storage-path 指定）</li>
  *   <li>Parse: extract clean text via Tika</li>
  *   <li>Chunk: split into segments</li>
  *   <li>Embed: convert chunks to vectors</li>

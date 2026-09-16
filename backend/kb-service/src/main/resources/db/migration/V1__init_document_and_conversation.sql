@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS document
     title       VARCHAR(500)  NOT NULL COMMENT 'Document title',
     file_type   VARCHAR(20)   NOT NULL COMMENT 'File type: PDF/MD/DOCX/HTML',
     file_size   BIGINT        NOT NULL COMMENT 'File size in bytes',
-    file_path   VARCHAR(1000) NOT NULL COMMENT 'MinIO object path',
+    file_path   VARCHAR(1000) NOT NULL COMMENT 'Local file path (under app.file-storage-path)',
     status      VARCHAR(20)   NOT NULL DEFAULT 'UPLOADED'
         COMMENT 'Processing status: UPLOADED/PARSING/CHUNKING/EMBEDDING/READY/FAILED',
     chunk_count INT           DEFAULT 0 COMMENT 'Number of chunks',

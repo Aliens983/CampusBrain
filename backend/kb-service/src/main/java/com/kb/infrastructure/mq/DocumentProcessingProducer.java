@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 /**
  * Producer: sends document processing messages to RabbitMQ.
  * <p>
- * After a document is uploaded to MinIO, a message is sent to trigger
+ * After a document is saved to local storage, a message is sent to trigger
  * the async processing pipeline: Parse → Chunk → Embed → Store.
  * </p>
  *
