@@ -77,9 +77,13 @@ spring:
     password: ${RABBITMQ_PASSWORD:admin123}
     listener:
       simple:
-        concurrency: 2
+        # 消费端并发：5 个消费者并行处理不同文档；单文档的 embedding 批次另在
+        # embeddingExecutor（默认 4 线程）内并发，两层并发相乘即对模型 API 的峰值并发。
+        # prefetch 从 1 提到 2：消费者处理当前大文档时可预取下一条，减少队列空转，
+        # 同时避免预取过多把大文档批量压在单个消费者本地。
+        concurrency: 3
         max-concurrency: 5
-        prefetch: 1
+        prefetch: 2
         retry:
           enabled: true
           initial-interval: 3000ms
@@ -235,6 +239,11 @@ kb:
     # 单实例同时在途的流式问答连接上限；超限新请求在响应建立前直接收到 503。
     # 50 路并发 × 单轮约 30s ≈ 100 QPM 的持续吞吐，配合单用户频控与 boundedElastic 使用。
     max-concurrent: ${KB_SSE_MAX_CONCURRENT:50}
+  embedding:
+    # 单次 embedding API 请求携带的分块条数；文档内按此切批并发请求
+    batch-size: ${KB_EMBEDDING_BATCH_SIZE:32}
+    # 单文档内 embedding 批次的并发线程数（对模型 API 的并发预算）
+    parallelism: ${KB_EMBEDDING_PARALLELISM:4}
 
 # ---------- App Config ----------
 app:
