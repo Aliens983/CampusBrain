@@ -27,7 +27,16 @@ public class DbResetConfig {
     @Bean
     public FlywayMigrationStrategy dbResetFlywayStrategy(
             @Value("${app.db.reset-on-startup:false}") boolean resetOnStartup,
+            @Value("${spring.flyway.clean-disabled:true}") boolean cleanDisabled,
             RedisConnectionFactory connectionFactory) {
+        // 双开关矛盾时 fail-fast：否则要等到 Flyway 回调才抛底层的
+        // "Clean is disabled" 英文异常，排查者很难联想到两个开关的配套关系。
+        // 与 cas-server 的 DbResetConfig 保持同一行为。
+        if (resetOnStartup && cleanDisabled) {
+            throw new IllegalStateException(
+                    "APP_DB_RESET_ON_STARTUP=true 必须同时设置 FLYWAY_CLEAN_DISABLED=false，"
+                            + "否则 spring.flyway.clean-disabled=true 会拒绝执行 flyway.clean()，启动中止。");
+        }
         return flyway -> {
             if (resetOnStartup) {
                 flyway.clean();
