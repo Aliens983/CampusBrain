@@ -224,6 +224,14 @@ resilience4j:
         wait-duration-in-open-state: 60s
         permitted-number-of-calls-in-half-open-state: 3
 
+# ---------- 问答缓存 ----------
+kb:
+  cache:
+    # 开关同时控制精确缓存（Caffeine+Redis）与语义缓存（向量相似度 0.95）。
+    # 仅纯知识类问题（未命中预约意图且会话无预约槽位、本地资料有命中）读写缓存；
+    # 余量/档期/我的预约等实时数据绝不缓存。预约变更事件会整体淘汰存量缓存。
+    enabled: ${KB_CACHE_ENABLED:true}
+
 # ---------- App Config ----------
 app:
   file-storage-path: ${FILE_STORAGE_PATH:../file}

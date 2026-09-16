@@ -96,6 +96,9 @@ public class SemanticCacheService {
      * 存入语义缓存
      */
     public void store(String question, String answer) {
+        if (!cacheEnabled) {
+            return;
+        }
         try {
             float[] vec = embeddingService.embed(question);
             String key = PREFIX + question.hashCode();

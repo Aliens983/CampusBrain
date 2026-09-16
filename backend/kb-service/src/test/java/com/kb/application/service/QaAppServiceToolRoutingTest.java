@@ -55,6 +55,8 @@ class QaAppServiceToolRoutingTest {
     @Mock private StringRedisTemplate redisTemplate;
     @Mock private ChatSessionRepository chatSessionRepository;
     @Mock private CasClient casClient;
+    @Mock private com.kb.infrastructure.cache.QaCacheService qaCacheService;
+    @Mock private com.kb.infrastructure.cache.SemanticCacheService semanticCacheService;
 
     @InjectMocks private QaApplicationService service;
 

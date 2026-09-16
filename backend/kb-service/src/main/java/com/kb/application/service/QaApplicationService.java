@@ -15,6 +15,8 @@ import com.kb.domain.rag.RerankerService;
 import com.kb.infrastructure.client.CasClient;
 import com.kb.infrastructure.client.CasResult;
 import com.kb.infrastructure.client.dto.CasBookingResult;
+import com.kb.infrastructure.cache.QaCacheService;
+import com.kb.infrastructure.cache.SemanticCacheService;
 import com.kb.infrastructure.common.BusinessException;
 import com.kb.infrastructure.common.ErrorCode;
 import com.kb.infrastructure.metrics.BusinessMetrics;
@@ -66,6 +68,8 @@ public class QaApplicationService implements IQaApplicationService {
     private final StringRedisTemplate redisTemplate;
     private final ChatSessionRepository chatSessionRepository;
     private final CasClient casClient;
+    private final QaCacheService qaCacheService;
+    private final SemanticCacheService semanticCacheService;
 
     /** 注入 LLM 的历史消息条数（对话表读取上限） */
     private static final int HISTORY_LIMIT = 8;
@@ -169,6 +173,18 @@ public class QaApplicationService implements IQaApplicationService {
             // 供 @Tool 回退使用（LLM 漏传参数时用会话槽位兜底）
             ChatContextHolder.set(new ChatContextHolder.ChatContext(sid, userId, session.getSlots()));
 
+            // ---- Step 1.5: 纯知识类问题先查问答缓存 ----
+            // 预约实时类（命中预约意图或会话已带槽位）一律不查不写，避免余量/档期过期；
+            // 精确缓存未命中再查语义缓存（相似度阈值 0.95）。
+            if (isKnowledgeOnlyQuery(rewritten, session)) {
+                String cached = answerFromCache(query, rewritten, sid, userId,
+                        onToken, onCitations, onMessageId, onEvent, startTime);
+                if (cached != null) {
+                    return cached;
+                }
+                metrics.recordCacheMiss();
+            }
+
             // ---- Step 2: 混合检索 + 重排 ----
             long retrievalStart = System.currentTimeMillis();
             List<RetrievalResult> retrieved = graphRetriever.retrieve(rewritten);
@@ -180,6 +196,12 @@ public class QaApplicationService implements IQaApplicationService {
 
             // ---- Step 4: 生成回答 ----
             String fullAnswer = generate(rewritten, reranked, history, session, onToken);
+
+            // 本地资料命中的知识类回答写缓存（精确 + 语义），预约/兜底类不写
+            if (isKnowledgeOnlyQuery(rewritten, session) && reranked != null && !reranked.isEmpty()
+                    && fullAnswer != null && !fullAnswer.isBlank()) {
+                populateKnowledgeCache(rewritten, fullAnswer, buildCitations(reranked));
+            }
 
             // ---- Step 5: 回读会话（工具可能更新了槽位与待确认草稿）----
             ChatSession latest = chatSessionRepository.find(sid).orElse(session);
@@ -278,6 +300,16 @@ public class QaApplicationService implements IQaApplicationService {
 
             ChatContextHolder.set(new ChatContextHolder.ChatContext(sid, userId, session.getSlots()));
 
+            // 纯知识类问题先查缓存（同步路径无 token 回调）
+            if (isKnowledgeOnlyQuery(rewritten, session)) {
+                String cached = answerFromCache(query, rewritten, sid, userId,
+                        null, null, null, null, startTime);
+                if (cached != null) {
+                    return cached;
+                }
+                metrics.recordCacheMiss();
+            }
+
             long retrievalStart = System.currentTimeMillis();
             List<RetrievalResult> retrieved = searchService.search(rewritten);
             metrics.recordRetrievalLatency(System.currentTimeMillis() - retrievalStart);
@@ -285,6 +317,11 @@ public class QaApplicationService implements IQaApplicationService {
 
             conversationRepository.save(sid, "user", query, userId);
             String answer = generate(rewritten, reranked, history, session, null);
+
+            if (isKnowledgeOnlyQuery(rewritten, session) && reranked != null && !reranked.isEmpty()
+                    && answer != null && !answer.isBlank()) {
+                populateKnowledgeCache(rewritten, answer, buildCitations(reranked));
+            }
 
             ChatSession latest = chatSessionRepository.find(sid).orElse(session);
             chatSessionRepository.save(latest);
@@ -331,6 +368,82 @@ public class QaApplicationService implements IQaApplicationService {
             return ragAnswer;
         }
         return llmService.generateAnswerDirectStreaming(query, history, onToken);
+    }
+
+    // ==================== 知识问答缓存 ====================
+
+    /**
+     * 是否为"纯知识类"问题：既不命中预约意图词，会话中也没有累积任何预约槽位。
+     * 只有这类问题允许读写问答缓存——余量、档期、我的预约等实时数据一旦缓存
+     * 就会向用户展示过期结果。
+     */
+    private boolean isKnowledgeOnlyQuery(String rewrittenQuery, ChatSession session) {
+        return !isAppointmentQuery(rewrittenQuery)
+                && (session == null || session.slotsOrEmpty().isEmpty());
+    }
+
+    /**
+     * 查缓存并按正常问答的收尾方式产出一轮回答。先精确（L1/L2），再语义（0.95）。
+     *
+     * @return 缓存命中时的完整答案；未命中返回 null（调用方继续走检索 + LLM）
+     */
+    private String answerFromCache(String originalQuery, String rewrittenQuery, String sid, Long userId,
+                                   Consumer<String> onToken,
+                                   Consumer<List<Conversation.CitationRef>> onCitations,
+                                   Consumer<Long> onMessageId,
+                                   Consumer<AssistantEvent> onEvent,
+                                   long startTime) {
+        List<Conversation.CitationRef> citations = List.of();
+        String answer = null;
+
+        var exact = qaCacheService.getCachedAnswer(rewrittenQuery);
+        if (exact.isPresent()) {
+            answer = exact.get().answer();
+            citations = exact.get().citations() == null ? List.of() : exact.get().citations();
+        } else {
+            String semantic = semanticCacheService.lookup(rewrittenQuery);
+            if (semantic != null) {
+                answer = semantic;
+            }
+        }
+        if (answer == null || answer.isBlank()) {
+            return null;
+        }
+
+        conversationRepository.save(sid, "user", originalQuery, userId);
+        if (onToken != null) {
+            onToken.accept(answer);
+        }
+        Long messageId = conversationRepository.saveWithReferences(
+                sid, "assistant", answer, citations, userId);
+        if (onMessageId != null && messageId != null) {
+            onMessageId.accept(messageId);
+        }
+        if (onCitations != null) {
+            onCitations.accept(citations);
+        }
+        // 知识类问题不会产生槽位/待确认事件，onEvent 无需回调
+
+        metrics.recordCacheHit();
+        metrics.recordQaRequest();
+        metrics.recordQaLatency(System.currentTimeMillis() - startTime);
+        incrementDailyCounter();
+        return answer;
+    }
+
+    /**
+     * 知识类回答写入两级缓存：精确缓存（Caffeine + Redis，含引用），
+     * 语义缓存（向量，仅答案）。两者都受 kb.cache.enabled 开关控制。
+     */
+    private void populateKnowledgeCache(String rewrittenQuery, String answer,
+                                        List<Conversation.CitationRef> citations) {
+        try {
+            qaCacheService.cacheAnswer(rewrittenQuery, answer, citations);
+            semanticCacheService.store(rewrittenQuery, answer);
+        } catch (Exception e) {
+            // 缓存写入失败绝不影响主链路回答
+            log.debug("问答缓存写入失败: {}", e.getMessage());
+        }
     }
 
     // ==================== 待确认动作的执行 ====================
