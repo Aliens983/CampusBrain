@@ -166,6 +166,7 @@ import cqImg from '@/assets/images/campus/cq.jpg'
 import xsImg from '@/assets/images/campus/xs.jpg'
 import { fetchServiceCards, fetchServiceCategories, type ServiceCategoryOption } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
+import { assetUrl } from '@/common/utils/asset'
 
 const router = useRouter()
 const route = useRoute()
@@ -246,14 +247,6 @@ function syncCategoryRoute(value: string | number | boolean) {
 
 function goService(id: number) {
   router.push(`/service/${id}`)
-}
-
-/** /uploads/xx → /api/uploads/xx（走 vite 代理） */
-function assetUrl(path?: string) {
-  if (!path) return ''
-  if (/^https?:/.test(path)) return path
-  if (path.startsWith('/uploads')) return `/api${path}`
-  return path
 }
 </script>
 

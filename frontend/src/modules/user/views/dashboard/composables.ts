@@ -2,6 +2,7 @@ import { computed, ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { fetchBookingRecords, fetchServiceCards } from '@/common/campus'
 import request from '@/common/utils/request'
+import { assetUrl } from '@/common/utils/asset'
 import type { BookingRecord, DashboardStat, ServiceCard } from '@/common/types'
 
 /** 快捷入口项 */
@@ -24,12 +25,7 @@ export interface DashboardTodo {
 }
 
 /** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
-export function assetUrl(p?: string) {
-  if (!p) return ''
-  if (/^https?:/.test(p)) return p
-  if (p.startsWith('/uploads')) return `/api${p}`
-  return p
-}
+export { assetUrl }
 
 /** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
 function bannerUrl(p: string) {

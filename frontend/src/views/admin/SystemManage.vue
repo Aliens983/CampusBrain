@@ -145,6 +145,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
+import { assetUrl } from '@/common/utils/asset'
 
 const settings = reactive({
   advanceDays: '提前 7 天',
@@ -160,21 +161,24 @@ const policy = reactive({
 
 onMounted(async () => {
   try {
-    const data = await request.get('/admin/settings/notify') as any
-    if (data) {
-      if (typeof data.emailEnabled === 'boolean') policy.emailEnabled = data.emailEnabled
-      if (typeof data.smsEnabled === 'boolean') policy.smsEnabled = data.smsEnabled
+    const data: unknown = await request.get('/admin/settings/notify')
+    if (data && typeof data === 'object') {
+      const notify = data as { emailEnabled?: unknown; smsEnabled?: unknown }
+      if (typeof notify.emailEnabled === 'boolean') policy.emailEnabled = notify.emailEnabled
+      if (typeof notify.smsEnabled === 'boolean') policy.smsEnabled = notify.smsEnabled
     }
-  } catch {
-    // 加载失败用默认值
+  } catch (error) {
+    // 加载失败用默认值，保留可观测性日志
+    console.error('[SystemManage] 通知策略加载失败', error)
   }
 })
 
 async function savePolicy() {
   try {
     await request.put('/admin/settings/notify', { ...policy })
-  } catch {
-    // 保存失败由响应拦截器统一提示
+  } catch (error) {
+    // 保存失败由响应拦截器统一提示，此处仅记录原因
+    console.error('[SystemManage] 通知策略保存失败', error)
   }
 }
 
@@ -189,18 +193,13 @@ interface CarouselItem {
 const carousels = ref<CarouselItem[]>([])
 const carouselInput = ref<HTMLInputElement | null>(null)
 
-function assetUrl(p?: string) {
-  if (!p) return ''
-  if (/^https?:/.test(p)) return p
-  if (p.startsWith('/uploads')) return `/api${p}`
-  return p
-}
-
 async function loadCarousels() {
   try {
-    const list = await request.get('/admin/carousel') as CarouselItem[] | unknown
+    const list: unknown = await request.get('/admin/carousel')
     carousels.value = Array.isArray(list) ? list : []
-  } catch {
+  } catch (error) {
+    // 轮播加载失败展示空态，保留可观测性日志
+    console.error('[SystemManage] 轮播图加载失败', error)
     carousels.value = []
   }
 }

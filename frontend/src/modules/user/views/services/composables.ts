@@ -38,12 +38,7 @@ export interface RoomLite {
 }
 
 /** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
-export function assetUrl(p?: string) {
-  if (!p) return ''
-  if (/^https?:/.test(p)) return p
-  if (p.startsWith('/uploads')) return `/api${p}`
-  return p
-}
+export { assetUrl } from '@/common/utils/asset'
 
 /** 本地时区 yyyy-MM-dd（避免 toISOString 的 UTC 跨天问题） */
 export function localDate(d = new Date()) {

@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import request from '@/common/utils/request'
 import { fetchAdminServicesPage, fetchServiceCategories, type ServiceCategoryOption } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
+import { assetUrl } from '@/common/utils/asset'
 
 /** 校区 Tab 选项：'' 全部 / cq 仓前 / xs 下沙 */
 const CAMPUS_OPTIONS = [
@@ -90,8 +91,9 @@ export function useServiceManage() {
       total.value = all.total
       availableTotal.value = available.total
       campusCounts.value = { '': all.total, cq: cq.total, xs: xs.total }
-    } catch {
-      // 计数失败不阻塞列表
+    } catch (error) {
+      // 计数失败不阻塞列表，但保留可观测性日志
+      console.error('[serviceManage] 统计计数加载失败', error)
     }
   }
 
@@ -130,14 +132,6 @@ export function useServiceManage() {
       editForm.image = item.imageUrl || ''
     }
   })
-
-  /** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
-  function assetUrl(path?: string) {
-    if (!path) return ''
-    if (/^https?:/.test(path)) return path
-    if (path.startsWith('/uploads')) return `/api${path}`
-    return path
-  }
 
   /** 封面上传：POST /admin/files，返回相对 URL */
   async function uploadImage(file: File, kind: 'edit' | 'create') {
