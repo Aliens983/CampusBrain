@@ -89,6 +89,14 @@ public class LangChain4jLlmService implements LlmService {
      */
     private static final int LLM_STREAM_TIMEOUT_SECONDS = 90;
 
+    /**
+     * RAG 流式"无法回答"判定的缓冲前缀长度。
+     * 标记词最长 4 个字（如"没有足够的""文档中未"），缓冲 16 字足以覆盖
+     * "抱歉，我无法回答……"这类礼貌前缀；前缀内一旦出现标记词即中止 RAG 流并
+     * 切换直接兜底，避免把"无法回答"推给用户后又拼一段兜底答案。
+     */
+    private static final int NO_ANSWER_GATE_CHARS = 16;
+
     /** 熔断打开/主备耗尽时面向用户的统一兜底文案（A-07；不含任何内部失败细节） */
     private static final String LLM_FALLBACK_MESSAGE = "AI 服务暂时不可用，请稍后重试。";
 
@@ -137,8 +145,7 @@ public class LangChain4jLlmService implements LlmService {
     @SuppressWarnings("unused")
     private String unavailableAnswer(String query, List<RetrievalResult> docs,
                                      List<ChatMessage> history, Throwable t) {
-        log.warn("Circuit breaker OPEN for llmService (rag-sync), returning fallback");
-        return LLM_FALLBACK_MESSAGE;
+        return llmFallback("rag-sync", null, t);
     }
 
     // ==================== 流式 RAG ====================
@@ -160,7 +167,8 @@ public class LangChain4jLlmService implements LlmService {
         List<dev.langchain4j.data.message.ChatMessage> messages = toLangChainMessages(
                 promptEngine.buildFullPrompt(query, retrievedDocs, conversationHistory));
         try {
-            return streamRag(messages, tokenConsumer, cancellationToken);
+            return streamRagWithGate(query, messages, conversationHistory,
+                    tokenConsumer, cancellationToken);
         } catch (StreamCancelledException e) {
             throw e;
         } catch (Exception e) {
@@ -170,20 +178,53 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * RAG 真流式：token 直推消费者；客户端取消时中止在途供应商请求。
+     * RAG 真流式 + "无法回答"前缀门控：
+     * <ol>
+     *   <li>先缓冲前 {@link #NO_ANSWER_GATE_CHARS} 字不下发，期间出现"无法回答"类标记词，
+     *       立即中止本次请求，改走不带 RAG 上下文的直接流式兜底；</li>
+     *   <li>前缀安全则一次性放出缓冲，后续 token 直通，打字机效果对 RAG 回答同样生效。</li>
+     * </ol>
      */
-    private String streamRag(List<dev.langchain4j.data.message.ChatMessage> ragMessages,
-                             Consumer<String> tokenConsumer,
-                             CancellationToken cancellationToken) {
+    private String streamRagWithGate(String query,
+                                     List<dev.langchain4j.data.message.ChatMessage> ragMessages,
+                                     List<ChatMessage> conversationHistory,
+                                     Consumer<String> tokenConsumer,
+                                     CancellationToken cancellationToken) {
         StringBuilder full = new StringBuilder();
-        StreamingChatLanguageModel model = streamingModelFactory.create(cancellationToken);
+        StringBuilder gate = new StringBuilder();
+        AtomicBoolean gateOpen = new AtomicBoolean(false);
+        AtomicBoolean switched = new AtomicBoolean(false);
+        // 门控期命中"无法回答"：用来中止 RAG 流的内部令牌（同时受客户端取消联动）
+        CancellationToken abortRag = linkedToken(cancellationToken);
+
+        StreamingChatLanguageModel model = streamingModelFactory.create(abortRag);
         CompletableFuture<Void> future = new CompletableFuture<>();
         model.generate(ragMessages, new dev.langchain4j.model.StreamingResponseHandler<>() {
             @Override
             public void onNext(String token) {
-                if (!cancellationToken.isCancelled()) {
-                    full.append(token);
+                if (abortRag.isCancelled()) {
+                    return;
+                }
+                full.append(token);
+                if (switched.get()) {
+                    return;
+                }
+                if (gateOpen.get()) {
                     tokenConsumer.accept(token);
+                    return;
+                }
+                gate.append(token);
+                if (NoAnswerMarkers.looksLikeNoAnswer(gate.toString())) {
+                    // 判定本地资料无法回答：中止 RAG 流，标记切换直接兜底
+                    switched.set(true);
+                    abortRag.cancel();
+                    future.complete(null);
+                    return;
+                }
+                if (gate.length() >= NO_ANSWER_GATE_CHARS) {
+                    gateOpen.set(true);
+                    tokenConsumer.accept(gate.toString());
+                    gate.setLength(0);
                 }
             }
 
@@ -194,8 +235,8 @@ public class LangChain4jLlmService implements LlmService {
 
             @Override
             public void onError(Throwable error) {
-                if (cancellationToken.isCancelled()) {
-                    // 客户端主动取消引发的 onError 不算失败
+                if (abortRag.isCancelled()) {
+                    // 主动中止引发的 onError 不算失败
                     future.complete(null);
                 } else {
                     future.completeExceptionally(error);
@@ -203,6 +244,16 @@ public class LangChain4jLlmService implements LlmService {
             }
         });
         awaitStream(future, cancellationToken);
+
+        if (switched.get()) {
+            log.debug("RAG 回答命中无答案标记，切换直接流式兜底: query={}", query);
+            return generateAnswerDirectStreaming(query, conversationHistory,
+                    tokenConsumer, cancellationToken);
+        }
+        // 门控缓冲中还有未放出的安全前缀
+        if (!gateOpen.get() && gate.length() > 0) {
+            tokenConsumer.accept(gate.toString());
+        }
         return full.toString();
     }
 
@@ -210,9 +261,7 @@ public class LangChain4jLlmService implements LlmService {
     private String streamingUnavailable(String query, List<RetrievalResult> docs,
                                          List<ChatMessage> history, Consumer<String> consumer,
                                          CancellationToken token, Throwable t) {
-        log.warn("Circuit breaker OPEN for llmService (rag-streaming), returning fallback");
-        consumer.accept(LLM_FALLBACK_MESSAGE);
-        return LLM_FALLBACK_MESSAGE;
+        return llmFallback("rag-streaming", consumer, t);
     }
 
     // ==================== Function Calling 流式 ====================
@@ -268,9 +317,7 @@ public class LangChain4jLlmService implements LlmService {
     private String toolsStreamingUnavailable(String query, List<RetrievalResult> docs,
                                               List<ChatMessage> history, Consumer<String> consumer,
                                               String hint, CancellationToken token, Throwable t) {
-        log.warn("Circuit breaker OPEN for llmService (tools-streaming), returning fallback");
-        consumer.accept(LLM_FALLBACK_MESSAGE);
-        return LLM_FALLBACK_MESSAGE;
+        return llmFallback("tools-streaming", consumer, t);
     }
 
     // ==================== 同步 Function Calling（保留给非流式/测试入口） ====================
@@ -362,9 +409,7 @@ public class LangChain4jLlmService implements LlmService {
     private String directStreamingUnavailable(String query, List<ChatMessage> history,
                                                Consumer<String> consumer,
                                                CancellationToken token, Throwable t) {
-        log.warn("Circuit breaker OPEN for llmService (direct-streaming), returning fallback");
-        consumer.accept(LLM_FALLBACK_MESSAGE);
-        return LLM_FALLBACK_MESSAGE;
+        return llmFallback("direct-streaming", consumer, t);
     }
 
     // ==================== 跨供应商兜底 ====================
@@ -439,6 +484,32 @@ public class LangChain4jLlmService implements LlmService {
         return answer;
     }
 
+    /**
+     * 熔断器 fallback 统一模板（A-07）。
+     * <p>
+     * 四条 {@code @CircuitBreaker} 链路（RAG 同步/RAG 流式/工具流式/直连流式）此前各自
+     * 维护一份近乎相同的兜底方法，日志里无法区分是哪条链路、因何原因降级。
+     * 现统一收敛到本模板：
+     * <ul>
+     *   <li>{@code scene} 标识降级链路，日志结构化输出场景与失败原因（异常类型+消息），
+     *       熔断打开（CallNotPermittedException）与主备耗尽（LlmUnavailableException）可区分；</li>
+     *   <li>面向用户仍只返回同一句通用文案，失败原因不外泄（对齐 B-02）。</li>
+     * </ul>
+     *
+     * @param scene         降级链路标识（rag-sync / rag-streaming / tools-streaming / direct-streaming）
+     * @param tokenConsumer 流式 token 消费者；同步链路为 null
+     * @param t             触发降级的异常
+     */
+    private String llmFallback(String scene, Consumer<String> tokenConsumer, Throwable t) {
+        String reason = (t == null) ? "unknown"
+                : t.getClass().getSimpleName() + ": " + t.getMessage();
+        log.warn("[LLM fallback] scene={}, reason={}，返回兜底文案", scene, reason, t);
+        if (tokenConsumer != null) {
+            tokenConsumer.accept(LLM_FALLBACK_MESSAGE);
+        }
+        return LLM_FALLBACK_MESSAGE;
+    }
+
     // ==================== 流式等待与取消辅助 ====================
 
     /**
@@ -478,6 +549,16 @@ public class LangChain4jLlmService implements LlmService {
             }
             throw new LlmUnavailableException("流式生成失败", cause);
         }
+    }
+
+    /**
+     * 创建与客户端取消令牌联动的内部令牌：客户端取消会传播到内部令牌，
+     * 但内部令牌（服务端超时/门控切换）取消不影响客户端令牌语义。
+     */
+    private CancellationToken linkedToken(CancellationToken clientToken) {
+        CancellationToken internal = new CancellationToken();
+        clientToken.onAbort(internal::cancel);
+        return internal;
     }
 
     // ==================== 消息与提示词构建 ====================
