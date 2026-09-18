@@ -61,12 +61,23 @@ public interface BookingRepository {
     int countRoomOverlap(Long roomId, LocalDate date, String startTime, String endTime);
 
     /**
-     * 取消预约（原子完成状态置取消 + 通用单回补 booked_count + 咨询单释放时段，7.3.6）。
-     * 仅当前用户的待审核单、或已通过的活动单命中；重复调用幂等。
+     * 筛出当前用户给定订单中"可取消"的订单 ID（12-09）。
+     * <p>
+     * 可取消条件与原原子 UPDATE 的 WHERE 完全一致：归属本人、ID 在入参集合内、
+     * 且为待审核单，或已通过的活动单。必须先查明实际命中集合，
+     * CANCELLED 事件才能只发给真正被取消的订单，而不是入参里的每个 id
+     * （不属于本人/已取消/已通过的非活动单都不应收到事件）。
+     */
+    List<Long> findCancellableOrderIds(Long userId, List<Long> orderIds);
+
+    /**
+     * 按已确认的订单集合原子完成「状态置取消 + 通用单回补 booked_count +
+     * 咨询单释放时段」（7.3.6）。仅更新 {@code orderIds} 中仍满足可取消条件的行，
+     * SELECT 与 UPDATE 之间状态被外部改动时以 UPDATE 的实际影响行数为准。
      *
      * @return 实际取消的订单行数
      */
-    int cancelBookings(Long userId, List<Long> bookingIds);
+    int cancelByIds(Long userId, List<Long> orderIds);
 
     /**
      * 分页查询所有服务预约状态（支持按审核状态、服务名称筛选）

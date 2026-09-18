@@ -44,16 +44,25 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                   @Param("dedupeSeconds") int dedupeSeconds);
 
     /**
+     * 筛出当前用户给定订单中可取消（待审核单、或已通过的活动单）的订单 ID（12-09）。
+     * WHERE 与 {@link #cancelByIdsAndRelease} 完全一致。
+     */
+    List<Long> selectCancellableOrderIds(@Param("userId") Long userId,
+                                         @Param("orderIds") List<Long> orderIds,
+                                         @Param("pendingCode") int pendingCode,
+                                         @Param("approvedCode") int approvedCode);
+
+    /**
      * 取消并释放资源（7.3.6）：一条多表 UPDATE 原子完成「状态置取消 + 通用单回补库存 +
      * 咨询单释放时段」，仅待审核单、或已通过的活动单命中。
      *
      * @return 实际取消的订单行数
      */
-    int cancelBookingsAndRelease(@Param("userId") Long userId,
-                                 @Param("bookingIds") List<Long> bookingIds,
-                                 @Param("pendingCode") int pendingCode,
-                                 @Param("approvedCode") int approvedCode,
-                                 @Param("cancelledCode") int cancelledCode);
+    int cancelByIdsAndRelease(@Param("userId") Long userId,
+                              @Param("orderIds") List<Long> orderIds,
+                              @Param("pendingCode") int pendingCode,
+                              @Param("approvedCode") int approvedCode,
+                              @Param("cancelledCode") int cancelledCode);
 
     /**
      * 分页查询所有服务预约状态（支持筛选）

@@ -134,8 +134,13 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public int cancelBookings(Long userId, List<Long> bookingIds) {
-        return itemMapper.cancelBookingsAndRelease(userId, bookingIds, PENDING, APPROVED, CANCELLED);
+    public List<Long> findCancellableOrderIds(Long userId, List<Long> orderIds) {
+        return itemMapper.selectCancellableOrderIds(userId, orderIds, PENDING, APPROVED);
+    }
+
+    @Override
+    public int cancelByIds(Long userId, List<Long> orderIds) {
+        return itemMapper.cancelByIdsAndRelease(userId, orderIds, PENDING, APPROVED, CANCELLED);
     }
 
     @Override

@@ -176,17 +176,27 @@ public class BookServiceImpl implements BookService {
         if (bookingIds == null || bookingIds.isEmpty()) {
             return false;
         }
-        int affected = bookingRepository.cancelBookings(userId, bookingIds);
-        boolean success = affected > 0;
-        if (success) {
-            bookingMetrics.recordCancelled(affected);
-            // 库存回补与咨询时段释放已在 cancelBookings 的一条多表 UPDATE 内原子完成：
-            // 只释放本次真正取消的通用单/咨询单，资源单不误扣、历史单不重复释放（7.3.6）。
-            for (Long id : bookingIds) {
-                bookingEventPublisher.publishChanged(userId, id, "CANCELLED");
-            }
+        // 先查出真正满足取消条件（本人所有 + 待审核/已通过活动单）的订单（12-09）。
+        // 不能拿入参集合直接发事件：不属于本人、已取消、已通过的非活动单都不会被 UPDATE，
+        // 给它们发 CANCELLED 会让 KB 侧按未发生的变更淘汰缓存，属于虚假业务事件。
+        List<Long> cancellableIds = bookingRepository.findCancellableOrderIds(userId, bookingIds);
+        if (cancellableIds.isEmpty()) {
+            return false;
         }
-        return success;
+        // 按实际命中集合执行原子多表 UPDATE；SELECT 与 UPDATE 间状态被并发改动时，
+        // 以 UPDATE 影响行数为准（极端竞争下 affected 可能小于 cancellableIds）
+        int affected = bookingRepository.cancelByIds(userId, cancellableIds);
+        if (affected <= 0) {
+            return false;
+        }
+        bookingMetrics.recordCancelled(affected);
+        // 库存回补与咨询时段释放已在一条多表 UPDATE 内原子完成：
+        // 只释放本次真正取消的通用单/咨询单，资源单不误扣、历史单不重复释放（7.3.6）。
+        // 事件同样只发给实际命中的订单（12-09）。
+        for (Long id : cancellableIds) {
+            bookingEventPublisher.publishChanged(userId, id, "CANCELLED");
+        }
+        return true;
     }
 
     @Override
