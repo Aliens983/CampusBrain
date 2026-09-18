@@ -8,7 +8,7 @@ import com.kb.infrastructure.mq.DocumentProcessingProducer;
 import com.kb.infrastructure.persistence.elasticsearch.EsDocumentRepository;
 import com.kb.infrastructure.rag.parser.DocumentParserSpi;
 import com.kb.infrastructure.rag.parser.ParserRegistry;
-import com.kb.infrastructure.security.LoginUser;
+import com.laoliu.auth.dto.LoginUser;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -75,8 +75,14 @@ class DocumentApplicationServiceTest {
     }
 
     private void login(Long userId, String role) {
-        SecurityFrameworkUtils.setLoginUser(LoginUser.builder()
-                .userId(userId).username("u" + userId).role(role).build());
+        // Q-02：统一模型使用数字角色 code（ADMIN=1，其余按普通用户 0）
+        LoginUser loginUser = new LoginUser();
+        loginUser.setId(userId);
+        loginUser.setName("u" + userId);
+        loginUser.setRole("ADMIN".equalsIgnoreCase(role)
+                ? com.laoliu.auth.policy.RolePolicy.ADMIN.getCode()
+                : com.laoliu.auth.policy.RolePolicy.USER.getCode());
+        SecurityFrameworkUtils.setLoginUser(loginUser);
     }
 
     @Test

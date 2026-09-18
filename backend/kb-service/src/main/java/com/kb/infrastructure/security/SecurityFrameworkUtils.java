@@ -1,9 +1,13 @@
 package com.kb.infrastructure.security;
 
+import com.laoliu.auth.dto.LoginUser;
+import com.laoliu.auth.policy.RolePolicy;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 
 /**
  * 安全框架工具类
@@ -37,12 +41,15 @@ public class SecurityFrameworkUtils {
     }
 
     /**
-     * 将 LoginUser 设置到 Spring Security 上下文
+     * 将 LoginUser 设置到 Spring Security 上下文（Q-02 后为 common-auth 统一模型，
+     * 数字角色 code → ROLE_* 权限的映射统一走 {@link RolePolicy}）
      */
     public static void setLoginUser(LoginUser loginUser) {
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(
-                        loginUser, null, loginUser.getAuthorities());
+                        loginUser, null,
+                        List.of(new SimpleGrantedAuthority(
+                                RolePolicy.of(loginUser.getRole()).getAuthority())));
         SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
@@ -63,7 +70,7 @@ public class SecurityFrameworkUtils {
      */
     public static Long getLoginUserId() {
         LoginUser user = getLoginUser();
-        return user != null ? user.getUserId() : null;
+        return user != null ? user.getId() : null;
     }
 
     /**

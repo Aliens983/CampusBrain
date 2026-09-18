@@ -1,7 +1,8 @@
 package com.laoliu.cas.security.filter;
 
-import com.laoliu.cas.common.security.JWTUtils;
-import com.laoliu.cas.common.security.LoginUser;
+import com.laoliu.auth.JWTUtils;
+import com.laoliu.auth.dto.LoginUser;
+import com.laoliu.auth.policy.RolePolicy;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -39,7 +40,8 @@ public class JWTFilter extends OncePerRequestFilter {
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             loginUser,
                             null,
-                            List.of(new SimpleGrantedAuthority(resolveAuthority(loginUser.getRole())))
+                            List.of(new SimpleGrantedAuthority(
+                                    RolePolicy.of(loginUser.getRole()).getAuthority()))
                     );
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                     log.debug("用户 {} 认证成功", loginUser.getId());
@@ -58,18 +60,5 @@ public class JWTFilter extends OncePerRequestFilter {
             return bearerToken.substring(7);
         }
         return null;
-    }
-
-    /** 数字角色映射为 Spring Security 权限（ROLE_ 前缀） */
-    private String resolveAuthority(Integer role) {
-        if (role == null) {
-            return "ROLE_USER";
-        }
-        return switch (role) {
-            case 1 -> "ROLE_ADMIN";
-            case 2 -> "ROLE_SUPER_ADMIN";
-            case 3 -> "ROLE_TEACHER";
-            default -> "ROLE_USER";
-        };
     }
 }

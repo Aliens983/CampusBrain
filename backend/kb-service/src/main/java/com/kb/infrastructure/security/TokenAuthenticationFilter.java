@@ -2,6 +2,8 @@ package com.kb.infrastructure.security;
 
 import com.laoliu.auth.AuthConstants;
 import com.laoliu.auth.InternalSigner;
+import com.laoliu.auth.dto.LoginUser;
+import com.laoliu.auth.policy.RolePolicy;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -65,22 +67,16 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        LoginUser loginUser = LoginUser.builder()
-                .userId(Long.parseLong(userId))
-                .username(userId)
-                .role(toRoleName(role))
-                .build();
+        // Q-02：统一使用 common-auth 模型，数字角色头直接落入 role code；
+        // 粗粒度 ADMIN/USER 语义由 RolePolicy（1/2 管理员，其余普通用户）统一给出，
+        // 不再在 KB 本地硬编码 "1"/"2" -> "ADMIN" 的反向还原。
+        LoginUser loginUser = new LoginUser();
+        loginUser.setId(Long.parseLong(userId));
+        loginUser.setRole(RolePolicy.ofHeader(role).getCode());
+        loginUser.setName(userId);
         SecurityFrameworkUtils.setLoginUser(loginUser);
 
         chain.doFilter(request, response);
-    }
-
-    /** CAS 数字角色（0/1/2）映射到 KB 的 ADMIN/USER 两级角色 */
-    private String toRoleName(String numericRole) {
-        if ("1".equals(numericRole) || "2".equals(numericRole)) {
-            return "ADMIN";
-        }
-        return "USER";
     }
 
     private boolean isPublicPath(String path) {

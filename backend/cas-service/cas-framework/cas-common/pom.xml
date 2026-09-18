@@ -99,6 +99,13 @@
             <groupId>jakarta.validation</groupId>
             <artifactId>jakarta.validation-api</artifactId>
         </dependency>
+
+        <!-- Q-02：LoginUser / RolePolicy 全服务唯一模型来源 -->
+        <dependency>
+            <groupId>com.laoliu</groupId>
+            <artifactId>common-auth</artifactId>
+            <version>1.0.0</version>
+        </dependency>
     </dependencies>
 
 </project>

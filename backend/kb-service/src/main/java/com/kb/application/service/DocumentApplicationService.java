@@ -189,10 +189,10 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                 userId, keyword, normalizedPage, normalizedSize);
     }
 
-    /** 当前登录用户是否为管理员 */
+    /** 当前登录用户是否为管理员（角色判定统一走 common-auth RolePolicy，Q-02） */
     private boolean isAdmin() {
         var loginUser = SecurityFrameworkUtils.getLoginUser();
-        return loginUser != null && "ADMIN".equalsIgnoreCase(loginUser.getRole());
+        return loginUser != null && loginUser.isAdmin();
     }
 
     /**
@@ -340,8 +340,8 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                 .orElseThrow(() -> new BusinessException.DocumentException(
                         ErrorCode.DOCUMENT_NOT_FOUND, "id=" + id));
         var loginUser = SecurityFrameworkUtils.getLoginUser();
-        Long currentUserId = loginUser != null ? loginUser.getUserId() : null;
-        boolean isAdmin = loginUser != null && "ADMIN".equalsIgnoreCase(loginUser.getRole());
+        Long currentUserId = loginUser != null ? loginUser.getId() : null;
+        boolean isAdmin = loginUser != null && loginUser.isAdmin();
         if (isAdmin || isOwner(doc, currentUserId)) {
             return doc;
         }

@@ -1,13 +1,12 @@
 package com.laoliu.cas.security.config;
 
 import com.laoliu.auth.InternalSigner;
-import com.laoliu.cas.common.security.JWTUtils;
+import com.laoliu.auth.JWTUtils;
 import com.laoliu.cas.security.filter.InternalAuthFilter;
 import com.laoliu.cas.security.filter.JWTFilter;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.FilterType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -24,10 +23,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @AutoConfiguration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true)
-@ComponentScan(
-        basePackages = {"com.laoliu.cas.security", "com.laoliu.auth"},
-        excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = com.laoliu.auth.JWTUtils.class)
-)
+// Q-02：JWTUtils 收敛为 common-auth 唯一实现，随 com.laoliu.auth 包扫描装配（此前排除它是为了使用 cas 自带副本）
+@ComponentScan(basePackages = {"com.laoliu.cas.security", "com.laoliu.auth"})
 public class SecurityAutoConfiguration {
 
     @Bean

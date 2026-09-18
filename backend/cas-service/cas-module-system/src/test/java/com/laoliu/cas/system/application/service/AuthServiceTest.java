@@ -2,8 +2,8 @@ package com.laoliu.cas.system.application.service;
 
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.UserErrorCode;
-import com.laoliu.cas.common.security.JWTUtils;
-import com.laoliu.cas.common.security.LoginUser;
+import com.laoliu.auth.JWTUtils;
+import com.laoliu.auth.dto.LoginUser;
 import com.laoliu.cas.common.util.PasswordUtils;
 import com.laoliu.cas.redis.util.RedisUtil;
 import com.laoliu.cas.system.interfaces.dto.request.UserRegisterRequest;
