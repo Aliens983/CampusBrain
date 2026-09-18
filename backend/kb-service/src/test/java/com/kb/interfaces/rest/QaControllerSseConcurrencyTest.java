@@ -49,7 +49,7 @@ class QaControllerSseConcurrencyTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("503");
         verify(qaService, never()).askStreaming(
-                anyString(), anyString(), any(), any(), any(), any(), any());
+                anyString(), anyString(), any(), any(), any(), any(), any(), any());
         verify(limiter, never()).release();
     }
 
@@ -58,10 +58,11 @@ class QaControllerSseConcurrencyTest {
     @SuppressWarnings("unchecked")
     void shouldStreamAndReleaseWhenPermitAcquired() {
         when(limiter.tryAcquire()).thenReturn(true);
-        when(qaService.askStreaming(anyString(), anyString(), any(),
+        when(qaService.askStreaming(anyString(), anyString(), any(), any(),
                 any(Consumer.class), any(Consumer.class), any(Consumer.class), any(Consumer.class)))
                 .thenAnswer(inv -> {
-                    Consumer<String> onToken = inv.getArgument(3);
+                    // 8 参重载：query(0)、sessionId(1)、userId(2)、CancellationToken(3)、onToken(4)
+                    Consumer<String> onToken = inv.getArgument(4);
                     onToken.accept("答案片段");
                     return "完整答案";
                 });

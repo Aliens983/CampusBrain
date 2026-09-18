@@ -1,13 +1,14 @@
 package com.kb.application.service;
 
 import com.kb.domain.document.Document;
+import com.kb.domain.document.DocumentIndexCleaner;
+import com.kb.domain.document.DocumentProcessingDispatcher;
 import com.kb.domain.document.DocumentRepository;
+import com.kb.domain.document.DocumentTypeRegistry;
+import com.kb.domain.document.KnowledgeCacheInvalidator;
 import com.kb.domain.rag.VectorStoreService;
 import com.kb.infrastructure.metrics.BusinessMetrics;
-import com.kb.infrastructure.mq.DocumentProcessingProducer;
-import com.kb.infrastructure.persistence.elasticsearch.EsDocumentRepository;
-import com.kb.infrastructure.rag.parser.DocumentParserSpi;
-import com.kb.infrastructure.rag.parser.ParserRegistry;
+import com.kb.infrastructure.rag.graph.KnowledgeGraphService;
 import com.laoliu.auth.dto.LoginUser;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import org.junit.jupiter.api.AfterEach;
@@ -48,11 +49,13 @@ import static org.mockito.Mockito.*;
 class DocumentApplicationServiceTest {
 
     @Mock private DocumentRepository documentRepository;
-    @Mock private DocumentProcessingProducer mqProducer;
+    @Mock private DocumentProcessingDispatcher documentDispatcher;
     @Mock private VectorStoreService vectorStore;
-    @Mock private EsDocumentRepository esRepository;
+    @Mock private DocumentIndexCleaner indexCleaner;
     @Mock private BusinessMetrics metrics;
-    @Mock private ParserRegistry parserRegistry;
+    @Mock private DocumentTypeRegistry documentTypeRegistry;
+    @Mock private KnowledgeCacheInvalidator cacheInvalidator;
+    @Mock private KnowledgeGraphService knowledgeGraphService;
 
     private DocumentApplicationService service;
 
@@ -61,8 +64,9 @@ class DocumentApplicationServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DocumentApplicationService(documentRepository, mqProducer, vectorStore,
-                esRepository, metrics, parserRegistry);
+        service = new DocumentApplicationService(documentRepository, documentDispatcher, vectorStore,
+                indexCleaner, metrics, documentTypeRegistry, cacheInvalidator,
+                knowledgeGraphService);
         ReflectionTestUtils.setField(service, "fileStoragePath", tempDir.toString());
     }
 
@@ -121,10 +125,10 @@ class DocumentApplicationServiceTest {
 
         service.deleteDocument(5L);
 
-        InOrder inOrder = inOrder(documentRepository, vectorStore, esRepository);
+        InOrder inOrder = inOrder(documentRepository, vectorStore, indexCleaner);
         inOrder.verify(documentRepository).delete(5L);
         inOrder.verify(vectorStore).deleteByDocumentId("5");
-        inOrder.verify(esRepository).deleteByDocumentId("5");
+        inOrder.verify(indexCleaner).deleteByDocumentId("5");
         assertThat(Files.exists(file)).isFalse();
         verify(metrics, never()).recordDocumentFailure();
     }
@@ -140,7 +144,7 @@ class DocumentApplicationServiceTest {
         service.deleteDocument(6L);
 
         verify(documentRepository).delete(6L);
-        verifyNoInteractions(vectorStore, esRepository);
+        verifyNoInteractions(vectorStore, indexCleaner);
 
         // 模拟事务提交
         List<TransactionSynchronization> syncs = TransactionSynchronizationManager.getSynchronizations();
@@ -148,7 +152,7 @@ class DocumentApplicationServiceTest {
         syncs.forEach(TransactionSynchronization::afterCommit);
 
         verify(vectorStore).deleteByDocumentId("6");
-        verify(esRepository).deleteByDocumentId("6");
+        verify(indexCleaner).deleteByDocumentId("6");
     }
 
     @Test
@@ -164,7 +168,7 @@ class DocumentApplicationServiceTest {
         // 不触发 afterCommit，直接清理同步器（模拟回滚后的清理）
         TransactionSynchronizationManager.clear();
 
-        verifyNoInteractions(vectorStore, esRepository);
+        verifyNoInteractions(vectorStore, indexCleaner);
     }
 
     @Test
@@ -179,7 +183,7 @@ class DocumentApplicationServiceTest {
         service.deleteDocument(9L);
 
         verify(vectorStore, times(3)).deleteByDocumentId("9");
-        verify(esRepository).deleteByDocumentId("9");
+        verify(indexCleaner).deleteByDocumentId("9");
         verify(metrics).recordDocumentFailure();
     }
 
@@ -189,7 +193,8 @@ class DocumentApplicationServiceTest {
         login(1L, "USER");
         MockMultipartFile file = new MockMultipartFile(
                 "file", "note.txt", "text/plain", "hello".getBytes());
-        when(parserRegistry.getParserChain("txt")).thenReturn(List.of(mock(DocumentParserSpi.class)));
+        when(documentTypeRegistry.extractFileType("note.txt")).thenReturn("txt");
+        when(documentTypeRegistry.supports("txt")).thenReturn(true);
         when(documentRepository.save(any(Document.class)))
                 .thenThrow(new RuntimeException("db down"));
 
@@ -198,7 +203,7 @@ class DocumentApplicationServiceTest {
                 .hasMessageContaining("db down");
 
         assertThat(Files.list(tempDir).count()).isZero();
-        verify(mqProducer, never()).send(anyLong());
+        verify(documentDispatcher, never()).send(anyLong());
     }
 
     @Test
@@ -207,7 +212,8 @@ class DocumentApplicationServiceTest {
         login(1L, "USER");
         MockMultipartFile file = new MockMultipartFile(
                 "file", "note2.txt", "text/plain", "world".getBytes());
-        when(parserRegistry.getParserChain("txt")).thenReturn(List.of(mock(DocumentParserSpi.class)));
+        when(documentTypeRegistry.extractFileType("note2.txt")).thenReturn("txt");
+        when(documentTypeRegistry.supports("txt")).thenReturn(true);
         when(documentRepository.save(any(Document.class)))
                 .thenReturn(Document.builder().id(11L).build());
         TransactionSynchronizationManager.initSynchronization();
@@ -215,12 +221,12 @@ class DocumentApplicationServiceTest {
         Long id = service.uploadDocument(file);
 
         assertThat(id).isEqualTo(11L);
-        verify(mqProducer, never()).send(anyLong());
+        verify(documentDispatcher, never()).send(anyLong());
 
         TransactionSynchronizationManager.getSynchronizations()
                 .forEach(TransactionSynchronization::afterCommit);
 
-        verify(mqProducer).send(11L);
+        verify(documentDispatcher).send(11L);
         verify(metrics).recordDocumentUpload();
     }
 }

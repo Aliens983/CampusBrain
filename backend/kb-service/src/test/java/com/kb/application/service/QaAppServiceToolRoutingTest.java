@@ -13,15 +13,14 @@ import com.kb.infrastructure.client.CasClient;
 import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.rag.graph.GraphAssistedRetriever;
 import com.kb.infrastructure.rag.rewrite.ContextualQueryRewriter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
@@ -58,7 +57,20 @@ class QaAppServiceToolRoutingTest {
     @Mock private com.kb.infrastructure.cache.QaCacheService qaCacheService;
     @Mock private com.kb.infrastructure.cache.SemanticCacheService semanticCacheService;
 
-    @InjectMocks private QaApplicationService service;
+    private AnswerPipeline pipeline;
+    private QaApplicationService service;
+
+    @BeforeEach
+    void setUp() {
+        pipeline = new AnswerPipeline(searchService, rerankerService, llmService,
+                graphRetriever, conversationRepository, metrics);
+        CacheGuard cacheGuard = new CacheGuard(pipeline, qaCacheService, semanticCacheService,
+                conversationRepository, metrics);
+        PendingBookingExecutor pendingExecutor = new PendingBookingExecutor(casClient,
+                chatSessionRepository, conversationRepository, metrics);
+        service = new QaApplicationService(contextualRewriter, conversationRepository,
+                chatSessionRepository, metrics, redisTemplate, pipeline, cacheGuard, pendingExecutor);
+    }
 
     /** 会话上下文桩：每次返回干净会话，模拟首轮提问 */
     private void stubSession() {
@@ -81,31 +93,35 @@ class QaAppServiceToolRoutingTest {
     class Routing {
 
         @Test
-        @DisplayName("预约类问题应走 Function Calling 工具链路")
+        @DisplayName("预约类问题应走 Function Calling 工具链路（真流式）")
         void shouldRouteAppointmentQueryToTools() {
             String query = "有哪些服务可以预约？";
             stubPipeline(query);
-            when(llmService.generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString()))
+            when(llmService.generateAnswerWithToolsStreaming(
+                    anyString(), anyList(), anyList(), any(), any(), any()))
                     .thenReturn("实时答案");
 
             service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
-            verify(llmService).generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString());
-            verify(llmService, never()).generateAnswerDirectStreaming(anyString(), anyList(), any());
+            verify(llmService).generateAnswerWithToolsStreaming(
+                    anyString(), anyList(), anyList(), any(), any(), any());
+            verify(llmService, never()).generateAnswerDirectStreaming(
+                    anyString(), anyList(), any(), any());
         }
 
         @Test
-        @DisplayName("非预约类 + 无本地资料 → 走 DeepSeek 兜底（不走工具）")
+        @DisplayName("非预约类 + 无本地资料 → 走 DeepSeek 流式兜底（不走工具）")
         void shouldRouteNonAppointmentToDirectWhenNoDocs() {
             String query = "什么是 RAG 检索？";
             stubPipeline(query);
-            when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any()))
+            when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any(), any()))
                     .thenReturn("兜底答案");
 
             service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
-            verify(llmService, never()).generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString());
-            verify(llmService).generateAnswerDirectStreaming(anyString(), anyList(), any());
+            verify(llmService, never()).generateAnswerWithToolsStreaming(
+                    anyString(), anyList(), anyList(), any(), any(), any());
+            verify(llmService).generateAnswerDirectStreaming(anyString(), anyList(), any(), any());
         }
 
         @Test
@@ -123,12 +139,14 @@ class QaAppServiceToolRoutingTest {
             when(rerankerService.rerank(query, List.of(doc))).thenReturn(List.of(doc));
             when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                     .thenReturn(1L);
-            when(llmService.generateAnswer(anyString(), anyList(), anyList())).thenReturn("RAG 答案");
+            when(llmService.generateAnswerStreaming(anyString(), anyList(), anyList(), any(), any()))
+                    .thenReturn("RAG 答案");
 
             service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
-            verify(llmService, never()).generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString());
-            verify(llmService).generateAnswer(anyString(), anyList(), anyList());
+            verify(llmService, never()).generateAnswerWithToolsStreaming(
+                    anyString(), anyList(), anyList(), any(), any(), any());
+            verify(llmService).generateAnswerStreaming(anyString(), anyList(), anyList(), any(), any());
         }
 
         @Test
@@ -136,7 +154,8 @@ class QaAppServiceToolRoutingTest {
         void shouldPassMessageIdOnToolPath() {
             String query = "会议室还有多少余量？";
             stubPipeline(query);
-            when(llmService.generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString()))
+            when(llmService.generateAnswerWithToolsStreaming(
+                    anyString(), anyList(), anyList(), any(), any(), any()))
                     .thenReturn("实时答案");
 
             long[] captured = {0L};
@@ -172,6 +191,6 @@ class QaAppServiceToolRoutingTest {
     }
 
     private boolean invokeIsAppointment(String q) {
-        return ReflectionTestUtils.invokeMethod(service, "isAppointmentQuery", (Object) q);
+        return pipeline.isAppointmentQuery(q);
     }
 }

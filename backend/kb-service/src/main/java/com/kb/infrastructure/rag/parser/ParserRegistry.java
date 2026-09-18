@@ -1,5 +1,6 @@
 package com.kb.infrastructure.rag.parser;
 
+import com.kb.domain.document.DocumentTypeRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -12,12 +13,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * Spring 自动发现标注了 {@code @Component} 的解析器实现并注册
  * 通过扩展名查找时按优先级排序，同扩展名取最高优先级
  * </p>
+ * <p>
+ * 同时是文件类型判据的南向端口实现（{@link DocumentTypeRegistry}）：
+ * 上传校验以这里为准，扩展名白名单只增不删，与 Q-03 的判据收敛保持一致。
+ * </p>
  *
  * @author forever-king
  */
 @Slf4j
 @Component
-public class ParserRegistry {
+public class ParserRegistry implements DocumentTypeRegistry {
 
     /** 扩展名 → 排序后的解析器列表（优先级最高在前） */
     private final Map<String, List<DocumentParserSpi>> registry = new ConcurrentHashMap<>();
@@ -59,9 +64,18 @@ public class ParserRegistry {
     }
 
     /**
+     * 该文件类型是否注册了可用解析器（上传类型校验的判据唯一源）。
+     */
+    @Override
+    public boolean supports(String fileType) {
+        return fileType != null && !getParserChain(fileType).isEmpty();
+    }
+
+    /**
      * 返回当前所有受支持（可解析）的扩展名集合（已排序副本）。
      * 上传校验应以这里为准，避免"白名单允许、实际无解析器"的错位。
      */
+    @Override
     public Set<String> supportedExtensions() {
         return new TreeSet<>(registry.keySet());
     }

@@ -15,10 +15,10 @@ import com.kb.infrastructure.client.CasClient;
 import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.rag.graph.GraphAssistedRetriever;
 import com.kb.infrastructure.rag.rewrite.ContextualQueryRewriter;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -61,7 +61,19 @@ class QaKnowledgeCacheTest {
     @Mock private QaCacheService qaCacheService;
     @Mock private SemanticCacheService semanticCacheService;
 
-    @InjectMocks private QaApplicationService service;
+    private QaApplicationService service;
+
+    @BeforeEach
+    void setUp() {
+        AnswerPipeline pipeline = new AnswerPipeline(searchService, rerankerService, llmService,
+                graphRetriever, conversationRepository, metrics);
+        CacheGuard cacheGuard = new CacheGuard(pipeline, qaCacheService, semanticCacheService,
+                conversationRepository, metrics);
+        PendingBookingExecutor pendingExecutor = new PendingBookingExecutor(casClient,
+                chatSessionRepository, conversationRepository, metrics);
+        service = new QaApplicationService(contextualRewriter, conversationRepository,
+                chatSessionRepository, metrics, redisTemplate, pipeline, cacheGuard, pendingExecutor);
+    }
 
     private static final String QUERY = "什么是向量检索？";
 
@@ -107,7 +119,8 @@ class QaKnowledgeCacheTest {
         stubEmptySession();
         stubRewrite(QUERY);
         when(qaCacheService.getCachedAnswer(QUERY)).thenReturn(Optional.empty());
-        when(semanticCacheService.lookup(QUERY)).thenReturn("语义相似问题的答案");
+        when(semanticCacheService.lookup(QUERY))
+                .thenReturn(new SemanticCacheService.SemanticCacheHit("语义相似问题的答案", List.of()));
         when(conversationRepository.saveWithReferences(
                 anyString(), anyString(), anyString(), any(), any())).thenReturn(1L);
 
@@ -130,7 +143,13 @@ class QaKnowledgeCacheTest {
                 .content("...").chunkIndex(0).score(0.9).source("keyword").build();
         when(graphRetriever.retrieve(QUERY)).thenReturn(List.of(doc));
         when(rerankerService.rerank(QUERY, List.of(doc))).thenReturn(List.of(doc));
-        when(llmService.generateAnswer(anyString(), anyList(), anyList())).thenReturn("新鲜 RAG 答案");
+        // SSE 链路走真流式 RAG：模拟供应商逐 token 回调并返回完整答案
+        when(llmService.generateAnswerStreaming(
+                anyString(), anyList(), anyList(), any(), any())).thenAnswer(inv -> {
+            java.util.function.Consumer<String> tokenConsumer = inv.getArgument(3);
+            tokenConsumer.accept("新鲜 RAG 答案");
+            return "新鲜 RAG 答案";
+        });
         when(conversationRepository.saveWithReferences(
                 anyString(), anyString(), anyString(), any(), any())).thenReturn(1L);
 
@@ -138,7 +157,7 @@ class QaKnowledgeCacheTest {
 
         assertThat(answer).isEqualTo("新鲜 RAG 答案");
         verify(qaCacheService).cacheAnswer(eq(QUERY), eq("新鲜 RAG 答案"), anyList());
-        verify(semanticCacheService).store(QUERY, "新鲜 RAG 答案");
+        verify(semanticCacheService).store(eq(QUERY), eq("新鲜 RAG 答案"), anyList());
         verify(metrics).recordCacheMiss();
     }
 
@@ -150,8 +169,12 @@ class QaKnowledgeCacheTest {
         stubRewrite(query);
         when(graphRetriever.retrieve(query)).thenReturn(List.of());
         when(rerankerService.rerank(query, List.of())).thenReturn(List.of());
-        when(llmService.generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString()))
-                .thenReturn("实时答案");
+        when(llmService.generateAnswerWithToolsStreaming(
+                anyString(), anyList(), anyList(), any(), any(), any())).thenAnswer(inv -> {
+            java.util.function.Consumer<String> tokenConsumer = inv.getArgument(3);
+            tokenConsumer.accept("实时答案");
+            return "实时答案";
+        });
         when(conversationRepository.saveWithReferences(
                 anyString(), anyString(), anyString(), any(), any())).thenReturn(1L);
 
@@ -160,7 +183,7 @@ class QaKnowledgeCacheTest {
         verify(qaCacheService, never()).getCachedAnswer(anyString());
         verify(semanticCacheService, never()).lookup(anyString());
         verify(qaCacheService, never()).cacheAnswer(anyString(), anyString(), anyList());
-        verify(semanticCacheService, never()).store(anyString(), anyString());
+        verify(semanticCacheService, never()).store(anyString(), anyString(), anyList());
     }
 
     @Test
@@ -175,8 +198,12 @@ class QaKnowledgeCacheTest {
                 .thenReturn(new ContextualQueryRewriter.RewriteResult(QUERY, slots, false));
         when(graphRetriever.retrieve(QUERY)).thenReturn(List.of());
         when(rerankerService.rerank(QUERY, List.of())).thenReturn(List.of());
-        when(llmService.generateAnswerWithTools(anyString(), anyList(), anyList(), any(), anyString()))
-                .thenReturn("工具答案");
+        when(llmService.generateAnswerWithToolsStreaming(
+                anyString(), anyList(), anyList(), any(), any(), any())).thenAnswer(inv -> {
+            java.util.function.Consumer<String> tokenConsumer = inv.getArgument(3);
+            tokenConsumer.accept("工具答案");
+            return "工具答案";
+        });
         when(conversationRepository.saveWithReferences(
                 anyString(), anyString(), anyString(), any(), any())).thenReturn(1L);
 

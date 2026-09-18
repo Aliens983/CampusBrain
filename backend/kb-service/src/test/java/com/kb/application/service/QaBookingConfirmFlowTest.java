@@ -22,7 +22,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -70,7 +69,7 @@ class QaBookingConfirmFlowTest {
     @Mock private com.kb.infrastructure.cache.QaCacheService qaCacheService;
     @Mock private com.kb.infrastructure.cache.SemanticCacheService semanticCacheService;
 
-    @InjectMocks private QaApplicationService service;
+    private QaApplicationService service;
 
     private ChatSession session;
 
@@ -86,6 +85,15 @@ class QaBookingConfirmFlowTest {
                 .needAudit(true)
                 .build());
         when(chatSessionRepository.loadForUser(anyString(), any())).thenReturn(session);
+
+        AnswerPipeline pipeline = new AnswerPipeline(searchService, rerankerService, llmService,
+                graphRetriever, conversationRepository, metrics);
+        CacheGuard cacheGuard = new CacheGuard(pipeline, qaCacheService, semanticCacheService,
+                conversationRepository, metrics);
+        PendingBookingExecutor pendingExecutor = new PendingBookingExecutor(casClient,
+                chatSessionRepository, conversationRepository, metrics);
+        service = new QaApplicationService(contextualRewriter, conversationRepository,
+                chatSessionRepository, metrics, redisTemplate, pipeline, cacheGuard, pendingExecutor);
     }
 
     @Test

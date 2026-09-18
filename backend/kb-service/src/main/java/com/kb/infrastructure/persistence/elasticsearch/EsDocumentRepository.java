@@ -6,6 +6,7 @@ import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.BulkResponse;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.Hit;
+import com.kb.domain.document.DocumentIndexCleaner;
 import com.kb.domain.rag.RetrievalResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +28,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class EsDocumentRepository {
+public class EsDocumentRepository implements DocumentIndexCleaner {
 
     /** Elasticsearch客户端，用于执行索引、搜索、删除等操作 */
     private final ElasticsearchClient esClient;
@@ -109,6 +110,7 @@ public class EsDocumentRepository {
     /**
      * Delete all chunks belonging to a document.
      */
+    @Override
     public void deleteByDocumentId(String documentId) {
         try {
             esClient.deleteByQuery(d -> d

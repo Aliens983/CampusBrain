@@ -2,6 +2,7 @@ package com.kb.application.service;
 
 import com.kb.domain.chat.AssistantEvent;
 import com.kb.domain.conversation.Conversation;
+import com.kb.domain.rag.CancellationToken;
 
 import java.util.List;
 import java.util.function.Consumer;
@@ -19,6 +20,17 @@ public interface IQaApplicationService {
      * @param onEvent 用于向前端推送槽位更新、待确认预约草稿、预约动作结果
      */
     String askStreaming(String query, String sessionId, Long userId,
+                        Consumer<String> onToken,
+                        Consumer<List<Conversation.CitationRef>> onCitations,
+                        Consumer<Long> onMessageId,
+                        Consumer<AssistantEvent> onEvent);
+
+    /**
+     * 流式问答（可取消版）：{@code cancellationToken} 由 SSE 控制器在客户端断连时触发，
+     * 服务端据此中止供应商在途生成，避免空烧 token。
+     */
+    String askStreaming(String query, String sessionId, Long userId,
+                        CancellationToken cancellationToken,
                         Consumer<String> onToken,
                         Consumer<List<Conversation.CitationRef>> onCitations,
                         Consumer<Long> onMessageId,

@@ -1,16 +1,18 @@
 package com.kb.application.service;
 
 import com.kb.domain.document.Document;
+import com.kb.domain.document.DocumentIndexCleaner;
+import com.kb.domain.document.DocumentProcessingDispatcher;
 import com.kb.domain.document.DocumentRepository;
 import com.kb.domain.document.DocumentStatus;
+import com.kb.domain.document.DocumentTypeRegistry;
+import com.kb.domain.document.KnowledgeCacheInvalidator;
 import com.kb.domain.rag.VectorStoreService;
 import com.kb.infrastructure.common.BusinessException;
 import com.kb.infrastructure.common.ErrorCode;
 import com.kb.infrastructure.metrics.BusinessMetrics;
-import com.kb.infrastructure.mq.DocumentProcessingProducer;
-import com.kb.infrastructure.rag.parser.ParserRegistry;
+import com.kb.infrastructure.rag.graph.KnowledgeGraphService;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
-import com.kb.infrastructure.persistence.elasticsearch.EsDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,20 +56,26 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     /** 文档仓库接口 */
     private final DocumentRepository documentRepository;
 
-    /** 消息队列生产者，触发异步文档处理 */
-    private final DocumentProcessingProducer mqProducer;
+    /** 消息队列生产者，触发异步文档处理（南向端口，A-01） */
+    private final DocumentProcessingDispatcher documentDispatcher;
 
     /** 向量存储服务，用于删除文档时清理向量 */
     private final VectorStoreService vectorStore;
 
-    /** Elasticsearch文档仓储，用于删除文档时清理索引 */
-    private final EsDocumentRepository esRepository;
+    /** 全文索引删除端口（ES 实现），用于删除文档时清理索引 */
+    private final DocumentIndexCleaner indexCleaner;
 
     /** 业务指标收集器 */
     private final BusinessMetrics metrics;
 
-    /** 解析器注册中心（上传文件类型校验以此为准） */
-    private final ParserRegistry parserRegistry;
+    /** 文件类型解析器注册表端口（上传校验判据唯一源） */
+    private final DocumentTypeRegistry documentTypeRegistry;
+
+    /** 知识变更后联动淘汰问答缓存端口（12-04） */
+    private final KnowledgeCacheInvalidator cacheInvalidator;
+
+    /** 内存知识图谱：删除/重处理文档时摘除实体与边归属（12-10） */
+    private final KnowledgeGraphService knowledgeGraphService;
 
     /** 本地文件存储目录 */
     @Value("${app.file-storage-path:./file}")
@@ -86,12 +94,13 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     @Transactional
     public Long uploadDocument(MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
-        String fileType = extractFileType(originalFilename);
+        // 扩展名提取收敛到端口唯一实现（Q-03），应用层不再各持一份副本
+        String fileType = documentTypeRegistry.extractFileType(originalFilename);
 
-        // 1. 文件类型校验：以解析器注册表为准（有解析器才能处理），
+        // 1. 文件类型校验：以解析器注册表（南向端口）为准（有解析器才能处理），
         //    避免"上传时白名单放行、异步处理时才报不支持"的错位。
-        if (parserRegistry.getParserChain(fileType).isEmpty()) {
-            String supported = String.join(" / ", parserRegistry.supportedExtensions());
+        if (!documentTypeRegistry.supports(fileType)) {
+            String supported = String.join(" / ", documentTypeRegistry.supportedExtensions());
             throw new BusinessException.DocumentException(
                     ErrorCode.DOCUMENT_UNSUPPORTED_TYPE,
                     fileType + "（当前支持：" + supported + "）");
@@ -212,7 +221,12 @@ public class DocumentApplicationService implements IDocumentApplicationService {
 
         // 2. 事务成功提交后清理向量、索引与本地文件
         String filePath = doc.getFilePath();
-        afterCommit(() -> cleanupExternalStores(id, filePath));
+        afterCommit(() -> {
+            cleanupExternalStores(id, filePath);
+            // 文档内容已从知识库移除：淘汰两级问答缓存，
+            // 否则精确 1h / 语义 24h 内仍会返回引用该文档的旧答案（12-04）
+            cacheInvalidator.evictAllQaCaches("文档删除 documentId=" + id);
+        });
 
         log.info("Document DB record deleted, external cleanup scheduled after commit: id={}", id);
     }
@@ -251,7 +265,13 @@ public class DocumentApplicationService implements IDocumentApplicationService {
         boolean vectorOk = runWithRetry("Qdrant 向量删除", id,
                 () -> vectorStore.deleteByDocumentId(String.valueOf(id)));
         boolean esOk = runWithRetry("ES 索引删除", id,
-                () -> esRepository.deleteByDocumentId(String.valueOf(id)));
+                () -> indexCleaner.deleteByDocumentId(String.valueOf(id)));
+        // 内存知识图谱摘除：纯内存操作、无外部故障面，best-effort 即可（12-10）
+        try {
+            knowledgeGraphService.deleteByDocument(id);
+        } catch (Exception e) {
+            log.warn("知识图谱归属清理失败（内存态，重启即清空）: id={}", id, e);
+        }
         boolean fileOk = true;
         if (filePath != null && !filePath.isBlank()) {
             fileOk = runWithRetry("本地文件删除", id, () -> deleteLocalFileOrThrow(filePath));
@@ -300,7 +320,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
      */
     private void sendProcessingMessageWithRetry(Long documentId) {
         boolean sent = runWithRetry("文档处理 MQ 投递", documentId,
-                () -> mqProducer.send(documentId));
+                () -> documentDispatcher.send(documentId));
         if (!sent) {
             metrics.recordDocumentFailure();
         }
@@ -394,12 +414,5 @@ public class DocumentApplicationService implements IDocumentApplicationService {
         } catch (IOException e) {
             log.error("上传失败后补偿删除本地文件仍失败，可能残留无主文件: {}", filePath, e);
         }
-    }
-
-    private String extractFileType(String filename) {
-        if (filename == null || !filename.contains(".")) {
-            return "unknown";
-        }
-        return filename.substring(filename.lastIndexOf(".") + 1).toLowerCase();
     }
 }

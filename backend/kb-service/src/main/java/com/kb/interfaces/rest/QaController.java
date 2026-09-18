@@ -3,6 +3,7 @@ package com.kb.interfaces.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kb.application.service.IQaApplicationService;
 import com.kb.domain.conversation.Conversation;
+import com.kb.domain.rag.CancellationToken;
 import com.kb.domain.conversation.Conversation.CitationRef;
 import com.kb.interfaces.dto.ApiResponse;
 import com.kb.interfaces.dto.FeedbackRequest;
@@ -98,10 +99,17 @@ public class QaController {
                     HttpStatus.SERVICE_UNAVAILABLE, "当前问答用户较多，请稍后再试"));
         }
 
+        // 本轮请求的取消令牌：客户端断开（cancel）时触发，
+        // 贯穿到模型层中止供应商在途 SSE，而不是仅在本服务丢弃 token（12-07）
+        CancellationToken cancellationToken = new CancellationToken();
+
         // 显式指定泛型：链式调用 subscribeOn 后编译器无法从目标类型反推 T
         return Flux.<ServerSentEvent<?>>create(sink -> {
+            // 订阅被取消（浏览器关闭/主动 abort）时立即通知下游中止生成
+            sink.onCancel(cancellationToken::cancel);
+            sink.onDispose(cancellationToken::cancel);
             try {
-                qaService.askStreaming(query, sessionId, userId,
+                qaService.askStreaming(query, sessionId, userId, cancellationToken,
                         token -> {
                             // 回答 token 用默认 message 事件
                             if (!sink.isCancelled()) {
@@ -145,11 +153,19 @@ public class QaController {
                 // 会触发 error 并准备自动重连，前端只能靠 onerror 里的 es.close() 兜底——
                 // 任何未 close 的错误路径都会把同一轮问答再跑一遍（重复落库用户消息、
                 // 重复调 LLM，甚至重复执行待确认预约）。前端的 [DONE] 分支也一直是死代码。
-                sink.next(ServerSentEvent.builder().data(DONE_SIGNAL).build());
-                sink.complete();
+                // 客户端已断开则 sink 操作都是静默空操作，直接结束即可。
+                if (!cancellationToken.isCancelled()) {
+                    sink.next(ServerSentEvent.builder().data(DONE_SIGNAL).build());
+                    sink.complete();
+                }
             } catch (Exception e) {
-                log.error("SSE streaming error", e);
-                sink.error(e);
+                if (cancellationToken.isCancelled()) {
+                    // 断连收尾过程中产生的异常不再向已死的 sink 传播
+                    log.debug("SSE 已取消，忽略收尾异常: {}", e.toString());
+                } else {
+                    log.error("SSE streaming error", e);
+                    sink.error(e);
+                }
             }
         })
         // 订阅到 boundedElastic：本服务是 Servlet 栈，Flux 默认在容器线程上订阅，
