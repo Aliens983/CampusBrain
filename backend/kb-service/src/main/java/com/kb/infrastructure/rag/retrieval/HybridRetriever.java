@@ -45,6 +45,10 @@ public class HybridRetriever implements com.kb.domain.rag.SearchService {
     /** RRF 融合算法中的常数 k，默认值 60 */
     private double rrfK;
 
+    @Value("${kb.retrieval.timeout-seconds:30}")
+    /** 关键词/向量并行检索的最大等待秒数（超时按空结果降级，不阻塞问答链路） */
+    private int retrievalTimeoutSeconds;
+
     public HybridRetriever(KeywordRetriever keywordRetriever,
                            VectorRetriever vectorRetriever,
                            @Qualifier("retrievalExecutor") ExecutorService retrievalExecutor) {
@@ -84,14 +88,14 @@ public class HybridRetriever implements com.kb.domain.rag.SearchService {
         List<RetrievalResult> vectorResults;
 
         try {
-            keywordResults = keywordFuture.get(30, TimeUnit.SECONDS);
+            keywordResults = keywordFuture.get(retrievalTimeoutSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("Keyword retrieval failed", e);
             keywordResults = keywordFuture.getNow(List.of());
         }
 
         try {
-            vectorResults = vectorFuture.get(30, TimeUnit.SECONDS);
+            vectorResults = vectorFuture.get(retrievalTimeoutSeconds, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("Vector retrieval failed", e);
             vectorResults = vectorFuture.getNow(List.of());

@@ -41,6 +41,8 @@ class RrfFusionTest {
         hybridRetriever = new HybridRetriever(keywordRetriever, vectorRetriever, executor);
         ReflectionTestUtils.setField(hybridRetriever, "finalTopK", 5);
         ReflectionTestUtils.setField(hybridRetriever, "rrfK", 60.0);
+        // Q-04：检索超时已配置化（@Value），单测手动构造不经过 Spring，需显式注入，避免 get(0s) 立即超时
+        ReflectionTestUtils.setField(hybridRetriever, "retrievalTimeoutSeconds", 30);
     }
 
     @AfterEach

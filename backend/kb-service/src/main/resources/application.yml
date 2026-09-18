@@ -254,6 +254,14 @@ kb:
     semantic-collection: ${KB_SEMANTIC_CACHE_COLLECTION:qa_semantic_cache}
     semantic-threshold: ${KB_SEMANTIC_CACHE_THRESHOLD:0.95}
     semantic-ttl-hours: ${KB_SEMANTIC_CACHE_TTL_HOURS:24}
+  qa:
+    # 拼装提示词时携带的最近对话历史条数（Q-04）
+    history-limit: ${KB_QA_HISTORY_LIMIT:8}
+    # 返回引用片段的最大截取字符数（Q-04）
+    citation-snippet-length: ${KB_QA_CITATION_SNIPPET_LENGTH:120}
+  # 混合检索（向量 + BM25）总预算超时（Q-04）
+  retrieval:
+    timeout-seconds: ${KB_RETRIEVAL_TIMEOUT_SECONDS:30}
   # 文档消费可靠性（12-03）
   document:
     processing-lock-ttl-seconds: ${KB_DOC_PROCESSING_LOCK_TTL:1800}
