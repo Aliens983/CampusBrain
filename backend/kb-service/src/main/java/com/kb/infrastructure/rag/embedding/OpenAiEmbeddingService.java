@@ -1,10 +1,12 @@
 package com.kb.infrastructure.rag.embedding;
 
 import com.kb.domain.rag.EmbeddingService;
+import com.kb.infrastructure.rag.llm.LlmUnavailableException;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.output.Response;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,6 +57,7 @@ public class OpenAiEmbeddingService implements EmbeddingService {
     }
 
     @Override
+    @CircuitBreaker(name = "embeddingService", fallbackMethod = "embedUnavailable")
     public float[] embed(String text) {
         if (text == null || text.isEmpty()) {
             return new float[0];
@@ -64,11 +67,21 @@ public class OpenAiEmbeddingService implements EmbeddingService {
             return embedding.vector();
         } catch (Exception e) {
             log.error("Embedding failed for text (length={})", text.length(), e);
-            throw new RuntimeException("Embedding failed", e);
+            throw new LlmUnavailableException("Embedding 调用失败", e);
         }
     }
 
+    /**
+     * 熔断打开时不能伪造向量返回（会污染向量库/语义缓存）：直接抛出，
+     * 文档入库由 MQ 重试/DLQ 兜底，语义缓存调用方自行降级为"未命中"。
+     */
+    @SuppressWarnings("unused")
+    private float[] embedUnavailable(String text, Throwable t) {
+        throw new LlmUnavailableException("Embedding 服务不可用（熔断打开或调用失败）", t);
+    }
+
     @Override
+    @CircuitBreaker(name = "embeddingService", fallbackMethod = "embedBatchUnavailable")
     public List<float[]> embedBatch(List<String> texts) {
         if (texts == null || texts.isEmpty()) {
             return List.of();
@@ -115,6 +128,12 @@ public class OpenAiEmbeddingService implements EmbeddingService {
             allEmbeddings.addAll(batchResult);
         }
         return allEmbeddings;
+    }
+
+    /** 批量熔断兜底：同样不能伪造向量，直接抛出交由上层重试/DLQ */
+    @SuppressWarnings("unused")
+    private List<float[]> embedBatchUnavailable(List<String> texts, Throwable t) {
+        throw new LlmUnavailableException("Embedding 批处理服务不可用（熔断打开或调用失败）", t);
     }
 
     /**

@@ -207,8 +207,11 @@ public class LangChain4jLlmService implements LlmService {
             var response = fallbackModel.generate(messages);
             return response.content().text();
         } catch (Exception e2) {
+            // 12-01：主备两次尝试均失败必须抛出，由 Resilience4j 统计真实失败率，
+            // 不能吞成普通字符串返回（那样熔断器永远认为成功，熔断永不打开）。
             log.error("Fallback LLM [{}] also failed", fallbackProvider.getDisplayName(), e2);
-            return "抱歉，生成答案时遇到了问题，请稍后重试。";
+            throw new LlmUnavailableException(
+                    "LLM 主备供应商均不可用: " + fallbackProvider.getDisplayName(), e2);
         }
     }
 
