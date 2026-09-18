@@ -5,10 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>org.springframework.boot</groupId>
-        <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.5</version>
-        <relativePath/>
+        <groupId>com.laoliu</groupId>
+        <artifactId>cloud-platform</artifactId>
+        <version>1.0.0</version>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <groupId>com.kb</groupId>
@@ -45,21 +45,7 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>2023.0.3</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.alibaba.cloud</groupId>
-                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
-                <version>2023.0.1.2</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-
+            <!-- spring-cloud / spring-cloud-alibaba 版本由聚合父 cloud-platform 统一管理，此处不再重复声明 -->
             <!-- MyBatis-Plus -->
             <dependency>
                 <groupId>com.baomidou</groupId>

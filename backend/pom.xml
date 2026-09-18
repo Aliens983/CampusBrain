@@ -54,4 +54,29 @@
         <module>cas-service</module>
         <module>kb-service</module>
     </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- Spring Boot 打包插件版本统一由聚合父管理（原 kb-service 依赖 spring-boot-starter-parent 提供） -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                </plugin>
+                <!-- Surefire 版本与上一代 spring-boot-starter-parent 3.3.5 对齐，保证测试行为一致 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-surefire-plugin</artifactId>
+                    <version>3.2.5</version>
+                </plugin>
+                <!-- Compiler 版本对齐 starter-parent 3.3.5；source/target 由 maven.compiler.* 属性控制（各子模块可覆盖） -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <version>3.13.0</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
 </project>
