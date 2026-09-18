@@ -123,7 +123,12 @@ public class EsDocumentRepository implements DocumentIndexCleaner {
                     )
             );
         } catch (IOException e) {
-            log.warn("Failed to delete ES docs for document: {}", documentId, e);
+            // A-04：不得吞掉失败——否则上层的有限重试与"失败落库 + 补偿对账"全部失效，
+            // 已删除文档的 ES 孤儿记录会长期残留。转为非受检异常向上传播，
+            // 由 DocumentApplicationService 的重试/对账链路与 MQ 消费端的清理 catch 处理。
+            log.error("Failed to delete ES docs for document: {}", documentId, e);
+            throw new java.io.UncheckedIOException(
+                    "ES 删除文档索引失败: documentId=" + documentId, e);
         }
     }
 

@@ -271,6 +271,14 @@ kb:
       lock-ttl-seconds: ${KB_DOC_RECLAIM_LOCK_TTL:120}
       interval-ms: ${KB_DOC_RECLAIM_INTERVAL_MS:300000}
       initial-delay-ms: ${KB_DOC_RECLAIM_INITIAL_DELAY_MS:120000}
+  # 外部索引删除失败补偿对账（A-04）
+  index-cleanup:
+    enabled: ${KB_INDEX_CLEANUP_ENABLED:true}
+    batch-size: ${KB_INDEX_CLEANUP_BATCH:100}
+    # 默认 24 次 ×5 分钟周期 = 约 2 小时补偿窗口；仍失败置 GIVE_UP 并打 give_up 指标
+    max-retries: ${KB_INDEX_CLEANUP_MAX_RETRIES:24}
+    interval-ms: ${KB_INDEX_CLEANUP_INTERVAL_MS:300000}
+    initial-delay-ms: ${KB_INDEX_CLEANUP_INITIAL_DELAY_MS:180000}
   # 内存知识图谱容量护栏（12-10；中期落图存储后移除）
   graph:
     max-entities: ${KB_GRAPH_MAX_ENTITIES:50000}

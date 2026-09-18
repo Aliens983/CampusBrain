@@ -5,6 +5,8 @@ import com.kb.domain.document.DocumentIndexCleaner;
 import com.kb.domain.document.DocumentProcessingDispatcher;
 import com.kb.domain.document.DocumentRepository;
 import com.kb.domain.document.DocumentTypeRegistry;
+import com.kb.domain.document.IndexDeleteFailureRepository;
+import com.kb.domain.document.IndexTarget;
 import com.kb.domain.document.KnowledgeCacheInvalidator;
 import com.kb.domain.rag.VectorStoreService;
 import com.kb.infrastructure.metrics.BusinessMetrics;
@@ -56,6 +58,7 @@ class DocumentApplicationServiceTest {
     @Mock private DocumentTypeRegistry documentTypeRegistry;
     @Mock private KnowledgeCacheInvalidator cacheInvalidator;
     @Mock private KnowledgeGraphService knowledgeGraphService;
+    @Mock private IndexDeleteFailureRepository indexDeleteFailureRepository;
 
     private DocumentApplicationService service;
 
@@ -66,7 +69,7 @@ class DocumentApplicationServiceTest {
     void setUp() {
         service = new DocumentApplicationService(documentRepository, documentDispatcher, vectorStore,
                 indexCleaner, metrics, documentTypeRegistry, cacheInvalidator,
-                knowledgeGraphService);
+                knowledgeGraphService, indexDeleteFailureRepository);
         ReflectionTestUtils.setField(service, "fileStoragePath", tempDir.toString());
     }
 
@@ -185,6 +188,10 @@ class DocumentApplicationServiceTest {
         verify(vectorStore, times(3)).deleteByDocumentId("9");
         verify(indexCleaner).deleteByDocumentId("9");
         verify(metrics).recordDocumentFailure();
+        // A-04：Qdrant 最终失败必须落对账表等待补偿，并打 index.cleanup 失败指标
+        verify(indexDeleteFailureRepository)
+                .recordOrIncrement(eq(9L), eq(IndexTarget.QDRANT), anyString());
+        verify(metrics).recordIndexCleanupFailure("QDRANT");
     }
 
     @Test

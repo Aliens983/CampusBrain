@@ -126,6 +126,38 @@ public class BusinessMetrics {
         documentFailureCounter.increment();
     }
 
+    // ---- 外部索引删除对账指标（A-04）----
+
+    /** 删除外部索引最终失败，已落库 index_delete_failure 等待补偿 */
+    public void recordIndexCleanupFailure(String target) {
+        Counter.builder("kb.index.cleanup")
+                .description("External index delete cleanup outcome")
+                .tag("target", target)
+                .tag("result", "failure")
+                .register(registry)
+                .increment();
+    }
+
+    /** 补偿任务重试删除成功，孤儿记录已清除 */
+    public void recordIndexCleanupRecovered(String target) {
+        Counter.builder("kb.index.cleanup")
+                .description("External index delete cleanup outcome")
+                .tag("target", target)
+                .tag("result", "recovered")
+                .register(registry)
+                .increment();
+    }
+
+    /** 补偿达到重试上限仍失败，需人工核查（用于告警） */
+    public void recordIndexCleanupGiveUp(String target) {
+        Counter.builder("kb.index.cleanup")
+                .description("External index delete cleanup outcome")
+                .tag("target", target)
+                .tag("result", "give_up")
+                .register(registry)
+                .increment();
+    }
+
     // ---- Retrieval Metrics ----
 
     public void recordRetrievalLatency(long durationMs) {

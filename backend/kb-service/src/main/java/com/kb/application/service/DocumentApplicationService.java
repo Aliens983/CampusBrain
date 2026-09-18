@@ -6,6 +6,8 @@ import com.kb.domain.document.DocumentProcessingDispatcher;
 import com.kb.domain.document.DocumentRepository;
 import com.kb.domain.document.DocumentStatus;
 import com.kb.domain.document.DocumentTypeRegistry;
+import com.kb.domain.document.IndexDeleteFailureRepository;
+import com.kb.domain.document.IndexTarget;
 import com.kb.domain.document.KnowledgeCacheInvalidator;
 import com.kb.domain.rag.VectorStoreService;
 import com.kb.infrastructure.common.BusinessException;
@@ -76,6 +78,9 @@ public class DocumentApplicationService implements IDocumentApplicationService {
 
     /** 内存知识图谱：删除/重处理文档时摘除实体与边归属（12-10） */
     private final KnowledgeGraphService knowledgeGraphService;
+
+    /** 外部索引删除失败对账仓储：最终失败落库，由补偿任务重试（A-04） */
+    private final IndexDeleteFailureRepository indexDeleteFailureRepository;
 
     /** 本地文件存储目录 */
     @Value("${app.file-storage-path:./file}")
@@ -262,9 +267,9 @@ public class DocumentApplicationService implements IDocumentApplicationService {
      * 但必须以 ERROR 日志 + 失败指标暴露，供运维对账，绝不静默吞异常。
      */
     private void cleanupExternalStores(Long id, String filePath) {
-        boolean vectorOk = runWithRetry("Qdrant 向量删除", id,
+        boolean vectorOk = runWithRetry("Qdrant 向量删除", IndexTarget.QDRANT, id,
                 () -> vectorStore.deleteByDocumentId(String.valueOf(id)));
-        boolean esOk = runWithRetry("ES 索引删除", id,
+        boolean esOk = runWithRetry("ES 索引删除", IndexTarget.ELASTICSEARCH, id,
                 () -> indexCleaner.deleteByDocumentId(String.valueOf(id)));
         // 内存知识图谱摘除：纯内存操作、无外部故障面，best-effort 即可（12-10）
         try {
@@ -274,7 +279,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
         }
         boolean fileOk = true;
         if (filePath != null && !filePath.isBlank()) {
-            fileOk = runWithRetry("本地文件删除", id, () -> deleteLocalFileOrThrow(filePath));
+            fileOk = runWithRetry("本地文件删除", null, id, () -> deleteLocalFileOrThrow(filePath));
         }
         if (!vectorOk || !esOk || !fileOk) {
             metrics.recordDocumentFailure();
@@ -289,7 +294,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
      * 有限次重试执行外部清理动作，异常退避后重试；达到上限返回 false（不抛出，
      * 因为事务已经提交，抛出无法改变结果，调用方负责记录与告警）。
      */
-    private boolean runWithRetry(String actionName, Long documentId, Runnable action) {
+    private boolean runWithRetry(String actionName, IndexTarget target, Long documentId, Runnable action) {
         for (int attempt = 1; attempt <= CLEANUP_MAX_ATTEMPTS; attempt++) {
             try {
                 action.run();
@@ -298,6 +303,14 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                 if (attempt >= CLEANUP_MAX_ATTEMPTS) {
                     log.error("{}在 {} 次尝试后仍失败: documentId={}",
                             actionName, CLEANUP_MAX_ATTEMPTS, documentId, e);
+                    // A-04：外部索引（Qdrant/ES）最终失败必须落对账表并计失败指标，
+                    // 由 IndexDeleteFailureReclaimer 定时补偿，杜绝孤儿向量/索引长期残留。
+                    // target 为 null 表示本地文件等非索引项，无对账表，仅走日志与失败指标。
+                    if (target != null) {
+                        String reason = e.getClass().getSimpleName() + ": " + e.getMessage();
+                        indexDeleteFailureRepository.recordOrIncrement(documentId, target, reason);
+                        metrics.recordIndexCleanupFailure(target.name());
+                    }
                     return false;
                 }
                 log.warn("{}第 {} 次尝试失败，将重试: documentId={}",
@@ -319,7 +332,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
      * （文档停留在 UPLOADED 状态，可由运维/对账任务重新投递）。
      */
     private void sendProcessingMessageWithRetry(Long documentId) {
-        boolean sent = runWithRetry("文档处理 MQ 投递", documentId,
+        boolean sent = runWithRetry("文档处理 MQ 投递", null, documentId,
                 () -> documentDispatcher.send(documentId));
         if (!sent) {
             metrics.recordDocumentFailure();

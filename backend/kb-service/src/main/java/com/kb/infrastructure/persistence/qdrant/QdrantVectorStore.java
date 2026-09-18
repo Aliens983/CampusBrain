@@ -176,9 +176,17 @@ public class QdrantVectorStore implements VectorStoreService {
                             .build()
             ).get();
             log.debug("Deleted vectors for document {} from Qdrant", documentId);
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("Qdrant deleteByDocumentId failed", e);
+        } catch (InterruptedException e) {
+            // A-04：恢复中断标志并向上抛出，让上层重试/对账链路感知失败，
+            // 不能静默吞掉导致 Qdrant 孤儿向量永久残留
             Thread.currentThread().interrupt();
+            log.error("Qdrant deleteByDocumentId interrupted: documentId={}", documentId, e);
+            throw new IllegalStateException(
+                    "Qdrant 删除文档向量被中断: documentId=" + documentId, e);
+        } catch (ExecutionException e) {
+            log.error("Qdrant deleteByDocumentId failed: documentId={}", documentId, e);
+            throw new IllegalStateException(
+                    "Qdrant 删除文档向量失败: documentId=" + documentId, e);
         }
     }
 
