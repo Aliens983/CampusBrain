@@ -17,8 +17,8 @@ import java.util.Optional;
 /**
  * 问答缓存服务 — 两级缓存
  * <p>
- * L1（Caffeine 本地）：纳秒级，存热点问题 Top-100，TTL 5 分钟
- * L2（Redis 分布式）：毫秒级，存所有问答，TTL 1 小时
+ * 写路径以 L2（Redis）为准（单一数据源）；L1（Caffeine）退化为短 TTL 读缓存，
+ * 仅在 L2 命中后回填，用于吸收热点读放大（A-05：消除 L1/L2 双写非原子窗口）。
  * </p>
  *
  * @author forever-king
@@ -31,27 +31,29 @@ public class QaCacheService {
     private final CacheKeyBuilder keyBuilder;
     private final ObjectMapper objectMapper;
 
-    /** L1 本地缓存：最多 100 条，5 分钟过期 */
+    /**
+     * L1 本地读缓存：最多 100 条，短 TTL 30 秒自愈。
+     * 不在写路径同步写入（A-05），仅由 L2 命中回填，避免与 L2 双写非原子。
+     */
+    private static final Duration L1_TTL = Duration.ofSeconds(30);
+
     private final Cache<String, QaCacheEntry> localCache = Caffeine.newBuilder()
             .maximumSize(100)
-            .expireAfterWrite(Duration.ofMinutes(5))
+            .expireAfterWrite(L1_TTL)
             .build();
 
     /** L2 Redis TTL */
     private static final Duration REDIS_TTL = Duration.ofHours(1);
 
     /**
-     * 问答缓存总开关，默认关闭。
+     * 问答缓存（精确缓存）开关，与语义缓存共用 {@code kb.cache.enabled}（A-06 统一语义）。
      * <p>
-     * 缓存写入/读取此前从未被调用（死 Bean），但预约变更事件会调 evictAll()——
-     * 后者内部对 qa:cache:* 做 Redis SCAN，在没有缓存可清时是纯空转开销。
-     * 这里加开关：关闭时所有方法短路，既消除空转，也让"缓存是否启用"成为显式配置。
-     * <p>
-     * 为何默认关闭（详见 docs/为什么不用缓存.md）：预约类问答依赖实时余量，
-     * 缓存会导致用户看到过期名额；且同一问题的答案可能来自 Function Calling，
-     * 缓存后无法区分。启用前需先解决"仅对纯知识类问题缓存"的判定。
+     * 上游已按"仅纯知识类问题才读写缓存"过滤（预约余量/档期/我的预约等实时数据
+     * 绝不缓存，预约变更事件整体淘汰），因此开关默认值（true）与 application.yml 的
+     * {@code KB_CACHE_ENABLED} 保持一致；实际取值以 yml 为准。关闭时所有方法短路，
+     * 避免对 qa:cache:* 的 SCAN 空转。
      */
-    @Value("${kb.cache.enabled:false}")
+    @Value("${kb.cache.enabled:true}")
     private boolean cacheEnabled;
 
     public QaCacheService(StringRedisTemplate stringRedisTemplate,
@@ -63,7 +65,10 @@ public class QaCacheService {
     }
 
     /**
-     * 写入问答缓存（L1 + L2 双写）
+     * 写入问答缓存（A-05：仅写 L2 Redis，单一数据源）。
+     * <p>
+     * L1 只在 L2 命中时回填，写路径不再双写，天然规避 L1/L2 不一致窗口；
+     * Redis 故障时本次写入整体失败，不残留 L1 中"新写失败后继续读旧值"的脏读。
      */
     public void cacheAnswer(String query, String answer,
                              List<Conversation.CitationRef> citations) {
@@ -73,7 +78,6 @@ public class QaCacheService {
         QaCacheEntry entry = new QaCacheEntry(answer, citations, System.currentTimeMillis());
         String key = keyBuilder.qaCacheKey(query);
 
-        localCache.put(key, entry);
         try {
             stringRedisTemplate.opsForValue().set(key,
                     objectMapper.writeValueAsString(entry), REDIS_TTL);
@@ -83,7 +87,7 @@ public class QaCacheService {
     }
 
     /**
-     * 查询缓存（L1 → L2 → 回填）
+     * 查询缓存（L1 读缓存优先 → L2 为准 → 命中后回填 L1）
      */
     public Optional<QaCacheEntry> getCachedAnswer(String query) {
         if (!cacheEnabled) {
