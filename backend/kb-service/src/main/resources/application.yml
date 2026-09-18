@@ -247,6 +247,10 @@ kb:
     # 仅纯知识类问题（未命中预约意图且会话无预约槽位、本地资料有命中）读写缓存；
     # 余量/档期/我的预约等实时数据绝不缓存。预约变更事件会整体淘汰存量缓存。
     enabled: ${KB_CACHE_ENABLED:true}
+    # 语义缓存（Qdrant 独立 collection，12-02）
+    semantic-collection: ${KB_SEMANTIC_CACHE_COLLECTION:qa_semantic_cache}
+    semantic-threshold: ${KB_SEMANTIC_CACHE_THRESHOLD:0.95}
+    semantic-ttl-hours: ${KB_SEMANTIC_CACHE_TTL_HOURS:24}
   sse:
     # 单实例同时在途的流式问答连接上限；超限新请求在响应建立前直接收到 503。
     # 50 路并发 × 单轮约 30s ≈ 100 QPM 的持续吞吐，配合单用户频控与 boundedElastic 使用。
