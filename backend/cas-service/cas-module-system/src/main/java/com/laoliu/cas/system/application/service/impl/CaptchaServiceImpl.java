@@ -6,7 +6,6 @@ import cn.hutool.captcha.generator.MathGenerator;
 import cn.hutool.core.math.Calculator;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.UserErrorCode;
-import com.laoliu.cas.infra.application.service.FileService;
 import com.laoliu.cas.redis.util.RedisUtil;
 import com.laoliu.cas.system.application.service.CaptchaService;
 import com.laoliu.cas.system.interfaces.dto.response.CaptchaResponse;
@@ -15,11 +14,14 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.UUID;
 
 /**
+ * 图形验证码服务
+ * <p>
+ * 答案与图片均存 Redis（内存态），不再落盘到 uploads/captcha，避免磁盘持续堆积；
+ * 图片通过 GET /captcha/image/{uuid} 动态取回，前端无需感知变化。
+ *
  * @author forever-king
  */
 @Slf4j
@@ -28,7 +30,6 @@ import java.util.UUID;
 public class CaptchaServiceImpl implements CaptchaService {
 
     private final RedisUtil redisUtil;
-    private final FileService fileService;
 
     @Value("${file.upload.server-address:http://localhost:18080}")
     private String serverAddress;
@@ -38,6 +39,15 @@ public class CaptchaServiceImpl implements CaptchaService {
 
     /** 图形验证码在 Redis 中的 key 前缀，生成与校验两处必须保持一致 */
     private static final String CAPTCHA_KEY_PREFIX = "captcha:";
+
+    /** 验证码图片 base64 在 Redis 中的 key 前缀（与 GraphicController 的读取侧保持一致） */
+    private static final String CAPTCHA_IMG_KEY_PREFIX = "captcha:img:";
+
+    /** 验证码有效时长（秒）：答案与图片一致，短 TTL 内存态 */
+    private static final long CAPTCHA_TTL_SECONDS = 300;
+
+    /** 图片取回路径（与 GraphicController 的路由保持一致） */
+    private static final String CAPTCHA_IMAGE_PATH = "/captcha/image/";
 
     @Override
     public CaptchaResponse generateCaptcha() {
@@ -53,24 +63,20 @@ public class CaptchaServiceImpl implements CaptchaService {
         double calcResult = Calculator.conversion(expr);
         String end = String.valueOf((int) calcResult);
 
-        redisUtil.setVerificationCode(redisKey, end, 300);
+        redisUtil.setVerificationCode(redisKey, end, CAPTCHA_TTL_SECONDS);
 
-        try {
-            File tempFile = File.createTempFile("captcha-", ".png");
-            captcha.write(tempFile);
-            String fileUrl = fileService.uploadFile(tempFile, "captcha");
-            tempFile.delete();
+        // 图片转 base64 存 Redis（不再经 FileService 落盘），TTL 与答案保持一致
+        String dataUri = captcha.getImageBase64();
+        String pureBase64 = dataUri.substring(dataUri.indexOf(',') + 1);
+        redisUtil.setVerificationCode(CAPTCHA_IMG_KEY_PREFIX + uuid, pureBase64, CAPTCHA_TTL_SECONDS);
 
-            String imageUrl = serverAddress + contextPath + fileUrl;
+        // 返回绝对 URL，前端 new URL(...) 解析路径的逻辑无需改动
+        String imageUrl = serverAddress + contextPath + CAPTCHA_IMAGE_PATH + uuid;
 
-            return CaptchaResponse.builder()
-                    .uuid(uuid)
-                    .imageUrl(imageUrl)
-                    .build();
-        } catch (IOException e) {
-            log.error("生成验证码图片失败", e);
-            throw new RuntimeException("生成验证码图片失败", e);
-        }
+        return CaptchaResponse.builder()
+                .uuid(uuid)
+                .imageUrl(imageUrl)
+                .build();
     }
 
     @Override
