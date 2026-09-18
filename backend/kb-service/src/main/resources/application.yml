@@ -263,6 +263,10 @@ kb:
       lock-ttl-seconds: ${KB_DOC_RECLAIM_LOCK_TTL:120}
       interval-ms: ${KB_DOC_RECLAIM_INTERVAL_MS:300000}
       initial-delay-ms: ${KB_DOC_RECLAIM_INITIAL_DELAY_MS:120000}
+  # 内存知识图谱容量护栏（12-10；中期落图存储后移除）
+  graph:
+    max-entities: ${KB_GRAPH_MAX_ENTITIES:50000}
+    max-relations: ${KB_GRAPH_MAX_RELATIONS:200000}
   sse:
     # 单实例同时在途的流式问答连接上限；超限新请求在响应建立前直接收到 503。
     # 50 路并发 × 单轮约 30s ≈ 100 QPM 的持续吞吐，配合单用户频控与 boundedElastic 使用。

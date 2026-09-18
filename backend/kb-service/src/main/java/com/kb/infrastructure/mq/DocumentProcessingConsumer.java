@@ -145,6 +145,8 @@ public class DocumentProcessingConsumer {
                 vectorStore.deleteByDocumentId(docIdStr);
                 esRepository.deleteByDocumentId(docIdStr);
                 documentRepository.deleteChunksByDocumentId(documentId);
+                // 内存知识图谱同步摘除旧归属，避免重处理后旧实体/旧边残留（12-10）
+                kgService.deleteByDocument(documentId);
             } catch (Exception e) {
                 log.warn("清理旧数据失败（继续处理）: id={}", documentId, e);
             }
@@ -169,10 +171,16 @@ public class DocumentProcessingConsumer {
             updateStatus(doc, DocumentStatus.EMBEDDING);
             List<float[]> embeddings = embed(chunks);
 
-            // === Step 3.5: Build knowledge graph（实体抽取 + 关系构建）
+            // === Step 3.5: Build knowledge graph（best-effort：
+            // 图谱是检索增强能力，抽取失败不能拖垮文档入库主链路，详见 12-10）===
             for (DocumentChunk chunk : chunks) {
                 if (chunk.getContent() != null && !chunk.getContent().isBlank()) {
-                    kgService.ingestChunk(chunk.getContent(), documentId, chunk.getQdrantId());
+                    try {
+                        kgService.ingestChunk(chunk.getContent(), documentId, chunk.getQdrantId());
+                    } catch (Exception kgEx) {
+                        log.warn("知识图谱抽取失败，跳过该分块（不影响文档入库）: id={}, chunk={}",
+                                documentId, chunk.getQdrantId(), kgEx);
+                    }
                 }
             }
 
