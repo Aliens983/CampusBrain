@@ -37,6 +37,15 @@ public interface LlmService {
                                    Consumer<String> tokenConsumer);
 
     /**
+     * 流式生成（可取消版）：客户端断连时应尽快中止供应商侧的在途生成，避免空烧 token。
+     */
+    default String generateAnswerStreaming(String query, List<RetrievalResult> retrievedDocs,
+                                   List<ChatMessage> conversationHistory,
+                                   Consumer<String> tokenConsumer, CancellationToken cancellationToken) {
+        throw new UnsupportedOperationException("SSE 断连取消透传待接入");
+    }
+
+    /**
      * Generate an answer with real-time tool (Function Calling) enhancement.
      * LLM 可在回答时自主调用预约查询工具获取实时数据
      *
@@ -67,6 +76,16 @@ public interface LlmService {
                                    Consumer<String> tokenConsumer, String contextHint);
 
     /**
+     * 预约工具链路的真流式版（Function Calling 期间也逐 token 推送），支持断连取消。
+     */
+    default String generateAnswerWithToolsStreaming(String query, List<RetrievalResult> retrievedDocs,
+                                            List<ChatMessage> conversationHistory,
+                                            Consumer<String> tokenConsumer, String contextHint,
+                                            CancellationToken cancellationToken) {
+        throw new UnsupportedOperationException("SSE 断连取消透传待接入");
+    }
+
+    /**
      * 本地资料库未检索到相关内容时的兜底回答：直接用大模型（DeepSeek）对话，
      * 不携带 RAG 上下文
      *
@@ -81,6 +100,15 @@ public interface LlmService {
      */
     String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
                                          Consumer<String> tokenConsumer);
+
+    /**
+     * 本地资料库未检索到相关内容时的兜底回答（流式可取消版）。
+     */
+    default String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
+                                         Consumer<String> tokenConsumer,
+                                         CancellationToken cancellationToken) {
+        throw new UnsupportedOperationException("SSE 断连取消透传待接入");
+    }
 
     /**
      * A simplified chat message for domain use (no LangChain4j dependency).

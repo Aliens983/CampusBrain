@@ -234,6 +234,9 @@ resilience4j:
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
         automatic-transition-from-open-to-half-open-enabled: true
+        # 客户端主动断连导致的中止不是服务故障，不得计入熔断失败率（12-07）
+        ignore-exceptions:
+          - com.kb.infrastructure.rag.llm.StreamCancelledException
       embeddingService:
         sliding-window-size: 10
         failure-rate-threshold: 50
