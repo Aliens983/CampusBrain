@@ -84,6 +84,9 @@ public class DocumentProcessingConsumer {
     /** 处理中/回收重投的 Redis 短锁：防止重试与超时重投造成并发处理同一文档 */
     private final DocumentProcessingLock processingLock;
 
+    /** 分块批量写入的单事务边界（A-03） */
+    private final com.kb.infrastructure.persistence.mysql.DocumentChunkTransactionService chunkTransactionService;
+
     /** 文档分块策略 */
     @Value("${chunking.strategy}")
     private String chunkStrategy;
@@ -173,8 +176,9 @@ public class DocumentProcessingConsumer {
                 }
             }
 
-            // === Step 4: Save chunks to MySQL first（让 chunk 拿到 documentId）
-            documentRepository.saveChunks(chunks, documentId);
+            // === Step 4: Save chunks to MySQL first（让 chunk 拿到 documentId）===
+            // A-03：整批分块在单个事务内写入，中途失败整体回滚，不留半成品分块
+            chunkTransactionService.saveChunksAtomically(chunks, documentId);
 
             // === Step 5: Store (Qdrant + ES) — 用正确的 documentId（失败可重试）===
             store(chunks, embeddings, documentId);
