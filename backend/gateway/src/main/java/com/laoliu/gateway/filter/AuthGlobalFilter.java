@@ -4,14 +4,15 @@ import com.laoliu.auth.AuthConstants;
 import com.laoliu.auth.InternalSigner;
 import com.laoliu.auth.JWTUtils;
 import com.laoliu.auth.dto.LoginUser;
+import com.laoliu.auth.web.AuthErrorResponses;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
 import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpResponse;
 import org.springframework.stereotype.Component;
@@ -114,8 +115,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private Mono<Void> unauthorized(ServerWebExchange exchange) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
-        response.getHeaders().setContentType(MediaType.APPLICATION_JSON);
-        byte[] bytes = "{\"code\":401,\"message\":\"未登录或登录已过期\"}"
+        // Q-07：错误体统一走 common-auth AuthErrorResponses（code/message/timestamp），
+        // 与 kb ApiResponse / cas CommonResult 同口径
+        response.getHeaders().set(HttpHeaders.CONTENT_TYPE, AuthErrorResponses.JSON_CONTENT_TYPE);
+        byte[] bytes = AuthErrorResponses.unauthorized("未登录或登录已过期")
                 .getBytes(StandardCharsets.UTF_8);
         DataBuffer buffer = response.bufferFactory().wrap(bytes);
         return response.writeWith(Mono.just(buffer));

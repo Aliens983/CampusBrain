@@ -4,6 +4,7 @@ import com.laoliu.auth.AuthConstants;
 import com.laoliu.auth.InternalSigner;
 import com.laoliu.auth.dto.LoginUser;
 import com.laoliu.auth.policy.RolePolicy;
+import com.laoliu.auth.web.AuthErrorResponses;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -85,7 +86,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write("{\"code\":401,\"message\":\"" + message + "\"}");
+        // Q-07：与网关/全局异常处理统一错误体（AuthErrorResponses），不再手写拼接
+        response.setContentType(AuthErrorResponses.JSON_CONTENT_TYPE);
+        response.getWriter().write(AuthErrorResponses.unauthorized(message));
     }
 }

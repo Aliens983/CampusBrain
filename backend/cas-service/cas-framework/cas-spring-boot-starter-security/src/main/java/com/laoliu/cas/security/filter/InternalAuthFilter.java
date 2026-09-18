@@ -2,6 +2,7 @@ package com.laoliu.cas.security.filter;
 
 import com.laoliu.auth.AuthConstants;
 import com.laoliu.auth.InternalSigner;
+import com.laoliu.auth.web.AuthErrorResponses;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -55,8 +56,9 @@ public class InternalAuthFilter extends OncePerRequestFilter {
                 || !internalSigner.verifyWithTimestamp(sign, MAX_AGE_SECONDS, userId, role, timestamp)) {
             log.warn("内网签名校验失败: path={}", request.getRequestURI());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"code\":401,\"message\":\"无效的内网身份签名\"}");
+            // Q-07：统一错误体（AuthErrorResponses）
+            response.setContentType(AuthErrorResponses.JSON_CONTENT_TYPE);
+            response.getWriter().write(AuthErrorResponses.unauthorized("无效的内网身份签名"));
             return;
         }
 
