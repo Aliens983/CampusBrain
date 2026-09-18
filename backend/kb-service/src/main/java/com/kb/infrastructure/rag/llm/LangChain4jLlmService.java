@@ -52,6 +52,23 @@ public class LangChain4jLlmService implements LlmService {
     @Value("${llm.provider:deepseek}")
     private String llmProvider;
 
+    // ========== 跨供应商兜底密钥（Q-06：统一走 Spring 配置注入，不再 System.getenv 直取） ==========
+    @Value("${llm.fallback.deepseek-api-key:${DEEPSEEK_API_KEY:}}")
+    private String fallbackDeepseekApiKey;
+
+    @Value("${llm.fallback.qwen-api-key:${QWEN_API_KEY:}}")
+    private String fallbackQwenApiKey;
+
+    @Value("${llm.fallback.openai-api-key:${OPENAI_API_KEY:}}")
+    private String fallbackOpenaiApiKey;
+
+    /**
+     * 硅基流动兜底聊天密钥：优先独立 SILICONFLOW_API_KEY；
+     * 历史实现直接复用 EMBEDDING_API_KEY（同账号 key 可用于 chat），保留仅为向后兼容。
+     */
+    @Value("${llm.fallback.siliconflow-api-key:${SILICONFLOW_API_KEY:${EMBEDDING_API_KEY:}}}")
+    private String fallbackSiliconflowApiKey;
+
     /** 注入 LLM 的历史消息上限（超出部分丢弃最早的记录） */
     private static final int MAX_HISTORY_MESSAGES = 6;
 
@@ -186,13 +203,15 @@ public class LangChain4jLlmService implements LlmService {
         log.warn("Primary LLM [{}] failed, attempting fallback to [{}]",
                 primary.getDisplayName(), fallbackProvider.getDisplayName());
 
-        String fallbackApiKey = switch (fallbackProvider) {
-            case DEEPSEEK -> System.getenv("DEEPSEEK_API_KEY");
-            case QWEN -> System.getenv("QWEN_API_KEY");
-            case OPENAI -> System.getenv("OPENAI_API_KEY");
-            case OLLAMA -> "ollama";
-            case SILICONFLOW -> System.getenv("EMBEDDING_API_KEY");
-        };
+        String fallbackApiKey = resolveFallbackApiKey(fallbackProvider);
+        if (fallbackProvider != ModelProvider.OLLAMA
+                && (fallbackApiKey == null || fallbackApiKey.isBlank())) {
+            // 密钥缺失属配置问题：直接抛出让熔断器统计失败，避免带 null key 打出难定位的 401
+            log.error("Fallback LLM [{}] api-key 未配置（llm.fallback.*-api-key / 对应环境变量）",
+                    fallbackProvider.getDisplayName());
+            throw new LlmUnavailableException(
+                    "LLM 兜底供应商密钥未配置: " + fallbackProvider.getDisplayName());
+        }
 
         try {
             ChatLanguageModel fallbackModel = OpenAiChatModel.builder()
@@ -350,6 +369,19 @@ public class LangChain4jLlmService implements LlmService {
         for (ChatMessage cm : recent) {
             messages.add(toLangChainMessage(cm));
         }
+    }
+
+    /**
+     * 按兜底供应商解析聊天密钥（Q-06：唯一出口，配置注入）。
+     */
+    private String resolveFallbackApiKey(ModelProvider provider) {
+        return switch (provider) {
+            case DEEPSEEK -> fallbackDeepseekApiKey;
+            case QWEN -> fallbackQwenApiKey;
+            case OPENAI -> fallbackOpenaiApiKey;
+            case OLLAMA -> "ollama";
+            case SILICONFLOW -> fallbackSiliconflowApiKey;
+        };
     }
 
     /** 各 Provider 的默认兜底模型名（不能共用一个名字，否则请求必然失败） */
