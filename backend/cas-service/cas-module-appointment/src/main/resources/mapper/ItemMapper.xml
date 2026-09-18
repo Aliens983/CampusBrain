@@ -67,10 +67,13 @@
 
     <!-- 幂等插入：同一用户对同一服务只要还有生效预约（待审核 / 已通过）就不重复插入。
          主键 order_id 通过 useGeneratedKeys 回填到入参 ItemDO，调用方据此拿到真实订单号，
-         不再使用"查用户最新一单"这种存在竞态的绕行方案。 -->
+         不再使用"查用户最新一单"这种存在竞态的绕行方案。
+         并发兜底：NOT EXISTS 子查询为快照读，双事务并发窗口可能同时通过；
+         配合 V7 唯一约束 uk_user_service_status(user_id, service_id, manage_status)，
+         冲突时 INSERT IGNORE 降级为影响 0 行（触发行仍为 0，业务层"去重回补库存"流程不变）。 -->
     <insert id="insertSingleService"
             useGeneratedKeys="true" keyProperty="item.orderId">
-        INSERT INTO item(user_id, service_id)
+        INSERT IGNORE INTO item(user_id, service_id)
         SELECT #{item.userId}, #{item.serviceId}
         WHERE NOT EXISTS (
             SELECT 1 FROM item i

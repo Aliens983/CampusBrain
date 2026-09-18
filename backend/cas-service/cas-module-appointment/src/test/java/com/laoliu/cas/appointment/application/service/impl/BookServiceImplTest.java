@@ -23,9 +23,17 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -168,6 +176,56 @@ class BookServiceImplTest {
             // Then：先扣减后插入
             verify(bookingRepository).decrementStock(SERVICE_ID);
             verify(bookingRepository).insertServices(eq(USER_ID), anyList());
+        }
+
+        @Test
+        @DisplayName("并发预约同一服务时超出容量上限的请求被拒绝")
+        void shouldRejectOverCapacityUnderConcurrentBooking() throws Exception {
+            // Given：模拟 DB 原子条件 UPDATE（decrementStock）——容量充足才 +1，
+            // 并发下只有前 capacity 个请求成功，其余触发行=0 抛 BOOKING_CAPACITY_FULL。
+            int capacity = 3;
+            int threads = 10;
+            AtomicInteger bookedAttempts = new AtomicInteger();
+            AtomicLong orderSeq = new AtomicLong(ORDER_ID);
+            when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(buildAvailableService(SERVICE_ID)));
+            when(bookingRepository.decrementStock(SERVICE_ID)).thenAnswer(inv ->
+                    bookedAttempts.incrementAndGet() <= capacity ? 1 : 0);
+            when(bookingRepository.insertServices(eq(USER_ID), anyList())).thenAnswer(inv -> {
+                @SuppressWarnings("unchecked")
+                List<Integer> sids = (List<Integer>) inv.getArgument(1);
+                return sids.stream().map(s -> orderSeq.getAndIncrement()).toList();
+            });
+            when(userInfoApi.getUserById(USER_ID)).thenReturn(buildUserInfo());
+
+            // When：10 个线程同时预约同一服务
+            ExecutorService pool = Executors.newFixedThreadPool(threads);
+            CountDownLatch ready = new CountDownLatch(1);
+            AtomicInteger success = new AtomicInteger();
+            AtomicInteger capacityFull = new AtomicInteger();
+            List<Future<?>> futures = new ArrayList<>();
+            for (int i = 0; i < threads; i++) {
+                futures.add(pool.submit(() -> {
+                    ready.await();
+                    try {
+                        bookService.bookService(USER_ID, List.of(SERVICE_ID));
+                        success.incrementAndGet();
+                    } catch (BusinessException e) {
+                        assertEquals(BookErrorCode.BOOKING_CAPACITY_FULL.getCode(), e.getCode());
+                        capacityFull.incrementAndGet();
+                    }
+                    return null;
+                }));
+            }
+            ready.countDown();
+            for (Future<?> f : futures) {
+                f.get(10, TimeUnit.SECONDS);
+            }
+            pool.shutdown();
+
+            // Then：恰好 capacity 个成功，其余全部容量满，且 10 次都发起了库存扣减尝试
+            assertEquals(capacity, success.get());
+            assertEquals(threads - capacity, capacityFull.get());
+            assertEquals(threads, bookedAttempts.get());
         }
     }
 
