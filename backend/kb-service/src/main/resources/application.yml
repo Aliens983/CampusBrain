@@ -251,6 +251,15 @@ kb:
     semantic-collection: ${KB_SEMANTIC_CACHE_COLLECTION:qa_semantic_cache}
     semantic-threshold: ${KB_SEMANTIC_CACHE_THRESHOLD:0.95}
     semantic-ttl-hours: ${KB_SEMANTIC_CACHE_TTL_HOURS:24}
+  # 文档消费可靠性（12-03）
+  document:
+    processing-lock-ttl-seconds: ${KB_DOC_PROCESSING_LOCK_TTL:1800}
+    reclaim:
+      stale-minutes: ${KB_DOC_RECLAIM_STALE_MINUTES:10}
+      batch-size: ${KB_DOC_RECLAIM_BATCH:50}
+      lock-ttl-seconds: ${KB_DOC_RECLAIM_LOCK_TTL:120}
+      interval-ms: ${KB_DOC_RECLAIM_INTERVAL_MS:300000}
+      initial-delay-ms: ${KB_DOC_RECLAIM_INITIAL_DELAY_MS:120000}
   sse:
     # 单实例同时在途的流式问答连接上限；超限新请求在响应建立前直接收到 503。
     # 50 路并发 × 单轮约 30s ≈ 100 QPM 的持续吞吐，配合单用户频控与 boundedElastic 使用。

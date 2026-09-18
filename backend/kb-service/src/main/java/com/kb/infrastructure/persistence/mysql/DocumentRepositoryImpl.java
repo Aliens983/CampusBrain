@@ -75,6 +75,15 @@ public class DocumentRepositoryImpl implements DocumentRepository {
     }
 
     @Override
+    public List<Document> findStuckInProcessing(List<DocumentStatus> statuses,
+                                                java.time.LocalDateTime threshold, int limit) {
+        List<String> statusNames = statuses.stream().map(Enum::name).toList();
+        return documentMapper.selectStuckInProcessing(statusNames, threshold, limit).stream()
+                .map(this::toDocument)
+                .toList();
+    }
+
+    @Override
     public List<Document> findByOwnerId(Long ownerId, int page, int size) {
         return documentMapper.selectPageByOwnerId(ownerId, (long) page * size, size).stream()
                 .map(this::toDocument)

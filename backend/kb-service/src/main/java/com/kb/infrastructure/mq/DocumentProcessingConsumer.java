@@ -12,6 +12,7 @@ import com.kb.infrastructure.rag.chunker.ChunkerFactory;
 import com.kb.infrastructure.rag.graph.KnowledgeGraphService;
 import com.kb.infrastructure.rag.parser.ParserChain;
 import com.kb.infrastructure.rag.parser.ParserFactory;
+import com.kb.infrastructure.schedule.DocumentProcessingLock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -19,7 +20,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+import java.io.FileNotFoundException;
 import java.io.InputStream;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -36,6 +39,13 @@ import java.util.*;
  *   <li>Store: persist to Qdrant (vectors) + ES (keywords)</li>
  * </ol>
  * </p>
+ * <p>
+ * <b>失败语义（12-03）</b>：
+ * <ul>
+ *   <li>永久性失败（文件丢失、解析不支持/文件损坏）→ 置 FAILED 并 ACK，不做无意义重试；</li>
+ *   <li>可重试失败（embedding/Qdrant/ES/DB 抖动）→ 向外抛出，由 Spring retry 退避重试 3 次，
+ *       仍失败则经死信交换机进入 DLQ 留存，文档保留中间态由超时回收任务重新投递。</li>
+ * </ul>
  *
  * @author forever-king
  */
@@ -71,26 +81,40 @@ public class DocumentProcessingConsumer {
     /** 知识图谱服务 — 文档入库时自动抽取实体 */
     private final KnowledgeGraphService kgService;
 
+    /** 处理中/回收重投的 Redis 短锁：防止重试与超时重投造成并发处理同一文档 */
+    private final DocumentProcessingLock processingLock;
+
     /** 文档分块策略 */
     @Value("${chunking.strategy}")
     private String chunkStrategy;
+
+    /** 处理中锁 TTL：正常处理应远小于该值；消费者宕机时由 TTL 自动释放 */
+    @Value("${kb.document.processing-lock-ttl-seconds:1800}")
+    private long processingLockTtlSeconds;
+
+    /**
+     * 永久性处理失败：重试无意义（文件丢失/损坏/不支持的格式）。
+     * 捕获后置 FAILED 并正常 ACK，消息不进 DLQ。
+     */
+    public static class PermanentProcessingException extends RuntimeException {
+        public PermanentProcessingException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
 
     /**
      * Consume document processing messages from the queue.
      */
     @RabbitListener(queues = "kb.document.processing.queue")
     public void processDocument(DocumentProcessingMessage message) {
-        processDocumentInternal(message);
-    }
-
-    private void processDocumentInternal(DocumentProcessingMessage message) {
         Long documentId = message.getDocumentId();
         log.info("Processing document: id={}, forceReprocess={}",
                 documentId, message.isForceReprocess());
 
         Optional<Document> docOpt = documentRepository.findById(documentId);
         if (docOpt.isEmpty()) {
-            log.error("Document not found: id={}", documentId);
+            // 文档行已不存在（删除/回滚）：直接 ACK，重投也处理不了
+            log.warn("Document not found, ack and skip: id={}", documentId);
             return;
         }
 
@@ -99,6 +123,15 @@ public class DocumentProcessingConsumer {
         // Skip already-processed documents unless forced
         if (doc.isReady() && !message.isForceReprocess()) {
             log.info("Document already processed: id={}", documentId);
+            return;
+        }
+
+        // 并发保护：enterProcessing 通过 owner token 识别
+        // "本地重试 / TTL 内回到本实例的重投递"（放行）与"其他实例正在处理"（ACK 跳过），
+        // 杜绝两个消费者并发执行"删旧数据→写新数据"。
+        if (!processingLock.enterProcessing(documentId,
+                Duration.ofSeconds(processingLockTtlSeconds))) {
+            log.info("文档正在被其他消费者处理，本次消息直接确认跳过: id={}", documentId);
             return;
         }
 
@@ -113,18 +146,23 @@ public class DocumentProcessingConsumer {
                 log.warn("清理旧数据失败（继续处理）: id={}", documentId, e);
             }
 
-            // === Step 1: Parse ===
+            // === Step 1: Parse（解析失败视为永久性失败：损坏/加密/不支持的文件不会因重试变好）===
             updateStatus(doc, DocumentStatus.PARSING);
-            ParsedDocument parsed = parse(doc);
-            log.info("Parsed document: id={}, chars={}", documentId,
-                    parsed.getCharCount());
+            ParsedDocument parsed;
+            try {
+                parsed = parse(doc);
+            } catch (Exception e) {
+                throw new PermanentProcessingException(
+                        "文档解析失败（文件损坏、加密或格式不支持）: id=" + documentId, e);
+            }
+            log.info("Parsed document: id={}, chars={}", documentId, parsed.getCharCount());
 
             // === Step 2: Chunk ===
             updateStatus(doc, DocumentStatus.CHUNKING);
             List<DocumentChunk> chunks = chunk(parsed);
             log.info("Chunked document: id={}, chunks={}", documentId, chunks.size());
 
-            // === Step 3: Embed ===
+            // === Step 3: Embed（失败可重试：模型限流/超时）===
             updateStatus(doc, DocumentStatus.EMBEDDING);
             List<float[]> embeddings = embed(chunks);
 
@@ -138,7 +176,7 @@ public class DocumentProcessingConsumer {
             // === Step 4: Save chunks to MySQL first（让 chunk 拿到 documentId）
             documentRepository.saveChunks(chunks, documentId);
 
-            // === Step 5: Store (Qdrant + ES) — 用正确的 documentId
+            // === Step 5: Store (Qdrant + ES) — 用正确的 documentId（失败可重试）===
             store(chunks, embeddings, documentId);
 
             // === Step 6: Mark READY ===
@@ -149,17 +187,34 @@ public class DocumentProcessingConsumer {
             eventPublisher.publishEvent(new DocumentProcessedEvent(
                     this, documentId, doc.getTitle(), doc.getOwnerId(),
                     DocumentStatus.READY, null));
+            // 成功终态：释放处理锁
+            processingLock.exitProcessing(documentId);
 
-        } catch (Exception e) {
-            log.error("Document processing failed: id={}", documentId, e);
-            String errMsg = truncate(e.getMessage(), 500);
+        } catch (PermanentProcessingException permanent) {
+            // 永久失败：置 FAILED 并正常 ACK（不重试、不进 DLQ）
+            log.error("Document processing permanently failed: id={}", documentId, permanent);
+            String errMsg = truncate(permanent.getMessage(), 500);
             documentRepository.updateStatus(documentId, DocumentStatus.FAILED, errMsg);
-
             eventPublisher.publishEvent(new DocumentProcessedEvent(
                     this, documentId, doc.getTitle(), doc.getOwnerId(),
                     DocumentStatus.FAILED, errMsg));
+            processingLock.exitProcessing(documentId);
+
+        } catch (Exception retryable) {
+            // 可重试失败：保持当前中间态向外抛出 ——
+            // Spring retry 在本实例退避重试 max-attempts 次；
+            // 仍失败则被拒绝并路由到 DLQ（default-requeue-rejected=false + 队列 DLX 参数）。
+            // 不在这里把文档改成 FAILED：中间态 + updated_at 时间戳让超时回收任务能发现并重新投递。
+            // 同时不释放 Redis 处理锁：TTL 窗口内重投的消息（含回到本实例）虽可被 owner 识别，
+            // 但跨实例重复消费仍被锁挡住，给下游（embedding/Qdrant）留出恢复窗口。
+            log.error("Document processing failed (retryable), will retry/DLQ: id={}",
+                    documentId, retryable);
+            if (retryable instanceof RuntimeException re) {
+                throw re;
+            }
+            throw new RuntimeException("文档处理失败（可重试）: id=" + documentId, retryable);
         }
-    } // end processDocumentInternal
+    } // end processDocument
 
     // ========== Pipeline Steps ==========
 
@@ -167,6 +222,9 @@ public class DocumentProcessingConsumer {
         try (InputStream fileStream = new java.io.FileInputStream(doc.getFilePath())) {
             // Use ParserChain: tries primary parser first, auto-fallbacks on failure
             return parserChain.parseAuto(fileStream, doc.getTitle());
+        } catch (FileNotFoundException fnf) {
+            throw new PermanentProcessingException(
+                    "原始文件不存在，可能已被外部清理: path=" + doc.getFilePath(), fnf);
         }
     }
 

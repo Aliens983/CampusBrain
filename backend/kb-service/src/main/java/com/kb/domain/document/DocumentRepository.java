@@ -1,5 +1,6 @@
 package com.kb.domain.document;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,6 +32,16 @@ public interface DocumentRepository {
      * Find documents by processing status.
      */
     List<Document> findByStatus(DocumentStatus status);
+
+    /**
+     * 查找长时间停留在给定中间态、updated_at 早于阈值的文档（超时回收用，12-03）。
+     *
+     * @param statuses  中间态集合（UPLOADED/PARSING/CHUNKING/EMBEDDING）
+     * @param threshold updated_at 上界（早于该时间才算卡死）
+     * @param limit     单次最多返回条数
+     */
+    List<Document> findStuckInProcessing(List<DocumentStatus> statuses,
+                                         LocalDateTime threshold, int limit);
 
     /**
      * 按归属用户分页查询，按创建时间倒序。

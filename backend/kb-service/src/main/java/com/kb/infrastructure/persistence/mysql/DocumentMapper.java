@@ -28,6 +28,24 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
     long countByStatus(@Param("status") String status);
 
     /**
+     * 查询长时间停留在中间态的文档（12-03 超时回收）。
+     * <p>
+     * 文档表 updated_at 为 ON UPDATE CURRENT_TIMESTAMP，每次状态流转都会刷新；
+     * updated_at 早于阈值说明处理链路中断（消费者宕机、消息丢失、重试耗尽进 DLQ）。
+     */
+    @Select({
+            "<script>",
+            "SELECT * FROM document WHERE status IN ",
+            "<foreach collection='statuses' item='s' open='(' separator=',' close=')'>#{s}</foreach>",
+            " AND updated_at &lt; #{threshold} ",
+            "ORDER BY updated_at ASC LIMIT #{limit}",
+            "</script>"
+    })
+    List<DocumentDO> selectStuckInProcessing(@Param("statuses") java.util.Collection<String> statuses,
+                                             @Param("threshold") java.time.LocalDateTime threshold,
+                                             @Param("limit") int limit);
+
+    /**
      * 按归属用户分页查询。
      */
     @Select("SELECT * FROM document WHERE owner_id = #{ownerId} " +
