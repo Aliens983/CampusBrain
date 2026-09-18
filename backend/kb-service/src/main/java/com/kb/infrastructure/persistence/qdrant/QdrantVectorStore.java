@@ -2,9 +2,7 @@ package com.kb.infrastructure.persistence.qdrant;
 
 import com.kb.domain.rag.VectorStoreService;
 import io.qdrant.client.QdrantClient;
-import io.qdrant.client.grpc.Collections;
 import io.qdrant.client.grpc.Collections.Distance;
-import io.qdrant.client.grpc.Collections.VectorParams;
 import io.qdrant.client.grpc.Points;
 import io.qdrant.client.grpc.Points.*;
 import jakarta.annotation.PostConstruct;
@@ -17,7 +15,6 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 
 import static io.qdrant.client.PointIdFactory.id;
-import static io.qdrant.client.ValueFactory.value;
 import static io.qdrant.client.VectorsFactory.vectors;
 import static io.qdrant.client.WithPayloadSelectorFactory.enable;
 
@@ -35,6 +32,9 @@ public class QdrantVectorStore implements VectorStoreService {
     /** Qdrant客户端实例，用于与Qdrant向量数据库通信 */
     private final QdrantClient qdrantClient;
 
+    /** Qdrant gRPC 公共样板（collection 创建/payload 转换，Q-05） */
+    private final QdrantSupport qdrantSupport;
+
     /** Qdrant集合名称 */
     @Value("${qdrant.collection-name}")
     private String collectionName;
@@ -50,28 +50,9 @@ public class QdrantVectorStore implements VectorStoreService {
     @Override
     @PostConstruct
     public void ensureCollection() {
-        try {
-            boolean exists = qdrantClient.collectionExistsAsync(collectionName).get();
-            if (!exists) {
-                Distance distance = "Cosine".equalsIgnoreCase(distanceType)
-                        ? Distance.Cosine : Distance.Euclid;
-
-                qdrantClient.createCollectionAsync(
-                        collectionName,
-                        VectorParams.newBuilder()
-                                .setSize(vectorSize)
-                                .setDistance(distance)
-                                .build()
-                ).get();
-                log.info("Qdrant collection '{}' created (dim={}, dist={})",
-                        collectionName, vectorSize, distanceType);
-            } else {
-                log.info("Qdrant collection '{}' already exists", collectionName);
-            }
-        } catch (InterruptedException | ExecutionException e) {
-            log.error("Failed to ensure Qdrant collection '{}'", collectionName, e);
-            Thread.currentThread().interrupt();
-        }
+        // Q-05：collection 幂等创建收敛到 QdrantSupport；保持历史容错语义（failFast=false）
+        qdrantSupport.ensureCollection(collectionName, vectorSize, distanceType,
+                Distance.Euclid, false);
     }
 
     @Override
@@ -83,7 +64,7 @@ public class QdrantVectorStore implements VectorStoreService {
             // Convert Map<String, Object> to Map<String, Value>
             Map<String, io.qdrant.client.grpc.JsonWithInt.Value> payload = new HashMap<>();
             for (Map.Entry<String, Object> entry : p.payload().entrySet()) {
-                payload.put(entry.getKey(), convertToValue(entry.getValue()));
+                payload.put(entry.getKey(), qdrantSupport.toValue(entry.getValue()));
             }
 
             PointStruct point = PointStruct.newBuilder()
@@ -116,7 +97,7 @@ public class QdrantVectorStore implements VectorStoreService {
             List<ScoredPoint> results = qdrantClient.searchAsync(
                     SearchPoints.newBuilder()
                             .setCollectionName(collectionName)
-                            .addAllVector(floatToList(queryVector))
+                            .addAllVector(qdrantSupport.toFloatList(queryVector))
                             .setLimit(limit)
                             .setScoreThreshold((float) scoreThreshold)
                             .setWithPayload(enable(true))
@@ -129,7 +110,7 @@ public class QdrantVectorStore implements VectorStoreService {
                 Map<String, Object> plainPayload = new HashMap<>();
                 for (Map.Entry<String, io.qdrant.client.grpc.JsonWithInt.Value> entry :
                         sp.getPayloadMap().entrySet()) {
-                    plainPayload.put(entry.getKey(), convertFromValue(entry.getValue()));
+                    plainPayload.put(entry.getKey(), qdrantSupport.fromValue(entry.getValue()));
                 }
 
                 svList.add(new ScoredVector(
@@ -201,53 +182,5 @@ public class QdrantVectorStore implements VectorStoreService {
         }
     }
 
-    // ========== Value Converters ==========
-
-    @SuppressWarnings("unchecked")
-    private io.qdrant.client.grpc.JsonWithInt.Value convertToValue(Object obj) {
-        if (obj == null) {
-            // Qdrant 的 setStringValue(null) 会抛 NPE，null 统一存为空字符串
-            return value("");
-        }
-        if (obj instanceof String s) {
-            return value(s);
-        }
-        if (obj instanceof Integer i) {
-            return value(i.longValue());
-        }
-        if (obj instanceof Long l) {
-            return value(l);
-        }
-        if (obj instanceof Double d) {
-            return value(d);
-        }
-        if (obj instanceof Float f) {
-            return value(f.doubleValue());
-        }
-        if (obj instanceof Boolean b) {
-            return value(b);
-        }
-        if (obj instanceof Map) {
-            // For simplicity, serialize complex objects to string
-            return value(obj.toString());
-        }
-        return value(obj.toString());
-    }
-
-    private Object convertFromValue(io.qdrant.client.grpc.JsonWithInt.Value value) {
-        if (value == null) return null;
-        if (value.hasStringValue()) return value.getStringValue();
-        if (value.hasIntegerValue()) return value.getIntegerValue();
-        if (value.hasDoubleValue()) return value.getDoubleValue();
-        if (value.hasBoolValue()) return value.getBoolValue();
-        return value.toString();
-    }
-
-    private List<Float> floatToList(float[] array) {
-        List<Float> list = new ArrayList<>(array.length);
-        for (float f : array) {
-            list.add(f);
-        }
-        return list;
-    }
 }
+

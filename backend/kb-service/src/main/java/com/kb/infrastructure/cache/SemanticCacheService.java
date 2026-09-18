@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.rag.EmbeddingService;
-import io.qdrant.client.grpc.Collections.VectorParams;
+import com.kb.infrastructure.persistence.qdrant.QdrantSupport;
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.grpc.Collections.Distance;
 import io.qdrant.client.grpc.Points;
@@ -26,7 +26,6 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -72,6 +71,8 @@ public class SemanticCacheService {
     private final QdrantClient qdrantClient;
     private final EmbeddingService embeddingService;
     private final ObjectMapper objectMapper;
+    /** Qdrant gRPC 公共样板（collection 创建/向量转换，Q-05） */
+    private final QdrantSupport qdrantSupport;
 
     @Value("${kb.cache.enabled:true}")
     private boolean cacheEnabled;
@@ -100,35 +101,14 @@ public class SemanticCacheService {
 
     @PostConstruct
     void ensureCollection() {
-        // 启动期 Qdrant 不可用不能阻止应用启动：缓存是可降级旁路，运行期各方法自带异常保护。
-        try {
-            if (Boolean.TRUE.equals(qdrantClient.collectionExistsAsync(collectionName).get())) {
-                log.info("Qdrant 语义缓存 collection '{}' 已存在", collectionName);
-                return;
-            }
-            qdrantClient.createCollectionAsync(collectionName,
-                    VectorParams.newBuilder().setSize(vectorSize).setDistance(Distance.Dot).build()).get();
+        // Q-05：collection 幂等创建收敛到 QdrantSupport。
+        // 启动期 Qdrant 不可用不能阻止应用启动：缓存是可降级旁路（failFast=false），运行期各方法自带异常保护。
+        boolean ready = qdrantSupport.ensureCollection(collectionName, vectorSize, "Cosine",
+                Distance.Dot, false);
+        if (ready) {
             log.info("Qdrant 语义缓存 collection '{}' 就绪 (dim={}, threshold={}, ttl={}h)",
                     collectionName, vectorSize, similarityThreshold, ttlHours);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.error("创建语义缓存 collection 被中断: {}", collectionName, e);
-        } catch (Exception e) {
-            // 多实例并发启动可能重复创建，已存在视为成功，其余异常降级关闭
-            if (e.getMessage() != null && e.getMessage().contains("already exists")) {
-                log.info("Qdrant 语义缓存 collection '{}' 被并发创建", collectionName);
-            } else {
-                log.error("Qdrant 语义缓存 collection 初始化失败，语义缓存降级关闭", e);
-            }
         }
-    }
-
-    private List<Float> toFloatList(float[] array) {
-        List<Float> list = new ArrayList<>(array.length);
-        for (float x : array) {
-            list.add(x);
-        }
-        return list;
     }
 
     /**
@@ -164,7 +144,7 @@ public class SemanticCacheService {
             List<ScoredPoint> results = qdrantClient.searchAsync(
                     SearchPoints.newBuilder()
                             .setCollectionName(collectionName)
-                            .addAllVector(toFloatList(queryVec))
+                            .addAllVector(qdrantSupport.toFloatList(queryVec))
                             .setLimit(1)
                             .setScoreThreshold((float) similarityThreshold)
                             .setFilter(freshnessFilter)
