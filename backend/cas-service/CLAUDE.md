@@ -13,12 +13,12 @@ ORM:         MyBatis-Plus 3.5.5
 DB:          MySQL 8，库 cas_db（本地开发用宿主机 3306；compose 全栈用 cas-mysql）
 Cache:       Redis（本地 6379 db0）：验证码 / 邮箱限频
 MQ:          RabbitMQ：发布 appointment.changed
-迁移:        Flyway（classpath:db/migration，V1~V6）
+迁移:        Flyway（classpath:db/migration，V1~V8）
 API 文档:    Knife4j → http://localhost:18080/api/v1/doc.html（经网关放行）
 Group/包:    com.laoliu / com.laoliu.cas
 构建运行:    mvn -pl cas-service/cas-server -am package -DskipTests
              java -jar cas-server/target/cas-server-1.0.0.jar（无 mvnw，用系统 mvn）
-测试:        cd cas-service && mvn -B test → 109 个 @Test（16 个测试类）
+测试:        cd cas-service && mvn -B test → 170 个 @Test（24 个测试类；cas-server 含 14 个需外部 MySQL 的 V8 IT）
              ⚠ 用 -pl cas-service -am 只会构建聚合 pom、不跑子模块测试，必须进 cas-service 目录跑
 密钥:        全部 ${ENV_VAR} 注入（application.yml 仅内置本地示例默认值，生产必须覆盖）
 ```
@@ -49,33 +49,37 @@ cas-framework（聚合）
   ├─ cas-spring-boot-starter-redis    RedisTemplate + RedisUtil
   ├─ cas-spring-boot-starter-mq       MqAutoConfiguration（RabbitMQ 基础配置，非空 stub）
   └─ cas-spring-boot-starter-test     BaseApplicationTest
-cas-module-infra        文件 / 邮件 / 二维码（依赖 framework + thirdparty 的 OSSService）
+cas-module-infra-api    跨模块契约（FileService / EmailService），无实现、零框架依赖（仅 spring-web 签名）
+cas-module-infra        文件 / 邮件 / 二维码（依赖 infra-api + framework + thirdparty 的 OSSService）
 cas-thirdparty          天气、阿里云 OSS、短信（仅依赖 common；AI 对话链已删除，见下）
-cas-module-system       用户 / 认证 / 角色 / 通知策略（依赖 infra + thirdparty）
-cas-module-appointment  预约核心（依赖 system + infra）
+cas-module-system-api   跨模块契约（UserInfoApi / NotificationSettingsApi + UserInfoDTO），零业务依赖
+cas-module-system       用户 / 认证 / 角色 / 通知策略（依赖 system-api + infra-api + thirdparty）
+cas-module-appointment  预约核心（仅依赖 system-api + infra-api 契约，编译期不依赖两模块实现）
 cas-server              启动入口：CampusAppointmentApplication + application.yml + Flyway
 ```
 
-硬约束：`server` 零业务代码；业务模块互不直接依赖（跨模块走 `api/`）；thirdparty 不依赖业务模块。
+硬约束：`server` 零业务代码；业务模块**编译期只依赖对方的 *-api 契约 artifact**（2.3），实现装配发生在 cas-server；跨模块调用走 `XxxApi` 接口；thirdparty 不依赖业务模块。
 
 ## DDD 分层（每个业务模块一致）
 
 ```
-interfaces/   controller/{admin,app,teacher} + dto/{request,response} + convert|assembler
-application/  service + impl（编排，不直接碰 MyBatis）
-domain/       entity（纯 POJO，无 Spring 注解）+ repository（接口）
+interfaces/   controller/{admin,app,teacher,assistant} + convert（不再放 DTO）
+application/  service + impl（编排，不直接碰 MyBatis）+ dto/{request,response}（2.2 后应用层契约统一定义于此，interfaces 直接复用）
+domain/       entity（纯 POJO，无 Spring 注解）+ repository（接口）+ view（读模型）
 infrastructure/ persistence/{dataobject,mapper,repository/*Impl} + task/mq/config/aspect
-api/          跨模块对外接口 XxxApi + XxxApiImpl + dto（仅 system 模块提供）
+跨模块 api    XxxApi + DTO 独立为 cas-module-system-api / cas-module-infra-api 两个零实现 artifact（2.3）
 ```
 
-所有业务子域（含轮播图 carousel、AI 预约助手 assistant）均已统一到上述四层包结构，不再允许新建扁平子域包。assistant 的控制器位于 `interfaces/controller/assistant/`，DTO 位于 `interfaces/dto/`，服务位于 `application/service(+impl)`；carousel 经 domain 实体 `Carousel` + `CarouselRepository` 仓储接入。
+domain 层禁止引用 interfaces/application 包，由 `DomainLayerBoundaryTest` 字节码扫描守护（2.1/2.2）。
+
+所有业务子域（含轮播图 carousel、AI 预约助手 assistant）均已统一到上述四层包结构，不再允许新建扁平子域包。assistant 的控制器位于 `interfaces/controller/assistant/`，DTO 位于 `application/dto/`，服务位于 `application/service(+impl)`；carousel 经 domain 实体 `Carousel` + `CarouselRepository` 仓储接入。
 
 ### 授权约定（2.3.2，硬约束）
 
 - **路径前缀不承载权限语义**：`/admin`、`/teacher`、`/app` 只表示接口分组，Spring Security 不再对 `/admin/**` 配置任何角色规则。
 - **授权唯一来源**是方法级 `@RequireRole`（`RoleAspect` 每次请求实时查库判定，因此角色调整立即生效，不依赖 JWT 内陈旧 claim）；新端点必须显式标注。
 - 守护测试 `AdminEndpointAuthorizationGuardTest`（cas-server）扫描全部控制器，凡类级路径以 `/admin` 开头的 HTTP 映射方法缺注解即构建失败。
-- 例外：`/appointments/assistant/**` 是 KB 内网接口，由 `ROLE_INTERNAL`（HMAC 签名）保护，不走用户角色体系。
+- 例外：`/appointments/**`（含 assistant 内网接口）整体由 `ROLE_INTERNAL`（HMAC 签名）保护，不走用户角色体系（4.9：matcher 已由 `/appointments/assistant/**` 收严为整个前缀，该前缀仅 AvailabilityController + AppointmentAssistantController 暴露）。
 
 ## 当前各模块真实内容
 
@@ -88,11 +92,11 @@ api/          跨模块对外接口 XxxApi + XxxApiImpl + dto（仅 system 模�
 - **咨询沟通**：ConsultChatAppController `/app/chat/consult/conversations/**`（列表、unread-count、open-with-consultant/open-with-student/open-by-booking、消息按 afterId 增量拉取、发消息、已读），参与者本人鉴权。
 - **余量（给 KB）**：AvailabilityController `GET /appointments/availability`（内网签名）+ `/appointments/mine`。
 - **轮播图**（四层包，domain 实体 Carousel + CarouselRepository）：CarouselAdminController（/admin/carousel，GET/POST/DELETE/{id}/reorder）、CarouselAppController（GET /app/carousel）。
-- **AI 预约助手**（四层包：`interfaces/controller/assistant` + `application/service` + `interfaces/dto`）：AppointmentAssistantController（`/appointments/assistant/**`，内网签名供 KB 调用）
+- **AI 预约助手**（四层包：`interfaces/controller/assistant` + `application/service` + `application/dto`）：AppointmentAssistantController（`/appointments/assistant/**`，内网签名供 KB 调用）
   - 查询：`GET /services?campus=&category=&keyword=`、`/consultants?campus=&keyword=&date=`、`/consultants/{id}/slots?date=`、`/rooms?campus=&date=&startTime=&endTime=`、`/equipment?campus=&keyword=&date=&startTime=&endTime=`、`/my-bookings?manageStatus=`
   - 预约（两段式）：`POST /bookings/draft`（只校验预览，草稿存 Redis TTL 10min，key 按 userId 隔离）→ `POST /bookings/{draftId}/confirm`（二次校验后通过 `ConsultationService` / `RoomService` / `EquipmentService` / `BookService` 接口下单）；`GET|DELETE /bookings/draft/{draftId}`、`POST /bookings/{orderId}/cancel`
   - 校验不通过时返回 `valid=false` + `invalidReason`（不抛异常），便于 AI 直接转述给用户。
-- **领域实体**：ServiceItem、ServiceCategory、AppointmentRecord、Consultant、TimeSlot、Room、Equipment、Carousel、ConsultChatConversation、ConsultChatMessage。
+- **领域实体**：ServiceItem、ServiceCategory、Consultant、TimeSlot、Room、Equipment、Carousel、ConsultChatConversation、ConsultChatMessage（预约单 item 表不建领域实体，经 ItemDO + domain/view 的 BookingQueryView 读写）。
 - **定时/MQ**：infrastructure/task/BookingAutoCompleteTask（60s 扫描过期置 COMPLETED）+ AppointmentScheduleConfig；infrastructure/mq/BookingEventPublisher + RabbitMqConfig + AppointmentChangedEvent（发 appointment.changed）。
 - **MQ 拓扑（2026-09-12 改造）**：显式声明 `DirectExchange cas.appointment.exchange` + Binding，不再依赖默认 exchange 的隐式绑定；队列名沿用 `appointment.changed` 以免存量消息丢失。消息体为 `AppointmentChangedEvent` 经 ObjectMapper 序列化的 JSON（取代手工拼接字符串，后者无转义、易产出非法 JSON），序列化失败只记日志、不影响预约主流程。**KB 侧 `AppointmentEventConfig` 的同名常量需与此处同步。**
 
@@ -101,12 +105,12 @@ api/          跨模块对外接口 XxxApi + XxxApiImpl + dto（仅 system 模�
 - **登录强制校验图形验证码**（2026-09-12 起）：`POST /auth/login` 必须传 `captchaUuid` + `captchaCode`，验证码**一次性**（`CaptchaService.validateCaptcha` 取出即删）。同一账号连续失败 **5 次锁定 15 分钟**（Redis `login:fail:{email}` 原子 INCR），登录成功清零。⚠ 前后端需同时发布，否则全员无法登录。
 - controller/admin：UserController（`@RequestMapping("/users")`：`/`、`/me`、`/list`、POST、PUT `/me`、`/me/notify` GET/PUT、PUT `/password`、GET `/me/bookings`）、RoleAdminController（`/admin/users/role` GET/PUT）、NotifyPolicyAdminController（`/admin/settings/notify` GET/PUT）、EmailAdminController（`POST /admin/email`）。
 - aspect/RoleAspect：**已修复**——权限不足抛 `ForbiddenException`/`UnauthorizedException`，由 GlobalExceptionHandler 统一返回；超管放行全部，TEACHER 可访问开放给 USER 的接口，教师专属接口须显式列 TEACHER。
-- api：UserInfoApi（供 appointment 取用户信息）、GetUserIdViaTokenApi。
+- api 契约：`UserInfoApi`、`NotificationSettingsApi` + `UserInfoDTO` 位于独立 artifact **cas-module-system-api**；实现 `UserInfoApiImpl` 在本模块 api/impl，`NotificationSettingsService` 直接实现该契约。`GetUserIdViaTokenApi` 定义在 cas-common。
 - 另有 NotificationPolicy*（全局策略 + 用户偏好）、BookingRecord*（我的预约视图）。
 
 ### cas-module-infra
 - FileAdminController `POST /admin/files`（本地上传，绝对路径 transferTo，支持子目录 uuid 命名）、OSSAdminController `POST /admin/files/oss`；QRCodeAppController `GET /app/qr-code`。
-- FileService / EmailService（@Async，JavaMail 465 SSL）/ QRCodeService（Hutool → OSSService）。无 domain 层。
+- FileService / EmailService 契约位于 **cas-module-infra-api**（2.3，FileService 含字节版 uploadFile 与 deleteByUrl）；本模块提供实现（@Async，JavaMail 465 SSL）/ QRCodeService（Hutool → OSSService）。无 domain 层。
 
 ### cas-thirdparty（注意：AI 对话链已整体删除）
 - 现存：WeatherController（`GET /weather`、`/weather/local`）、WeatherApi(Impl)、OSSService(Impl)、SmsService(Impl)、AliyunConfig、OSSConfig。
@@ -115,15 +119,15 @@ api/          跨模块对外接口 XxxApi + XxxApiImpl + dto（仅 system 模�
 
 ### cas-server
 - CampusAppointmentApplication（@SpringBootApplication + @MapperScan("com.laoliu.cas.**.mapper") + @ComponentScan("com.laoliu.cas")）。
-- DbResetConfig：仅当环境变量 `APP_DB_RESET_ON_STARTUP=true` 且 `FLYWAY_CLEAN_DISABLED=false`（compose 演示模式）时启动 clean+migrate；两个开关矛盾时 Bean 初始化即 fail-fast。
+- DbResetConfig：三道开关齐备才执行——`APP_DB_RESET_ON_STARTUP=true` + `FLYWAY_CLEAN_DISABLED=false` + `APP_REDIS_FLUSH_ON_RESET=true`（后者仅控制是否 FLUSHDB；缺它只跳过 Redis 并打 WARN，前两个矛盾时 Bean 初始化 fail-fast），compose 默认全 false/true/false（6.2/6.3）。
 - controller/ConfigDemoController（`GET /config-demo/greeting`，Nacos 热更新演示）、SentinelDemoController（`GET /sentinel-demo/limited`）。
-- resources：application.yml（无 application.yml.example，无明文密钥，全部环境变量 + 本地默认值）、db/migration/V1~V6。
+- resources：application.yml（无 application.yml.example，无明文密钥，全部环境变量 + 本地默认值；DB/Redis 主机经 `${DB_HOST:localhost}` 等占位符注入，6.5）、db/migration/V1~V8。
 
-## 数据库（Flyway V1~V6，全新机器零手工 SQL）
+## 数据库（Flyway V1~V8，全新机器零手工 SQL）
 
 | 表 | 要点 |
 |---|---|
-| `user` | role：0 普通用户 / 1 管理员 / 2 超管 / **3 教师**；email_notify 偏好 |
+| `user` | role 唯一来源 common-auth `RolePolicy`：0 普通用户 / 1 管理员 / 2 超级管理员 / 3 教师（可经接口分配仅 0/1/3，超管不可经接口设置）；email_notify 偏好 |
 | `notification_policy` | 全局单行，邮件通道开关 |
 | `service_category` | 固定 4 类（教师咨询/设备借用/教室空间/活动报名），不可在管理端增删改 |
 | `services` | category_id（代码级外键）、campus(cq/xs)、image_url、capacity(-1 不限)、booked_count |
@@ -131,12 +135,12 @@ api/          跨模块对外接口 XxxApi + XxxApiImpl + dto（仅 system 模�
 | `room` | 教室 + 校区；同间同时段唯一 |
 | `equipment` | total_stock / available_stock / unit / location |
 | `item` | 预约单：service_id + 资源列其一（consultant_id/slot_id… 或 room_id… 或 equipment_id/quantity）；manage_status 0待审/1通过/2拒绝/3取消/4完成；reason |
-| `carousel` | image_url / sort / enabled（≤6） |
+| `carousel` | image_url / sort / enabled（上限 `${carousel.max-count:6}`，40030 CAROUSEL_LIMIT_EXCEEDED） |
 | `consult_chat_conversation` / `consult_chat_message` | V5 新增，学生⇄教师 1:1 唯一会话；read_flag 未读 |
 
 种子：V1 两校区服务/咨询师/教室/设备/轮播图/分类；V2 admin@campus.com、user@campus.com（密码 123456）；V3 教师账号 + 咨询师回填。
 
-**迁移约定**：V*.sql 只面向全新库做增量建表/种子，不写 ALTER 既有表；已上线库的结构演进直接对库执行 SQL，参考 `UPGRADE-service-category.md`、`UPGRADE-teacher-role.md`。禁止改写历史 V 文件（checksum）。`sql/` 目录是演进/参考脚本，不参与 Flyway。
+**迁移约定**：V1~V6 面向全新库建表/种子；V7/V8 是预约防重/唯一约束守卫（V8 用生成列 + 唯一索引，兼容存量重复数据）。已上线库的结构演进直接对库执行 SQL，参考 `UPGRADE-service-category.md`、`UPGRADE-teacher-role.md`。禁止改写已应用的历史 V 文件（checksum，6.1 已恢复 validate-on-migrate）。`sql/` 目录是演进/参考脚本，不参与 Flyway。
 
 ## 关键业务规则
 
@@ -159,12 +163,13 @@ Don't：cas-server/cas-common 写业务；跨模块直接注入 Mapper；注入 
 
 ## 测试现状
 
-109 个 `@Test` / 16 个测试类（JUnit5 + Mockito，纯单元测试，不起 Docker）：
-- appointment（54）：BookServiceImplTest 16、AppointmentAssistantServiceImplTest 12、ServiceStatusServiceImplTest 10、ServiceItemServiceImplTest 8、TeacherAuditServiceImplTest 5、AvailabilityControllerTest 3。
-- system（43）：AuthServiceTest 17、RoleServiceImplTest 10、RoleAspectTest 11（AspectJProxyFactory 真实织入，验证类级/方法级 @RequireRole 与 401/403）、EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
-- infra（5）：QRCodeServiceImplTest 3、EmailServiceImplTest 2。
+170 个 `@Test` / 24 个测试类（JUnit5 + Mockito；除 cas-server 的 V8 IT 外均为纯单元测试，不起 Docker）：
+- appointment（83，11 类）：BookServiceImplTest 18、AppointmentAssistantServiceImplTest 16、ServiceStatusServiceImplTest 16、CarouselServiceImplTest 7、ServiceItemServiceImplTest 8、TeacherAuditServiceImplTest 5、AvailabilityControllerTest 3、ConsultChatServiceImplTest 3、BookingEventPublisherTest 4、BookingAutoCompleteTaskTest 2、DomainLayerBoundaryTest 1。
+- system（48，5 类）：AuthServiceTest 18、RoleServiceImplTest 14、RoleAspectTest 11、EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
+- infra（13，3 类）：FileServiceImplDeleteByUrlTest 8、QRCodeServiceImplTest 3、EmailServiceImplTest 2。
 - thirdparty（6）：WeatherApiImplTest 4、SmsServiceImplTest 2。
-- cas-server（1）：AdminEndpointAuthorizationGuardTest（管理端控制器授权守护，纯反射）。
+- cas-server（20，3 类）：V8BookingGuardDbTest 14（需外部 MySQL，IT_MYSQL_* 环境变量）、DbResetConfigTest 5、AdminEndpointAuthorizationGuardTest 1（管理端控制器授权守护，纯反射）。
+- 模块外同域：cas-spring-boot-starter-security 6（InternalAuthFilterTest 3 等）、gateway 16（AuthGlobalFilterTest 等）。
 
 ## 仍存在的已知限制（真实，未修）
 

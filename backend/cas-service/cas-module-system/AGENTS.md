@@ -31,8 +31,9 @@ infrastructure/
 ├── aspect/     RoleAspect（@RequireRole 拦截，抛 Unauthorized/ForbiddenException）
 └── persistence/dataobject（UserDO、BookingRecordDO）
                 mapper（UserMapper、NotificationPolicyMapper —— 后者注解 SQL 直查 notification_policy 单行，无 DO）· repository/UserRepositoryImpl
-api/            UserInfoApi + impl/UserInfoApiImpl + dto/UserInfoDTO
-                GetUserIdViaTokenApiImpl（接口定义在 cas-common）
+api/            api/impl：UserInfoApiImpl（契约 UserInfoApi + UserInfoDTO 在独立 artifact
+                cas-module-system-api，2.3）、GetUserIdViaTokenApiImpl（接口定义在 cas-common）；
+                NotificationSettingsService 直接实现 system-api 的 NotificationSettingsApi
 ```
 
 > 历史问题均已修复：登录/注册/验证码**无重复 Controller**；**RoleAspect 改为抛异常**（走
@@ -44,7 +45,7 @@ api/            UserInfoApi + impl/UserInfoApiImpl + dto/UserInfoDTO
 - **注册/重置**：邮箱 6 位验证码（Redis `verification_code:{email}` TTL 300s，限频 `rate_limit:email:{email}` 60s）→ 写库。
 - **验证码**：Hutool 算术验证码，答案存 Redis（captcha:{uuid} TTL 300s），图片经 infra FileService 落 uploads/captcha。
 - **角色**：`UserRoleEnum` USER(0)/ADMIN(1)/SUPER_ADMIN(2)/TEACHER(3)；超管全放行，教师可访问开放给 USER 的接口。
-- **通知**：NotificationSettingsService 管理全局 `notification_policy` 与用户 `email_notify` 偏好。
+- **通知**：NotificationSettingsService 管理全局 `notification_policy` 与用户 `email_notify` 偏好，并实现 system-api 的 `NotificationSettingsApi#isEmailAllowed` 供 appointment 跨模块调用。
 
 ## 接口（网关前缀 /api/v1）
 
@@ -57,10 +58,11 @@ api/            UserInfoApi + impl/UserInfoApiImpl + dto/UserInfoDTO
 
 ## 测试
 
-4 个测试类 / 32 个 `@Test`：AuthServiceTest 17、RoleServiceImplTest 10、
-EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
+5 个测试类 / 48 个 `@Test`：AuthServiceTest 18（含重置码失败锁定 4.13）、
+RoleServiceImplTest 14、RoleAspectTest 11、EmailVerificationServiceImplTest 3、UserServiceImplTest 2。
 
 ## 依赖与对外 API
 
-依赖 `cas-module-infra`（邮件/文件）、`cas-thirdparty`、`cas-framework`；不依赖 appointment。
-对外提供 `UserInfoApi`（appointment 取用户）与 `GetUserIdViaTokenApi`（RoleAspect 等用）。
+编译期仅依赖 `cas-module-infra-api`（EmailService 契约）、`cas-thirdparty`、`cas-framework`；不依赖 appointment。
+对外契约位于独立 artifact `cas-module-system-api`：`UserInfoApi`（appointment 取用户）、
+`NotificationSettingsApi`（邮件发送许可合成判断）；`GetUserIdViaTokenApi` 定义在 cas-common（RoleAspect 等用）。

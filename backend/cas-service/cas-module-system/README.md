@@ -22,7 +22,7 @@ com.laoliu.cas.system
 ├── infrastructure/
 │   ├── aspect/                 # RoleAspect（@RequireRole 拦截）
 │   └── persistence/            # UserDO / UserMapper / UserRepositoryImpl
-└── api/                        # UserInfoApi、GetUserIdViaTokenApi（供其他模块调用）
+└── api/impl/                   # UserInfoApiImpl、GetUserIdViaTokenApiImpl（契约 UserInfoApi/NotificationSettingsApi 位于独立 artifact cas-module-system-api，2.3）
 ```
 
 ## 主要 REST 分组（网关前缀 `/api/v1`）
@@ -40,4 +40,4 @@ com.laoliu.cas.system
 `user`（role 0 普通/1 管理员/2 超管/3 教师 · email_notify）、`notification_policy`（单行策略）。
 
 ## 依赖
-依赖 `cas-module-infra`（邮件/文件）；被 `cas-module-appointment` 依赖（经 `UserInfoApi` 取用户）。
+编译期依赖 `cas-module-infra-api`（EmailService 契约）；`cas-module-appointment` 仅依赖本模块的契约 artifact `cas-module-system-api`（UserInfoApi / NotificationSettingsApi，2.3），实现在 cas-server 运行时装配。

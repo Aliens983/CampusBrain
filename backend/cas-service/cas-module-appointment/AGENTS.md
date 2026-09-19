@@ -8,32 +8,34 @@
 interfaces/
 ├── controller/
 │   ├── admin/    ServiceAdminController(/admin/services) · ServiceStatusAdminController(/admin/bookings)
+│   │             CarouselAdminController(/admin/carousel)
 │   ├── app/      BookAppController(/app/bookings) · ServiceStatusController(/app/bookings/mine)
 │   │             ServiceController(/app/services) · ServiceCategoryController(/app/service-categories)
 │   │             ConsultationAppController(/app/consultations) · RoomAppController(/app/rooms)
 │   │             EquipmentAppController(/app/equipment) · AvailabilityController(/appointments/*)
-│   │             ConsultChatAppController(/app/chat/consult/**)
-│   └── teacher/  TeacherAuditController(/teacher/bookings)
+│   │             CarouselAppController(/app/carousel) · ConsultChatAppController(/app/chat/consult/**)
+│   ├── teacher/  TeacherAuditController(/teacher/bookings)
+│   └── assistant/ AppointmentAssistantController(/appointments/assistant/**，内网 HMAC 签名)
+└── convert/      ServiceConvert · BookingViewConverter · CarouselConvert（interfaces 不再持有 DTO，2.2）
+application/
 ├── dto/          request/（BookServiceRequest、RoomBookRequest、EquipmentBookRequest、
-│                     ConsultationBookRequest、AuditRequest、TeacherAuditRequest、Service*ReqVO …）
-│                 response/（ServiceRespVO、ServiceCategoryRespVO、BookingDTO、ServiceStatusResponse、
+│   │             ConsultationBookRequest、AuditRequest、TeacherAuditRequest、Service*ReqVO、
+│   │             AssistantBookingDraftRequest、CarouselImage record …）
+│                 response/（ServiceRespVO、ServiceCategoryRespVO、BookingResponse、ServiceStatusResponse、
 │                     ConsultantResponse、RoomResponse、TimeSlotRespVO、BookResultResponse、
-│                     ServiceAvailabilityVO、UserServicesRespVO …）
-└── convert/      ServiceConvert
-application/service/  Book · ServiceStatus · Service · ServiceCategory · Consultation · Room ·
-                      Equipment · TeacherAudit · ConsultChat（接口 + impl）
-domain/          entity：Service · ServiceCategory · AppointmentRecord · Consultant · TimeSlot ·
-                        Room · Equipment · ConsultChatConversation · ConsultChatMessage
-                 repository：对应 *Repository 接口
+│                     ServiceAvailabilityResponse、Assistant*Response/Draft/Result …）
+└── service/      Book · ServiceStatus · ServiceItem · ServiceCategory · Consultation · Room ·
+                      Equipment · TeacherAudit · ConsultChat · AppointmentAssistant · Carousel（接口 + impl）
+domain/          entity：ServiceItem · ServiceCategory · Consultant · TimeSlot ·
+                        Room · Equipment · Carousel · ConsultChatConversation · ConsultChatMessage
+                 repository：对应 *Repository 接口；view：BookingQueryView 等读模型（2.1）
 infrastructure/
-├── persistence/ dataobject（ServicesDO/ServiceCategoryDO/ItemDO/AppointmentRecordDO/ConsultantDO/
-│                 TimeSlotDO/RoomDO/EquipmentDO/ConsultChat*DO）+ mapper + repository/*Impl
+├── persistence/ dataobject（ServicesDO/ServiceCategoryDO/ItemDO/ConsultantDO/
+│                 TimeSlotDO/RoomDO/EquipmentDO/CarouselDO/ConsultChat*DO）+ mapper + repository/*Impl
 ├── task/        BookingAutoCompleteTask（@Scheduled 60s）+ AppointmentScheduleConfig
 ├── mq/          BookingEventPublisher + RabbitMqConfig + AppointmentChangedEvent
 │                （发 appointment.changed；显式 DirectExchange + Binding）
 └── config/      AppointmentScheduleConfig
-carousel/        独立子域：controller(CarouselAdminController/CarouselAppController) · service ·
-                 mapper · dataobject（轮播图，未严格四层）
 ```
 
 > 历史上曾存在的「FAKE 硬编码咨询师/设备数据」「重复 ServiceController/ServiceStatusController」
@@ -70,9 +72,13 @@ Flyway：`services`（category_id/campus/image_url/capacity/booked_count）、`s
 
 ## 测试
 
-5 个测试类 / 41 个 `@Test`：BookServiceImplTest 15、ServiceStatusServiceImplTest 10、
-ServiceServiceImplTest 8、TeacherAuditServiceImplTest 5、AvailabilityControllerTest 3。
+11 个测试类 / 83 个 `@Test`：BookServiceImplTest 18、AppointmentAssistantServiceImplTest 16、
+ServiceStatusServiceImplTest 16、CarouselServiceImplTest 7（1.5/2.10/2.11）、ServiceItemServiceImplTest 8、
+TeacherAuditServiceImplTest 5、AvailabilityControllerTest 3、ConsultChatServiceImplTest 3、
+BookingEventPublisherTest 4、BookingAutoCompleteTaskTest 2、DomainLayerBoundaryTest 1（domain 反向依赖字节码守卫，2.1/2.2）。
 
 ## 依赖
 
-依赖 `cas-module-system`（UserInfoApi）、`cas-module-infra`（Email/File）、`cas-framework`；不依赖其他业务模块。
+编译期仅依赖 `cas-module-system-api`（UserInfoApi/NotificationSettingsApi）与
+`cas-module-infra-api`（FileService/EmailService）契约 artifact + `cas-framework`（2.3）；
+system/infra 的实现只在 cas-server 运行时装配，本模块不依赖其他业务模块实现。
