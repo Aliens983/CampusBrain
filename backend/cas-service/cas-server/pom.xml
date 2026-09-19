@@ -153,6 +153,27 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- 真实 MySQL 集成测试（5.1/5.2：Flyway 冒烟 + 唯一约束/并发防超卖验证），
+             仅测试期使用，运行时不引入 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>1.19.8</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
+            <version>1.19.8</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- 集成测试期需要驱动类在测试编译/运行 classpath（main 中为 runtime） -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -168,6 +189,18 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <!-- 本机/CI 环境 Ryuk 回收容器端口探测抖动会导致 Testcontainers 集成测试被
+                         disabledWithoutDocker 静默跳过；1.19.8 仅识别该环境变量（系统属性无效）。
+                         关闭后容器由 JVM shutdown hook + TC 标签回收，不影响用例正确性。 -->
+                    <environmentVariables>
+                        <TESTCONTAINERS_RYUK_DISABLED>true</TESTCONTAINERS_RYUK_DISABLED>
+                    </environmentVariables>
+                </configuration>
             </plugin>
         </plugins>
     </build>
