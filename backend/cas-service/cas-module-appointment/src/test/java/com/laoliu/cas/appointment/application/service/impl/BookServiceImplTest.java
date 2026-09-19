@@ -9,6 +9,7 @@ import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.domain.view.BookingRef;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
@@ -67,9 +68,11 @@ class BookServiceImplTest {
     private static final Long SERVICE_ID_2 = 2L;
     private static final Long ORDER_ID = 10L;
 
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+
     @BeforeEach
     void setUp() {
-        bookService = new BookServiceImpl(bookingRepository, serviceRepository, userInfoApi, bookingEventPublisher, new BookingMetrics(new SimpleMeterRegistry()));
+        bookService = new BookServiceImpl(bookingRepository, serviceRepository, userInfoApi, bookingEventPublisher, new BookingMetrics(meterRegistry));
     }
 
     @Nested
@@ -236,45 +239,49 @@ class BookServiceImplTest {
         @Test
         @DisplayName("应当成功取消预约")
         void shouldCancelBookingsSuccessfully() {
-            // Given：先 SELECT 出可取消订单，再按实际命中集合执行原子 UPDATE
+            // Given：FOR UPDATE 锁定读返回可取消订单引用，再按实际命中集合执行原子 UPDATE
             List<Long> bookingIds = List.of(ORDER_ID);
-            when(bookingRepository.findCancellableOrderIds(USER_ID, bookingIds))
-                    .thenReturn(List.of(ORDER_ID));
-            when(bookingRepository.cancelByIds(USER_ID, List.of(ORDER_ID))).thenReturn(1);
+            when(bookingRepository.findCancellableBookings(USER_ID, bookingIds))
+                    .thenReturn(List.of(new BookingRef(ORDER_ID, USER_ID, SERVICE_ID)));
+            // 多表 UPDATE 取消 1 单返回 2（item + services 各匹配一行）
+            when(bookingRepository.cancelByIds(USER_ID, List.of(ORDER_ID))).thenReturn(2);
 
             // When
             boolean result = bookService.cancelBookings(USER_ID, bookingIds);
 
             // Then
             assertTrue(result);
-            verify(bookingRepository).findCancellableOrderIds(USER_ID, bookingIds);
+            verify(bookingRepository).findCancellableBookings(USER_ID, bookingIds);
             verify(bookingRepository).cancelByIds(USER_ID, List.of(ORDER_ID));
+            // 计数按锁定集合大小（1 单），不按多表行数之和（2）
+            assertEquals(1.0, meterRegistry.counter("booking.cancelled").count());
         }
 
         @Test
-        @DisplayName("取消成功时发布变更事件，库存与时段释放已由原子 SQL 完成")
+        @DisplayName("取消成功时按订单真实 serviceId 发布 CANCELLED（3.5.1：不再错传 orderId）")
         void shouldPublishChangedEventOnCancel() {
             // Given
             List<Long> bookingIds = List.of(ORDER_ID);
-            when(bookingRepository.findCancellableOrderIds(USER_ID, bookingIds))
-                    .thenReturn(List.of(ORDER_ID));
-            when(bookingRepository.cancelByIds(USER_ID, List.of(ORDER_ID))).thenReturn(1);
+            when(bookingRepository.findCancellableBookings(USER_ID, bookingIds))
+                    .thenReturn(List.of(new BookingRef(ORDER_ID, USER_ID, SERVICE_ID)));
+            when(bookingRepository.cancelByIds(USER_ID, List.of(ORDER_ID))).thenReturn(2);
 
             // When
             boolean result = bookService.cancelBookings(USER_ID, bookingIds);
 
-            // Then：service 层不再单独回补（已在 cancelBookings 的多表 UPDATE 内原子完成，7.3.6）
+            // Then：事件第二参是 serviceId；service 层不单独回补（多表 UPDATE 内原子完成，7.3.6）
             assertTrue(result);
-            verify(bookingEventPublisher).publishChanged(USER_ID, ORDER_ID, "CANCELLED");
+            verify(bookingEventPublisher).publishChanged(USER_ID, SERVICE_ID, "CANCELLED");
+            verify(bookingEventPublisher, never()).publishChanged(USER_ID, ORDER_ID, "CANCELLED");
             verify(bookingRepository, never()).releaseStock(anyLong());
         }
 
         @Test
         @DisplayName("无可取消订单（全部不属于本人/状态不符）时不执行 UPDATE、不发事件（12-09）")
         void shouldNotPublishEventWhenCancelFailed() {
-            // Given：SELECT 命中为空（无待审核单/活动单可取消）
+            // Given：锁定读命中为空（无待审核单/活动单可取消）
             List<Long> bookingIds = List.of(ORDER_ID);
-            when(bookingRepository.findCancellableOrderIds(USER_ID, bookingIds))
+            when(bookingRepository.findCancellableBookings(USER_ID, bookingIds))
                     .thenReturn(Collections.emptyList());
 
             // When
@@ -287,23 +294,26 @@ class BookServiceImplTest {
         }
 
         @Test
-        @DisplayName("批量取消仅部分命中：只对实际取消的订单发 CANCELLED 事件（12-09）")
+        @DisplayName("批量取消仅部分命中：只对实际取消的订单按其 serviceId 发 CANCELLED（12-09/3.5）")
         void shouldPublishEventOnlyForActuallyCancelledOrders() {
-            // Given：入参两个订单，只有 ORDER_ID 满足"本人所有 + 待审核/活动已通过"
+            // Given：入参两个订单，只有 ORDER_ID 满足"本人所有 + 待审核/活动已通过"，
+            // 且两单属于不同服务，未命中订单的 serviceId 绝不能出现在事件里
             Long notOwnedOrNotCancellable = 999L;
+            Long otherServiceId = 50L;
             List<Long> bookingIds = List.of(ORDER_ID, notOwnedOrNotCancellable);
-            when(bookingRepository.findCancellableOrderIds(USER_ID, bookingIds))
-                    .thenReturn(List.of(ORDER_ID));
-            when(bookingRepository.cancelByIds(USER_ID, List.of(ORDER_ID))).thenReturn(1);
+            when(bookingRepository.findCancellableBookings(USER_ID, bookingIds))
+                    .thenReturn(List.of(new BookingRef(ORDER_ID, USER_ID, SERVICE_ID)));
+            when(bookingRepository.cancelByIds(USER_ID, List.of(ORDER_ID))).thenReturn(2);
 
             // When
             boolean result = bookService.cancelBookings(USER_ID, bookingIds);
 
-            // Then：UPDATE 与事件都只涉及实际命中的 ORDER_ID
+            // Then：UPDATE 与事件都只涉及实际命中的 ORDER_ID/SERVICE_ID
             assertTrue(result);
-            verify(bookingEventPublisher).publishChanged(USER_ID, ORDER_ID, "CANCELLED");
+            verify(bookingEventPublisher, times(1))
+                    .publishChanged(USER_ID, SERVICE_ID, "CANCELLED");
             verify(bookingEventPublisher, never())
-                    .publishChanged(anyLong(), eq(notOwnedOrNotCancellable), anyString());
+                    .publishChanged(anyLong(), eq(otherServiceId), anyString());
         }
 
         @Test
@@ -314,7 +324,7 @@ class BookServiceImplTest {
 
             // Then
             assertFalse(result);
-            verify(bookingRepository, never()).findCancellableOrderIds(anyLong(), anyList());
+            verify(bookingRepository, never()).findCancellableBookings(anyLong(), anyList());
             verify(bookingRepository, never()).cancelByIds(anyLong(), anyList());
         }
 

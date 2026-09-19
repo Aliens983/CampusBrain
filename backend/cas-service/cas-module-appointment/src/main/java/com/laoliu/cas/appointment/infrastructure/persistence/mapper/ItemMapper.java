@@ -7,6 +7,7 @@ import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.domain.view.BookingRef;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -44,13 +45,15 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                   @Param("dedupeSeconds") int dedupeSeconds);
 
     /**
-     * 筛出当前用户给定订单中可取消（待审核单、或已通过的活动单）的订单 ID（12-09）。
-     * WHERE 与 {@link #cancelByIdsAndRelease} 完全一致。
+     * 筛出当前用户给定订单中可取消（待审核单、或已通过的活动单）的订单引用（12-09 + 3.5）。
+     * WHERE 与 {@link #cancelByIdsAndRelease} 完全一致；SQL 为 FOR UPDATE 锁定读，
+     * 必须在事务内调用：返回集合同步携带 orderId/userId/serviceId，
+     * 既作为后续 UPDATE 的精确入参，也作为 CANCELLED 事件的真实 serviceId 来源。
      */
-    List<Long> selectCancellableOrderIds(@Param("userId") Long userId,
-                                         @Param("orderIds") List<Long> orderIds,
-                                         @Param("pendingCode") int pendingCode,
-                                         @Param("approvedCode") int approvedCode);
+    List<BookingRef> selectCancellableBookingRefs(@Param("userId") Long userId,
+                                                  @Param("orderIds") List<Long> orderIds,
+                                                  @Param("pendingCode") int pendingCode,
+                                                  @Param("approvedCode") int approvedCode);
 
     /**
      * 取消并释放资源（7.3.6）：一条多表 UPDATE 原子完成「状态置取消 + 通用单回补库存 +

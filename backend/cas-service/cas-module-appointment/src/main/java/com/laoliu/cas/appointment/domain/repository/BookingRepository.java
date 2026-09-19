@@ -1,6 +1,7 @@
 package com.laoliu.cas.appointment.domain.repository;
 
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.domain.view.BookingRef;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.common.enums.ManageStatus;
@@ -61,21 +62,26 @@ public interface BookingRepository {
     int countRoomOverlap(Long roomId, LocalDate date, String startTime, String endTime);
 
     /**
-     * 筛出当前用户给定订单中"可取消"的订单 ID（12-09）。
+     * 筛出当前用户给定订单中"可取消"的订单引用（12-09 + 3.5）。
      * <p>
-     * 可取消条件与原原子 UPDATE 的 WHERE 完全一致：归属本人、ID 在入参集合内、
-     * 且为待审核单，或已通过的活动单。必须先查明实际命中集合，
-     * CANCELLED 事件才能只发给真正被取消的订单，而不是入参里的每个 id
-     * （不属于本人/已取消/已通过的非活动单都不应收到事件）。
+     * 可取消条件与原子 UPDATE 的 WHERE 完全一致：归属本人、ID 在入参集合内，
+     * 且为待审核单，或已通过的活动单。该查询为 FOR UPDATE 锁定读（须在事务内）：
+     * 调用期间命中行被锁定，返回集合即随后 UPDATE 的实际命中集合，
+     * CANCELLED 事件据此逐单按真实 serviceId 发布，杜绝虚假事件与 serviceId 错传。
      */
-    List<Long> findCancellableOrderIds(Long userId, List<Long> orderIds);
+    List<BookingRef> findCancellableBookings(Long userId, List<Long> orderIds);
 
     /**
-     * 按已确认的订单集合原子完成「状态置取消 + 通用单回补 booked_count +
-     * 咨询单释放时段」（7.3.6）。仅更新 {@code orderIds} 中仍满足可取消条件的行，
-     * SELECT 与 UPDATE 之间状态被外部改动时以 UPDATE 的实际影响行数为准。
+     * 按已锁定的订单集合原子完成「状态置取消 + 通用单回补 booked_count +
+     * 咨询单释放时段」（7.3.6）。入参必须来自同事务内的
+     * {@link #findCancellableBookings}（FOR UPDATE 已锁定命中行），
+     * 正常路径下集合内每一行都会被更新。
+     * <p>
+     * 注意：多表 UPDATE 返回值是各表匹配行之和（取消 1 单通常返回 2），
+     * <b>不能</b>用作取消订单数，只能以 {@code > 0} 判定是否命中；
+     * 事件集合与计数以 {@link #findCancellableBookings} 的返回为准（3.5.2）。
      *
-     * @return 实际取消的订单行数
+     * @return 多表 UPDATE 各表匹配行之和；0 表示无命中
      */
     int cancelByIds(Long userId, List<Long> orderIds);
 

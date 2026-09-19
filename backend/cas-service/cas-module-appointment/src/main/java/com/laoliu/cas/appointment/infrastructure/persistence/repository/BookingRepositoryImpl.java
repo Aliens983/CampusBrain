@@ -8,6 +8,7 @@ import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.mapper.ItemMapper;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.domain.view.BookingRef;
 import com.laoliu.cas.common.enums.ManageStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -146,8 +147,8 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public List<Long> findCancellableOrderIds(Long userId, List<Long> orderIds) {
-        return itemMapper.selectCancellableOrderIds(userId, orderIds, PENDING, APPROVED);
+    public List<BookingRef> findCancellableBookings(Long userId, List<Long> orderIds) {
+        return itemMapper.selectCancellableBookingRefs(userId, orderIds, PENDING, APPROVED);
     }
 
     @Override

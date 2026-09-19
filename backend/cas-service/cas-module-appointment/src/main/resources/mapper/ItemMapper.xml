@@ -42,6 +42,14 @@
         <result property="serviceState" column="service_state"/>
     </resultMap>
 
+    <resultMap id="BookingRefResultMap" type="com.laoliu.cas.appointment.domain.view.BookingRef">
+        <constructor>
+            <idArg column="order_id" javaType="java.lang.Long"/>
+            <arg column="user_id" javaType="java.lang.Long"/>
+            <arg column="service_id" javaType="java.lang.Long"/>
+        </constructor>
+    </resultMap>
+
     <!-- 「容量型预约」唯一判据（3.6）：consultant/slot/room/equipment 四个资源外键全空。
          只有容量型预约下单时真实扣减过 services.booked_count，取消/完结才允许回补。
          cancelByIdsAndRelease / adminCancelAndRelease / adminCompleteAndRelease /
@@ -154,17 +162,16 @@
         WHERE i.user_id = #{userId}
     </select>
 
-    <!-- 取消并释放资源（7.3.6）：一条多表 UPDATE 原子完成三件事——
-         1) item.manage_status -> 已取消，仅命中「待审核单」或「已通过的活动单」（状态机白名单）；
-         2) 仅通用类预约（consultant/slot/room/equipment 外键均为空）回补 services.booked_count；
-            资源类预约下单时从不扣减 booked_count，此处绝不能误减（否则会吃掉通用单的名额）；
-         3) 咨询类预约同步把占用的时段置回可约。
-         WHERE 只匹配本次真正被取消的行：重复调用幂等——历史已取消单不再匹配，
-         既不会二次回补，也不会把同一时段被他人重新占用后（available 已被重新置 0）误释放。 -->
-    <!-- 先筛出真正可取消的订单 ID（12-09）：归属本人 + 待审核单/已通过活动单。
-         CANCELLED 事件只能发给这个集合，不能发给入参中的每个 id。 -->
-    <select id="selectCancellableOrderIds" resultType="java.lang.Long">
-        SELECT item.order_id
+    <!-- 先筛出真正可取消的订单（12-09 + 3.5）：归属本人 + 待审核单/已通过活动单。
+         同时取回 user_id/service_id：CANCELLED 事件必须按订单真实 serviceId 发布，
+         不能拿 orderId 顶替（3.5.1）。
+         FOR UPDATE（3.5.2）：在取消事务内对命中的 item 行加写锁意向，
+         SELECT 与后续多表 UPDATE 之间行状态不可能被并发改动，
+         因而本结果集 == UPDATE 实际命中集合，事件可安全地按本集合逐单发布，
+         不会给"竞争中被别人先改掉状态"的订单发虚假 CANCELLED。
+         资源释放（booked_count 回补/时段置回可约、幂等口径）见下方 cancelByIdsAndRelease。 -->
+    <select id="selectCancellableBookingRefs" resultMap="BookingRefResultMap">
+        SELECT item.order_id, item.user_id, item.service_id
         FROM item
         JOIN services s ON item.service_id = s.service_id
         LEFT JOIN service_category c ON c.id = s.category_id
@@ -175,6 +182,7 @@
         </foreach>
           AND ( item.manage_status = #{pendingCode}
                 OR (item.manage_status = #{approvedCode} AND c.code = 'activity') )
+        FOR UPDATE
     </select>
 
     <!-- 取消并释放资源（7.3.6）：一条多表 UPDATE 原子完成三件事——
@@ -204,6 +212,7 @@
           AND ( item.manage_status = #{pendingCode}
                 OR (item.manage_status = #{approvedCode} AND c.code = 'activity') )
     </update>
+
     <!-- 管理员强制取消（3.4 僵尸单兜底）：与用户取消的差异仅在 WHERE——
          不校验 user_id 归属、不要求活动分类，待审核/已通过的任意类型单均可取消，
          用于清理用户侧无法取消（已通过的通用/咨询/教室/设备单）造成的僵尸占用。

@@ -10,6 +10,7 @@ import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.interfaces.dto.response.BookingResponse;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.domain.view.BookingRef;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
@@ -176,25 +177,29 @@ public class BookServiceImpl implements BookService {
         if (bookingIds == null || bookingIds.isEmpty()) {
             return false;
         }
-        // 先查出真正满足取消条件（本人所有 + 待审核/已通过活动单）的订单（12-09）。
-        // 不能拿入参集合直接发事件：不属于本人、已取消、已通过的非活动单都不会被 UPDATE，
-        // 给它们发 CANCELLED 会让 KB 侧按未发生的变更淘汰缓存，属于虚假业务事件。
-        List<Long> cancellableIds = bookingRepository.findCancellableOrderIds(userId, bookingIds);
-        if (cancellableIds.isEmpty()) {
+        // 锁定读查出真正满足取消条件（本人所有 + 待审核/已通过活动单）的订单（12-09 + 3.5.2）。
+        // FOR UPDATE 让 SELECT 与 UPDATE 之间命中行状态不可能被并发改动，
+        // 返回集合即 UPDATE 的实际命中集合；入参里不属于本人、已取消、已通过的非活动单
+        // 都不会进集合，不会给它们发 CANCELLED（虚假业务事件）。
+        List<BookingRef> cancellable = bookingRepository.findCancellableBookings(userId, bookingIds);
+        if (cancellable.isEmpty()) {
             return false;
         }
-        // 按实际命中集合执行原子多表 UPDATE；SELECT 与 UPDATE 间状态被并发改动时，
-        // 以 UPDATE 影响行数为准（极端竞争下 affected 可能小于 cancellableIds）
+        List<Long> cancellableIds = cancellable.stream()
+                .map(BookingRef::orderId)
+                .collect(Collectors.toList());
+        // 多表 UPDATE 返回值是各表匹配行之和（取消 1 单通常为 2），只能 >0 判命中，
+        // 绝不能当"取消订单数"（3.5.2/看板第 7 节）；计数与事件一律以锁定集合为准。
         int affected = bookingRepository.cancelByIds(userId, cancellableIds);
         if (affected <= 0) {
             return false;
         }
-        bookingMetrics.recordCancelled(affected);
+        bookingMetrics.recordCancelled(cancellable.size());
         // 库存回补与咨询时段释放已在一条多表 UPDATE 内原子完成：
         // 只释放本次真正取消的通用单/咨询单，资源单不误扣、历史单不重复释放（7.3.6）。
-        // 事件同样只发给实际命中的订单（12-09）。
-        for (Long id : cancellableIds) {
-            bookingEventPublisher.publishChanged(userId, id, "CANCELLED");
+        // 事件按订单真实 serviceId 发布（3.5.1：此前错传 orderId，KB 侧暂只全量淘汰故被掩盖）。
+        for (BookingRef ref : cancellable) {
+            bookingEventPublisher.publishChanged(ref.userId(), ref.serviceId(), "CANCELLED");
         }
         return true;
     }
