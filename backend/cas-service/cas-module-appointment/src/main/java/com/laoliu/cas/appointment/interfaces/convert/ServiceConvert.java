@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.interfaces.convert;
 
 import com.laoliu.cas.appointment.domain.entity.ServiceItem;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceResponse;
+import com.laoliu.cas.appointment.application.dto.response.ServiceResponse;
 import com.laoliu.cas.common.result.PageResult;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;

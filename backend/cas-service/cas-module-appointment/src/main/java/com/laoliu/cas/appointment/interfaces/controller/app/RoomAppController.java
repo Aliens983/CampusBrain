@@ -1,8 +1,8 @@
 package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.RoomService;
-import com.laoliu.cas.appointment.interfaces.dto.request.RoomBookRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.RoomResponse;
+import com.laoliu.cas.appointment.application.dto.request.RoomBookRequest;
+import com.laoliu.cas.appointment.application.dto.response.RoomResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
 import com.laoliu.cas.common.result.CommonResult;
 import io.swagger.v3.oas.annotations.Operation;

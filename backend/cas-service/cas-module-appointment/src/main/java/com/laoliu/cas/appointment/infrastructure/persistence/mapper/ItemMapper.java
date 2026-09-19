@@ -3,11 +3,11 @@ package com.laoliu.cas.appointment.infrastructure.persistence.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
-import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.domain.view.BookingRef;
+import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
+import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO;
+import com.laoliu.cas.appointment.application.dto.response.ServiceAvailabilityResponse;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
@@ -48,7 +48,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
 
     /**
      * 筛出当前用户给定订单中可取消（待审核单、或已通过的活动单）的订单引用（12-09 + 3.5）。
-     * WHERE 与 {@link #cancelByIdsAndRelease} 完全一致；SQL 为 FOR UPDATE 锁定读，
+     * WHERE 与 {@link #cancelByIdsAndRelease} 完全一致；SQL 为 {@code FOR UPDATE} 锁定读，
      * 必须在事务内调用：返回集合同步携带 orderId/userId/serviceId，
      * 既作为后续 UPDATE 的精确入参，也作为 CANCELLED 事件的真实 serviceId 来源。
      */
@@ -68,22 +68,6 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                               @Param("pendingCode") int pendingCode,
                               @Param("approvedCode") int approvedCode,
                               @Param("cancelledCode") int cancelledCode);
-
-    /**
-     * 分页查询所有服务预约状态（支持筛选）
-     */
-    IPage<BookingQueryView> getServiceStatusWithPage(Page<?> page,
-            @Param("manageStatus") Integer manageStatus,
-            @Param("serviceName") String serviceName);
-
-    List<BookingQueryView> getServiceStatusByUserId(@Param("userId") Long userId);
-
-    /**
-     * 分页查询用户的预约状态（支持筛选）
-     */
-    IPage<BookingQueryView> getServiceStatusByUserIdWithPage(@Param("userId") Long userId, Page<?> page,
-            @Param("manageStatus") Integer manageStatus,
-            @Param("serviceName") String serviceName);
 
     /**
      * 管理员强制取消（3.4 僵尸单兜底）：不校验订单归属与活动分类，待审核/已通过单均可命中；
@@ -111,6 +95,22 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                 @Param("pendingCode") int pendingCode,
                                 @Param("approvedCode") int approvedCode,
                                 @Param("completedCode") int completedCode);
+
+    /**
+     * 分页查询所有服务预约状态（支持筛选）
+     */
+    IPage<BookingQueryView> getServiceStatusWithPage(Page<?> page,
+            @Param("manageStatus") Integer manageStatus,
+            @Param("serviceName") String serviceName);
+
+    List<BookingQueryView> getServiceStatusByUserId(@Param("userId") Long userId);
+
+    /**
+     * 分页查询用户的预约状态（支持筛选）
+     */
+    IPage<BookingQueryView> getServiceStatusByUserIdWithPage(@Param("userId") Long userId, Page<?> page,
+            @Param("manageStatus") Integer manageStatus,
+            @Param("serviceName") String serviceName);
 
     /**
      * 审核状态流转：仅当订单当前状态属于 {@code fromStatuses} 时才更新（状态机白名单）。
@@ -238,5 +238,4 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     /** 资源占用聚合投影行（resourceId=教室/设备ID，cnt=占用条数或占用台数之和） */
     record ResourceOverlapRow(Long resourceId, Integer cnt) {
     }
-
 }

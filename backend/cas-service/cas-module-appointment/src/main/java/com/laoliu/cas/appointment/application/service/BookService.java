@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.application.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.interfaces.dto.response.BookingResponse;
+import com.laoliu.cas.appointment.application.dto.response.BookingResponse;
 import com.laoliu.cas.system.api.dto.UserInfoDTO;
 
 import java.util.List;

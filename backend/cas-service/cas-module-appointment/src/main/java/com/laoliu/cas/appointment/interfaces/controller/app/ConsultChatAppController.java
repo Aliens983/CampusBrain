@@ -1,12 +1,12 @@
 package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.ConsultChatService;
-import com.laoliu.cas.appointment.interfaces.dto.request.OpenChatByBookingRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.OpenChatRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.OpenChatWithStudentRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.SendMessageRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ConversationResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.MessageResponse;
+import com.laoliu.cas.appointment.application.dto.request.OpenChatByBookingRequest;
+import com.laoliu.cas.appointment.application.dto.request.OpenChatRequest;
+import com.laoliu.cas.appointment.application.dto.request.OpenChatWithStudentRequest;
+import com.laoliu.cas.appointment.application.dto.request.SendMessageRequest;
+import com.laoliu.cas.appointment.application.dto.response.ConversationResponse;
+import com.laoliu.cas.appointment.application.dto.response.MessageResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.result.CommonResult;

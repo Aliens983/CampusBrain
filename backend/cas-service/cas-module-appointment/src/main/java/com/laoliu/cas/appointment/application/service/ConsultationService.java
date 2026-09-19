@@ -1,8 +1,8 @@
 package com.laoliu.cas.appointment.application.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.interfaces.dto.response.ConsultantResponse;
 import com.laoliu.cas.appointment.domain.view.TimeSlotView;
+import com.laoliu.cas.appointment.application.dto.response.ConsultantResponse;
 
 import java.util.List;
 

@@ -2,7 +2,7 @@ package com.laoliu.cas.appointment.interfaces.controller.admin;
 
 import com.laoliu.cas.appointment.application.service.CarouselService;
 import com.laoliu.cas.appointment.interfaces.convert.CarouselConvert;
-import com.laoliu.cas.appointment.interfaces.dto.response.CarouselResponse;
+import com.laoliu.cas.appointment.application.dto.response.CarouselResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.result.CommonResult;

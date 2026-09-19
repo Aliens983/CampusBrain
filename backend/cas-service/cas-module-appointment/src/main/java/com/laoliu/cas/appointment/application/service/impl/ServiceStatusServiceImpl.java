@@ -6,7 +6,7 @@ import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
+import com.laoliu.cas.appointment.application.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;

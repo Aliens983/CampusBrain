@@ -3,12 +3,12 @@ package com.laoliu.cas.appointment.infrastructure.persistence.repository;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.domain.view.BookingRef;
 import com.laoliu.cas.appointment.infrastructure.config.BookingProperties;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.mapper.ItemMapper;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
-import com.laoliu.cas.appointment.domain.view.BookingQueryView;
-import com.laoliu.cas.appointment.domain.view.BookingRef;
+import com.laoliu.cas.appointment.application.dto.response.ServiceAvailabilityResponse;
 import com.laoliu.cas.common.enums.ManageStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -123,7 +123,6 @@ public class BookingRepositoryImpl implements BookingRepository {
                         ItemMapper.ResourceOverlapRow::cnt));
     }
 
-
     @Override
     public int autoCompleteExpired() {
         return itemMapper.autoCompleteExpired(APPROVED, COMPLETED);
@@ -149,18 +148,6 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public boolean adminCancelAndRelease(Long orderId, String reason) {
-        // 多表 UPDATE 行数为各表匹配行之和（item + services，咨询单还有 time_slot），
-        // 只能以 >0 判定命中；终态/不存在单 WHERE 不匹配，返回 0（3.4，见看板第 7 节）
-        return itemMapper.adminCancelAndRelease(orderId, reason, PENDING, APPROVED, CANCELLED) > 0;
-    }
-
-    @Override
-    public boolean adminCompleteAndRelease(Long orderId, String reason) {
-        return itemMapper.adminCompleteAndRelease(orderId, reason, PENDING, APPROVED, COMPLETED) > 0;
-    }
-
-    @Override
     public Map<Long, Integer> countRoomOverlapBatch(Collection<Long> roomIds, LocalDate date,
                                                     String startTime, String endTime) {
         if (roomIds == null || roomIds.isEmpty()) {
@@ -172,7 +159,6 @@ public class BookingRepositoryImpl implements BookingRepository {
                         ItemMapper.ResourceOverlapRow::cnt));
     }
 
-
     @Override
     public List<BookingRef> findCancellableBookings(Long userId, List<Long> orderIds) {
         return itemMapper.selectCancellableBookingRefs(userId, orderIds, PENDING, APPROVED);
@@ -181,6 +167,18 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public int cancelByIds(Long userId, List<Long> orderIds) {
         return itemMapper.cancelByIdsAndRelease(userId, orderIds, PENDING, APPROVED, CANCELLED);
+    }
+
+    @Override
+    public boolean adminCancelAndRelease(Long orderId, String reason) {
+        // 多表 UPDATE 行数为各表匹配行之和（item + services，咨询单还有 time_slot），
+        // 只能以 >0 判定命中；终态/不存在单 WHERE 不匹配，返回 0（3.4，见看板第 7 节）
+        return itemMapper.adminCancelAndRelease(orderId, reason, PENDING, APPROVED, CANCELLED) > 0;
+    }
+
+    @Override
+    public boolean adminCompleteAndRelease(Long orderId, String reason) {
+        return itemMapper.adminCompleteAndRelease(orderId, reason, PENDING, APPROVED, COMPLETED) > 0;
     }
 
     @Override

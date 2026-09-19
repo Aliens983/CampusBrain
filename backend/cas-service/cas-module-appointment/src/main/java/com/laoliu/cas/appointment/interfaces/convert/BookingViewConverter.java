@@ -2,8 +2,8 @@ package com.laoliu.cas.appointment.interfaces.convert;
 
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.domain.view.TimeSlotView;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
+import com.laoliu.cas.appointment.application.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.application.dto.response.TimeSlotResponse;
 
 import java.util.List;
 

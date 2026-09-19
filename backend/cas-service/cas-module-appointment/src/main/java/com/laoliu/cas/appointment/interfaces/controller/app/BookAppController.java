@@ -1,9 +1,9 @@
 package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.BookService;
-import com.laoliu.cas.appointment.interfaces.dto.request.BookServiceRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.BookingResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.BookResultResponse;
+import com.laoliu.cas.appointment.application.dto.request.BookServiceRequest;
+import com.laoliu.cas.appointment.application.dto.response.BookingResponse;
+import com.laoliu.cas.appointment.application.dto.response.BookResultResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
 import com.laoliu.cas.common.pojo.PageParam;
 import com.laoliu.cas.common.result.CommonResult;
@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
-import java.util.List;
 
 /**
  * 用户端预约接口

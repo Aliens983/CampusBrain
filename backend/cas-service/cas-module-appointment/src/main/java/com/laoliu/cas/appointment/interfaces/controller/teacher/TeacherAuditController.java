@@ -2,10 +2,9 @@ package com.laoliu.cas.appointment.interfaces.controller.teacher;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.TeacherAuditService;
-import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
-import com.laoliu.cas.appointment.interfaces.dto.request.TeacherAuditRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.application.dto.request.TeacherAuditRequest;
+import com.laoliu.cas.appointment.application.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.result.CommonResult;
@@ -43,8 +42,10 @@ public class TeacherAuditController {
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) Integer status) {
         Long teacherId = SecurityFrameworkUtils.getLoginUserId();
-        IPage<BookingQueryView> page = teacherAuditService.listMyBookings(teacherId, pageNo, pageSize, status);
-        return CommonResult.success(PageResult.of(page.convert(BookingViewConverter::toResponse)));
+        IPage<ServiceStatusResponse> page = teacherAuditService
+                .listMyBookings(teacherId, pageNo, pageSize, status)
+                .convert(BookingViewConverter::toResponse);
+        return CommonResult.success(PageResult.of(page));
     }
 
     @Operation(summary = "审核通过（仅本人名下咨询档期）")

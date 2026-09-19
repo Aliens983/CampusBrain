@@ -2,8 +2,8 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.interfaces.convert.ServiceConvert;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceResponse;
+import com.laoliu.cas.appointment.application.dto.request.ServicePageRequest;
+import com.laoliu.cas.appointment.application.dto.response.ServiceResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
 import com.laoliu.cas.common.pojo.PageParam;
 import com.laoliu.cas.common.result.CommonResult;

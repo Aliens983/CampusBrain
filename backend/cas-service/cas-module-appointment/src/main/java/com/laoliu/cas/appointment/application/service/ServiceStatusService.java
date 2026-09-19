@@ -1,10 +1,8 @@
 package com.laoliu.cas.appointment.application.service;
 
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
+import com.laoliu.cas.appointment.application.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
-
 import com.baomidou.mybatisplus.core.metadata.IPage;
-
 
 /**
  * 服务预约状态应用服务接口
@@ -14,16 +12,18 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 public interface ServiceStatusService {
 
     /**
-     * 分页查询所有服务预约状态（支持筛选）
+     * 分页查询所有服务预约状态（支持筛选，含状态中文描述）
      */
     IPage<BookingQueryView> getServiceStatus(ServiceStatusPageRequest req);
 
     /**
-     * 分页查询用户的预约状态（含状态描述，支持筛选）
+     * 分页查询用户的预约状态（含状态描述，支持筛选）。
+     * 1.9：原「含/不含描述」的成对重复方法已删除，非分页取数由调用方直接走
+     * BookingRepository，描述只在面向 HTTP 的分页查询处统一补充。
      */
     IPage<BookingQueryView> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req);
 
-    /** 根据订单ID获取预约状态 */
+    /** 根据订单ID获取预约状态（审核/管理员操作链路内部使用） */
     BookingQueryView getServiceStatusByOrderId(Long orderId);
 
     /** 发送审核邮件 */

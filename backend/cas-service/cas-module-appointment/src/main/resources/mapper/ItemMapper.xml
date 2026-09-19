@@ -341,38 +341,6 @@
           AND end_time &gt; #{startTime}
     </select>
 
-    <!-- 批量：多间教室同日同窗各自的占用条数（4.7 N+1 收敛，GROUP BY 一次取回；无占用教室缺省 0） -->
-    <select
-        id="countRoomOverlapBatch"
-        resultType="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ItemMapper$ResourceOverlapRow"
-    >
-        SELECT room_id AS resourceId, COUNT(*) AS cnt
-        FROM item
-        WHERE slot_date = #{date}
-          AND manage_status IN (#{pendingCode}, #{approvedCode})
-          AND start_time &lt; #{endTime}
-          AND end_time &gt; #{startTime}
-          AND room_id IN
-          <foreach collection="roomIds" item="rid" open="(" separator="," close=")">#{rid}</foreach>
-        GROUP BY room_id
-    </select>
-
-    <!-- 批量：多台设备同日同窗各自被占用台数之和（4.7 N+1 收敛；无占用设备缺省 0） -->
-    <select
-        id="sumEquipmentOverlapBatch"
-        resultType="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ItemMapper$ResourceOverlapRow"
-    >
-        SELECT equipment_id AS resourceId, IFNULL(SUM(quantity), 0) AS cnt
-        FROM item
-        WHERE slot_date = #{date}
-          AND manage_status IN (#{pendingCode}, #{approvedCode})
-          AND start_time &lt; #{endTime}
-          AND end_time &gt; #{startTime}
-          AND equipment_id IN
-          <foreach collection="equipmentIds" item="eid" open="(" separator="," close=")">#{eid}</foreach>
-        GROUP BY equipment_id
-    </select>
-
     <!-- 到点自动完结：已通过的单置为已完成。
          两类完结依据：
          1) 有时段的预约（咨询/设备/教室）：slot_date 已过，或当天且 end_time 已过；
@@ -433,6 +401,38 @@
           AND manage_status IN (#{pendingCode}, #{approvedCode})
           AND start_time &lt; #{endTime}
           AND end_time &gt; #{startTime}
+    </select>
+
+    <!-- 批量：多间教室同日同窗各自的占用条数（4.7 N+1 收敛，GROUP BY 一次取回；无占用教室缺省 0） -->
+    <select
+        id="countRoomOverlapBatch"
+        resultType="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ItemMapper$ResourceOverlapRow"
+    >
+        SELECT room_id AS resourceId, COUNT(*) AS cnt
+        FROM item
+        WHERE slot_date = #{date}
+          AND manage_status IN (#{pendingCode}, #{approvedCode})
+          AND start_time &lt; #{endTime}
+          AND end_time &gt; #{startTime}
+          AND room_id IN
+          <foreach collection="roomIds" item="rid" open="(" separator="," close=")">#{rid}</foreach>
+        GROUP BY room_id
+    </select>
+
+    <!-- 批量：多台设备同日同窗各自被占用台数之和（4.7 N+1 收敛；无占用设备缺省 0） -->
+    <select
+        id="sumEquipmentOverlapBatch"
+        resultType="com.laoliu.cas.appointment.infrastructure.persistence.mapper.ItemMapper$ResourceOverlapRow"
+    >
+        SELECT equipment_id AS resourceId, IFNULL(SUM(quantity), 0) AS cnt
+        FROM item
+        WHERE slot_date = #{date}
+          AND manage_status IN (#{pendingCode}, #{approvedCode})
+          AND start_time &lt; #{endTime}
+          AND end_time &gt; #{startTime}
+          AND equipment_id IN
+          <foreach collection="equipmentIds" item="eid" open="(" separator="," close=")">#{eid}</foreach>
+        GROUP BY equipment_id
     </select>
 
     <!-- 分页查询所有服务预约状态（支持按审核状态、服务名称筛选） -->
@@ -502,7 +502,7 @@
     </update>
 
     <!-- 各服务有效预约数（待审核+已通过，与 booked_count 扣减语义一致），供余量展示/KB 助手查询 -->
-    <select id="countBookingsByService" resultType="com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse">
+    <select id="countBookingsByService" resultType="com.laoliu.cas.appointment.application.dto.response.ServiceAvailabilityResponse">
         SELECT service_id AS serviceId, COUNT(*) AS bookingCount
         FROM item
         WHERE manage_status IN (#{pendingCode}, #{approvedCode})

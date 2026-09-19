@@ -5,7 +5,7 @@ import com.laoliu.cas.appointment.domain.entity.ConsultChatMessage;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultChatRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
-import com.laoliu.cas.appointment.interfaces.dto.response.ConversationResponse;
+import com.laoliu.cas.appointment.application.dto.response.ConversationResponse;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

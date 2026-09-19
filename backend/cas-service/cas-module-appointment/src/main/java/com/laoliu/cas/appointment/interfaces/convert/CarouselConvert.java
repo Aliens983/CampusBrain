@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.interfaces.convert;
 
 import com.laoliu.cas.appointment.domain.entity.Carousel;
-import com.laoliu.cas.appointment.interfaces.dto.response.CarouselResponse;
+import com.laoliu.cas.appointment.application.dto.response.CarouselResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

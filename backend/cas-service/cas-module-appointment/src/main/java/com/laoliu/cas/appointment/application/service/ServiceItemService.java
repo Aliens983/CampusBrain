@@ -1,8 +1,8 @@
 package com.laoliu.cas.appointment.application.service;
 
 import com.laoliu.cas.appointment.domain.entity.ServiceItem;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageRequest;
+import com.laoliu.cas.appointment.application.dto.request.ServiceAddRequest;
+import com.laoliu.cas.appointment.application.dto.request.ServicePageRequest;
 import com.laoliu.cas.common.result.PageResult;
 
 import java.util.List;

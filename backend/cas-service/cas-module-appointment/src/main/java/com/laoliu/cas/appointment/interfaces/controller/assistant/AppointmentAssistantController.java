@@ -1,18 +1,16 @@
 package com.laoliu.cas.appointment.interfaces.controller.assistant;
 
-import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceResponse;
+import com.laoliu.cas.appointment.application.dto.request.AssistantBookingDraftRequest;
+import com.laoliu.cas.appointment.application.dto.response.AssistantBookingDraft;
+import com.laoliu.cas.appointment.application.dto.response.AssistantBookingResult;
+import com.laoliu.cas.appointment.application.dto.response.AssistantConsultantResponse;
+import com.laoliu.cas.appointment.application.dto.response.AssistantEquipmentResponse;
+import com.laoliu.cas.appointment.application.dto.response.AssistantRoomResponse;
+import com.laoliu.cas.appointment.application.dto.response.AssistantServiceResponse;
 import com.laoliu.cas.appointment.application.service.AppointmentAssistantService;
-import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
-import com.laoliu.cas.appointment.domain.view.TimeSlotView;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
+import com.laoliu.cas.appointment.application.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.application.dto.response.TimeSlotResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import io.swagger.v3.oas.annotations.Operation;

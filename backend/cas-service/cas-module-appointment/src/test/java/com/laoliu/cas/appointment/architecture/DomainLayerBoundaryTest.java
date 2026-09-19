@@ -20,18 +20,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * <p>
  * domain 是四层最内层，禁止 compile-time 依赖外层包
  * （BookingRepository/ConsultantRepository 曾直接返回 ServiceStatusResponse /
- * TimeSlotResponse，形成 domain→interfaces 反向依赖）。领域查询统一走
- * domain/view 下的读模型，对外 HTTP 响应由 interfaces 层 Convert 转换。
+ * TimeSlotResponse，形成 domain→interfaces 反向依赖）。2.1 后领域查询统一走
+ * domain/view 下的读模型；2.2 后请求/响应 DTO 整体移居 application/dto。
  * 本测试扫描 target/classes 下 domain 包全部 class 字节码，任何对外层包
- * {@code com/laoliu/cas/appointment/interfaces} 的符号引用都视为回归。
+ * {@code com/laoliu/cas/appointment/interfaces} 或
+ * {@code com/laoliu/cas/appointment/application} 的符号引用都视为回归。
  *
  * @author forever-king
  */
 class DomainLayerBoundaryTest {
 
     private static final String DOMAIN_PATH = "com/laoliu/cas/appointment/domain/";
-    private static final byte[] FORBIDDEN_TOKEN =
-            "com/laoliu/cas/appointment/interfaces".getBytes();
+    private static final byte[][] FORBIDDEN_TOKENS = {
+            "com/laoliu/cas/appointment/interfaces".getBytes(),
+            "com/laoliu/cas/appointment/application".getBytes()
+    };
 
     @Test
     @DisplayName("2.1 domain 层任何 class 不得引用 interfaces 包（反向依赖守卫）")
@@ -50,8 +53,10 @@ class DomainLayerBoundaryTest {
                 classes.filter(p -> p.toString().endsWith(".class")).forEach(classFile -> {
                     try {
                         byte[] bytes = Files.readAllBytes(classFile);
-                        if (contains(bytes, FORBIDDEN_TOKEN)) {
-                            violations.add(classFile.toString());
+                        for (byte[] token : FORBIDDEN_TOKENS) {
+                            if (contains(bytes, token)) {
+                                violations.add(classFile + " -> " + new String(token).replace('/', '.'));
+                            }
                         }
                     } catch (IOException e) {
                         throw new IllegalStateException("读取 class 失败: " + classFile, e);

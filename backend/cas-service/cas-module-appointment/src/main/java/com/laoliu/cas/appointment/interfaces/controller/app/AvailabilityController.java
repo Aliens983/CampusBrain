@@ -2,9 +2,9 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
 import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.application.dto.response.ServiceAvailabilityResponse;
+import com.laoliu.cas.appointment.application.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import io.swagger.v3.oas.annotations.Operation;

@@ -6,7 +6,7 @@ import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
 import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
+import com.laoliu.cas.appointment.application.dto.request.ServiceAddRequest;
 import com.laoliu.cas.common.result.PageResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

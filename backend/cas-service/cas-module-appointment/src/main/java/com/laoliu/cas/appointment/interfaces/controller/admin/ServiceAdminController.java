@@ -2,10 +2,10 @@ package com.laoliu.cas.appointment.interfaces.controller.admin;
 
 import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.interfaces.convert.ServiceConvert;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceAddRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServicePageRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.UserServicesResponse;
+import com.laoliu.cas.appointment.application.dto.request.ServiceAddRequest;
+import com.laoliu.cas.appointment.application.dto.request.ServicePageRequest;
+import com.laoliu.cas.appointment.application.dto.response.ServiceResponse;
+import com.laoliu.cas.appointment.application.dto.response.UserServicesResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.pojo.PageParam;
 import com.laoliu.cas.system.api.UserInfoApi;

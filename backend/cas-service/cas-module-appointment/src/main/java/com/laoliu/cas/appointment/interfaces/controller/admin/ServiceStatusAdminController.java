@@ -3,11 +3,10 @@ package com.laoliu.cas.appointment.interfaces.controller.admin;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
-import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
-import com.laoliu.cas.appointment.interfaces.dto.request.AuditRequest;
-import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.application.dto.request.AuditRequest;
+import com.laoliu.cas.appointment.application.dto.request.ServiceStatusPageRequest;
+import com.laoliu.cas.appointment.application.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.enums.UserRoleEnum;
@@ -43,8 +42,9 @@ public class ServiceStatusAdminController {
     @GetMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
     public CommonResult<PageResult<ServiceStatusResponse>> getAllBookings(@Valid ServiceStatusPageRequest req) {
-        IPage<BookingQueryView> statusPage = serviceStatusService.getServiceStatus(req);
-        return CommonResult.success(PageResult.of(statusPage.convert(BookingViewConverter::toResponse)));
+        IPage<ServiceStatusResponse> statusPage = serviceStatusService.getServiceStatus(req)
+                .convert(BookingViewConverter::toResponse);
+        return CommonResult.success(PageResult.of(statusPage));
     }
 
     @Operation(summary = "审核通过预约", description = "管理员审核通过用户的预约申请，审核通过后发送邮件通知申请人")

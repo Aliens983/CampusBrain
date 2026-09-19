@@ -8,7 +8,7 @@ import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
-import com.laoliu.cas.appointment.interfaces.dto.response.BookingResponse;
+import com.laoliu.cas.appointment.application.dto.response.BookingResponse;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.domain.view.BookingRef;
 import com.laoliu.cas.common.exception.BusinessException;

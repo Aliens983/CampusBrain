@@ -5,7 +5,7 @@ import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.application.dto.response.ServiceStatusResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

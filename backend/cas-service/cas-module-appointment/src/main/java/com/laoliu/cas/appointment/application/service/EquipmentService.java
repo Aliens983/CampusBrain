@@ -1,8 +1,8 @@
 package com.laoliu.cas.appointment.application.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.interfaces.dto.request.EquipmentBookRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.EquipmentResponse;
+import com.laoliu.cas.appointment.application.dto.request.EquipmentBookRequest;
+import com.laoliu.cas.appointment.application.dto.response.EquipmentResponse;
 
 import java.util.List;
 

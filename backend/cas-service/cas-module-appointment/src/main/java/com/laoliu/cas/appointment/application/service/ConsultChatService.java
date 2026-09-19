@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.application.service;
 
-import com.laoliu.cas.appointment.interfaces.dto.response.ConversationResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.MessageResponse;
+import com.laoliu.cas.appointment.application.dto.response.ConversationResponse;
+import com.laoliu.cas.appointment.application.dto.response.MessageResponse;
 
 import java.util.List;
 

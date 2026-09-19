@@ -2,7 +2,7 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.laoliu.cas.appointment.application.service.ServiceCategoryService;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceCategoryResponse;
+import com.laoliu.cas.appointment.application.dto.response.ServiceCategoryResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
