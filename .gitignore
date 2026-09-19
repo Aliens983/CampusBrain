@@ -36,3 +36,6 @@ Thumbs.db
 /file
 # 服务器部署点记录（不入库）
 .last-deploy-commit
+
+# TRAE IDE 工作目录（本地配置，不入库）
+.trae/
