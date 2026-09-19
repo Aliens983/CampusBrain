@@ -3,6 +3,7 @@ package com.kb.infrastructure.rag.retrieval;
 import com.kb.domain.rag.EmbeddingService;
 import com.kb.domain.rag.RetrievalResult;
 import com.kb.domain.rag.VectorStoreService;
+import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -38,9 +39,10 @@ public class VectorRetriever {
         // 1. Embed the query
         float[] queryVector = embeddingService.embed(query);
 
-        // 2. Search Qdrant
+        // 2. Search Qdrant（4.1 深度审查 P0：带归属过滤；取不到用户则仅共享文档，fail-closed）
+        Long ownerId = SecurityFrameworkUtils.getLoginUserId();
         List<VectorStoreService.ScoredVector> results =
-                vectorStore.search(queryVector, topK, similarityThreshold);
+                vectorStore.search(queryVector, topK, similarityThreshold, ownerId);
 
         // 3. Map to domain results
         return results.stream()

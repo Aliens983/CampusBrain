@@ -12,6 +12,7 @@ import com.kb.domain.rag.SearchService;
 import com.kb.infrastructure.client.CasClient;
 import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.rag.graph.GraphAssistedRetriever;
+import com.kb.infrastructure.rag.intent.KeywordIntentClassifier;
 import com.kb.infrastructure.rag.rewrite.ContextualQueryRewriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -62,10 +63,11 @@ class QaAppServiceToolRoutingTest {
 
     @BeforeEach
     void setUp() {
+        // 2.8：CacheGuard 依赖 IntentClassifier（真实关键词实现），AnswerPipeline 亦注入之
         pipeline = new AnswerPipeline(searchService, rerankerService, llmService,
-                graphRetriever, conversationRepository, metrics);
-        CacheGuard cacheGuard = new CacheGuard(pipeline, qaCacheService, semanticCacheService,
-                conversationRepository, metrics);
+                graphRetriever, conversationRepository, metrics, new KeywordIntentClassifier());
+        CacheGuard cacheGuard = new CacheGuard(new KeywordIntentClassifier(), qaCacheService,
+                semanticCacheService, conversationRepository, metrics);
         PendingBookingExecutor pendingExecutor = new PendingBookingExecutor(casClient,
                 chatSessionRepository, conversationRepository, metrics);
         service = new QaApplicationService(contextualRewriter, conversationRepository,

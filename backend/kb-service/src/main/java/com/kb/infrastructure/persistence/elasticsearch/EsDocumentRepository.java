@@ -69,16 +69,36 @@ public class EsDocumentRepository implements DocumentIndexCleaner {
 
     /**
      * Keyword (BM25) search on document chunk content.
+     * 4.1（深度审查 P0）：按归属过滤——可见 = 全局共享（ownerId 缺失/未知）OR 当前用户私有。
+     *
+     * @param ownerId 当前登录用户 ID；null 表示匿名/系统检索，仅返回共享文档
      */
-    public List<RetrievalResult> keywordSearch(String query, int topK) {
+    public List<RetrievalResult> keywordSearch(String query, int topK, Long ownerId) {
         try {
             SearchResponse<EsDocumentEntity> response = esClient.search(s -> s
                             .index(indexName)
                             .query(q -> q
-                                    .match(m -> m
-                                            .field("content")
-                                            .query(query)
-                                    )
+                                    .bool(b -> {
+                                        b.must(m -> m
+                                                .match(mm -> mm
+                                                        .field("content")
+                                                        .query(query)
+                                                )
+                                        );
+                                        if (ownerId != null) {
+                                            // (ownerId == 当前用户) OR (ownerId 缺失 -> 共享文档)
+                                            b.should(sh -> sh.term(t -> t
+                                                    .field("ownerId")
+                                                    .value(ownerId.toString())));
+                                            // exists:false 用 "must_not exists" 表达共享文档
+                                            b.should(sh -> sh.bool(sb -> sb
+                                                    .mustNot(mn -> mn.exists(e -> e.field("ownerId")))));
+                                            b.minimumShouldMatch("1");
+                                        } else {
+                                            b.mustNot(mn -> mn.exists(e -> e.field("ownerId")));
+                                        }
+                                        return b;
+                                    })
                             )
                             .size(topK)
                             .sort(sort -> sort

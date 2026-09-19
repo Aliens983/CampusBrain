@@ -16,6 +16,7 @@ import com.kb.infrastructure.client.CasResult;
 import com.kb.infrastructure.client.dto.CasBookingResult;
 import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.rag.graph.GraphAssistedRetriever;
+import com.kb.infrastructure.rag.intent.KeywordIntentClassifier;
 import com.kb.infrastructure.rag.rewrite.ContextualQueryRewriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -87,9 +88,9 @@ class QaBookingConfirmFlowTest {
         when(chatSessionRepository.loadForUser(anyString(), any())).thenReturn(session);
 
         AnswerPipeline pipeline = new AnswerPipeline(searchService, rerankerService, llmService,
-                graphRetriever, conversationRepository, metrics);
-        CacheGuard cacheGuard = new CacheGuard(pipeline, qaCacheService, semanticCacheService,
-                conversationRepository, metrics);
+                graphRetriever, conversationRepository, metrics, new KeywordIntentClassifier());
+        CacheGuard cacheGuard = new CacheGuard(new KeywordIntentClassifier(), qaCacheService,
+                semanticCacheService, conversationRepository, metrics);
         PendingBookingExecutor pendingExecutor = new PendingBookingExecutor(casClient,
                 chatSessionRepository, conversationRepository, metrics);
         service = new QaApplicationService(contextualRewriter, conversationRepository,
@@ -141,7 +142,10 @@ class QaBookingConfirmFlowTest {
                 .thenReturn(new ContextualQueryRewriter.RewriteResult("知识库怎么用", new BookingSlots(), false));
         when(graphRetriever.retrieve("知识库怎么用")).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank("知识库怎么用", List.of())).thenReturn(List.<RetrievalResult>of());
-        when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any())).thenReturn("这是知识库用法");
+        // 5.3（深度审查 P1）：生产走 4 参 generateAnswerDirectStreaming（含 CancellationToken），
+        // 原 3 参打桩与生产不匹配返回 null，掩盖流式无召回兜底缺陷；现打 4 参桩并断言真实回答被落库
+        when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any(), any()))
+                .thenReturn("这是知识库用法");
         when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(11L);
 
@@ -160,7 +164,8 @@ class QaBookingConfirmFlowTest {
                 .thenReturn(new ContextualQueryRewriter.RewriteResult("确认", new BookingSlots(), false));
         when(graphRetriever.retrieve("确认")).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank("确认", List.of())).thenReturn(List.<RetrievalResult>of());
-        when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any())).thenReturn("请问要确认什么？");
+        when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any(), any()))
+                .thenReturn("请问要确认什么？");
         when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(12L);
 

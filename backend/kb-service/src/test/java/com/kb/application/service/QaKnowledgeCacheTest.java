@@ -14,6 +14,7 @@ import com.kb.infrastructure.cache.SemanticCacheService;
 import com.kb.infrastructure.client.CasClient;
 import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.rag.graph.GraphAssistedRetriever;
+import com.kb.infrastructure.rag.intent.KeywordIntentClassifier;
 import com.kb.infrastructure.rag.rewrite.ContextualQueryRewriter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -65,10 +66,11 @@ class QaKnowledgeCacheTest {
 
     @BeforeEach
     void setUp() {
+        // 2.8：CacheGuard 依赖 IntentClassifier（真实关键词实现），AnswerPipeline 亦注入之
         AnswerPipeline pipeline = new AnswerPipeline(searchService, rerankerService, llmService,
-                graphRetriever, conversationRepository, metrics);
-        CacheGuard cacheGuard = new CacheGuard(pipeline, qaCacheService, semanticCacheService,
-                conversationRepository, metrics);
+                graphRetriever, conversationRepository, metrics, new KeywordIntentClassifier());
+        CacheGuard cacheGuard = new CacheGuard(new KeywordIntentClassifier(), qaCacheService,
+                semanticCacheService, conversationRepository, metrics);
         PendingBookingExecutor pendingExecutor = new PendingBookingExecutor(casClient,
                 chatSessionRepository, conversationRepository, metrics);
         service = new QaApplicationService(contextualRewriter, conversationRepository,
@@ -107,7 +109,7 @@ class QaKnowledgeCacheTest {
         assertThat(messageId[0]).isEqualTo(99L);
         verify(graphRetriever, never()).retrieve(anyString());
         verify(rerankerService, never()).rerank(anyString(), anyList());
-        verify(semanticCacheService, never()).lookup(anyString());
+        verify(semanticCacheService, never()).lookup(anyString(), any());
         verify(llmService, never()).generateAnswer(anyString(), anyList(), anyList());
         verify(metrics).recordCacheHit();
         verify(metrics, never()).recordCacheMiss();
@@ -119,7 +121,7 @@ class QaKnowledgeCacheTest {
         stubEmptySession();
         stubRewrite(QUERY);
         when(qaCacheService.getCachedAnswer(QUERY)).thenReturn(Optional.empty());
-        when(semanticCacheService.lookup(QUERY))
+        when(semanticCacheService.lookup(eq(QUERY), any()))
                 .thenReturn(new SemanticCacheService.SemanticCacheHit("语义相似问题的答案", List.of()));
         when(conversationRepository.saveWithReferences(
                 anyString(), anyString(), anyString(), any(), any())).thenReturn(1L);
@@ -137,7 +139,7 @@ class QaKnowledgeCacheTest {
         stubEmptySession();
         stubRewrite(QUERY);
         when(qaCacheService.getCachedAnswer(QUERY)).thenReturn(Optional.empty());
-        when(semanticCacheService.lookup(QUERY)).thenReturn(null);
+        when(semanticCacheService.lookup(eq(QUERY), any())).thenReturn(null);
         RetrievalResult doc = RetrievalResult.builder()
                 .chunkId("c1").documentId("d1").documentTitle("向量检索")
                 .content("...").chunkIndex(0).score(0.9).source("keyword").build();
@@ -157,7 +159,7 @@ class QaKnowledgeCacheTest {
 
         assertThat(answer).isEqualTo("新鲜 RAG 答案");
         verify(qaCacheService).cacheAnswer(eq(QUERY), eq("新鲜 RAG 答案"), anyList());
-        verify(semanticCacheService).store(eq(QUERY), eq("新鲜 RAG 答案"), anyList());
+        verify(semanticCacheService).store(eq(QUERY), eq("新鲜 RAG 答案"), anyList(), any());
         verify(metrics).recordCacheMiss();
     }
 
@@ -181,9 +183,9 @@ class QaKnowledgeCacheTest {
         service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
         verify(qaCacheService, never()).getCachedAnswer(anyString());
-        verify(semanticCacheService, never()).lookup(anyString());
+        verify(semanticCacheService, never()).lookup(anyString(), any());
         verify(qaCacheService, never()).cacheAnswer(anyString(), anyString(), anyList());
-        verify(semanticCacheService, never()).store(anyString(), anyString(), anyList());
+        verify(semanticCacheService, never()).store(anyString(), anyString(), anyList(), any());
     }
 
     @Test
@@ -210,6 +212,6 @@ class QaKnowledgeCacheTest {
         service.askStreaming(QUERY, "s1", t -> {}, c -> {}, id -> {});
 
         verify(qaCacheService, never()).getCachedAnswer(anyString());
-        verify(semanticCacheService, never()).lookup(anyString());
+        verify(semanticCacheService, never()).lookup(anyString(), any());
     }
 }

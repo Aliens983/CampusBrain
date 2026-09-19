@@ -4,6 +4,7 @@ import com.kb.domain.chat.ChatSession;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.conversation.ConversationRepository;
 import com.kb.domain.rag.CancellationToken;
+import com.kb.domain.rag.IntentClassifier;
 import com.kb.domain.rag.LlmService;
 import com.kb.domain.rag.RerankerService;
 import com.kb.domain.rag.RetrievalResult;
@@ -38,6 +39,8 @@ public class AnswerPipeline {
     private final GraphAssistedRetriever graphRetriever;
     private final ConversationRepository conversationRepository;
     private final BusinessMetrics metrics;
+    /** 2.8：预约意图粗筛收敛到独立分类器，三方（管线/缓存守卫/编排）各自注入 */
+    private final IntentClassifier intentClassifier;
 
     /** 注入 LLM 的历史消息条数（对话表读取上限） */
     @Value("${kb.qa.history-limit:8}")
@@ -48,25 +51,11 @@ public class AnswerPipeline {
     private int citationSnippetLength;
 
     /**
-     * 意图路由（Intent Routing）：判断用户问题是否可能涉及"实时预约数据"。
-     * <p>命中关键词的问题会进入带工具集的 Function Calling 链路；在工具链路内，
-     * 是否真正调用工具由 LLM 自主决定，本方法只做粗筛。
-     * <p>
-     * 3.3.4：路由词表收窄。此前混入了"老师/教师/咨询/设备/仓前/下沙"等可以单独成词的歧义词，
-     * 像"教师招聘政策""设备处报修电话""仓前食堂在哪"这类纯知识库问题也被误路由进预约工具链路。
-     * 现仅保留"单独出现也强烈指向预约动作/资源"的词；校区、人物身份等须与预约词共现，
-     * 宁可不进也不要乱进。
+     * 意图路由（Intent Routing）：判断用户问题是否可能涉及"实时预约数据"，委托
+     * {@link IntentClassifier}（2.8：实现已从本类迁出，此处保留方法签名兼容既有调用）。
      */
-    private static final List<String> APPOINTMENT_KEYWORDS = List.of(
-            "可预约", "预约", "余量", "名额", "会议室", "设备借用", "借用", "自习室",
-            "场地", "空闲", "可约", "档期", "怎么预约", "怎么约", "能不能约",
-            "有哪些服务", "还有哪些", "心理咨询", "教室", "取消预约", "我的预约");
-
     public boolean isAppointmentQuery(String q) {
-        if (q == null || q.isEmpty()) {
-            return false;
-        }
-        return APPOINTMENT_KEYWORDS.stream().anyMatch(q::contains);
+        return intentClassifier.isAppointmentQuery(q);
     }
 
     /**
@@ -146,7 +135,9 @@ public class AnswerPipeline {
             }
             return ragAnswer;
         }
-        return llmService.generateAnswerDirectStreaming(query, history, null, cancellationToken);
+        // 3.2（深度审查 P0）：同步链路无召回时走同步兜底，绝不能走流式分支传 null 消费者，
+        // 否则 LangChain4jLlmService 的 tokenConsumer.accept 会 NPE 并污染熔断统计。
+        return llmService.generateAnswerDirect(query, history);
     }
 
     /**

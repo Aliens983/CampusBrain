@@ -11,6 +11,7 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Hybrid retrieval orchestrator.
@@ -87,19 +88,11 @@ public class HybridRetriever implements com.kb.domain.rag.SearchService {
         List<RetrievalResult> keywordResults;
         List<RetrievalResult> vectorResults;
 
-        try {
-            keywordResults = keywordFuture.get(retrievalTimeoutSeconds, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.error("Keyword retrieval failed", e);
-            keywordResults = keywordFuture.getNow(List.of());
-        }
-
-        try {
-            vectorResults = vectorFuture.get(retrievalTimeoutSeconds, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            log.error("Vector retrieval failed", e);
-            vectorResults = vectorFuture.getNow(List.of());
-        }
+        // 1.7（深度审查 P2）：修正"降级"名不副实——Future 若<b>异常完成</b>（检索抛错），
+        // 旧实现的 getNow() 会抛 CompletionException 让异常穿透，注释却称"按空结果降级"。
+        // 现区分三种情形：超时未完成→取 now 或空；异常完成→按空结果降级并记日志；正常→用结果。
+        keywordResults = awaitResult("关键词检索", keywordFuture);
+        vectorResults = awaitResult("向量检索", vectorFuture);
 
         log.debug("Keyword results: {}, Vector results: {}",
                 keywordResults.size(), vectorResults.size());
@@ -109,6 +102,27 @@ public class HybridRetriever implements com.kb.domain.rag.SearchService {
 
         log.debug("Fused results (after RRF): {}", fused.size());
         return fused;
+    }
+
+    /**
+     * 等待单侧检索结果并按空结果降级（1.7）：
+     * <ul>
+     *   <li>超时未完成 → 尽力取已完成值，未完成则空列表；</li>
+     *   <li>异常完成（检索侧抛错）→ 空列表，另一侧照常参与融合；</li>
+     *   <li>正常返回 → 结果。</li>
+     * </ul>
+     */
+    private List<RetrievalResult> awaitResult(String label,
+                                              CompletableFuture<List<RetrievalResult>> future) {
+        try {
+            return future.get(retrievalTimeoutSeconds, TimeUnit.SECONDS);
+        } catch (TimeoutException te) {
+            log.warn("{}超时（{}s），按空结果降级", label, retrievalTimeoutSeconds);
+            return future.isCompletedExceptionally() ? List.of() : future.getNow(List.of());
+        } catch (Exception e) {
+            log.error("{}失败，按空结果降级", label, e);
+            return List.of();
+        }
     }
 
     /**

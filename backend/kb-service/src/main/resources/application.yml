@@ -77,8 +77,8 @@ spring:
     password: ${RABBITMQ_PASSWORD:admin123}
     listener:
       simple:
-        # 消费端并发：5 个消费者并行处理不同文档；单文档的 embedding 批次另在
-        # embeddingExecutor（默认 4 线程）内并发，两层并发相乘即对模型 API 的峰值并发。
+        # 消费端并发：并发数 3、最多扩展 5（1.7：注释口径与值对齐）；单文档的
+        # embedding 批次另在 embeddingExecutor（默认 4 线程）内并发。
         # prefetch 从 1 提到 2：消费者处理当前大文档时可预取下一条，减少队列空转，
         # 同时避免预取过多把大文档批量压在单个消费者本地。
         concurrency: 3
@@ -254,6 +254,12 @@ kb:
     semantic-collection: ${KB_SEMANTIC_CACHE_COLLECTION:qa_semantic_cache}
     semantic-threshold: ${KB_SEMANTIC_CACHE_THRESHOLD:0.95}
     semantic-ttl-hours: ${KB_SEMANTIC_CACHE_TTL_HOURS:24}
+    # 过期点清理任务（3.8：查找只懒过滤，本任务定期删除已过 TTL 的点）
+    semantic-cleanup-interval-ms: ${KB_SEMANTIC_CACHE_CLEANUP_INTERVAL_MS:21600000}
+    semantic-cleanup-init-delay-ms: ${KB_SEMANTIC_CACHE_CLEANUP_INIT_DELAY_MS:600000}
+    # 文档处理事件缓存失效合并窗口（3.7：批量上传 N 篇只跑一次全量淘汰，避免 N 次 SCAN 风暴）
+    evict-merge-interval-ms: ${KB_CACHE_EVICT_MERGE_INTERVAL_MS:30000}
+    evict-merge-init-delay-ms: ${KB_CACHE_EVICT_MERGE_INIT_DELAY_MS:60000}
   # 问答链路参数（Q-04/B-04：代码 @Value 已带同样默认值，此处显式声明便于运维调参）
   qa:
     # 拼装提示词时携带的最近对话历史条数
@@ -265,9 +271,16 @@ kb:
   # 混合检索（向量 + BM25）总预算超时
   retrieval:
     timeout-seconds: ${KB_RETRIEVAL_TIMEOUT_SECONDS:30}
+    # 检索线程池大小（4.4：0=跟随 kb.sse.max-concurrent；检索为短时网络调用，
+    # 线程数≈在途流式问答数×2，不再用大队列压住扩容）
+    pool-size: ${KB_RETRIEVAL_POOL_SIZE:0}
   # 文档消费可靠性（12-03）
   document:
     processing-lock-ttl-seconds: ${KB_DOC_PROCESSING_LOCK_TTL:1800}
+    # 处理锁续约周期（3.9 Watchdog：远小于锁 TTL，保证超长处理不失锁）
+    processing-lock-renew-ms: ${KB_DOC_PROCESSING_LOCK_RENEW_MS:300000}
+    # 本机锁登记剪枝阈值（3.9：长期无活动的 token/在途登记将被清理）
+    processing-lock-prune-after-ms: ${KB_DOC_PROCESSING_LOCK_PRUNE_AFTER_MS:3600000}
     reclaim:
       stale-minutes: ${KB_DOC_RECLAIM_STALE_MINUTES:10}
       batch-size: ${KB_DOC_RECLAIM_BATCH:50}

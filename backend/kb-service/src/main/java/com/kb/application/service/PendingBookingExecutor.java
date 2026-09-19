@@ -41,23 +41,46 @@ public class PendingBookingExecutor {
     public enum ConfirmIntent { CONFIRM, REJECT, NONE }
 
     /**
-     * 判定"确认"的关键词。刻意只收多字词：单字（如"行""对"）在中文里歧义太大，
-     * 容易把"换个时间行不行"误判成确认。
-     * <p>
-     * 3.3.3：已移除"提交"——它高度歧义（"怎么提交？""提交按钮在哪"是疑问句而非确认），
-     * 确认提交由"确认/确定/好的/预约吧/帮我约"等明确表达承担；{@link #detectConfirmIntent}
-     * 另对"好的，帮我查余量"这类"应答词 + 新请求分句"做排除。
+     * 判定"确认"的关键词。刻意只收高置信词，并配合{@link #QUESTION_MARKERS}与{@link #REQUEST_ACTION_MARKERS}
+     * 双重拦截，杜绝误下单（3.3 深度审查 P0）：
+     * <ul>
+     *   <li>3.3.3 已移除"提交"这类歧义词；</li>
+     *   <li>3.3 再移除"可以"（"明天可以预约吗"含"可以"曾被误判为确认）；</li>
+     *   <li>英文词 ok/yes 采用整词匹配，避免 "book a room" 命中 "ok"。</li>
+     * </ul>
      */
     private static final List<String> POSITIVE_WORDS = List.of(
-            "确认", "确定", "是的", "好的", "可以", "没问题", "就这样", "就这个", "就按",
+            "确认", "确定", "好的", "是的", "没问题", "就这样", "就这个", "就按",
             "预约吧", "帮我约", "帮我订", "ok", "yes");
 
     /**
-     * 判定"取消"的关键词，其中"不确认/不确定/不行"必须排在肯定词之前判断。
+     * 判定"取消"的关键词。英文 no 采用整词匹配，避免 "I want to know" 命中 "no"。
      */
     private static final List<String> NEGATIVE_WORDS = List.of(
             "不确认", "不确定", "不用", "不要", "不是", "不行", "取消", "算了", "不约",
             "放弃", "先别", "别了", "再想想", "拒绝", "no");
+
+    /**
+     * 3.3（深度审查 P0）：疑问标志。命中即不是确认/取消——"明天可以预约吗"、"能帮我查下余量吗"
+     * 都是询问而非应答，先于否定/肯定判定，避免把草稿误下单或误丢弃。
+     */
+    private static final List<String> QUESTION_MARKERS = List.of(
+            "吗", "呢", "？", "?", "能不能", "可不可以", "是否可以", "怎么", "如何",
+            "多少", "哪些", "什么时候", "几点", "有没有", "能否");
+
+    /**
+     * 3.3（深度审查 P0）：请求动作标志。q 以这些词开头且不含明确下单动作（约/订/提交/下单）时，
+     * 是"请帮我处理某事"的询问而非确认——"帮我确定一下时间"不能触发真实下单。
+     */
+    private static final List<String> REQUEST_ACTION_MARKERS = List.of(
+            "帮我", "麻烦", "请教", "请问", "帮忙");
+
+    /**
+     * 3.3：超过 30 字的"长确认句"（如"好的，我确认这个预约，请帮我提交"）不再一律判 NONE，
+     * 只要含明确下单动作且非疑问仍判确认，避免草稿被误销毁；否则交给 LLM。
+     */
+    private static final List<String> STRONG_CONFIRM_LONG = List.of(
+            "确认预约", "确定预约", "提交预约", "帮我提交", "帮我约", "帮我订", "预约吧", "下单");
 
     /**
      * 3.3.3：应答词之后若接上这些"新请求"信号，说明用户是在借应答口吻发起另一个问题，
@@ -73,24 +96,43 @@ public class PendingBookingExecutor {
 
     /**
      * 判定用户本轮输入是确认、取消还是无关话题（交给后续正常问答理解）。
+     * <p>
+     * 3.3（深度审查 P0）修复：疑问/请求-动作双重拦截 + 英文整词匹配 + 长句强确认，
+     * 从根上消除"帮用户擅自下单/取消"的误判面。
      */
     public ConfirmIntent detectConfirmIntent(String query) {
         if (query == null || query.isBlank()) {
             return ConfirmIntent.NONE;
         }
         String q = query.trim().toLowerCase(Locale.ROOT);
-        // 长句基本不是简单的确认/取消，交给 LLM 正常理解
-        if (q.length() > 30) {
+
+        // 3.3：疑问句一律不判确认/取消（"明天可以预约吗"、"怎么确认"、"能否改期"）
+        if (QUESTION_MARKERS.stream().anyMatch(q::contains)) {
             return ConfirmIntent.NONE;
         }
+
+        // 3.3：请求-动作句（"帮我确定一下时间"）不判确认，除非含明确下单动作
+        if (REQUEST_ACTION_MARKERS.stream().anyMatch(q::startsWith)) {
+            if (q.contains("约") || q.contains("订") || q.contains("提交") || q.contains("下单")) {
+                return ConfirmIntent.CONFIRM;
+            }
+            return ConfirmIntent.NONE;
+        }
+
+        // 长句基本不是简单的确认/取消，交给 LLM 正常理解；但含明确下单动作的确认长句放行
+        if (q.length() > 30) {
+            return STRONG_CONFIRM_LONG.stream().anyMatch(q::contains)
+                    ? ConfirmIntent.CONFIRM : ConfirmIntent.NONE;
+        }
+
         // 先判否定：避免"不确认""不用了"被肯定词命中
         for (String w : NEGATIVE_WORDS) {
-            if (q.contains(w)) {
+            if (matchesWord(q, w)) {
                 return ConfirmIntent.REJECT;
             }
         }
         for (String w : POSITIVE_WORDS) {
-            if (q.contains(w)) {
+            if (matchesWord(q, w)) {
                 // 3.3.3："好的/可以 + 后续新请求小句"不判确认（形如"好的，怎么预约？"）；
                 // 但"好的帮我约/确认预约吧"这类仍含明确下单动作的，保持判定为确认
                 if (isAckFollowedByNewRequest(q)) {
@@ -100,6 +142,14 @@ public class PendingBookingExecutor {
             }
         }
         return ConfirmIntent.NONE;
+    }
+
+    /** 英文短词整词匹配（避免 "book a room" 命中 "ok"、"know" 命中 "no"），中文直接 contains */
+    private static boolean matchesWord(String q, String word) {
+        if (word.matches("[a-zA-Z]+")) {
+            return q.matches(".*\\b" + word + "\\b.*");
+        }
+        return q.contains(word);
     }
 
     /**
@@ -140,6 +190,12 @@ public class PendingBookingExecutor {
                                  Consumer<Long> onMessageId,
                                  Consumer<AssistantEvent> onEvent,
                                  long startTime) {
+        // 3.3（深度审查 P0 附带）：草稿已过期（如确认消息被长时间延迟/客户端断连后补发）绝不能再下单，
+        // 直接丢弃并提示，杜绝"过期草稿仍被真实执行"的竞态。
+        if (pending.isExpired()) {
+            discardPending(session, pending);
+            return "您刚才的预约操作已过期，请重新发起预约。";
+        }
         conversationRepository.save(sid, "user", query, userId);
 
         String answer;

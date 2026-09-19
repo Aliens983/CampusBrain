@@ -77,6 +77,12 @@ public class StuckDocumentReclaimer {
         for (Document doc : stuck) {
             Long id = doc.getId();
             try {
+                // 3.10（深度审查 P1）：先探测 processing 锁——只要 Redis 处理锁仍存在，
+                // 说明消费者（本机或其他实例）仍在处理该文档（3.9 Watchdog 会续约慢任务），
+                // 本轮跳过，不再对"还在跑的大文档"反复重投制造无效消息与 WARN。
+                if (processingLock.isProcessing(id)) {
+                    continue;
+                }
                 // 多实例/多轮去重：拿不到 reclaim 锁说明其他实例刚重投过
                 if (!processingLock.acquireForReclaim(id, Duration.ofSeconds(reclaimLockTtlSeconds))) {
                     continue;

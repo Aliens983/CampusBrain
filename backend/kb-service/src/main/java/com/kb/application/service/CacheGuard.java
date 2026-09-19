@@ -3,6 +3,7 @@ package com.kb.application.service;
 import com.kb.domain.chat.ChatSession;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.conversation.ConversationRepository;
+import com.kb.domain.rag.IntentClassifier;
 import com.kb.infrastructure.cache.QaCacheService;
 import com.kb.infrastructure.cache.SemanticCacheService;
 import com.kb.infrastructure.metrics.BusinessMetrics;
@@ -20,6 +21,10 @@ import java.util.function.Consumer;
  * 预约实时类问题（余量、档期、我的预约等）一旦缓存就会向用户展示过期结果，
  * 因此必须完全绕开缓存——该规则与本组件一起被 QaApplicationService 复用。
  * </p>
+ * <p>
+ * 2.8（深度审查 P2）：预约意图判定收敛到 {@link IntentClassifier}，
+ * 本组件不再依赖 {@link AnswerPipeline}，消除"缓存守卫→回答管线"越界与三角互知。
+ * </p>
  *
  * @author forever-king
  */
@@ -28,7 +33,7 @@ import java.util.function.Consumer;
 @RequiredArgsConstructor
 public class CacheGuard {
 
-    private final AnswerPipeline pipeline;
+    private final IntentClassifier intentClassifier;
     private final QaCacheService qaCacheService;
     private final SemanticCacheService semanticCacheService;
     private final ConversationRepository conversationRepository;
@@ -40,7 +45,7 @@ public class CacheGuard {
      * 就会向用户展示过期结果。
      */
     public boolean isKnowledgeOnlyQuery(String rewrittenQuery, ChatSession session) {
-        return !pipeline.isAppointmentQuery(rewrittenQuery)
+        return !intentClassifier.isAppointmentQuery(rewrittenQuery)
                 && (session == null || session.slotsOrEmpty().isEmpty());
     }
 
@@ -62,8 +67,10 @@ public class CacheGuard {
             answer = exact.get().answer();
             citations = exact.get().citations() == null ? List.of() : exact.get().citations();
         } else {
+            // 3.8（深度审查 P1）：语义缓存按归属过滤——仅本人或全局共享条目可命中，
+            // 避免 A 的私有文档答案被 B 语义命中（与 4.1 归属语义联动）
             SemanticCacheService.SemanticCacheHit semantic =
-                    semanticCacheService.lookup(rewrittenQuery);
+                    semanticCacheService.lookup(rewrittenQuery, userId);
             if (semantic != null) {
                 answer = semantic.answer();
                 citations = semantic.citations() == null ? List.of() : semantic.citations();
@@ -96,12 +103,14 @@ public class CacheGuard {
     /**
      * 知识类回答写入两级缓存：精确缓存（Caffeine + Redis）与语义缓存（Qdrant 向量），
      * 两者都存引用快照，且都受 kb.cache.enabled 开关控制。
+     *
+     * @param ownerId 生成者（3.8：语义缓存落归属维度，null=未登录走全局共享）
      */
     public void populateKnowledgeCache(String rewrittenQuery, String answer,
-                                       List<Conversation.CitationRef> citations) {
+                                       List<Conversation.CitationRef> citations, Long ownerId) {
         try {
             qaCacheService.cacheAnswer(rewrittenQuery, answer, citations);
-            semanticCacheService.store(rewrittenQuery, answer, citations);
+            semanticCacheService.store(rewrittenQuery, answer, citations, ownerId);
         } catch (Exception e) {
             // 缓存写入失败绝不影响主链路回答
             log.debug("问答缓存写入失败: {}", e.getMessage());

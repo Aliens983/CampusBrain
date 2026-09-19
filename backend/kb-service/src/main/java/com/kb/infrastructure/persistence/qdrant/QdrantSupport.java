@@ -30,8 +30,12 @@ public class QdrantSupport {
     private final QdrantClient qdrantClient;
 
     /**
-     * 幂等创建 collection：已存在则跳过。距离度量固定支持 Cosine，
-     * 配置非 Cosine 时使用调用方给出的兜底度量（向量库用 Euclid，语义缓存用 Dot）。
+     * 幂等创建 collection：已存在则跳过。
+     * <p>
+     * 1.7（深度审查 P2）：修正注释与实现不符——当前两个调用方
+     * （文档向量库 {@code QdrantVectorStore}、语义缓存 {@code SemanticCacheService}）
+     * <b>均显式使用 Cosine</b>（语义相似度 0.95 阈值按余弦语义）；{@code nonCosineFallback}
+     * 仅在调用方传入非 "Cosine" 度量名时生效，属预留扩展位而非既有行为。
      *
      * @param failFast true：创建失败抛 IllegalStateException（语义缓存启动即必须可用）；
      *                 false：仅记日志（向量库保持历史容错语义，由后续调用重试暴露）

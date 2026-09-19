@@ -22,7 +22,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -91,10 +90,6 @@ public class DocumentProcessingConsumer {
     @Value("${chunking.strategy}")
     private String chunkStrategy;
 
-    /** 处理中锁 TTL：正常处理应远小于该值；消费者宕机时由 TTL 自动释放 */
-    @Value("${kb.document.processing-lock-ttl-seconds:1800}")
-    private long processingLockTtlSeconds;
-
     /**
      * 永久性处理失败：重试无意义（文件丢失/损坏/不支持的格式）。
      * 捕获后置 FAILED 并正常 ACK，消息不进 DLQ。
@@ -129,11 +124,10 @@ public class DocumentProcessingConsumer {
             return;
         }
 
-        // 并发保护：enterProcessing 通过 owner token 识别
-        // "本地重试 / TTL 内回到本实例的重投递"（放行）与"其他实例正在处理"（ACK 跳过），
+        // 并发保护：enterProcessing 通过"Redis token + 本机在途登记表"双重判据（3.9）识别
+        // "本地重试 / TTL 内回到本实例的重投递"（放行）与"重复消息/其他实例正在处理"（ACK 跳过），
         // 杜绝两个消费者并发执行"删旧数据→写新数据"。
-        if (!processingLock.enterProcessing(documentId,
-                Duration.ofSeconds(processingLockTtlSeconds))) {
+        if (!processingLock.enterProcessing(documentId)) {
             log.info("文档正在被其他消费者处理，本次消息直接确认跳过: id={}", documentId);
             return;
         }
@@ -189,7 +183,8 @@ public class DocumentProcessingConsumer {
             chunkTransactionService.saveChunksAtomically(chunks, documentId);
 
             // === Step 5: Store (Qdrant + ES) — 用正确的 documentId（失败可重试）===
-            store(chunks, embeddings, documentId);
+            // 4.1（深度审查 P0）：写入归属用户 ownerId，检索端据此过滤
+            store(chunks, embeddings, documentId, doc.getOwnerId());
 
             // === Step 6: Mark READY ===
             documentRepository.markReady(documentId, chunks.size());
@@ -225,6 +220,10 @@ public class DocumentProcessingConsumer {
                 throw re;
             }
             throw new RuntimeException("文档处理失败（可重试）: id=" + documentId, retryable);
+        } finally {
+            // 3.9：注销本机在途登记（终态路径 exitProcessing 已移除，幂等）；
+            // 可重试路径在此取消"在途"标记，Spring retry 下一轮（token 仍在 Redis）可重新入场
+            processingLock.markTaskFinished(documentId);
         }
     } // end processDocument
 
@@ -235,8 +234,10 @@ public class DocumentProcessingConsumer {
             // Use ParserChain: tries primary parser first, auto-fallbacks on failure
             return parserChain.parseAuto(fileStream, doc.getTitle());
         } catch (FileNotFoundException fnf) {
+            // 4.17（深度审查 P2）：错误信息不得携带服务器绝对路径——
+            // 该 message 会写入 error_msg 并经 DocumentStatusNotifier 推送到前端
             throw new PermanentProcessingException(
-                    "原始文件不存在，可能已被外部清理: path=" + doc.getFilePath(), fnf);
+                    "原始文件不存在，可能已被外部清理（文件 ID=" + doc.getId() + "）", fnf);
         }
     }
 
@@ -264,7 +265,7 @@ public class DocumentProcessingConsumer {
         return embeddings;
     }
 
-    private void store(List<DocumentChunk> chunks, List<float[]> embeddings, Long documentId) {
+    private void store(List<DocumentChunk> chunks, List<float[]> embeddings, Long documentId, Long ownerId) {
         List<VectorStoreService.VectorPoint> qdrantPoints = new ArrayList<>();
         List<EsDocumentEntity> esDocs = new ArrayList<>();
 
@@ -281,6 +282,10 @@ public class DocumentProcessingConsumer {
             payload.put("content", chunk.getContent());
             payload.put("section_title", chunk.getMetadata() != null
                     ? chunk.getMetadata().getOrDefault("sectionTitle", "") : "");
+            // 4.1（深度审查 P0）：写入归属用户，检索端据此过滤跨用户私有泄露；null 视为全局共享
+            if (ownerId != null) {
+                payload.put("owner_id", String.valueOf(ownerId));
+            }
 
             qdrantPoints.add(new VectorStoreService.VectorPoint(
                     chunk.getQdrantId(), vector, payload));
@@ -293,6 +298,7 @@ public class DocumentProcessingConsumer {
                     .chunkIndex(chunk.getChunkIndex())
                     .createdAt(LocalDateTime.now()
                             .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
+                    .ownerId(ownerId)
                     .build());
         }
 

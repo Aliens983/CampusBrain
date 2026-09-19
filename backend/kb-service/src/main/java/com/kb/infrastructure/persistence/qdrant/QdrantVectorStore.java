@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.*;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static io.qdrant.client.PointIdFactory.id;
 import static io.qdrant.client.VectorsFactory.vectors;
@@ -28,6 +30,9 @@ import static io.qdrant.client.WithPayloadSelectorFactory.enable;
 @Component
 @RequiredArgsConstructor
 public class QdrantVectorStore implements VectorStoreService {
+
+    /** 4.18（深度审查 P2）：Qdrant gRPC 调用等待上限（秒），防止外部客户端挂起堵线程 */
+    private static final int QDRANT_TIMEOUT_SECONDS = 30;
 
     /** Qdrant客户端实例，用于与Qdrant向量数据库通信 */
     private final QdrantClient qdrantClient;
@@ -82,9 +87,9 @@ public class QdrantVectorStore implements VectorStoreService {
                             .setWait(true)
                             .addAllPoints(qdrantPoints)
                             .build()
-            ).get();
+            ).get(QDRANT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             log.debug("Upserted {} vectors to Qdrant", points.size());
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
             log.error("Qdrant upsert failed", e);
             Thread.currentThread().interrupt();
             throw new RuntimeException("Qdrant upsert failed", e);
@@ -92,17 +97,32 @@ public class QdrantVectorStore implements VectorStoreService {
     }
 
     @Override
-    public List<ScoredVector> search(float[] queryVector, int limit, double scoreThreshold) {
+    public List<ScoredVector> search(float[] queryVector, int limit, double scoreThreshold, Long ownerId) {
         try {
-            List<ScoredPoint> results = qdrantClient.searchAsync(
-                    SearchPoints.newBuilder()
-                            .setCollectionName(collectionName)
-                            .addAllVector(qdrantSupport.toFloatList(queryVector))
-                            .setLimit(limit)
-                            .setScoreThreshold((float) scoreThreshold)
-                            .setWithPayload(enable(true))
-                            .build()
-            ).get();
+            SearchPoints.Builder spb = SearchPoints.newBuilder()
+                    .setCollectionName(collectionName)
+                    .addAllVector(qdrantSupport.toFloatList(queryVector))
+                    .setLimit(limit)
+                    .setScoreThreshold((float) scoreThreshold)
+                    .setWithPayload(enable(true));
+
+            // 4.1（深度审查 P0）：归属过滤——可见 = 全局共享（owner_id 缺失/空）OR 当前用户私有
+            Filter.Builder filterBuilder = Filter.newBuilder();
+            Condition.Builder ownerMatches = Condition.newBuilder().setField(
+                    FieldCondition.newBuilder().setKey("owner_id").setMatch(
+                            Match.newBuilder().setKeyword(String.valueOf(ownerId))));
+            Condition.Builder shared = Condition.newBuilder().setIsEmpty(
+                    IsEmptyCondition.newBuilder().setKey("owner_id"));
+            if (ownerId != null) {
+                filterBuilder.addShould(ownerMatches).addShould(shared);
+            } else {
+                // 匿名/系统检索：仅共享文档
+                filterBuilder.addMust(shared);
+            }
+            spb.setFilter(filterBuilder.build());
+
+            List<ScoredPoint> results = qdrantClient.searchAsync(spb.build())
+                    .get(QDRANT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
             List<ScoredVector> svList = new ArrayList<>();
             for (ScoredPoint sp : results) {
@@ -121,7 +141,7 @@ public class QdrantVectorStore implements VectorStoreService {
             }
             return svList;
 
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
             log.error("Qdrant search failed", e);
             Thread.currentThread().interrupt();
             throw new RuntimeException("Qdrant search failed", e);
@@ -146,9 +166,9 @@ public class QdrantVectorStore implements VectorStoreService {
                                     .build())
                             .setWait(true)
                             .build()
-            ).get();
+            ).get(QDRANT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             log.debug("Deleted {} vectors from Qdrant", pointIds.size());
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException | ExecutionException | TimeoutException e) {
             log.error("Qdrant delete failed", e);
             Thread.currentThread().interrupt();
         }
@@ -174,7 +194,7 @@ public class QdrantVectorStore implements VectorStoreService {
                                     .build())
                             .setWait(true)
                             .build()
-            ).get();
+            ).get(QDRANT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             log.debug("Deleted vectors for document {} from Qdrant", documentId);
         } catch (InterruptedException e) {
             // A-04：恢复中断标志并向上抛出，让上层重试/对账链路感知失败，
@@ -183,7 +203,8 @@ public class QdrantVectorStore implements VectorStoreService {
             log.error("Qdrant deleteByDocumentId interrupted: documentId={}", documentId, e);
             throw new IllegalStateException(
                     "Qdrant 删除文档向量被中断: documentId=" + documentId, e);
-        } catch (ExecutionException e) {
+        } catch (ExecutionException | TimeoutException e) {
+            // 4.18：超时同样按失败上抛，由 IndexDeleteFailure 对账链路补偿
             log.error("Qdrant deleteByDocumentId failed: documentId={}", documentId, e);
             throw new IllegalStateException(
                     "Qdrant 删除文档向量失败: documentId=" + documentId, e);

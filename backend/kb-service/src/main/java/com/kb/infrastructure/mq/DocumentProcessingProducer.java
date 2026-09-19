@@ -1,5 +1,6 @@
 package com.kb.infrastructure.mq;
 
+import com.kb.domain.document.DocumentProcessingDispatcher;
 import com.kb.infrastructure.config.RabbitMqConfig;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,13 +13,17 @@ import org.springframework.stereotype.Component;
  * After a document is saved to local storage, a message is sent to trigger
  * the async processing pipeline: Parse → Chunk → Embed → Store.
  * </p>
+ * <p>
+ * 2.5（深度审查 P2）：本类直接 implements {@link DocumentProcessingDispatcher}
+ * （基础设施实现领域端口），已删除纯委托的 adapter 转发层。
+ * </p>
  *
  * @author forever-king
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class DocumentProcessingProducer {
+public class DocumentProcessingProducer implements DocumentProcessingDispatcher {
 
     /** RabbitMQ消息发送模板 */
     private final RabbitTemplate rabbitTemplate;
@@ -26,6 +31,7 @@ public class DocumentProcessingProducer {
     /**
      * Enqueue a document for async processing.
      */
+    @Override
     public void send(Long documentId) {
         send(documentId, false);
     }

@@ -98,6 +98,8 @@ public class QaApplicationService implements IQaApplicationService {
                                 Consumer<List<Conversation.CitationRef>> onCitations,
                                 Consumer<Long> onMessageId,
                                 Consumer<AssistantEvent> onEvent) {
+        // 3.12（深度审查 P2）：本重载不带 CancellationToken，调用方拿不到断连取消能力
+        // （走它仅用于无取消需求的场景/测试；生产 SSE 入口 QaController 直用 8 参含 token 版）。
         return askStreaming(query, sessionId, currentUserId, CancellationToken.none(),
                 onToken, onCitations, onMessageId, onEvent);
     }
@@ -126,47 +128,24 @@ public class QaApplicationService implements IQaApplicationService {
 
         try {
             // ---- Step 0: 上一轮遗留的"待确认动作"优先处理 ----
-            PendingBooking pending = session.getPendingBooking();
-            if (pending != null) {
-                if (pending.isExpired()) {
-                    session.setPendingBooking(null);
-                    chatSessionRepository.save(session);
-                } else {
-                    PendingBookingExecutor.ConfirmIntent intent = pendingExecutor.detectConfirmIntent(query);
-                    if (intent == PendingBookingExecutor.ConfirmIntent.CONFIRM) {
-                        return pendingExecutor.executePending(sid, userId, query, session, pending, true,
-                                tokenCollector, onCitations, onMessageId, onEvent, startTime);
-                    }
-                    if (intent == PendingBookingExecutor.ConfirmIntent.REJECT) {
-                        return pendingExecutor.executePending(sid, userId, query, session, pending, false,
-                                tokenCollector, onCitations, onMessageId, onEvent, startTime);
-                    }
-                    // 用户转移话题：丢弃上一份草稿，避免误确认
-                    pendingExecutor.discardPending(session, pending);
-                }
+            String handledAction = handlePendingBookingAction(query, sid, userId, session,
+                    tokenCollector, onCitations, onMessageId, onEvent, startTime);
+            if (handledAction != null) {
+                return handledAction;
             }
 
-            // ---- Step 1: 上下文感知改写（追问补全 + 槽位继承）----
-            List<LlmService.ChatMessage> history = pipeline.loadHistory(sid, userId);
-            ContextualQueryRewriter.RewriteResult rewrite =
-                    contextualRewriter.rewrite(query, history, session.slotsOrEmpty());
-            String rewritten = rewrite.query();
-            session.setSlots(rewrite.slots());
-            chatSessionRepository.save(session);
-
-            // 供 @Tool 回退使用（LLM 漏传参数时用会话槽位兜底）
-            ChatContextHolder.set(new ChatContextHolder.ChatContext(sid, userId, session.getSlots()));
+            // ---- Step 1: 上下文感知改写（追问补全 + 槽位继承），并透传会话槽位给 @Tool ----
+            RewriteOutcome outcome = rewriteWithContext(query, sid, userId, session);
+            String rewritten = outcome.query();
+            List<LlmService.ChatMessage> history = outcome.history();
 
             // ---- Step 1.5: 纯知识类问题先查问答缓存 ----
             // 预约实时类（命中预约意图或会话已带槽位）一律不查不写，避免余量/档期过期；
             // 精确缓存未命中再查语义缓存（相似度阈值 0.95）。
-            if (cacheGuard.isKnowledgeOnlyQuery(rewritten, session)) {
-                String cached = cacheGuard.answerFromCache(query, rewritten, sid, userId,
-                        tokenCollector, onCitations, onMessageId, startTime);
-                if (cached != null) {
-                    return cached;
-                }
-                metrics.recordCacheMiss();
+            String cached = tryServeFromCache(query, rewritten, sid, userId, session,
+                    tokenCollector, onCitations, onMessageId, startTime);
+            if (cached != null) {
+                return cached;
             }
 
             // ---- Step 2: 混合检索 + 重排（SSE 链路走图谱增强检索）----
@@ -184,45 +163,19 @@ public class QaApplicationService implements IQaApplicationService {
             }
 
             // 本地资料命中的知识类回答写缓存（精确 + 语义），预约/兜底类不写
-            if (cacheGuard.isKnowledgeOnlyQuery(rewritten, session) && reranked != null && !reranked.isEmpty()
-                    && fullAnswer != null && !fullAnswer.isBlank()) {
-                cacheGuard.populateKnowledgeCache(rewritten, fullAnswer, pipeline.buildCitations(reranked));
-            }
+            populateKnowledgeCacheIfApplicable(rewritten, session, reranked, fullAnswer, userId);
 
-            // ---- Step 5: 回读会话（工具可能更新了槽位与待确认草稿）----
-            ChatSession latest = chatSessionRepository.find(sid).orElse(session);
-            chatSessionRepository.save(latest);
-
-            List<Conversation.CitationRef> citations = pipeline.buildCitations(reranked);
-
-            Long messageId = conversationRepository.saveWithReferences(
-                    sid, "assistant", fullAnswer, citations, userId);
-            if (onMessageId != null && messageId != null) {
-                onMessageId.accept(messageId);
-            }
-            if (onCitations != null) {
-                onCitations.accept(citations);
-            }
-            if (onEvent != null) {
-                BookingSlots slots = latest.slotsOrEmpty();
-                if (!slots.isEmpty()) {
-                    onEvent.accept(AssistantEvent.slots(slots));
-                }
-                if (latest.getPendingBooking() != null) {
-                    onEvent.accept(AssistantEvent.confirm(latest.getPendingBooking()));
-                }
-            }
-
-            metrics.recordQaRequest();
-            metrics.recordQaLatency(System.currentTimeMillis() - startTime);
-            incrementDailyCounter();
-            return fullAnswer;
+            // ---- Step 5: 回读会话（工具可能更新了槽位与待确认草稿）+ 引用落库 + 回调 + 指标 ----
+            return persistAndNotify(sid, userId, fullAnswer, reranked, session,
+                    onCitations, onMessageId, onEvent, startTime);
 
         } catch (StreamCancelledException cancelled) {
             // 客户端主动断开：不是错误，不推错误文案、不落错误消息；
             // 已生成的非空部分尽力落库（刷新页面后历史不缺这一轮）。
             log.info("客户端断开，问答已中止: sid={}, 已生成 {} 字",
                     sid, partialAnswer.length());
+            // 3.12：单独计数"客户端断连中止"，区别于错误与正常完成
+            metrics.recordStreamCancelled();
             return finishAfterCancel(sid, userId, partialAnswer.toString(), startTime);
         } catch (Exception e) {
             log.error("Q&A failed for query: {}", query, e);
@@ -267,40 +220,22 @@ public class QaApplicationService implements IQaApplicationService {
         ChatSession session = chatSessionRepository.loadForUser(sid, userId);
 
         try {
-            PendingBooking pending = session.getPendingBooking();
-            if (pending != null && !pending.isExpired()) {
-                PendingBookingExecutor.ConfirmIntent intent = pendingExecutor.detectConfirmIntent(query);
-                if (intent == PendingBookingExecutor.ConfirmIntent.CONFIRM) {
-                    return pendingExecutor.executePending(sid, userId, query, session, pending, true,
-                            null, null, null, null, startTime);
-                }
-                if (intent == PendingBookingExecutor.ConfirmIntent.REJECT) {
-                    return pendingExecutor.executePending(sid, userId, query, session, pending, false,
-                            null, null, null, null, startTime);
-                }
-                pendingExecutor.discardPending(session, pending);
-            } else if (pending != null) {
-                session.setPendingBooking(null);
-                chatSessionRepository.save(session);
+            String handledAction = handlePendingBookingAction(query, sid, userId, session,
+                    null, null, null, null, startTime);
+            if (handledAction != null) {
+                return handledAction;
             }
 
-            List<LlmService.ChatMessage> history = pipeline.loadHistory(sid, userId);
-            ContextualQueryRewriter.RewriteResult rewrite =
-                    contextualRewriter.rewrite(query, history, session.slotsOrEmpty());
-            String rewritten = rewrite.query();
-            session.setSlots(rewrite.slots());
-            chatSessionRepository.save(session);
-
-            ChatContextHolder.set(new ChatContextHolder.ChatContext(sid, userId, session.getSlots()));
+            // 同步路径无 token 回调：改写仅维持槽位 / 上下文一致性
+            RewriteOutcome outcome = rewriteWithContext(query, sid, userId, session);
+            String rewritten = outcome.query();
+            List<LlmService.ChatMessage> history = outcome.history();
 
             // 纯知识类问题先查缓存（同步路径无 token 回调）
-            if (cacheGuard.isKnowledgeOnlyQuery(rewritten, session)) {
-                String cached = cacheGuard.answerFromCache(query, rewritten, sid, userId,
-                        null, null, null, startTime);
-                if (cached != null) {
-                    return cached;
-                }
-                metrics.recordCacheMiss();
+            String cached = tryServeFromCache(query, rewritten, sid, userId, session,
+                    null, null, null, startTime);
+            if (cached != null) {
+                return cached;
             }
 
             // 同步路径走关键词检索（非图谱增强）
@@ -310,21 +245,10 @@ public class QaApplicationService implements IQaApplicationService {
             String answer = pipeline.generate(rewritten, reranked, history, session, null,
                     CancellationToken.none());
 
-            if (cacheGuard.isKnowledgeOnlyQuery(rewritten, session) && reranked != null && !reranked.isEmpty()
-                    && answer != null && !answer.isBlank()) {
-                cacheGuard.populateKnowledgeCache(rewritten, answer, pipeline.buildCitations(reranked));
-            }
+            populateKnowledgeCacheIfApplicable(rewritten, session, reranked, answer, userId);
 
-            ChatSession latest = chatSessionRepository.find(sid).orElse(session);
-            chatSessionRepository.save(latest);
-
-            List<Conversation.CitationRef> citations = pipeline.buildCitations(reranked);
-            conversationRepository.saveWithReferences(sid, "assistant", answer, citations, userId);
-
-            metrics.recordQaRequest();
-            metrics.recordQaLatency(System.currentTimeMillis() - startTime);
-            incrementDailyCounter();
-            return answer;
+            return persistAndNotify(sid, userId, answer, reranked, session,
+                    null, null, null, startTime);
         } finally {
             ChatContextHolder.clear();
         }
@@ -390,6 +314,133 @@ public class QaApplicationService implements IQaApplicationService {
                     "sessionId=" + sessionId);
         }
         chatSessionRepository.clear(sessionId, userId);
+    }
+
+    // ========== 编排模板（ask / askStreaming 共用，第14轮 D-B5 收敛重复） ==========
+
+    /** 改写结果：改写后的问题 + 会话历史（生成回答仍需历史，故随结果一并返回）。 */
+    private record RewriteOutcome(String query, List<LlmService.ChatMessage> history) {
+    }
+
+    /**
+     * Step 0：处理上一轮遗留的"待确认预约动作"。
+     * 返回非 null 表示已代为处理完成（确认/取消已执行），调用方直接返回该结果；
+     * null 表示继续主线（草稿已过期则清掉，转移话题则丢弃旧草稿）。
+     */
+    private String handlePendingBookingAction(String query, String sid, Long userId, ChatSession session,
+                                              Consumer<String> tokenCollector,
+                                              Consumer<List<Conversation.CitationRef>> onCitations,
+                                              Consumer<Long> onMessageId,
+                                              Consumer<AssistantEvent> onEvent,
+                                              long startTime) {
+        PendingBooking pending = session.getPendingBooking();
+        if (pending == null) {
+            return null;
+        }
+        if (pending.isExpired()) {
+            session.setPendingBooking(null);
+            chatSessionRepository.save(session);
+            return null;
+        }
+        PendingBookingExecutor.ConfirmIntent intent = pendingExecutor.detectConfirmIntent(query);
+        if (intent == PendingBookingExecutor.ConfirmIntent.CONFIRM) {
+            return pendingExecutor.executePending(sid, userId, query, session, pending, true,
+                    tokenCollector, onCitations, onMessageId, onEvent, startTime);
+        }
+        if (intent == PendingBookingExecutor.ConfirmIntent.REJECT) {
+            return pendingExecutor.executePending(sid, userId, query, session, pending, false,
+                    tokenCollector, onCitations, onMessageId, onEvent, startTime);
+        }
+        // 用户转移话题：丢弃上一份草稿，避免误确认
+        pendingExecutor.discardPending(session, pending);
+        return null;
+    }
+
+    /**
+     * Step 1：上下文感知改写（追问补全 + 槽位继承），并透传会话槽位给 @Tool 回退使用。
+     */
+    private RewriteOutcome rewriteWithContext(String query, String sid, Long userId, ChatSession session) {
+        List<LlmService.ChatMessage> history = pipeline.loadHistory(sid, userId);
+        ContextualQueryRewriter.RewriteResult rewrite =
+                contextualRewriter.rewrite(query, history, session.slotsOrEmpty());
+        String rewritten = rewrite.query();
+        session.setSlots(rewrite.slots());
+        chatSessionRepository.save(session);
+
+        // 供 @Tool 回退使用（LLM 漏传参数时用会话槽位兜底）
+        ChatContextHolder.set(new ChatContextHolder.ChatContext(sid, userId, session.getSlots()));
+        return new RewriteOutcome(rewritten, history);
+    }
+
+    /**
+     * Step 1.5：纯知识类问题先查问答缓存（精确 + 语义）。
+     * 命中返回缓存答案；未命中返回 null 并记录 miss 指标。预约实时类由
+     * isKnowledgeOnlyQuery 排除（命中预约意图或会话已带槽位一律不查不写）。
+     */
+    private String tryServeFromCache(String query, String rewritten, String sid, Long userId, ChatSession session,
+                                     Consumer<String> tokenCollector,
+                                     Consumer<List<Conversation.CitationRef>> onCitations,
+                                     Consumer<Long> onMessageId,
+                                     long startTime) {
+        if (!cacheGuard.isKnowledgeOnlyQuery(rewritten, session)) {
+            return null;
+        }
+        String cached = cacheGuard.answerFromCache(query, rewritten, sid, userId,
+                tokenCollector, onCitations, onMessageId, startTime);
+        if (cached != null) {
+            return cached;
+        }
+        metrics.recordCacheMiss();
+        return null;
+    }
+
+    /**
+     * 本地资料命中的知识类回答写缓存（精确 + 语义），预约/兜底类不写。
+     */
+    private void populateKnowledgeCacheIfApplicable(String rewritten, ChatSession session,
+                                                    List<RetrievalResult> reranked, String answer,
+                                                    Long userId) {
+        if (cacheGuard.isKnowledgeOnlyQuery(rewritten, session) && reranked != null && !reranked.isEmpty()
+                && answer != null && !answer.isBlank()) {
+            cacheGuard.populateKnowledgeCache(rewritten, answer, pipeline.buildCitations(reranked), userId);
+        }
+    }
+
+    /**
+     * Step 5：回读会话（工具可能更新了槽位与待确认草稿）、引用落库、前端回调与指标收尾。
+     */
+    private String persistAndNotify(String sid, Long userId, String fullAnswer,
+                                    List<RetrievalResult> reranked, ChatSession session,
+                                    Consumer<List<Conversation.CitationRef>> onCitations,
+                                    Consumer<Long> onMessageId,
+                                    Consumer<AssistantEvent> onEvent,
+                                    long startTime) {
+        ChatSession latest = chatSessionRepository.find(sid).orElse(session);
+        chatSessionRepository.save(latest);
+
+        List<Conversation.CitationRef> citations = pipeline.buildCitations(reranked);
+        Long messageId = conversationRepository.saveWithReferences(
+                sid, "assistant", fullAnswer, citations, userId);
+        if (onMessageId != null && messageId != null) {
+            onMessageId.accept(messageId);
+        }
+        if (onCitations != null) {
+            onCitations.accept(citations);
+        }
+        if (onEvent != null) {
+            BookingSlots slots = latest.slotsOrEmpty();
+            if (!slots.isEmpty()) {
+                onEvent.accept(AssistantEvent.slots(slots));
+            }
+            if (latest.getPendingBooking() != null) {
+                onEvent.accept(AssistantEvent.confirm(latest.getPendingBooking()));
+            }
+        }
+
+        metrics.recordQaRequest();
+        metrics.recordQaLatency(System.currentTimeMillis() - startTime);
+        incrementDailyCounter();
+        return fullAnswer;
     }
 
     // ========== Private Helpers ==========

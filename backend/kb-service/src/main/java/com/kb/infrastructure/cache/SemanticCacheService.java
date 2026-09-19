@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.rag.EmbeddingService;
 import com.kb.infrastructure.persistence.qdrant.QdrantSupport;
+import com.kb.infrastructure.rag.llm.NoAnswerMarkers;
 import io.qdrant.client.QdrantClient;
 import io.qdrant.client.grpc.Collections.Distance;
 import io.qdrant.client.grpc.Points;
@@ -22,6 +23,7 @@ import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -67,6 +69,17 @@ public class SemanticCacheService {
     private static final String FIELD_ANSWER = "answer";
     private static final String FIELD_CITATIONS = "citations";
     private static final String FIELD_QUESTION = "question";
+
+    /**
+     * 3.8（深度审查 P1）归属维度：记录生成该条缓存的用户。
+     * <ul>
+     *   <li>有归属（owner_id 存在）→ 仅该用户可见（其答案可能引用了私有文档）；</li>
+     *   <li>无归属（字段缺失，未登录/服务内生成）→ 全量共享，与 4.1"无 owner=全局共享"口径一致。</li>
+     * </ul>
+     */
+    private static final String FIELD_OWNER_ID = "owner_id";
+    /** 过期清理时的时间余量（毫秒），避免边界点的缓存刚写入即被清扫 */
+    private static final long CLEANUP_TTL_MARGIN_MS = 3600_000L;
 
     private final QdrantClient qdrantClient;
     private final EmbeddingService embeddingService;
@@ -115,18 +128,20 @@ public class SemanticCacheService {
      * 查找语义缓存。
      *
      * @param question 改写后的用户问题
-     * @return top1 相似度 ≥ 阈值且未过期的缓存；未命中/任何异常均返回 null（降级走正常 RAG）
+     * @param userId   当前登录用户（3.8 归属过滤；null=未登录，仅可见全局共享条目）
+     * @return top1 相似度 ≥ 阈值、未过期且对当前用户可见的缓存；未命中/任何异常均返回 null（降级走正常 RAG）
      */
-    public SemanticCacheHit lookup(String question) {
+    public SemanticCacheHit lookup(String question, Long userId) {
         if (!cacheEnabled || question == null || question.isBlank()) {
             return null;
         }
         try {
             float[] queryVec = embeddingService.embed(question);
 
-            // 只在未过期点中检索：cached_at >= 截止时间
+            // 只在未过期且对当前用户可见的点中检索：cached_at >= 截止时间，
+            // 归属 = 本人（owner_id == userId）或全局共享（owner_id 缺失）
             long cutoff = System.currentTimeMillis() - ttlHours * 3600_000L;
-            Filter freshnessFilter = Filter.newBuilder()
+            Filter.Builder visibleFilter = Filter.newBuilder()
                     .addMust(Condition.newBuilder()
                             .setField(FieldCondition.newBuilder()
                                     .setKey(FIELD_CACHE_TYPE)
@@ -138,8 +153,8 @@ public class SemanticCacheService {
                                     .setKey(FIELD_CACHED_AT)
                                     .setRange(Points.Range.newBuilder().setGte(cutoff).build())
                                     .build())
-                            .build())
-                    .build();
+                            .build());
+            visibleFilter.addMust(ownerVisibilityCondition(userId));
 
             List<ScoredPoint> results = qdrantClient.searchAsync(
                     SearchPoints.newBuilder()
@@ -147,7 +162,7 @@ public class SemanticCacheService {
                             .addAllVector(qdrantSupport.toFloatList(queryVec))
                             .setLimit(1)
                             .setScoreThreshold((float) similarityThreshold)
-                            .setFilter(freshnessFilter)
+                            .setFilter(visibleFilter.build())
                             .setWithPayload(enable(true))
                             .build()
             ).get();
@@ -175,10 +190,18 @@ public class SemanticCacheService {
 
     /**
      * 写入语义缓存（同问题幂等覆盖）。
+     *
+     * @param ownerId 生成者用户 ID（3.8）；null=未登录/服务内生成 → 不落 owner_id，视为全局共享
      */
-    public void store(String question, String answer, List<Conversation.CitationRef> citations) {
+    public void store(String question, String answer, List<Conversation.CitationRef> citations, Long ownerId) {
         if (!cacheEnabled || question == null || question.isBlank()
                 || answer == null || answer.isBlank()) {
+            return;
+        }
+        // 4.19（深度审查 P2）："无法回答/拒绝回答/注入套话"类内容不写入全局语义缓存，
+        // 避免一次 prompt 注入的响应被固化放大为 TTL 内全体用户共享的答案。
+        if (NoAnswerMarkers.looksLikeNoAnswer(answer)) {
+            log.debug("跳过语义缓存写入（无法回答/拒绝回答类内容）: [{}]", question);
             return;
         }
         try {
@@ -192,6 +215,10 @@ public class SemanticCacheService {
                     .putPayload(FIELD_QUESTION, value(question))
                     .putPayload(FIELD_ANSWER, value(answer))
                     .putPayload(FIELD_CACHED_AT, value(System.currentTimeMillis()));
+            if (ownerId != null) {
+                // 仅登录用户写入时记归属；全局共享条目不写该字段，lookup 按 isNull 放行
+                point.putPayload(FIELD_OWNER_ID, value(ownerId));
+            }
             String citationsJson = objectMapper.writeValueAsString(
                     citations == null ? List.of() : citations);
             point.putPayload(FIELD_CITATIONS, value(citationsJson));
@@ -242,11 +269,78 @@ public class SemanticCacheService {
         }
     }
 
+    /**
+     * 3.8（深度审查 P1）归属可见性条件：owner_id == 当前用户 或 owner_id 缺失（全局共享）。
+     * 未登录（userId==null）仅放行全局共享条目。
+     */
+    private Condition ownerVisibilityCondition(Long userId) {
+        if (userId == null) {
+            return Condition.newBuilder()
+                    .setIsNull(Points.IsNullCondition.newBuilder().setKey(FIELD_OWNER_ID).build())
+                    .build();
+        }
+        Filter.Builder visible = Filter.newBuilder()
+                .addShould(Condition.newBuilder()
+                        .setField(FieldCondition.newBuilder()
+                                .setKey(FIELD_OWNER_ID)
+                                .setMatch(Match.newBuilder().setInteger(userId))
+                                .build())
+                        .build())
+                .addShould(Condition.newBuilder()
+                        .setIsNull(Points.IsNullCondition.newBuilder().setKey(FIELD_OWNER_ID).build())
+                        .build());
+        return Condition.newBuilder().setFilter(visible.build()).build();
+    }
+
+    /**
+     * 3.8（深度审查 P1）过期点清理任务：查找阶段只做"懒过滤"（cached_at >= cutoff），
+     * 过期点永不被删除，collection 只增不减。本任务按固定延迟删除已过 TTL（外加 1h 余量）
+     * 的缓存点，与懒过滤互补。
+     */
+    @Scheduled(fixedDelayString = "${kb.cache.semantic-cleanup-interval-ms:21600000}",
+            initialDelayString = "${kb.cache.semantic-cleanup-init-delay-ms:600000}")
+    public void cleanupStaleCacheEntries() {
+        if (!cacheEnabled) {
+            return;
+        }
+        try {
+            long cutoff = System.currentTimeMillis() - ttlHours * 3600_000L - CLEANUP_TTL_MARGIN_MS;
+            Filter staleFilter = Filter.newBuilder()
+                    .addMust(Condition.newBuilder()
+                            .setField(FieldCondition.newBuilder()
+                                    .setKey(FIELD_CACHE_TYPE)
+                                    .setMatch(Match.newBuilder().setKeyword(CACHE_TYPE))
+                                    .build())
+                            .build())
+                    .addMust(Condition.newBuilder()
+                            .setField(FieldCondition.newBuilder()
+                                    .setKey(FIELD_CACHED_AT)
+                                    .setRange(Points.Range.newBuilder().setLt(cutoff).build())
+                                    .build())
+                            .build())
+                    .build();
+            qdrantClient.deleteAsync(
+                    DeletePoints.newBuilder()
+                            .setCollectionName(collectionName)
+                            .setPoints(PointsSelector.newBuilder().setFilter(staleFilter).build())
+                            .setWait(true)
+                            .build()
+            ).get();
+            log.info("语义缓存过期清理完成：删除 cached_at < {} 的点", cutoff);
+        } catch (Exception e) {
+            // 清理失败不影响主链路，下个周期再试
+            log.warn("语义缓存过期清理失败: {}", e.getMessage());
+        }
+    }
+
     // ==================== helpers ====================
 
     /**
-     * 由问题内容确定性生成点位 ID（SHA-256 → UUIDv3）：
-     * 同一问题永远覆盖同一点位（幂等、无冗余），不同问题 256 位空间不碰撞。
+     * 由问题内容确定性生成点位 ID。
+     * <p>
+     * 1.7（深度审查 P2）：修正注释——{@code UUID.nameUUIDFromBytes} 内部为 <b>MD5（128 位）</b>
+     * 而非 SHA-256（SHA-256 仅用于把问题字节预哈希进 MD5 输入，最终空间仍是 128 位）。
+     * 同一问题恒映射同一 ID（幂等覆盖），不同问题碰撞概率约 2⁻⁶⁴，可忽略。
      */
     private UUID deterministicPointId(String question) {
         try {
