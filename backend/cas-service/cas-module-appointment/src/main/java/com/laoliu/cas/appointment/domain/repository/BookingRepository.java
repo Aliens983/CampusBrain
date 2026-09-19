@@ -58,7 +58,6 @@ public interface BookingRepository {
     Map<Long, Integer> sumEquipmentOverlapBatch(Collection<Long> equipmentIds, LocalDate date,
                                                 String startTime, String endTime);
 
-
     /** 到点自动归还：把已过结束时间的已通过时段单、及已过 end_date 的无时段单置为已完成，返回处理条数 */
     int autoCompleteExpired();
 
@@ -80,8 +79,8 @@ public interface BookingRepository {
     /**
      * 筛出当前用户给定订单中"可取消"的订单引用（12-09 + 3.5）。
      * <p>
-     * 可取消条件与原子 UPDATE 的 WHERE 完全一致：归属本人、ID 在入参集合内，
-     * 且为待审核单，或已通过的活动单。该查询为 FOR UPDATE 锁定读（须在事务内）：
+     * 可取消条件与原子 UPDATE 的 WHERE 完全一致：归属本人、ID 在入参集合内、
+     * 且为待审核单，或已通过的活动单。该查询为 {@code FOR UPDATE} 锁定读（须在事务内）：
      * 调用期间命中行被锁定，返回集合即随后 UPDATE 的实际命中集合，
      * CANCELLED 事件据此逐单按真实 serviceId 发布，杜绝虚假事件与 serviceId 错传。
      */
@@ -100,6 +99,22 @@ public interface BookingRepository {
      * @return 多表 UPDATE 各表匹配行之和；0 表示无命中
      */
     int cancelByIds(Long userId, List<Long> orderIds);
+
+    /**
+     * 管理员强制取消（3.4 僵尸单兜底）：不校验归属与活动分类，待审核/已通过的任意单
+     * 置为已取消并释放占用（容量型回补 booked_count、咨询单释放时段）。
+     *
+     * @return true 表示命中并更新；false 表示订单不存在或已是终态（幂等）
+     */
+    boolean adminCancelAndRelease(Long orderId, String reason);
+
+    /**
+     * 管理员强制完结（3.4 僵尸单兜底）：待审核/已通过单置为已完成，
+     * 容量型单回补 booked_count 解锁名额；时段型单不动时段。
+     *
+     * @return true 表示命中并更新；false 表示订单不存在或已是终态（幂等）
+     */
+    boolean adminCompleteAndRelease(Long orderId, String reason);
 
     /**
      * 分页查询所有服务预约状态（支持按审核状态、服务名称筛选）
@@ -126,22 +141,6 @@ public interface BookingRepository {
 
     /** 免审直通：把刚提交的活动预约置为已通过 */
     int approveActivityBookings(Long userId, List<Integer> serviceIds);
-
-    /**
-     * 管理员强制取消（3.4 僵尸单兜底）：不校验归属与活动分类，待审核/已通过的任意单
-     * 置为已取消并释放占用（容量型回补 booked_count、咨询单释放时段）。
-     *
-     * @return true 表示命中并更新；false 表示订单不存在或已是终态（幂等）
-     */
-    boolean adminCancelAndRelease(Long orderId, String reason);
-
-    /**
-     * 管理员强制完结（3.4 僵尸单兜底）：待审核/已通过单置为已完成，
-     * 容量型单回补 booked_count 解锁名额；时段型单不动时段。
-     *
-     * @return true 表示命中并更新；false 表示订单不存在或已是终态（幂等）
-     */
-    boolean adminCompleteAndRelease(Long orderId, String reason);
 
     /**
      * 审核状态流转：仅当订单当前状态属于 {@code allowedFrom} 时才更新（状态机白名单）。
