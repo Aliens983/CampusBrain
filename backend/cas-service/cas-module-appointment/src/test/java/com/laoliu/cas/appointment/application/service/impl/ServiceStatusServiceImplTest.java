@@ -1,6 +1,7 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
 import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
+import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import com.laoliu.cas.appointment.application.service.AuditSource;
@@ -45,14 +46,20 @@ class ServiceStatusServiceImplTest {
     @Mock
     private NotificationSettingsService notificationSettings;
 
+    @Mock
+    private BookingEventPublisher bookingEventPublisher;
+
     private ServiceStatusService serviceStatusService;
 
     private static final Long VALID_ORDER_ID = 1L;
-    private static final Long INVALID_ORDER_ID = 999L;
+    private static final Long INVALID_ORDER_ID = 99L;
+    private static final Long BOOKING_USER_ID = 100L;
+    private static final Long BOOKING_SERVICE_ID = 200L;
 
     @BeforeEach
     void setUp() {
-        serviceStatusService = new ServiceStatusServiceImpl(bookingRepository, emailService, notificationSettings, new BookingMetrics(new SimpleMeterRegistry()));
+        serviceStatusService = new ServiceStatusServiceImpl(bookingRepository, emailService, notificationSettings,
+                new BookingMetrics(new SimpleMeterRegistry()), bookingEventPublisher);
         // 默认"允许发送邮件"（策略与偏好都开）；需要验证"关闭后不发送"的用例再单独覆写
         lenient().when(notificationSettings.isEmailAllowed(any())).thenReturn(true);
     }
@@ -223,16 +230,125 @@ class ServiceStatusServiceImplTest {
         }
     }
 
+    @Nested
+    @DisplayName("管理员强制取消 - adminForceCancel")
+    class AdminForceCancelTests {
+
+        @Test
+        @DisplayName("已通过单强制取消成功：调用仓储释放占用并发送通知")
+        void shouldForceCancelApprovedBooking() {
+            // Given：用户侧无法取消的已通过通用单
+            when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(buildApprovedStatus());
+            when(bookingRepository.adminCancelAndRelease(VALID_ORDER_ID, null)).thenReturn(true);
+            when(bookingRepository.getUserEmailByOrderId(VALID_ORDER_ID)).thenReturn("test@example.com");
+
+            // When
+            assertDoesNotThrow(() -> serviceStatusService.adminForceCancel(VALID_ORDER_ID, null));
+
+            // Then
+            verify(bookingRepository).adminCancelAndRelease(VALID_ORDER_ID, null);
+            verify(emailService).sendEmail(eq("test@example.com"), contains("取消"), anyString());
+            // 3.5：强制取消按订单真实归属发布 CANCELLED 事件
+            verify(bookingEventPublisher)
+                    .publishChanged(BOOKING_USER_ID, BOOKING_SERVICE_ID, "CANCELLED");
+        }
+
+        @Test
+        @DisplayName("订单已是终态（UPDATE 0 行）应抛 AUDIT_FAILED，且不发邮件")
+        void shouldThrowAuditFailedWhenAlreadyTerminal() {
+            when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(buildApprovedStatus());
+            when(bookingRepository.adminCancelAndRelease(eq(VALID_ORDER_ID), any())).thenReturn(false);
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> serviceStatusService.adminForceCancel(VALID_ORDER_ID, "重复操作"));
+            assertEquals(BookErrorCode.AUDIT_FAILED.getCode(), ex.getCode());
+            verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());
+            // 终态 0 行：业务未生效，不得发布事件
+            verify(bookingEventPublisher, never())
+                    .publishChanged(anyLong(), anyLong(), anyString());
+        }
+
+        @Test
+        @DisplayName("订单不存在应抛 STATUS_NOT_FOUND")
+        void shouldThrowNotFoundWhenMissing() {
+            when(bookingRepository.getServiceStatusByOrderId(INVALID_ORDER_ID)).thenReturn(null);
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> serviceStatusService.adminForceCancel(INVALID_ORDER_ID, null));
+            assertEquals(BookErrorCode.STATUS_NOT_FOUND.getCode(), ex.getCode());
+            verify(bookingRepository, never()).adminCancelAndRelease(anyLong(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("管理员强制完结 - adminForceComplete")
+    class AdminForceCompleteTests {
+
+        @Test
+        @DisplayName("僵尸通用单强制完结成功：回补名额并通知用户")
+        void shouldForceCompleteZombieBooking() {
+            when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(buildApprovedStatus());
+            when(bookingRepository.adminCompleteAndRelease(VALID_ORDER_ID, null)).thenReturn(true);
+            when(bookingRepository.getUserEmailByOrderId(VALID_ORDER_ID)).thenReturn("test@example.com");
+
+            assertDoesNotThrow(() -> serviceStatusService.adminForceComplete(VALID_ORDER_ID, null));
+
+            verify(bookingRepository).adminCompleteAndRelease(VALID_ORDER_ID, null);
+            verify(emailService).sendEmail(eq("test@example.com"), contains("完结"), anyString());
+            // 3.5：强制完结发布 COMPLETED 事件（KB 侧统一按变更失效缓存）
+            verify(bookingEventPublisher)
+                    .publishChanged(BOOKING_USER_ID, BOOKING_SERVICE_ID, "COMPLETED");
+        }
+
+        @Test
+        @DisplayName("带备注完结：备注透传仓储并出现在邮件中；空白备注归一为 null")
+        void shouldPassReasonAndNormalizeBlank() {
+            String reason = "活动已结束，人工核销";
+            when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(buildApprovedStatus());
+            when(bookingRepository.adminCompleteAndRelease(VALID_ORDER_ID, reason)).thenReturn(true);
+            when(bookingRepository.getUserEmailByOrderId(VALID_ORDER_ID)).thenReturn("test@example.com");
+
+            assertDoesNotThrow(() -> serviceStatusService.adminForceComplete(VALID_ORDER_ID, reason));
+            verify(bookingRepository).adminCompleteAndRelease(VALID_ORDER_ID, reason);
+
+            // 空白备注：归一化为 null，不写入 reason 列
+            when(bookingRepository.getServiceStatusByOrderId(2L)).thenReturn(buildApprovedStatus());
+            when(bookingRepository.adminCompleteAndRelease(2L, null)).thenReturn(true);
+            assertDoesNotThrow(() -> serviceStatusService.adminForceComplete(2L, "   "));
+            verify(bookingRepository).adminCompleteAndRelease(2L, null);
+        }
+
+        @Test
+        @DisplayName("终态单完结应抛 AUDIT_FAILED")
+        void shouldThrowAuditFailedWhenAlreadyTerminal() {
+            when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(buildApprovedStatus());
+            when(bookingRepository.adminCompleteAndRelease(eq(VALID_ORDER_ID), any())).thenReturn(false);
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> serviceStatusService.adminForceComplete(VALID_ORDER_ID, null));
+            assertEquals(BookErrorCode.AUDIT_FAILED.getCode(), ex.getCode());
+            verify(bookingEventPublisher, never())
+                    .publishChanged(anyLong(), anyLong(), anyString());
+        }
+    }
+
     // ======================== 辅助方法 ========================
 
     private BookingQueryView buildPendingStatus() {
         BookingQueryView status = new BookingQueryView();
         status.setOrderId(VALID_ORDER_ID);
-        status.setUserId(100L);
+        status.setUserId(BOOKING_USER_ID);
+        status.setServiceId(BOOKING_SERVICE_ID);
         status.setUsername("测试用户");
         status.setServiceName("自习室预约");
         status.setServiceDescribe("图书馆自习室预约服务");
         status.setManageStatus(ManageStatus.SUBMIT.getCode());
+        return status;
+    }
+
+    private BookingQueryView buildApprovedStatus() {
+        BookingQueryView status = buildPendingStatus();
+        status.setManageStatus(ManageStatus.APPROVED.getCode());
         return status;
     }
 }

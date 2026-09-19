@@ -42,6 +42,18 @@
         <result property="serviceState" column="service_state"/>
     </resultMap>
 
+    <!-- 「容量型预约」唯一判据（3.6）：consultant/slot/room/equipment 四个资源外键全空。
+         只有容量型预约下单时真实扣减过 services.booked_count，取消/完结才允许回补。
+         cancelByIdsAndRelease / adminCancelAndRelease / adminCompleteAndRelease /
+         autoCompleteExpired 四条写语句必须共用同一片段，别名通过 include property 传入，
+         杜绝此前 autoComplete 漏判 slot_id 的两处不一致。 -->
+    <sql id="CapacityBookingCondition">
+        ${alias}.consultant_id IS NULL
+        AND ${alias}.slot_id IS NULL
+        AND ${alias}.room_id IS NULL
+        AND ${alias}.equipment_id IS NULL
+    </sql>
+
     <!-- 预约单详情的统一列清单与 JOIN：7 个查询共用，加字段只需改这一处 -->
     <sql id="ServiceStatus_Columns">
         i.order_id, i.service_id, i.user_id, u.name AS username,
@@ -179,10 +191,7 @@
         LEFT JOIN time_slot t ON t.id = item.slot_id
         SET item.manage_status = #{cancelledCode},
             s.booked_count = CASE
-                WHEN item.consultant_id IS NULL
-                 AND item.slot_id IS NULL
-                 AND item.room_id IS NULL
-                 AND item.equipment_id IS NULL
+                WHEN <include refid="CapacityBookingCondition"><property name="alias" value="item"/></include>
                 THEN GREATEST(s.booked_count - 1, 0)
                 ELSE s.booked_count
             END,
@@ -195,6 +204,49 @@
           AND ( item.manage_status = #{pendingCode}
                 OR (item.manage_status = #{approvedCode} AND c.code = 'activity') )
     </update>
+    <!-- 管理员强制取消（3.4 僵尸单兜底）：与用户取消的差异仅在 WHERE——
+         不校验 user_id 归属、不要求活动分类，待审核/已通过的任意类型单均可取消，
+         用于清理用户侧无法取消（已通过的通用/咨询/教室/设备单）造成的僵尸占用。
+         资源释放口径与 cancelByIdsAndRelease 一致；终态单不命中，重复调用幂等。 -->
+    <update id="adminCancelAndRelease">
+        UPDATE item
+        JOIN services s ON item.service_id = s.service_id
+        LEFT JOIN time_slot t ON t.id = item.slot_id
+        SET item.manage_status = #{cancelledCode},
+            s.booked_count = CASE
+                WHEN <include refid="CapacityBookingCondition"><property name="alias" value="item"/></include>
+                THEN GREATEST(s.booked_count - 1, 0)
+                ELSE s.booked_count
+            END,
+            t.available = CASE WHEN item.consultant_id IS NOT NULL THEN 1 ELSE t.available END
+            <if test="reason != null and reason != ''">
+                , item.reason = #{reason}
+            </if>
+        WHERE item.order_id = #{orderId}
+          AND item.manage_status IN (#{pendingCode}, #{approvedCode})
+    </update>
+
+    <!-- 管理员强制完结（3.4 僵尸单兜底）：待审核/已通过单置为已完成。
+         用于清理 autoCompleteExpired 无法自动覆盖的僵尸单
+         （end_time 为 NULL 且 services.end_date 也为 NULL 的长期有效通用单）。
+         容量型单（四资源外键全空）回补 booked_count，否则名额被永久占死；
+         时段型单完结代表服务已结束，不回补名额也不释放历史时段。终态单幂等 0 行。 -->
+    <update id="adminCompleteAndRelease">
+        UPDATE item
+        JOIN services s ON s.service_id = item.service_id
+        SET item.manage_status = #{completedCode},
+            s.booked_count = CASE
+                WHEN <include refid="CapacityBookingCondition"><property name="alias" value="item"/></include>
+                THEN GREATEST(s.booked_count - 1, 0)
+                ELSE s.booked_count
+            END
+            <if test="reason != null and reason != ''">
+                , item.reason = #{reason}
+            </if>
+        WHERE item.order_id = #{orderId}
+          AND item.manage_status IN (#{pendingCode}, #{approvedCode})
+    </update>
+
 
     <!-- 审核：只允许从 fromStatuses 给出的状态流转（由 Service 层状态机决定，
          如 通过仅允许待审核单，拒绝允许待审核/已通过单），非法跃迁影响 0 行 -->
@@ -296,7 +348,7 @@
                  但只有容量型预约（通用/活动，下单时真实扣过 booked_count）才回补；
                  咨询/教室/设备走 FOR UPDATE + 窗口判定，从未扣减，一并回补会把名额凭空减掉。 -->
             s.booked_count = CASE
-                WHEN i.consultant_id IS NULL AND i.room_id IS NULL AND i.equipment_id IS NULL
+                WHEN <include refid="CapacityBookingCondition"><property name="alias" value="i"/></include>
                 THEN GREATEST(s.booked_count - 1, 0)
                 ELSE s.booked_count
             END

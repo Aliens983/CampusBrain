@@ -81,6 +81,33 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
             @Param("serviceName") String serviceName);
 
     /**
+     * 管理员强制取消（3.4 僵尸单兜底）：不校验订单归属与活动分类，待审核/已通过单均可命中；
+     * 资源释放规则与 {@link #cancelByIdsAndRelease} 完全一致
+     * （容量型回补 booked_count、咨询单释放时段）。重复调用幂等：终态单 0 行。
+     *
+     * @return 实际命中行数（多表 UPDATE 为各表匹配行之和；0=不存在或已终态）
+     */
+    int adminCancelAndRelease(@Param("orderId") Long orderId,
+                              @Param("reason") String reason,
+                              @Param("pendingCode") int pendingCode,
+                              @Param("approvedCode") int approvedCode,
+                              @Param("cancelledCode") int cancelledCode);
+
+    /**
+     * 管理员强制完结（3.4 僵尸单兜底）：待审核/已通过单置为已完成；
+     * 仅容量型预约（consultant/slot/room/equipment 外键全空，下单时真实扣过 booked_count）
+     * 回补名额，解锁被僵尸单长期占满的容量；时段型单完结不释放时段（服务已结束）。
+     * 重复调用幂等：终态单 0 行。
+     *
+     * @return 实际命中行数（多表 UPDATE 为各表匹配行之和；0=不存在或已终态）
+     */
+    int adminCompleteAndRelease(@Param("orderId") Long orderId,
+                                @Param("reason") String reason,
+                                @Param("pendingCode") int pendingCode,
+                                @Param("approvedCode") int approvedCode,
+                                @Param("completedCode") int completedCode);
+
+    /**
      * 审核状态流转：仅当订单当前状态属于 {@code fromStatuses} 时才更新（状态机白名单）。
      *
      * @param status       目标状态码

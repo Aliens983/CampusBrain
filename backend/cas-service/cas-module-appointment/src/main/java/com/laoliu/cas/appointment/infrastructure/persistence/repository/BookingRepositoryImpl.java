@@ -134,6 +134,18 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    public boolean adminCancelAndRelease(Long orderId, String reason) {
+        // 多表 UPDATE 行数为各表匹配行之和（item + services，咨询单还有 time_slot），
+        // 只能以 >0 判定命中；终态/不存在单 WHERE 不匹配，返回 0（3.4，见看板第 7 节）
+        return itemMapper.adminCancelAndRelease(orderId, reason, PENDING, APPROVED, CANCELLED) > 0;
+    }
+
+    @Override
+    public boolean adminCompleteAndRelease(Long orderId, String reason) {
+        return itemMapper.adminCompleteAndRelease(orderId, reason, PENDING, APPROVED, COMPLETED) > 0;
+    }
+
+    @Override
     public List<Long> findCancellableOrderIds(Long userId, List<Long> orderIds) {
         return itemMapper.selectCancellableOrderIds(userId, orderIds, PENDING, APPROVED);
     }

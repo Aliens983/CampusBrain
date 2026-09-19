@@ -5,6 +5,7 @@ import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
+import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.enums.ManageStatus;
@@ -30,6 +31,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     private final EmailService emailService;
     private final NotificationSettingsService notificationSettings;
     private final BookingMetrics bookingMetrics;
+    private final BookingEventPublisher bookingEventPublisher;
 
     @Override
     public IPage<BookingQueryView> getServiceStatus(ServiceStatusPageRequest req) {
@@ -163,6 +165,84 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         }
     }
 
+
+    /**
+     * 状态中文描述统一经 {@link ManageStatus#of(Integer)} 取自枚举，
+     * 与 {@code BookServiceImpl#getStatusDescription} 同源，消除重复的 switch 0..4。
+     */
+    private void setStatusDescription(BookingQueryView response) {
+        ManageStatus status = ManageStatus.of(response.getManageStatus());
+        response.setStatusDescription(status == null ? "未知状态" : status.getMessage());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    // 释放占用会改变余量，与 auditReject 同样需要让 services 余量快照立即失效
+    @CacheEvict(value = "services", allEntries = true)
+    public void adminForceCancel(Long orderId, String reason) {
+        BookingQueryView serviceInfo = requireOrder(orderId);
+        boolean success = bookingRepository.adminCancelAndRelease(orderId, normalizeReason(reason));
+        if (!success) {
+            // 0 行：订单已是取消/拒绝/完结等终态（状态机白名单），拒绝重复操作
+            throw new BusinessException(BookErrorCode.AUDIT_FAILED);
+        }
+
+        // 3.4/3.5：管理员强制取消同样改变预约状态与余量，KB 问答缓存须收到事件
+        // （发布器在事务 afterCommit 发送，回滚不发；serviceId 取订单真实归属）
+        bookingEventPublisher.publishChanged(
+                serviceInfo.getUserId(), serviceInfo.getServiceId(), "CANCELLED");
+
+        String emailContent = "您好！您的以下预约已被管理员取消：\n预约服务："
+                + serviceInfo.getServiceName()
+                + slotLine(serviceInfo)
+                + (reason == null || reason.trim().isEmpty() ? "" : "\n取消原因：" + reason);
+        if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
+            sendAuditEmail(orderId, "预约被管理员取消通知", emailContent);
+        }
+    }
+
+    /**
+     * 管理员强制完结（3.4 僵尸单兜底）：对 end_time 与 services.end_date 均为空、
+     * 定时任务无法自动完结的长期有效通用单，由管理员人工置为已完成并回补名额，
+     * 避免 booked_count 只增不减把服务容量永久锁死。
+     */
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = "services", allEntries = true)
+    public void adminForceComplete(Long orderId, String reason) {
+        BookingQueryView serviceInfo = requireOrder(orderId);
+        boolean success = bookingRepository.adminCompleteAndRelease(orderId, normalizeReason(reason));
+        if (!success) {
+            throw new BusinessException(BookErrorCode.AUDIT_FAILED);
+        }
+
+        // 3.4/3.5：管理员完结同样发布事件（KB 消费端不区分类型，统一触发缓存失效）
+        bookingEventPublisher.publishChanged(
+                serviceInfo.getUserId(), serviceInfo.getServiceId(), "COMPLETED");
+
+        String emailContent = "您好！您的以下预约已由管理员标记为已完成：\n预约服务："
+                + serviceInfo.getServiceName()
+                + slotLine(serviceInfo)
+                + (reason == null || reason.trim().isEmpty() ? "" : "\n备注：" + reason);
+        if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
+            sendAuditEmail(orderId, "预约完结通知", emailContent);
+        }
+    }
+
+    /** 订单必须存在，否则抛 404 语义错误码 */
+    private BookingQueryView requireOrder(Long orderId) {
+        BookingQueryView serviceInfo = getServiceStatusByOrderId(orderId);
+        if (serviceInfo == null) {
+            throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
+        }
+        return serviceInfo;
+    }
+
+    /** 空白备注统一归一为 null，避免 SQL 动态片段把空串写进 reason 列 */
+    private static String normalizeReason(String reason) {
+        return reason == null || reason.trim().isEmpty() ? null : reason;
+    }
+
     /** 咨询/设备预约的邮件补充行（无资源明细返回空串） */
     private String slotLine(BookingQueryView r) {
         StringBuilder sb = new StringBuilder();
@@ -178,14 +258,5 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
                     .append(r.getStartTime()).append("-").append(r.getEndTime());
         }
         return sb.toString();
-    }
-
-    /**
-     * 状态中文描述统一经 {@link ManageStatus#of(Integer)} 取自枚举，
-     * 与 {@code BookServiceImpl#getStatusDescription} 同源，消除重复的 switch 0..4。
-     */
-    private void setStatusDescription(BookingQueryView response) {
-        ManageStatus status = ManageStatus.of(response.getManageStatus());
-        response.setStatusDescription(status == null ? "未知状态" : status.getMessage());
     }
 }

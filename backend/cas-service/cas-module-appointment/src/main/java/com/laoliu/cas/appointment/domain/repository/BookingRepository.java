@@ -106,6 +106,22 @@ public interface BookingRepository {
     int approveActivityBookings(Long userId, List<Integer> serviceIds);
 
     /**
+     * 管理员强制取消（3.4 僵尸单兜底）：不校验归属与活动分类，待审核/已通过的任意单
+     * 置为已取消并释放占用（容量型回补 booked_count、咨询单释放时段）。
+     *
+     * @return true 表示命中并更新；false 表示订单不存在或已是终态（幂等）
+     */
+    boolean adminCancelAndRelease(Long orderId, String reason);
+
+    /**
+     * 管理员强制完结（3.4 僵尸单兜底）：待审核/已通过单置为已完成，
+     * 容量型单回补 booked_count 解锁名额；时段型单不动时段。
+     *
+     * @return true 表示命中并更新；false 表示订单不存在或已是终态（幂等）
+     */
+    boolean adminCompleteAndRelease(Long orderId, String reason);
+
+    /**
      * 审核状态流转：仅当订单当前状态属于 {@code allowedFrom} 时才更新（状态机白名单）。
      *
      * @return true 表示命中并更新；false 表示订单不存在或状态非法跃迁

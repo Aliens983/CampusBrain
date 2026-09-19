@@ -58,4 +58,22 @@ public interface ServiceStatusService {
      * @param source  审核人身份（管理员 / 咨询师），用于区分邮件措辞，3.1.8
      */
     void auditReject(Long orderId, String reason, AuditSource source);
+
+    /**
+     * 管理员强制取消（3.4 僵尸单兜底）：不校验归属与活动分类，
+     * 待审核/已通过的任意预约单置为已取消并释放占用（名额/时段）。
+     *
+     * @param orderId 订单ID
+     * @param reason  处理备注（可选）
+     */
+    void adminForceCancel(Long orderId, String reason);
+
+    /**
+     * 管理员强制完结（3.4 僵尸单兜底）：待审核/已通过单置为已完成，
+     * 容量型单同步回补 booked_count，清理无法自动完结的长期占用。
+     *
+     * @param orderId 订单ID
+     * @param reason  处理备注（可选）
+     */
+    void adminForceComplete(Long orderId, String reason);
 }

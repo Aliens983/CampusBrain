@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -69,5 +70,27 @@ public class ServiceStatusAdminController {
         }
         serviceStatusService.auditReject(id, auditRequest.getReason(), AuditSource.ADMIN);
         return CommonResult.success("审核驳回成功", null);
+    }
+
+    @Operation(summary = "强制取消预约（僵尸单兜底）",
+            description = "3.4：管理员取消任意待审核/已通过预约（含用户侧无法取消的已通过通用/咨询/教室/设备单），"
+                    + "原子释放名额与咨询时段；已是终态（取消/拒绝/完结）的订单不可重复操作")
+    @PatchMapping("/{id}/cancel")
+    @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
+    public CommonResult<Void> adminForceCancel(@PathVariable Long id,
+                                               @RequestParam(required = false) String reason) {
+        serviceStatusService.adminForceCancel(id, reason);
+        return CommonResult.success("强制取消成功", null);
+    }
+
+    @Operation(summary = "强制完结预约（僵尸单兜底）",
+            description = "3.4：管理员把待审核/已通过预约标记为已完成，容量型单同步回补 booked_count，"
+                    + "用于清理定时任务无法自动完结（无结束时间且服务无 end_date）的僵尸通用单；终态单不可重复操作")
+    @PatchMapping("/{id}/complete")
+    @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
+    public CommonResult<Void> adminForceComplete(@PathVariable Long id,
+                                                 @RequestParam(required = false) String reason) {
+        serviceStatusService.adminForceComplete(id, reason);
+        return CommonResult.success("强制完结成功", null);
     }
 }
