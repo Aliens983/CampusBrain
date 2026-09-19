@@ -67,7 +67,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 1
-    validate-on-migrate: false   # V1 已裁剪孤儿表 ai_chat_history/file_info(2026-09-07)；服务器演示模式每次启动 clean+migrate，此项留 false 仅防本地存量库校验误报
+    validate-on-migrate: true    # 6.1 恢复校验（V8 已按生成列方案重写，V1~V8 文件不再改动）；存量库若曾对已应用脚本做过本地修改，用 flyway repair 对齐 checksum，不得整关校验
     # 默认禁用 clean：清库能力必须由部署侧显式放开（FLYWAY_CLEAN_DISABLED=false），
     # 避免误设 APP_DB_RESET_ON_STARTUP 就无声清空生产库
     clean-disabled: ${FLYWAY_CLEAN_DISABLED:true}
