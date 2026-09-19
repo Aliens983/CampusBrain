@@ -55,6 +55,12 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     /** 清理重试退避（毫秒），随尝试次数倍增 */
     private static final long CLEANUP_BACKOFF_MS = 200L;
 
+    /** 4.16：业务侧单文件上限（50MB，与容器/网关限制对齐） */
+    private static final long MAX_UPLOAD_BYTES = 50L * 1024 * 1024;
+
+    /** 4.16：展示标题长度上限 */
+    private static final int TITLE_MAX_LENGTH = 200;
+
     /** 文档仓库接口 */
     private final DocumentRepository documentRepository;
 
@@ -99,6 +105,9 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     @Transactional
     public Long uploadDocument(MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
+        // 4.16：原始文件名仅用于展示标题前脱敏（去 HTML 标签/控制字符/截断），
+        // 防止 XSS/显示注入；扩展名解析与安全性校验用端口唯一实现（Q-03）
+        String title = sanitizeTitle(originalFilename);
         // 扩展名提取收敛到端口唯一实现（Q-03），应用层不再各持一份副本
         String fileType = documentTypeRegistry.extractFileType(originalFilename);
 
@@ -111,6 +120,13 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                     fileType + "（当前支持：" + supported + "）");
         }
 
+        // 4.16：业务侧二次大小校验（与容器/网关限制对齐，兜底绕过直连场景）
+        if (file.getSize() > MAX_UPLOAD_BYTES) {
+            throw new BusinessException.DocumentException(
+                    ErrorCode.DOCUMENT_TOO_LARGE,
+                    "文件大小 " + file.getSize() + " 字节超过上限 " + MAX_UPLOAD_BYTES);
+        }
+
         // 2. 安全文件名：仅 UUID + 合法扩展名，避免路径穿越/任意文件写入
         String fileName = UUID.randomUUID() + "." + fileType;
         String localPath = saveToLocal(file, fileName);
@@ -118,7 +134,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
         // 3. 元信息落库 + 提交后投递 MQ；落盘之后的任何失败都必须回删文件
         try {
             Document doc = Document.builder()
-                    .title(originalFilename)
+                    .title(title)
                     .fileType(fileType)
                     .fileSize(file.getSize())
                     .filePath(localPath)
@@ -244,6 +260,25 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     // ==================== 内部辅助 ====================
+
+    /**
+     * 4.16：文件名用于展示前的脱敏——去 HTML 标签与控制字符、去首尾空白、限长。
+     * 防止把原始文件名中的脚本/超长内容直接落库并在前端渲染。
+     */
+    private String sanitizeTitle(String name) {
+        if (name == null || name.isBlank()) {
+            return "未命名文档";
+        }
+        String clean = name.replaceAll("<[^>]*>", "")
+                .replaceAll("\\p{Cntrl}", " ")
+                .trim()
+                .replaceAll("\\s+", " ");
+        if (clean.isEmpty()) {
+            return "未命名文档";
+        }
+        return clean.length() > TITLE_MAX_LENGTH
+                ? clean.substring(0, TITLE_MAX_LENGTH) : clean;
+    }
 
     /**
      * 事务提交后执行；若当前没有活动事务（如纯单测/非事务调用方），则立即执行。
