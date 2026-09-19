@@ -2,11 +2,9 @@ package com.kb.infrastructure.config;
 
 import com.kb.infrastructure.security.TokenAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
-import jakarta.annotation.PostConstruct;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -35,11 +33,11 @@ public class SecurityConfig {
 
     private final TokenAuthenticationFilter tokenFilter;
 
-    @PostConstruct
-    public void init() {
-        SecurityContextHolder.setStrategyName(
-                SecurityContextHolder.MODE_INHERITABLETHREADLOCAL);
-    }
+    // 4.2（深度审查 P0）：不再使用 MODE_INHERITABLETHREADLOCAL。
+    // 继承模式会让线程池里复用的线程（boundedElastic/OkHttp 回调）继承创建它的
+    // 那一次请求的身份并永久残留 —— 后续请求的 Feign 调用会以他人身份执行（串号）。
+    // 恢复默认 MODE_THREADLOCAL：池化线程拿不到身份时，Feign 回退 ChatContextHolder
+    // 请求级上下文，再取不到则用服务身份，杜绝跨用户串号。
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
