@@ -13,6 +13,8 @@
 #       队列积压指标经 kb-rabbitmq:15692/metrics 抓取。
 # ============================================================================
 
+name: ${COMPOSE_PROJECT_NAME:-campus-appointment}
+
 services:
   prometheus:
     image: prom/prometheus:v2.51.0

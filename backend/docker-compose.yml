@@ -11,6 +11,8 @@
 # CAS 依赖的 MySQL/Redis：本地开发用宿主机（localhost:3306/6379），
 # 全栈部署由 docker-compose.business.yml 提供 cas-mysql/cas-redis。
 # ============================================================
+name: ${COMPOSE_PROJECT_NAME:-campus-appointment}
+
 services:
   nacos:
     image: nacos/nacos-server:v2.3.2
