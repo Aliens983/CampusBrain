@@ -1,5 +1,6 @@
 package com.laoliu.cas.system.infrastructure.aspect;
 
+import com.laoliu.auth.policy.RolePolicy;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
 import com.laoliu.cas.common.enums.UserRoleEnum;
@@ -91,8 +92,8 @@ public class RoleAspect {
     }
 
     private boolean hasPermission(int currentRoleCode, UserRoleEnum[] requiredRoles) {
-        // 超级管理员拥有全部权限，直接放行
-        if (currentRoleCode == UserRoleEnum.SUPER_ADMIN.getCode()) {
+        // 超级管理员拥有全部权限，直接放行（角色 code 口径唯一来源 RolePolicy）
+        if (currentRoleCode == RolePolicy.SUPER_ADMIN.getCode()) {
             return true;
         }
         for (UserRoleEnum role : requiredRoles) {
@@ -100,7 +101,7 @@ public class RoleAspect {
                 return true;
             }
             // 教师 = 登录用户的一种：凡开放给「普通用户 USER」的通用接口，教师同样可用（教师专属接口则显式列出 TEACHER）
-            if (role == UserRoleEnum.USER && currentRoleCode == UserRoleEnum.TEACHER.getCode()) {
+            if (role == UserRoleEnum.USER && currentRoleCode == RolePolicy.TEACHER.getCode()) {
                 return true;
             }
         }

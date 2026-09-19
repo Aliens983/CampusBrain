@@ -35,12 +35,12 @@ public class RoleAdminController {
     @PutMapping("/role")
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
     public CommonResult<String> changeRole(@Valid @RequestBody ChangeRoleRequest request) {
+        // setRoleById 先做合法性校验（非法/超管角色直接抛 403），此处能到达的必为 0/1/3
         roleService.setRoleById(request.getUserId(), request.getRole());
-        String roleName = switch (request.getRole() == null ? 0 : request.getRole()) {
-            case 1 -> "管理员";
-            case 3 -> "教师";
-            default -> "普通用户";
-        };
+        // 角色中文名唯一来源 UserRoleEnum（code 委托 RolePolicy），不再本地 switch 复制一份
+        String roleName = UserRoleEnum.getByCode(
+                request.getRole() == null ? UserRoleEnum.USER.getCode() : request.getRole())
+                .getDescription();
         return CommonResult.success("角色修改成功", roleName);
     }
 }

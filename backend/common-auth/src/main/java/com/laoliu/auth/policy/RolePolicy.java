@@ -77,4 +77,13 @@ public enum RolePolicy {
     public static boolean isAdminCode(Integer code) {
         return code != null && (code == ADMIN.code || code == SUPER_ADMIN.code);
     }
+
+    /**
+     * 管理端可分配给用户的角色判据（全服务唯一口径）：
+     * 仅 普通用户 / 管理员 / 教师；超级管理员不可经接口设置（防提权，需库内特殊处理）。
+     */
+    public static boolean isAssignableUserRole(Integer code) {
+        return code != null
+                && (code == USER.code || code == ADMIN.code || code == TEACHER.code);
+    }
 }

@@ -1,5 +1,7 @@
 package com.laoliu.cas.system.application.service.impl;
 
+import com.laoliu.auth.policy.RolePolicy;
+import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.exception.ForbiddenException;
 import com.laoliu.cas.common.exception.ResourceNotFoundException;
 import com.laoliu.cas.system.application.service.RoleService;
@@ -24,13 +26,13 @@ public class RoleServiceImpl implements RoleService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException(404, "用户不存在"));
 
-        // 超级管理员不能被降级
-        if (user.getRole() != null && user.getRole() == 2) {
+        // 超级管理员不能被降级（code 口径唯一来源 RolePolicy）
+        if (user.getRole() != null && user.getRole() == RolePolicy.SUPER_ADMIN.getCode()) {
             throw new ForbiddenException(403, "不能修改超级管理员的角色");
         }
 
-        // 允许的目标角色：0 普通用户 / 1 管理员 / 3 教师；不可设 2（超管需库内特殊处理，防提权）
-        if (newRole == null || newRole < 0 || newRole > 3 || newRole == 2) {
+        // 可分配角色集合由 RolePolicy 统一定义：仅 普通用户/管理员/教师；超管不可经接口设置（防提权）
+        if (!RolePolicy.isAssignableUserRole(newRole)) {
             throw new ForbiddenException(403, "角色仅支持 0 普通用户 / 1 管理员 / 3 教师");
         }
         userRepository.updateRole(userId, newRole);
@@ -39,15 +41,15 @@ public class RoleServiceImpl implements RoleService {
     @Override
     public String getRoleByUserId(Long userId) {
         String role = userRepository.getRoleByUserId(userId);
-        if (role != null) {
-            return switch (role) {
-                case "0" -> "普通用户";
-                case "1" -> "管理员";
-                case "2" -> "超级管理员";
-                case "3" -> "教师";
-                default -> role;
-            };
+        if (role == null) {
+            return null;
         }
-        return role;
+        // 角色 code→中文名唯一来源 UserRoleEnum（其 code 委托 RolePolicy）；
+        // 脏数据（非数字/未知 code）按最小权限原则展示为普通用户，与权限解析同口径
+        try {
+            return UserRoleEnum.getByCode(Integer.parseInt(role)).getDescription();
+        } catch (NumberFormatException e) {
+            return UserRoleEnum.USER.getDescription();
+        }
     }
 }

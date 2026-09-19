@@ -72,6 +72,27 @@ class RoleServiceImplTest {
             when(userRepository.getRoleByUserId(USER_ID)).thenReturn(null);
             assertNull(roleService.getRoleByUserId(USER_ID));
         }
+
+        @Test
+        @DisplayName("role=2（超管）时应当返回\"超级管理员\"")
+        void shouldReturnSuperAdminWhenRoleIs2() {
+            when(userRepository.getRoleByUserId(USER_ID)).thenReturn("2");
+            assertEquals("超级管理员", roleService.getRoleByUserId(USER_ID));
+        }
+
+        @Test
+        @DisplayName("脏数据：非数字 role 按最小权限口径展示为\"普通用户\"，不抛异常")
+        void shouldFallbackWhenRoleIsNotNumeric() {
+            when(userRepository.getRoleByUserId(USER_ID)).thenReturn("admin");
+            assertEquals("普通用户", roleService.getRoleByUserId(USER_ID));
+        }
+
+        @Test
+        @DisplayName("脏数据：未知数字 role 按最小权限口径展示为\"普通用户\"")
+        void shouldFallbackWhenRoleIsUnknownCode() {
+            when(userRepository.getRoleByUserId(USER_ID)).thenReturn("99");
+            assertEquals("普通用户", roleService.getRoleByUserId(USER_ID));
+        }
     }
 
     // ======================== setRoleById ========================
@@ -144,6 +165,23 @@ class RoleServiceImplTest {
 
             assertThrows(ForbiddenException.class,
                     () -> roleService.setRoleById(USER_ID, 0));
+
+            verify(userRepository, never()).updateRole(anyLong(), anyInt());
+        }
+
+        @Test
+        @DisplayName("newRole 为 null/负数/越界值时应当抛出 ForbiddenException")
+        void shouldThrowForbiddenWhenNewRoleIsOutOfRange() {
+            User user = User.builder().id(USER_ID).role(0).build();
+            when(userRepository.findById(USER_ID)).thenReturn(Optional.of(user));
+
+            assertAll(
+                    () -> assertThrows(ForbiddenException.class,
+                            () -> roleService.setRoleById(USER_ID, null)),
+                    () -> assertThrows(ForbiddenException.class,
+                            () -> roleService.setRoleById(USER_ID, -1)),
+                    () -> assertThrows(ForbiddenException.class,
+                            () -> roleService.setRoleById(USER_ID, 4)));
 
             verify(userRepository, never()).updateRole(anyLong(), anyInt());
         }
