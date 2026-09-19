@@ -49,7 +49,8 @@ import static io.qdrant.client.WithPayloadSelectorFactory.enable;
  * 现改为：
  * <ul>
  *   <li>独立 Qdrant collection，HNSW top1 检索，一次 gRPC 往返完成相似度匹配；</li>
- *   <li>点位 ID 由问题 SHA-256 确定性派生（UUIDv3），同问题幂等覆盖、无碰撞错答；</li>
+ *   <li>点位 ID 由问题经 SHA-256 预哈希后派生（1.7：底层的 {@code UUID.nameUUIDFromBytes}
+ *       实为 <b>MD5（128 位）</b>），同问题幂等覆盖、碰撞概率可忽略；</li>
  *   <li>答案与引用快照一起存 payload，语义命中也能带引用（与精确缓存行为一致）；</li>
  *   <li>payload 带 cached_at，检索过滤 + 应用层双重 TTL 判定，过期点懒删除。</li>
  * </ul>

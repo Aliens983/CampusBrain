@@ -44,7 +44,6 @@ public class BusinessMetrics {
     // ---- Timers ----
     private final Timer qaLatencyTimer;
     private final Timer retrievalLatencyTimer;
-    private final Timer documentProcessingTimer;
 
     public BusinessMetrics(MeterRegistry registry) {
         this.registry = registry;
@@ -94,10 +93,6 @@ public class BusinessMetrics {
         this.retrievalLatencyTimer = Timer.builder("kb.retrieval.latency")
                 .description("Hybrid retrieval latency")
                 .register(registry);
-
-        this.documentProcessingTimer = Timer.builder("kb.document.processing")
-                .description("Document processing pipeline latency")
-                .register(registry);
     }
 
     // ---- QA Metrics ----
@@ -127,10 +122,6 @@ public class BusinessMetrics {
 
     public void recordDocumentUpload() {
         documentUploadCounter.increment();
-    }
-
-    public void recordDocumentProcessing(long durationMs) {
-        documentProcessingTimer.record(durationMs, TimeUnit.MILLISECONDS);
     }
 
     public void recordDocumentFailure() {
