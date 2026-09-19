@@ -8,7 +8,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -34,6 +36,16 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
         return timeSlotMapper.findAvailableByConsultantAndDate(consultantId, date).stream()
                 .map(TimeSlotDO::toEntity)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public Map<Long, Integer> countAvailableByConsultants(Collection<Long> consultantIds, LocalDate date) {
+        if (consultantIds == null || consultantIds.isEmpty()) {
+            return Map.of();
+        }
+        return timeSlotMapper.countAvailableByConsultants(consultantIds, date).stream()
+                .collect(Collectors.toMap(TimeSlotMapper.SlotCountRow::consultantId,
+                        TimeSlotMapper.SlotCountRow::cnt));
     }
 
     @Override

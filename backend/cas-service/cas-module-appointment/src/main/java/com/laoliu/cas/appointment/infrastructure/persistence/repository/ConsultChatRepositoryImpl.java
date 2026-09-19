@@ -14,7 +14,9 @@ import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -105,8 +107,27 @@ public class ConsultChatRepositoryImpl implements ConsultChatRepository {
     }
 
     @Override
+    public Map<Long, ConsultChatMessage> findLastMessages(Collection<Long> conversationIds) {
+        if (conversationIds == null || conversationIds.isEmpty()) {
+            return Map.of();
+        }
+        return messageMapper.selectLastMessages(conversationIds).entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toEntity()));
+    }
+
+    @Override
     public long countUnread(Long conversationId, Long viewerId) {
         return messageMapper.countUnread(conversationId, viewerId);
+    }
+
+    @Override
+    public Map<Long, Long> countUnread(Collection<Long> conversationIds, Long viewerId) {
+        if (conversationIds == null || conversationIds.isEmpty()) {
+            return Map.of();
+        }
+        return messageMapper.countUnreadGrouped(conversationIds, viewerId).stream()
+                .collect(Collectors.toMap(ConsultChatMessageMapper.UnreadCountRow::conversationId,
+                        ConsultChatMessageMapper.UnreadCountRow::cnt));
     }
 
     @Override
@@ -123,6 +144,17 @@ public class ConsultChatRepositoryImpl implements ConsultChatRepository {
     public Optional<String> findUserName(Long userId) {
         String name = conversationMapper.selectUserName(userId);
         return StringUtils.hasText(name) ? Optional.of(name) : Optional.empty();
+    }
+
+    @Override
+    public Map<Long, String> findUserNames(Collection<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return conversationMapper.selectUserNames(userIds).stream()
+                .filter(row -> StringUtils.hasText(row.userName()))
+                .collect(Collectors.toMap(ConsultChatConversationMapper.UserNameRow::userId,
+                        ConsultChatConversationMapper.UserNameRow::userName));
     }
 
     @Override

@@ -9,7 +9,10 @@ import com.laoliu.cas.appointment.application.service.RoomService;
 import com.laoliu.cas.appointment.interfaces.dto.request.AssistantBookingDraftRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingDraft;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantBookingResult;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantResponse;
+import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomResponse;
+import com.laoliu.cas.appointment.domain.entity.Equipment;
 import com.laoliu.cas.appointment.domain.entity.Room;
 import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
@@ -36,6 +39,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -314,6 +318,85 @@ class AppointmentAssistantServiceImplTest {
             assertEquals(1, rooms.size());
             assertEquals("B101", rooms.get(0).getName());
             assertEquals("xs", rooms.get(0).getCampus());
+        }
+
+        @Test
+        @DisplayName("4.7 咨询师列表带日期：时段数一条 GROUP BY 批量取，不逐个 findAvailable")
+        void shouldBatchLoadConsultantSlotCounts() {
+            when(serviceRepository.findAll()).thenReturn(List.of(service(1L, -1, 0)));
+            when(consultantRepository.findAll()).thenReturn(List.of(
+                    Consultant.builder().id(1L).name("王老师").serviceId(1L).build(),
+                    Consultant.builder().id(2L).name("李老师").serviceId(1L).build()));
+            when(timeSlotRepository.countAvailableByConsultants(any(), any(LocalDate.class)))
+                    .thenReturn(Map.of(1L, 3));
+
+            List<AssistantConsultantResponse> list =
+                    service.findConsultants(null, null, LocalDate.now().plusDays(1).toString());
+
+            assertEquals(2, list.size());
+            assertEquals(3, list.get(0).getAvailableSlotCount());
+            assertEquals(0, list.get(1).getAvailableSlotCount(), "当天无可用时段的咨询师按 0 兜底");
+            verify(timeSlotRepository, times(1)).countAvailableByConsultants(any(), any(LocalDate.class));
+            verify(timeSlotRepository, never()).findAvailable(anyLong(), any(LocalDate.class));
+        }
+
+        @Test
+        @DisplayName("4.7 咨询师列表不带日期：不触发任何时段查询")
+        void shouldNotQuerySlotsWithoutDate() {
+            when(serviceRepository.findAll()).thenReturn(List.of(service(1L, -1, 0)));
+            when(consultantRepository.findAll()).thenReturn(List.of(
+                    Consultant.builder().id(1L).name("王老师").serviceId(1L).build()));
+
+            List<AssistantConsultantResponse> list = service.findConsultants(null, null, null);
+
+            assertEquals(1, list.size());
+            assertNull(list.get(0).getAvailableSlotCount());
+            verify(timeSlotRepository, never()).countAvailableByConsultants(any(), any(LocalDate.class));
+            verify(timeSlotRepository, never()).findAvailable(anyLong(), any(LocalDate.class));
+        }
+
+        @Test
+        @DisplayName("4.7 教室列表带时间窗：占用数批量聚合，free 按命中数判定，不逐条 countRoomOverlap")
+        void shouldBatchLoadRoomOverlap() {
+            when(serviceService.getAvailableServices()).thenReturn(List.of(service(1L, -1, 0)));
+            when(roomRepository.findAll()).thenReturn(List.of(
+                    Room.builder().id(1L).name("A101").serviceId(1L).build(),
+                    Room.builder().id(2L).name("A102").serviceId(1L).build()));
+            when(bookingRepository.countRoomOverlapBatch(any(), any(LocalDate.class), anyString(), anyString()))
+                    .thenReturn(Map.of(1L, 2));
+
+            List<AssistantRoomResponse> rooms = service.findRooms(
+                    null, LocalDate.now().plusDays(1).toString(), "09:00", "10:00");
+
+            assertEquals(2, rooms.size());
+            assertFalse(rooms.get(0).getFree(), "窗口内有占用 → 非空闲");
+            assertTrue(rooms.get(1).getFree(), "结果集中缺省（0 条占用）→ 空闲");
+            verify(bookingRepository, times(1))
+                    .countRoomOverlapBatch(any(), any(LocalDate.class), anyString(), anyString());
+            verify(bookingRepository, never())
+                    .countRoomOverlap(anyLong(), any(LocalDate.class), anyString(), anyString());
+        }
+
+        @Test
+        @DisplayName("4.7 设备列表带时间窗：占用台数批量聚合，余量按批量结果计算")
+        void shouldBatchLoadEquipmentOverlap() {
+            when(serviceRepository.findAll()).thenReturn(List.of(service(1L, -1, 0)));
+            when(equipmentRepository.findAll()).thenReturn(List.of(
+                    Equipment.builder().id(1L).name("投影仪").serviceId(1L).availableStock(5).build(),
+                    Equipment.builder().id(2L).name("麦克风").serviceId(1L).availableStock(3).build()));
+            when(bookingRepository.sumEquipmentOverlapBatch(any(), any(LocalDate.class), anyString(), anyString()))
+                    .thenReturn(Map.of(1L, 5));
+
+            List<AssistantEquipmentResponse> list = service.findEquipment(
+                    null, null, LocalDate.now().plusDays(1).toString(), "09:00", "10:00");
+
+            assertEquals(2, list.size());
+            assertEquals(0, list.get(0).getRemainingForWindow(), "库存 5 占用 5 → 余量 0");
+            assertEquals(3, list.get(1).getRemainingForWindow(), "结果集中缺省按占用 0 → 余量即库存");
+            verify(bookingRepository, times(1))
+                    .sumEquipmentOverlapBatch(any(), any(LocalDate.class), anyString(), anyString());
+            verify(bookingRepository, never())
+                    .sumEquipmentOverlap(anyLong(), any(LocalDate.class), anyString(), anyString());
         }
     }
 

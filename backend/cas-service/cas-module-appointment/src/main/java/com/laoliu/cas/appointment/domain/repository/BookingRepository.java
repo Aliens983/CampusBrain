@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.common.enums.ManageStatus;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -50,6 +51,14 @@ public interface BookingRepository {
     /** 统计某设备某日时间段内已占用的台数（待审+已通过，用于防超借） */
     int sumEquipmentOverlap(Long equipmentId, LocalDate date, String startTime, String endTime);
 
+    /**
+     * 批量统计多台设备某日同窗各自被占用台数（4.7 N+1 收敛，助手设备列表一次 GROUP BY）。
+     * 窗口内无占用的设备不出现在返回 Map 中，调用方按 0 兜底。
+     */
+    Map<Long, Integer> sumEquipmentOverlapBatch(Collection<Long> equipmentIds, LocalDate date,
+                                                String startTime, String endTime);
+
+
     /** 到点自动归还：把已过结束时间的已通过时段单、及已过 end_date 的无时段单置为已完成，返回处理条数 */
     int autoCompleteExpired();
 
@@ -60,6 +69,13 @@ public interface BookingRepository {
 
     /** 统计某教室某日某时段已被占用条数（>0=已被预约） */
     int countRoomOverlap(Long roomId, LocalDate date, String startTime, String endTime);
+
+    /**
+     * 批量统计多间教室某日同窗各自占用条数（4.7 N+1 收敛，助手教室列表一次 GROUP BY）。
+     * 窗口内无占用的教室不出现在返回 Map 中，调用方按 0 兜底。
+     */
+    Map<Long, Integer> countRoomOverlapBatch(Collection<Long> roomIds, LocalDate date,
+                                             String startTime, String endTime);
 
     /**
      * 筛出当前用户给定订单中"可取消"的订单引用（12-09 + 3.5）。

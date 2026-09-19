@@ -15,6 +15,7 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -111,6 +112,19 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    public Map<Long, Integer> sumEquipmentOverlapBatch(Collection<Long> equipmentIds,
+                                                       LocalDate date, String startTime, String endTime) {
+        if (equipmentIds == null || equipmentIds.isEmpty()) {
+            return Map.of();
+        }
+        return itemMapper.sumEquipmentOverlapBatch(equipmentIds, date, startTime, endTime, PENDING, APPROVED)
+                .stream()
+                .collect(Collectors.toMap(ItemMapper.ResourceOverlapRow::resourceId,
+                        ItemMapper.ResourceOverlapRow::cnt));
+    }
+
+
+    @Override
     public int autoCompleteExpired() {
         return itemMapper.autoCompleteExpired(APPROVED, COMPLETED);
     }
@@ -145,6 +159,19 @@ public class BookingRepositoryImpl implements BookingRepository {
     public boolean adminCompleteAndRelease(Long orderId, String reason) {
         return itemMapper.adminCompleteAndRelease(orderId, reason, PENDING, APPROVED, COMPLETED) > 0;
     }
+
+    @Override
+    public Map<Long, Integer> countRoomOverlapBatch(Collection<Long> roomIds, LocalDate date,
+                                                    String startTime, String endTime) {
+        if (roomIds == null || roomIds.isEmpty()) {
+            return Map.of();
+        }
+        return itemMapper.countRoomOverlapBatch(roomIds, date, startTime, endTime, PENDING, APPROVED)
+                .stream()
+                .collect(Collectors.toMap(ItemMapper.ResourceOverlapRow::resourceId,
+                        ItemMapper.ResourceOverlapRow::cnt));
+    }
+
 
     @Override
     public List<BookingRef> findCancellableBookings(Long userId, List<Long> orderIds) {

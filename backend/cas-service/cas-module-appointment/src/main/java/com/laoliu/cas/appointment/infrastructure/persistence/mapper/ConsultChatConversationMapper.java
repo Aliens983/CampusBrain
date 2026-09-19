@@ -6,6 +6,9 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * 咨询沟通会话 Mapper
  *
@@ -35,4 +38,22 @@ public interface ConsultChatConversationMapper extends BaseMapper<ConsultChatCon
     /** 用户显示名（聊天对端名称） */
     @Select("SELECT name FROM `user` WHERE id = #{userId}")
     String selectUserName(@Param("userId") Long userId);
+
+    /**
+     * 批量取用户显示名（4.7 N+1 收敛：会话列表此前每会话发一次 selectUserName）。
+     * 调用方须保证 userIds 非空；库中无此用户或 name 为空时不在结果集中。
+     */
+    @Select("""
+            <script>
+            SELECT id AS userId, name AS userName
+            FROM `user`
+            WHERE id IN
+            <foreach collection="userIds" item="uid" open="(" separator="," close=")">#{uid}</foreach>
+            </script>
+            """)
+    List<UserNameRow> selectUserNames(@Param("userIds") Collection<Long> userIds);
+
+    /** 用户显示名投影行（userId → name） */
+    record UserNameRow(Long userId, String userName) {
+    }
 }

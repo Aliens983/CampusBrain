@@ -8,6 +8,8 @@ import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceI
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.domain.view.BookingRef;
+import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -209,4 +211,32 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                          @Param("endTime") String endTime,
                          @Param("pendingCode") int pendingCode,
                          @Param("approvedCode") int approvedCode);
+
+    /**
+     * 批量统计多间教室某日某时段各自的占用条数（4.7 N+1 收敛）：
+     * 助手「查教室列表」此前对每间教室各发一次 countRoomOverlap，现一条 GROUP BY 取回。
+     * 窗口内无占用的教室不在结果集中，调用方按 0 兜底。
+     */
+    List<ResourceOverlapRow> countRoomOverlapBatch(@Param("roomIds") Collection<Long> roomIds,
+                                                   @Param("date") LocalDate date,
+                                                   @Param("startTime") String startTime,
+                                                   @Param("endTime") String endTime,
+                                                   @Param("pendingCode") int pendingCode,
+                                                   @Param("approvedCode") int approvedCode);
+
+    /**
+     * 批量统计多台设备某日某时段各自被占用台数之和（4.7 N+1 收敛），
+     * 语义与 {@link #sumEquipmentOverlap} 逐条一致。窗口内无占用的设备按 0 兜底。
+     */
+    List<ResourceOverlapRow> sumEquipmentOverlapBatch(@Param("equipmentIds") Collection<Long> equipmentIds,
+                                                      @Param("date") LocalDate date,
+                                                      @Param("startTime") String startTime,
+                                                      @Param("endTime") String endTime,
+                                                      @Param("pendingCode") int pendingCode,
+                                                      @Param("approvedCode") int approvedCode);
+
+    /** 资源占用聚合投影行（resourceId=教室/设备ID，cnt=占用条数或占用台数之和） */
+    record ResourceOverlapRow(Long resourceId, Integer cnt) {
+    }
+
 }

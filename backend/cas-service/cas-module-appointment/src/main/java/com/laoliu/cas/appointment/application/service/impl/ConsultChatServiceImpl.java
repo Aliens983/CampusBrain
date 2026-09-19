@@ -20,7 +20,10 @@ import org.springframework.util.StringUtils;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 咨询沟通应用服务实现
@@ -38,8 +41,26 @@ public class ConsultChatServiceImpl implements ConsultChatService {
     @Override
     public List<ConversationResponse> listConversations(Long userId, Integer userRole) {
         requireChatRole(userRole);
-        return consultChatRepository.listByUserId(userId).stream()
-                .map(conv -> toConversationVO(conv, userId))
+        List<ConsultChatConversation> conversations = consultChatRepository.listByUserId(userId);
+        if (conversations.isEmpty()) {
+            return List.of();
+        }
+        // 4.7 N+1 收敛：对端名称、最后消息、未读数各一条批量 SQL 取回，
+        // 取代此前「每会话 3 次查询」（10 个会话从 30 次 SQL 降到 3 次）
+        Set<Long> peerIds = conversations.stream()
+                .map(conv -> Objects.equals(conv.getStudentId(), userId)
+                        ? conv.getTeacherId() : conv.getStudentId())
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        List<Long> conversationIds = conversations.stream()
+                .map(ConsultChatConversation::getId)
+                .toList();
+        Map<Long, String> peerNames = consultChatRepository.findUserNames(peerIds);
+        Map<Long, ConsultChatMessage> lastMessages = consultChatRepository.findLastMessages(conversationIds);
+        Map<Long, Long> unreadCounts = consultChatRepository.countUnread(conversationIds, userId);
+
+        return conversations.stream()
+                .map(conv -> toConversationVO(conv, userId, peerNames, lastMessages, unreadCounts))
                 // 有消息的会话按最后消息时间倒序，无消息的沉底
                 .sorted(Comparator
                         .comparing((ConversationResponse vo) -> vo.getLastTime() == null)
@@ -158,11 +179,34 @@ public class ConsultChatServiceImpl implements ConsultChatService {
     private ConversationResponse toConversationVO(ConsultChatConversation conversation, Long viewerId) {
         boolean viewerIsStudent = Objects.equals(conversation.getStudentId(), viewerId);
         Long peerUserId = viewerIsStudent ? conversation.getTeacherId() : conversation.getStudentId();
-        String peerRole = viewerIsStudent ? "teacher" : "student";
-        String peerName = consultChatRepository.findUserName(peerUserId).orElse("");
-
+        String peerName = peerUserId == null ? ""
+                : consultChatRepository.findUserName(peerUserId).orElse("");
         ConsultChatMessage last = consultChatRepository.lastMessage(conversation.getId()).orElse(null);
         long unread = consultChatRepository.countUnread(conversation.getId(), viewerId);
+        return buildConversationVO(conversation, viewerId, peerUserId, peerName, last, unread);
+    }
+
+    /**
+     * 批量版（4.7）：对端名称 / 最后消息 / 未读数由 listConversations 一次性预取，
+     * Map 中缺失即分别按空串 / null / 0 兜底，语义与逐条版完全一致。
+     */
+    private ConversationResponse toConversationVO(ConsultChatConversation conversation, Long viewerId,
+                                                  Map<Long, String> peerNames,
+                                                  Map<Long, ConsultChatMessage> lastMessages,
+                                                  Map<Long, Long> unreadCounts) {
+        boolean viewerIsStudent = Objects.equals(conversation.getStudentId(), viewerId);
+        Long peerUserId = viewerIsStudent ? conversation.getTeacherId() : conversation.getStudentId();
+        String peerName = peerUserId == null ? "" : peerNames.getOrDefault(peerUserId, "");
+        ConsultChatMessage last = lastMessages.get(conversation.getId());
+        long unread = unreadCounts.getOrDefault(conversation.getId(), 0L);
+        return buildConversationVO(conversation, viewerId, peerUserId, peerName, last, unread);
+    }
+
+    private ConversationResponse buildConversationVO(ConsultChatConversation conversation, Long viewerId,
+                                                     Long peerUserId, String peerName,
+                                                     ConsultChatMessage last, long unread) {
+        boolean viewerIsStudent = Objects.equals(conversation.getStudentId(), viewerId);
+        String peerRole = viewerIsStudent ? "teacher" : "student";
 
         return ConversationResponse.builder()
                 .id(conversation.getId())

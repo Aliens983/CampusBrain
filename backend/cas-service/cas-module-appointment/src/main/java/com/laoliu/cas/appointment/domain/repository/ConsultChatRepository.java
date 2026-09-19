@@ -3,7 +3,9 @@ package com.laoliu.cas.appointment.domain.repository;
 import com.laoliu.cas.appointment.domain.entity.ConsultChatConversation;
 import com.laoliu.cas.appointment.domain.entity.ConsultChatMessage;
 
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -34,8 +36,20 @@ public interface ConsultChatRepository {
     /** 某会话最后一条消息（用于会话列表预览） */
     Optional<ConsultChatMessage> lastMessage(Long conversationId);
 
+    /**
+     * 批量取多个会话各自的最后一条消息（4.7 N+1 收敛），conversationId → 消息；
+     * 无消息的会话不在返回 Map 中。入参为空时返回空 Map。
+     */
+    Map<Long, ConsultChatMessage> findLastMessages(Collection<Long> conversationIds);
+
     /** 某会话中发给 viewer 的未读数（sender ≠ viewer 且未读） */
     long countUnread(Long conversationId, Long viewerId);
+
+    /**
+     * 批量统计多个会话中发给 viewer 的未读数（4.7 N+1 收敛），conversationId → 未读数；
+     * 未读数为 0 的会话不在返回 Map 中，调用方按 0 兜底。入参为空时返回空 Map。
+     */
+    Map<Long, Long> countUnread(Collection<Long> conversationIds, Long viewerId);
 
     /** 打开会话时把所有发给 viewer 的消息置为已读，返回置读条数 */
     int markConversationRead(Long conversationId, Long viewerId);
@@ -45,6 +59,9 @@ public interface ConsultChatRepository {
 
     /** 用户显示名（聊天对端） */
     Optional<String> findUserName(Long userId);
+
+    /** 批量取用户显示名（4.7 N+1 收敛），userId → 名称；查不到的用户不在返回 Map 中 */
+    Map<Long, String> findUserNames(Collection<Long> userIds);
 
     /** 该教师账号是否为「教师咨询」分类咨询师（是否开放学生发起沟通） */
     boolean isTeacherConsultant(Long teacherUserId);

@@ -116,7 +116,11 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     public List<AssistantConsultantResponse> findConsultants(String campus, String keyword, String date) {
         Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
-        List<AssistantConsultantResponse> result = new ArrayList<>();
+
+        // 第一遍：校区/关键词过滤。先收集命中咨询师，再一条 GROUP BY 批量取当日可预约时段数
+        // （4.7：此前每命中一位咨询师就发一次 findAvailable，N 位咨询师 N 次 SQL）
+        List<Consultant> matched = new ArrayList<>();
+        Map<Long, ServiceItem> matchedService = new LinkedHashMap<>();
         for (Consultant c : consultantRepository.findAll()) {
             ServiceItem s = c.getServiceId() == null ? null : serviceIndex.get(c.getServiceId());
             if (s != null && !matchesCampus(s.getCampus(), campus)) {
@@ -130,10 +134,18 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                     && !containsKeyword(c.getName(), c.getDepartment(), c.getTitle(), c.getDescription(), keyword)) {
                 continue;
             }
-            Integer slotCount = null;
-            if (parsedDate != null) {
-                slotCount = timeSlotRepository.findAvailable(c.getId(), parsedDate).size();
-            }
+            matched.add(c);
+            matchedService.put(c.getId(), s);
+        }
+        Map<Long, Integer> slotCounts = parsedDate == null || matched.isEmpty()
+                ? Map.of()
+                : timeSlotRepository.countAvailableByConsultants(
+                        matched.stream().map(Consultant::getId).toList(), parsedDate);
+
+        List<AssistantConsultantResponse> result = new ArrayList<>();
+        for (Consultant c : matched) {
+            ServiceItem s = matchedService.get(c.getId());
+            Integer slotCount = parsedDate == null ? null : slotCounts.getOrDefault(c.getId(), 0);
             result.add(AssistantConsultantResponse.builder()
                     .consultantId(c.getId())
                     .name(c.getName())
@@ -169,28 +181,40 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         Map<Long, List<Room>> roomsByService = roomRepository.findAll().stream()
                 .collect(Collectors.groupingBy(Room::getServiceId, LinkedHashMap::new, Collectors.toList()));
 
-        List<AssistantRoomResponse> result = new ArrayList<>();
+        // 先收集本校区全部待展示（教室, 所属服务），再一条 GROUP BY 批量取窗口占用
+        // （4.7：此前每间教室各发一次 countRoomOverlap，N 间教室 N 次 SQL）
+        List<Room> candidateRooms = new ArrayList<>();
+        Map<Long, ServiceItem> roomService = new LinkedHashMap<>();
         for (ServiceItem s : serviceService.getAvailableServices()) {
             if (!matchesCampus(s.getCampus(), campus)) {
                 continue;
             }
             for (Room r : roomsByService.getOrDefault(s.getServiceId(), List.of())) {
-                Boolean free = null;
-                if (withWindow) {
-                    free = bookingRepository.countRoomOverlap(r.getId(), parsedDate, startTime, endTime) == 0;
-                }
-                result.add(AssistantRoomResponse.builder()
-                        .roomId(r.getId())
-                        .name(r.getName())
-                        .location(r.getLocation())
-                        .seats(r.getSeats())
-                        .serviceId(s.getServiceId())
-                        .serviceName(s.getServiceName())
-                        .campus(s.getCampus())
-                        .campusName(campusName(s.getCampus()))
-                        .free(free)
-                        .build());
+                candidateRooms.add(r);
+                roomService.put(r.getId(), s);
             }
+        }
+        Map<Long, Integer> roomOverlap = withWindow && !candidateRooms.isEmpty()
+                ? bookingRepository.countRoomOverlapBatch(
+                        candidateRooms.stream().map(Room::getId).toList(),
+                        parsedDate, startTime, endTime)
+                : Map.of();
+
+        List<AssistantRoomResponse> result = new ArrayList<>();
+        for (Room r : candidateRooms) {
+            ServiceItem s = roomService.get(r.getId());
+            Boolean free = withWindow ? roomOverlap.getOrDefault(r.getId(), 0) == 0 : null;
+            result.add(AssistantRoomResponse.builder()
+                    .roomId(r.getId())
+                    .name(r.getName())
+                    .location(r.getLocation())
+                    .seats(r.getSeats())
+                    .serviceId(s.getServiceId())
+                    .serviceName(s.getServiceName())
+                    .campus(s.getCampus())
+                    .campusName(campusName(s.getCampus()))
+                    .free(free)
+                    .build());
         }
         return result;
     }
@@ -203,7 +227,10 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         boolean withWindow = parsedDate != null && startTime != null && endTime != null
                 && !startTime.isBlank() && !endTime.isBlank() && startTime.compareTo(endTime) < 0;
 
-        List<AssistantEquipmentResponse> result = new ArrayList<>();
+        // 第一遍：校区/关键词过滤，收集命中设备，再一条 GROUP BY 批量取窗口占用
+        // （4.7：此前每台设备各发一次 sumEquipmentOverlap，N 台设备 N 次 SQL）
+        List<Equipment> matched = new ArrayList<>();
+        Map<Long, ServiceItem> matchedService = new LinkedHashMap<>();
         for (Equipment e : equipmentRepository.findAll()) {
             ServiceItem s = e.getServiceId() == null ? null : serviceIndex.get(e.getServiceId());
             if (s != null && !matchesCampus(s.getCampus(), campus)) {
@@ -216,9 +243,21 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                     && !containsKeyword(e.getName(), e.getCategory(), e.getDescription(), keyword)) {
                 continue;
             }
+            matched.add(e);
+            matchedService.put(e.getId(), s);
+        }
+        Map<Long, Integer> equipmentOccupied = withWindow && !matched.isEmpty()
+                ? bookingRepository.sumEquipmentOverlapBatch(
+                        matched.stream().map(Equipment::getId).toList(),
+                        parsedDate, startTime, endTime)
+                : Map.of();
+
+        List<AssistantEquipmentResponse> result = new ArrayList<>();
+        for (Equipment e : matched) {
+            ServiceItem s = matchedService.get(e.getId());
             Integer remaining = null;
             if (withWindow) {
-                int occupied = bookingRepository.sumEquipmentOverlap(e.getId(), parsedDate, startTime, endTime);
+                int occupied = equipmentOccupied.getOrDefault(e.getId(), 0);
                 int stock = e.getAvailableStock() == null ? 0 : e.getAvailableStock();
                 remaining = Math.max(stock - occupied, 0);
             }

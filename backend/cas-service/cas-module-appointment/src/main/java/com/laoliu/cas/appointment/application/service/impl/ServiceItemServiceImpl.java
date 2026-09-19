@@ -54,7 +54,9 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     }
 
     @Override
-    @Cacheable(value = "services", key = "#id")
+    // 4.8：Optional.empty() 不是 null，disableCachingNullValues 拦不住，会把"服务不存在"
+    // 缓存 30 分钟（此间新建同 ID 服务也读不到）。unless 显式排除空 Optional，只缓存命中结果。
+    @Cacheable(value = "services", key = "#id", unless = "#result == null or !#result.isPresent()")
     public Optional<ServiceItem> getServiceById(Long id) {
         return serviceRepository.findById(id);
     }
