@@ -52,7 +52,7 @@ class ServiceStatusServiceImplTest {
     private ServiceStatusService serviceStatusService;
 
     private static final Long VALID_ORDER_ID = 1L;
-    private static final Long INVALID_ORDER_ID = 99L;
+    private static final Long INVALID_ORDER_ID = 999L;
     private static final Long BOOKING_USER_ID = 100L;
     private static final Long BOOKING_SERVICE_ID = 200L;
 
@@ -229,6 +229,8 @@ class ServiceStatusServiceImplTest {
             verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any(), anyList());
         }
     }
+
+    // ======================== 管理员强制取消/完结（3.4 僵尸单兜底） ========================
 
     @Nested
     @DisplayName("管理员强制取消 - adminForceCancel")

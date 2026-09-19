@@ -74,7 +74,7 @@ class AppointmentAssistantServiceImplTest {
 
     @Mock private ServiceItemRepository serviceRepository;
     @Mock private ServiceCategoryRepository serviceCategoryRepository;
-    @Mock private ServiceItemService serviceService;
+    @Mock private ServiceItemService serviceItemService;
     @Mock private ConsultantRepository consultantRepository;
     @Mock private TimeSlotRepository timeSlotRepository;
     @Mock private RoomRepository roomRepository;
@@ -290,7 +290,7 @@ class AppointmentAssistantServiceImplTest {
         @Test
         @DisplayName("教室列表只全量查一次，避免按服务逐个查的 N+1")
         void shouldLoadRoomsInOneQuery() {
-            when(serviceService.getAvailableServices()).thenReturn(List.of(service(1L, -1, 0), service(2L, -1, 0)));
+            when(serviceItemService.getAvailableServices()).thenReturn(List.of(service(1L, -1, 0), service(2L, -1, 0)));
             when(roomRepository.findAll()).thenReturn(List.of(
                     Room.builder().id(1L).name("A101").serviceId(1L).build(),
                     Room.builder().id(2L).name("A102").serviceId(1L).build(),
@@ -306,7 +306,7 @@ class AppointmentAssistantServiceImplTest {
         @Test
         @DisplayName("按校区过滤教室")
         void shouldFilterRoomsByCampus() {
-            when(serviceService.getAvailableServices()).thenReturn(List.of(
+            when(serviceItemService.getAvailableServices()).thenReturn(List.of(
                     ServiceItem.builder().serviceId(1L).serviceName("仓前").serviceState(1).campus("cq").build(),
                     ServiceItem.builder().serviceId(2L).serviceName("下沙").serviceState(1).campus("xs").build()));
             when(roomRepository.findAll()).thenReturn(List.of(
@@ -358,7 +358,7 @@ class AppointmentAssistantServiceImplTest {
         @Test
         @DisplayName("4.7 教室列表带时间窗：占用数批量聚合，free 按命中数判定，不逐条 countRoomOverlap")
         void shouldBatchLoadRoomOverlap() {
-            when(serviceService.getAvailableServices()).thenReturn(List.of(service(1L, -1, 0)));
+            when(serviceItemService.getAvailableServices()).thenReturn(List.of(service(1L, -1, 0)));
             when(roomRepository.findAll()).thenReturn(List.of(
                     Room.builder().id(1L).name("A101").serviceId(1L).build(),
                     Room.builder().id(2L).name("A102").serviceId(1L).build()));

@@ -1,5 +1,7 @@
 package com.laoliu.cas.appointment.domain.enums;
 
+import lombok.Getter;
+
 /**
  * 服务业务分类编码（与 service_category 表 V4 种子、services.category_id 对应）。
  * <p>
@@ -8,6 +10,7 @@ package com.laoliu.cas.appointment.domain.enums;
  *
  * @author forever-king
  */
+@Getter
 public enum CategoryCode {
 
     /** 教师咨询 */
@@ -23,10 +26,6 @@ public enum CategoryCode {
 
     CategoryCode(String code) {
         this.code = code;
-    }
-
-    public String getCode() {
-        return code;
     }
 
     /** 判断给定分类编码是否为本枚举值 */

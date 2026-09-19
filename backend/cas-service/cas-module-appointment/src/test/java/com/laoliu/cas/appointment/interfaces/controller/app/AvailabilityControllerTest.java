@@ -29,14 +29,14 @@ import static org.mockito.Mockito.*;
 @DisplayName("AvailabilityController 单元测试")
 class AvailabilityControllerTest {
 
-    @Mock private ServiceItemService serviceService;
+    @Mock private ServiceItemService serviceItemService;
     @Mock private BookingRepository bookingRepository;
 
     private static final Long LOGIN_USER_ID = 100L;
     private static final Long FORGED_HEADER_ID = 999L;
 
     private AvailabilityController controller() {
-        return new AvailabilityController(serviceService, bookingRepository);
+        return new AvailabilityController(serviceItemService, bookingRepository);
     }
 
     @Nested

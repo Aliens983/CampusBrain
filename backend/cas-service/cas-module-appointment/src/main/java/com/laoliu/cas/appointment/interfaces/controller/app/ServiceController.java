@@ -28,19 +28,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ServiceController {
 
-    private final ServiceItemService serviceService;
+    private final ServiceItemService serviceItemService;
     private final GetUserIdViaTokenApi getUserIdViaTokenApi;
 
     @Operation(summary = "获取可预约服务列表（分页+筛选）", description = "分页查询服务，支持按名称模糊搜索和状态筛选")
     @GetMapping
     public CommonResult<PageResult<ServiceResponse>> getEnabledServices(@Valid ServicePageRequest req) {
-        return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceService.getAllServices(req)));
+        return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceItemService.getAllServices(req)));
     }
 
     @Operation(summary = "根据ID获取服务详情", description = "获取单个服务的详细信息")
     @GetMapping("/{id}")
     public CommonResult<ServiceResponse> getServiceById(@PathVariable Long id) {
-        return serviceService.getServiceById(id)
+        return serviceItemService.getServiceById(id)
                 .map(s -> CommonResult.success(ServiceConvert.INSTANCE.convert(s)))
                 .orElse(CommonResult.notFound("服务不存在"));
     }
@@ -50,6 +50,6 @@ public class ServiceController {
     public CommonResult<PageResult<ServiceResponse>> getMyServices(@Valid PageParam pageParam) {
         Long userId = getUserIdViaTokenApi.getUserId();
         return CommonResult.success(ServiceConvert.INSTANCE.convertPage(
-                serviceService.selectUserServices(userId, pageParam.getPageNo(), pageParam.getPageSize())));
+                serviceItemService.selectUserServices(userId, pageParam.getPageNo(), pageParam.getPageSize())));
     }
 }

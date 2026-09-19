@@ -43,24 +43,6 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public List<BookingQueryView> getServiceStatusByUserId(Long userId) {
-        return bookingRepository.getServiceStatusByUserId(userId);
-    }
-
-    @Override
-    public IPage<BookingQueryView> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest req) {
-        return bookingRepository.getServiceStatusByUserId(userId, req.getPageNo(), req.getPageSize(),
-                req.getManageStatus(), req.getServiceName());
-    }
-
-    @Override
-    public List<BookingQueryView> getServiceStatusByUserIdWithDescription(Long userId) {
-        List<BookingQueryView> statusList = bookingRepository.getServiceStatusByUserId(userId);
-        statusList.forEach(this::setStatusDescription);
-        return statusList;
-    }
-
-    @Override
     public IPage<BookingQueryView> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req) {
         IPage<BookingQueryView> statusPage = bookingRepository.getServiceStatusByUserId(
                 userId, req.getPageNo(), req.getPageSize(),
@@ -167,14 +149,10 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
 
 
     /**
-     * 状态中文描述统一经 {@link ManageStatus#of(Integer)} 取自枚举，
-     * 与 {@code BookServiceImpl#getStatusDescription} 同源，消除重复的 switch 0..4。
+     * 管理员强制取消（3.4 僵尸单兜底）：用户侧只能取消待审核单或已通过的活动单，
+     * 已通过的通用/咨询/教室/设备单若无人处理会永久占用名额/时段，
+     * 由管理员端点无条件（限角色）回收。状态变更与资源释放在同一条多表 UPDATE 内原子完成。
      */
-    private void setStatusDescription(BookingQueryView response) {
-        ManageStatus status = ManageStatus.of(response.getManageStatus());
-        response.setStatusDescription(status == null ? "未知状态" : status.getMessage());
-    }
-
     @Override
     @Transactional(rollbackFor = Exception.class)
     // 释放占用会改变余量，与 auditReject 同样需要让 services 余量快照立即失效
@@ -258,5 +236,14 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
                     .append(r.getStartTime()).append("-").append(r.getEndTime());
         }
         return sb.toString();
+    }
+
+    /**
+     * 状态中文描述统一经 {@link ManageStatus#of(Integer)} 取自枚举，
+     * 与 {@code BookServiceImpl#getStatusDescription} 同源，消除重复的 switch 0..4。
+     */
+    private void setStatusDescription(BookingQueryView response) {
+        ManageStatus status = ManageStatus.of(response.getManageStatus());
+        response.setStatusDescription(status == null ? "未知状态" : status.getMessage());
     }
 }

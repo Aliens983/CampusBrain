@@ -76,7 +76,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     private final ServiceItemRepository serviceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     /** 走应用服务（带 @Cacheable）而非直接查库，避免每次助手问答全表扫服务 */
-    private final ServiceItemService serviceService;
+    private final ServiceItemService serviceItemService;
     private final ConsultantRepository consultantRepository;
     private final TimeSlotRepository timeSlotRepository;
     private final RoomRepository roomRepository;
@@ -98,7 +98,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         List<AssistantServiceResponse> result = new ArrayList<>();
         // 走 ServiceItemService 而非 repository：前者带 @Cacheable("services")，
         // 避免每次助手问答都全表扫 services
-        for (ServiceItem s : serviceService.getAvailableServices()) {
+        for (ServiceItem s : serviceItemService.getAvailableServices()) {
             ServiceCategory cat = categories.get(s.getCategoryId());
             String categoryCode = cat == null ? null : cat.getCode();
             if (!matchesCampus(s.getCampus(), campus) || !matchesCategory(categoryCode, category)) {
@@ -185,7 +185,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         // （4.7：此前每间教室各发一次 countRoomOverlap，N 间教室 N 次 SQL）
         List<Room> candidateRooms = new ArrayList<>();
         Map<Long, ServiceItem> roomService = new LinkedHashMap<>();
-        for (ServiceItem s : serviceService.getAvailableServices()) {
+        for (ServiceItem s : serviceItemService.getAvailableServices()) {
             if (!matchesCampus(s.getCampus(), campus)) {
                 continue;
             }

@@ -143,7 +143,9 @@ public class BookServiceImpl implements BookService {
         dto.setCampus(status.getCampus());
         dto.setStatus(status.getManageStatus());
         dto.setCreateTime(status.getCreateTime());
-        dto.setReason(status.getStatusDescription());
+        // 1.3：reason 必须取管理员填写的真实拒绝原因（item.reason 列），
+        // 此前误取 statusDescription（仓储直出恒为 null），导致 /app/bookings 拒绝原因永远不可见
+        dto.setReason(status.getReason());
         dto.setStatusDescription(getStatusDescription(status.getManageStatus()));
         // 咨询时段预约：回显咨询师与时段
         dto.setConsultantName(status.getConsultantName());

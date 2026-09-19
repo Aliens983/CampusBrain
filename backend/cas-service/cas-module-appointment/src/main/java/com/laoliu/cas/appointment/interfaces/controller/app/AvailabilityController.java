@@ -3,7 +3,6 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
-import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.result.CommonResult;
@@ -30,14 +29,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AvailabilityController {
 
-    private final ServiceItemService serviceService;
+    private final ServiceItemService serviceItemService;
     private final BookingRepository bookingRepository;
 
     @Operation(summary = "获取可预约服务及实时预约数", description = "供 KB 智能助手查询实时预约数据")
     @GetMapping("/availability")
     public CommonResult<List<ServiceAvailabilityResponse>> getAvailability() {
         Map<Long, Long> counts = bookingRepository.countBookingsByService();
-        List<ServiceAvailabilityResponse> result = serviceService.getAvailableServices().stream()
+        List<ServiceAvailabilityResponse> result = serviceItemService.getAvailableServices().stream()
                 .map(s -> {
                     ServiceAvailabilityResponse vo = new ServiceAvailabilityResponse();
                     vo.setServiceId(s.getServiceId());

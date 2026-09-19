@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,11 +37,20 @@ public class BookingMetrics {
 
     private static final String RESULT_APPROVED = "approved";
     private static final String RESULT_REJECTED = "rejected";
+    private static final String SOURCE_ADMIN = "admin";
+    private static final String SOURCE_TEACHER = "teacher";
 
     private final MeterRegistry registry;
 
     private final Counter createdCounter;
     private final Counter cancelledCounter;
+
+    /** 1.10：审核计数/耗时按 result×source 全组合构造期预建，热点路径不再 builder+register 查找 */
+    private final Map<AuditKey, Counter> auditCounters;
+    private final Map<AuditKey, Timer> auditTimers;
+
+    /** 冲突拦截计数按已知 reason 预建；出现新原因时回退惰性注册（Micrometer 返回同名既有实例） */
+    private final Map<String, Counter> conflictCounters;
 
     public BookingMetrics(MeterRegistry registry) {
         this.registry = registry;
@@ -49,6 +59,46 @@ public class BookingMetrics {
                 .register(registry);
         this.cancelledCounter = Counter.builder("booking.cancelled")
                 .description("Bookings cancelled by users")
+                .register(registry);
+        this.auditCounters = Map.of(
+                new AuditKey(RESULT_APPROVED, SOURCE_ADMIN), auditCounter(RESULT_APPROVED, SOURCE_ADMIN),
+                new AuditKey(RESULT_APPROVED, SOURCE_TEACHER), auditCounter(RESULT_APPROVED, SOURCE_TEACHER),
+                new AuditKey(RESULT_REJECTED, SOURCE_ADMIN), auditCounter(RESULT_REJECTED, SOURCE_ADMIN),
+                new AuditKey(RESULT_REJECTED, SOURCE_TEACHER), auditCounter(RESULT_REJECTED, SOURCE_TEACHER)
+        );
+        this.auditTimers = Map.of(
+                new AuditKey(RESULT_APPROVED, SOURCE_ADMIN), auditTimer(RESULT_APPROVED, SOURCE_ADMIN),
+                new AuditKey(RESULT_APPROVED, SOURCE_TEACHER), auditTimer(RESULT_APPROVED, SOURCE_TEACHER),
+                new AuditKey(RESULT_REJECTED, SOURCE_ADMIN), auditTimer(RESULT_REJECTED, SOURCE_ADMIN),
+                new AuditKey(RESULT_REJECTED, SOURCE_TEACHER), auditTimer(RESULT_REJECTED, SOURCE_TEACHER)
+        );
+        this.conflictCounters = Map.of(
+                REASON_CAPACITY_FULL, conflictCounter(REASON_CAPACITY_FULL),
+                REASON_SLOT_UNAVAILABLE, conflictCounter(REASON_SLOT_UNAVAILABLE)
+        );
+    }
+
+    private Counter auditCounter(String result, String source) {
+        return Counter.builder("booking.audit")
+                .description("Booking audit decisions")
+                .tag("result", result)
+                .tag("source", source)
+                .register(registry);
+    }
+
+    private Timer auditTimer(String result, String source) {
+        return Timer.builder("booking.audit.duration")
+                .description("Booking audit processing duration")
+                .tag("result", result)
+                .tag("source", source)
+                .publishPercentileHistogram()
+                .register(registry);
+    }
+
+    private Counter conflictCounter(String reason) {
+        return Counter.builder("booking.conflict.blocked")
+                .description("Booking attempts blocked by capacity or slot conflicts")
+                .tag("reason", reason)
                 .register(registry);
     }
 
@@ -73,29 +123,24 @@ public class BookingMetrics {
      * @param durationNanos  审核处理耗时（纳秒）
      */
     public void recordAudit(boolean approved, AuditSource source, long durationNanos) {
-        String result = approved ? RESULT_APPROVED : RESULT_REJECTED;
-        String reviewer = source == AuditSource.TEACHER ? "teacher" : "admin";
-        Counter.builder("booking.audit")
-                .description("Booking audit decisions")
-                .tag("result", result)
-                .tag("source", reviewer)
-                .register(registry)
-                .increment();
-        Timer.builder("booking.audit.duration")
-                .description("Booking audit processing duration")
-                .tag("result", result)
-                .tag("source", reviewer)
-                .publishPercentileHistogram()
-                .register(registry)
-                .record(durationNanos, TimeUnit.NANOSECONDS);
+        AuditKey key = new AuditKey(
+                approved ? RESULT_APPROVED : RESULT_REJECTED,
+                source == AuditSource.TEACHER ? SOURCE_TEACHER : SOURCE_ADMIN);
+        auditCounters.get(key).increment();
+        auditTimers.get(key).record(durationNanos, TimeUnit.NANOSECONDS);
     }
 
     /** 容量满或时段冲突导致的下单拦截 */
     public void recordConflictBlocked(String reason) {
-        Counter.builder("booking.conflict.blocked")
-                .description("Booking attempts blocked by capacity or slot conflicts")
-                .tag("reason", reason)
-                .register(registry)
-                .increment();
+        Counter counter = conflictCounters.get(reason);
+        if (counter == null) {
+            // 防御：出现未预建的新原因时惰性注册（register 对同名 tag 组合返回既有实例，语义不变）
+            counter = conflictCounter(reason);
+        }
+        counter.increment();
+    }
+
+    /** 审核指标的 tag 组合键（result + source） */
+    private record AuditKey(String result, String source) {
     }
 }

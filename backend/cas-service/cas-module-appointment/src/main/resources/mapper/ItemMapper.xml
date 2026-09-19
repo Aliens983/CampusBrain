@@ -256,7 +256,6 @@
           AND item.manage_status IN (#{pendingCode}, #{approvedCode})
     </update>
 
-
     <!-- 审核：只允许从 fromStatuses 给出的状态流转（由 Service 层状态机决定，
          如 通过仅允许待审核单，拒绝允许待审核/已通过单），非法跃迁影响 0 行 -->
     <update id="auditService">

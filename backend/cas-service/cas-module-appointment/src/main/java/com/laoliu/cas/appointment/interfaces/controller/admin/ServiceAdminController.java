@@ -33,21 +33,21 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ServiceAdminController {
 
-    private final ServiceItemService serviceService;
+    private final ServiceItemService serviceItemService;
     private final UserInfoApi userInfoApi;
 
     @Operation(summary = "获取所有服务（分页+筛选）", description = "分页获取服务列表，支持按名称模糊搜索和状态筛选")
     @GetMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
     public CommonResult<PageResult<ServiceResponse>> getService(@Valid ServicePageRequest req) {
-        return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceService.getAllServices(req)));
+        return CommonResult.success(ServiceConvert.INSTANCE.convertPage(serviceItemService.getAllServices(req)));
     }
 
     @Operation(summary = "添加服务", description = "管理员添加新的服务项目，包含服务名称、描述和状态")
     @PostMapping
     @RequireRole(UserRoleEnum.ADMIN)
     public CommonResult<Void> addService(@Valid @RequestBody ServiceAddRequest serviceAddRequest) {
-        boolean success = serviceService.addService(serviceAddRequest);
+        boolean success = serviceItemService.addService(serviceAddRequest);
         if (success) {
             return CommonResult.success("添加服务成功", null);
         } else {
@@ -59,7 +59,7 @@ public class ServiceAdminController {
     @PutMapping("/{id}")
     @RequireRole(UserRoleEnum.ADMIN)
     public CommonResult<Void> updateService(@PathVariable Long id, @Valid @RequestBody ServiceAddRequest request) {
-        boolean success = serviceService.updateService(id, request);
+        boolean success = serviceItemService.updateService(id, request);
         if (success) {
             return CommonResult.success("更新服务成功", null);
         } else {
@@ -78,7 +78,7 @@ public class ServiceAdminController {
             return CommonResult.error(ServiceErrorCode.SERVICE_NOT_FOUND);
         }
         PageResult<ServiceResponse> servicesPage = ServiceConvert.INSTANCE.convertPage(
-                serviceService.selectUserServices(userId, pageParam.getPageNo(), pageParam.getPageSize()));
+                serviceItemService.selectUserServices(userId, pageParam.getPageNo(), pageParam.getPageSize()));
         UserServicesResponse resp = UserServicesResponse.of(
                 userInfo.getName(), userId, userInfo.getRole(), userInfo.getEmail(), servicesPage);
         return CommonResult.success(resp);
