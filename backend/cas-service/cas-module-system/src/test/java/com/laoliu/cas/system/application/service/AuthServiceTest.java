@@ -21,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -54,6 +55,7 @@ class AuthServiceTest {
     private static final String CAPTCHA_UUID = "captcha-uuid-001";
     private static final String CAPTCHA_CODE = "7";
     private static final String LOGIN_FAIL_KEY = "login:fail:" + EMAIL;
+    private static final String RESET_FAIL_KEY = "reset:fail:" + EMAIL;
 
     @Mock
     private CaptchaService captchaService;
@@ -198,6 +200,8 @@ class AuthServiceTest {
             verify(userRepository).getUserIdByEmail(EMAIL);
             verify(userRepository).updatePasswordByEmail(EMAIL, ENCODED_PASSWORD);
             verify(redisUtil).removeVerificationCode(redisKey);
+            // 4.13：重置成功后清掉历史试错计数
+            verify(redisUtil).delete(RESET_FAIL_KEY);
             verify(jwtUtils).generateToken(any(LoginUser.class));
         }
 
@@ -254,16 +258,34 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("验证码错误时应当抛出 VERIFICATION_CODE_ERROR 异常")
+        @DisplayName("验证码错误时应当抛出 VERIFICATION_CODE_ERROR 并累计一次试错，首次失败设锁定期")
         void shouldThrowExceptionWhenCodeError() {
             // Given
             String redisKey = "verification_code:" + EMAIL;
             when(redisUtil.getVerificationCode(redisKey)).thenReturn("999999");
+            when(redisUtil.increment(RESET_FAIL_KEY)).thenReturn(1L);
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
                     () -> authService.resetPassword(EMAIL, VERIFICATION_CODE, PASSWORD));
             assertEquals(UserErrorCode.VERIFICATION_CODE_ERROR.getCode(), exception.getCode());
+            verify(redisUtil).increment(RESET_FAIL_KEY);
+            verify(redisUtil).expire(eq(RESET_FAIL_KEY), eq(900L), any());
+        }
+
+        @Test
+        @DisplayName("4.13 试错达 5 次锁定：直接抛 RESET_CODE_TRY_LOCKED，不读验证码、不查库")
+        void shouldThrowExceptionWhenResetLocked() {
+            // Given
+            when(redisUtil.<Long>get(RESET_FAIL_KEY)).thenReturn(5L);
+
+            // When & Then
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> authService.resetPassword(EMAIL, VERIFICATION_CODE, PASSWORD));
+            assertEquals(UserErrorCode.RESET_CODE_TRY_LOCKED.getCode(), exception.getCode());
+            verify(redisUtil, never()).getVerificationCode(any());
+            verify(userRepository, never()).getUserIdByEmail(any());
+            verify(redisUtil, never()).increment(any());
         }
 
         @Test

@@ -29,6 +29,17 @@ public class AuthService {
     /** 登录失败计数在 Redis 中的 key 前缀 */
     private static final String LOGIN_FAIL_KEY_PREFIX = "login:fail:";
 
+    /**
+     * 重置密码验证码允许的最大连续试错次数（4.13）。
+     * 验证码为 6 位数字、300 秒有效，无计数时 5 分钟可穷举 10^6 组合改掉他人密码，
+     * 因此校验侧必须与登录侧同款计数锁定，不能只靠发送侧 60 秒频控。
+     */
+    private static final int MAX_RESET_CODE_FAIL = 5;
+    /** 重置试错锁定时长（秒） */
+    private static final long RESET_FAIL_LOCK_SECONDS = 15 * 60;
+    /** 重置密码验证码试错计数 key 前缀 */
+    private static final String RESET_FAIL_KEY_PREFIX = "reset:fail:";
+
     private final UserRepository userRepository;
     private final JWTUtils jwtUtils;
     private final PasswordUtils passwordUtils;
@@ -91,11 +102,19 @@ public class AuthService {
             throw new BusinessException(UserErrorCode.PASSWORD_EMPTY);
         }
 
+        // 4.13 试错锁定：6 位数字码有效期 5 分钟，无计数可在线穷举，必须先锁再验
+        String failKey = RESET_FAIL_KEY_PREFIX + email;
+        Long failCount = redisUtil.get(failKey);
+        if (failCount != null && failCount >= MAX_RESET_CODE_FAIL) {
+            throw new BusinessException(UserErrorCode.RESET_CODE_TRY_LOCKED);
+        }
+
         String storedCode = redisUtil.getVerificationCode("verification_code:" + email);
         if (storedCode == null) {
             throw new BusinessException(UserErrorCode.VERIFICATION_CODE_EXPIRED);
         }
         if (!storedCode.equals(code)) {
+            recordResetCodeFailure(failKey);
             throw new BusinessException(UserErrorCode.VERIFICATION_CODE_ERROR);
         }
 
@@ -107,8 +126,18 @@ public class AuthService {
         String encodedPassword = passwordUtils.encode(password);
         userRepository.updatePasswordByEmail(email, encodedPassword);
         redisUtil.removeVerificationCode("verification_code:" + email);
+        // 重置成功，清掉历史试错计数
+        redisUtil.delete(failKey);
 
         return jwtUtils.generateToken(buildLoginUser(userId, email));
+    }
+
+    /** 记录一次重置验证码试错：原子自增，首次失败时设定锁定期（与登录失败计数同款） */
+    private void recordResetCodeFailure(String failKey) {
+        Long count = redisUtil.increment(failKey);
+        if (count != null && count == 1L) {
+            redisUtil.expire(failKey, RESET_FAIL_LOCK_SECONDS, TimeUnit.SECONDS);
+        }
     }
 
     /** 构建带角色的登录上下文，用于签发包含 role 声明的 JWT */

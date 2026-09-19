@@ -77,4 +77,7 @@ public interface UserErrorCode {
     /** 图形验证码缺失（登录必须携带） */
     ErrorCode CAPTCHA_REQUIRED = new ErrorCode(20024, "请先完成图形验证码校验");
 
+    /** 重置密码验证码连续试错达到阈值（4.13：6 位数字码 5 分钟有效期内不可穷举，复用登录锁定口径） */
+    ErrorCode RESET_CODE_TRY_LOCKED = new ErrorCode(20025, "验证码错误次数过多，请15分钟后再试");
+
 }

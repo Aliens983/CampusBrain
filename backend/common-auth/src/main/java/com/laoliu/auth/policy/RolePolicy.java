@@ -26,6 +26,13 @@ public enum RolePolicy {
     /** 教师 */
     TEACHER(3, "ROLE_TEACHER");
 
+    /**
+     * 服务间内网身份（HMAC 签名，见 InternalAuthFilter）的权限名。
+     * 它不是用户角色：不占数字 code、永不出现在 JWT/角色头中，也不能由 {@link #of(Integer)} 解析得到，
+     * 防止任何外部输入被抬升为内网身份。
+     */
+    public static final String INTERNAL_AUTHORITY = "ROLE_INTERNAL";
+
     private final int code;
     private final String authority;
 

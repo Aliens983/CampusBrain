@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -24,6 +25,7 @@ class RolePolicyTest {
         assertEquals(3, RolePolicy.TEACHER.getCode());
         assertEquals("ROLE_USER", RolePolicy.USER.getAuthority());
         assertEquals("ROLE_SUPER_ADMIN", RolePolicy.SUPER_ADMIN.getAuthority());
+        assertEquals("ROLE_INTERNAL", RolePolicy.INTERNAL_AUTHORITY);
     }
 
     @Test
@@ -66,5 +68,13 @@ class RolePolicyTest {
         assertFalse(RolePolicy.isAssignableUserRole(null));
         assertFalse(RolePolicy.isAssignableUserRole(-1));
         assertFalse(RolePolicy.isAssignableUserRole(4));
+    }
+
+    @Test
+    @DisplayName("内网身份不占数字 code：任何外部可解析的 code 都不会得到 ROLE_INTERNAL")
+    void internalAuthorityIsNotReachableFromAnyCode() {
+        for (int code = -10; code <= 10; code++) {
+            assertNotEquals(RolePolicy.INTERNAL_AUTHORITY, RolePolicy.of(code).getAuthority());
+        }
     }
 }
