@@ -6,13 +6,13 @@ import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
-import com.laoliu.cas.appointment.application.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.application.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
-import com.laoliu.cas.infra.application.service.EmailService;
-import com.laoliu.cas.system.application.service.NotificationSettingsService;
+import com.laoliu.cas.infra.api.email.EmailService;
+import com.laoliu.cas.system.api.NotificationSettingsApi;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
 
     private final BookingRepository bookingRepository;
     private final EmailService emailService;
-    private final NotificationSettingsService notificationSettings;
+    private final NotificationSettingsApi notificationSettings;
     private final BookingMetrics bookingMetrics;
     private final BookingEventPublisher bookingEventPublisher;
 
@@ -146,7 +146,6 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
             sendAuditEmail(orderId, "预约审核未通过通知", emailContent);
         }
     }
-
 
     /**
      * 管理员强制取消（3.4 僵尸单兜底）：用户侧只能取消待审核单或已通过的活动单，

@@ -1,11 +1,11 @@
-package com.laoliu.cas.infra.application.service;
+package com.laoliu.cas.infra.api.file;
 
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 
 /**
- * 文件存储应用层服务接口
+ * 文件存储跨模块服务接口（契约独立至 cas-module-infra-api，实现在 cas-module-infra）
  *
  * @author forever-king
  */

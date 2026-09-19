@@ -15,7 +15,9 @@
     <modules>
         <module>cas-dependencies</module>
         <module>cas-framework</module>
+        <module>cas-module-infra-api</module>
         <module>cas-module-infra</module>
+        <module>cas-module-system-api</module>
         <module>cas-module-system</module>
         <module>cas-module-appointment</module>
         <module>cas-thirdparty</module>

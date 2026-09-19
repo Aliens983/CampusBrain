@@ -3,7 +3,7 @@ package com.laoliu.cas.infra.interfaces.controller.admin;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.result.CommonResult;
-import com.laoliu.cas.infra.application.service.FileService;
+import com.laoliu.cas.infra.api.file.FileService;
 import com.laoliu.cas.infra.interfaces.dto.request.FileUploadRequest;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;

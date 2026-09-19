@@ -1,5 +1,6 @@
 package com.laoliu.cas.system.application.service;
 
+import com.laoliu.cas.system.api.NotificationSettingsApi;
 import com.laoliu.cas.system.infrastructure.persistence.mapper.NotificationPolicyMapper;
 import com.laoliu.cas.system.infrastructure.persistence.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
-public class NotificationSettingsService {
+public class NotificationSettingsService implements NotificationSettingsApi {
 
     private final UserMapper userMapper;
     private final NotificationPolicyMapper policyMapper;
@@ -63,6 +64,7 @@ public class NotificationSettingsService {
      * 是否允许给该用户发送邮件通知：
      * 管理端全局策略「邮件」启用 且 该用户个人偏好「邮件」开启。
      */
+    @Override
     public boolean isEmailAllowed(Long userId) {
         return isEmailEnabled() && (userId == null || isEmailOn(userId));
     }

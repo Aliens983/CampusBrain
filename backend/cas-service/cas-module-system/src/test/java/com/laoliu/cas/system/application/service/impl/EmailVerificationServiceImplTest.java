@@ -3,7 +3,7 @@ package com.laoliu.cas.system.application.service.impl;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.UserErrorCode;
 import com.laoliu.cas.common.util.CodeGenerator;
-import com.laoliu.cas.infra.application.service.EmailService;
+import com.laoliu.cas.infra.api.email.EmailService;
 import com.laoliu.cas.redis.util.RedisUtil;
 import com.laoliu.cas.system.application.service.EmailVerificationService;
 import org.junit.jupiter.api.AfterEach;

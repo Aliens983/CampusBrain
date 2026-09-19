@@ -19,13 +19,20 @@
     <dependencies>
         <dependency>
             <groupId>com.laoliu</groupId>
-            <artifactId>cas-common</artifactId>
+            <artifactId>cas-module-system-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.laoliu</groupId>
-            <artifactId>cas-module-infra</artifactId>
+            <artifactId>cas-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- 2.3：编译期只依赖 infra 契约；实现由 cas-server 运行时装配 -->
+        <dependency>
+            <groupId>com.laoliu</groupId>
+            <artifactId>cas-module-infra-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 

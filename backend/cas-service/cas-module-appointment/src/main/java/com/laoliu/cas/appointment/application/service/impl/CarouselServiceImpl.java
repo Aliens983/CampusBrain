@@ -5,7 +5,7 @@ import com.laoliu.cas.appointment.domain.entity.Carousel;
 import com.laoliu.cas.appointment.domain.repository.CarouselRepository;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.ErrorCode;
-import com.laoliu.cas.infra.application.service.FileService;
+import com.laoliu.cas.infra.api.file.FileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;

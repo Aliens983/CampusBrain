@@ -1,7 +1,7 @@
-package com.laoliu.cas.infra.application.service;
+package com.laoliu.cas.infra.api.email;
 
 /**
- * 邮件发送应用层服务接口
+ * 邮件发送跨模块服务接口（2.3：契约独立至 cas-module-infra-api）
  *
  * @author forever-king
  */

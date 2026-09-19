@@ -1,6 +1,6 @@
 package com.laoliu.cas.infra.application.service.impl;
 
-import com.laoliu.cas.infra.application.service.EmailService;
+import com.laoliu.cas.infra.api.email.EmailService;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;

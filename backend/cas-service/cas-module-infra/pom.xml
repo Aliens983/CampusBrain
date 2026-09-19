@@ -19,6 +19,12 @@
     <dependencies>
         <dependency>
             <groupId>com.laoliu</groupId>
+            <artifactId>cas-module-infra-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.laoliu</groupId>
             <artifactId>cas-common</artifactId>
             <version>${project.version}</version>
         </dependency>

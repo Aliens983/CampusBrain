@@ -23,21 +23,29 @@
             <version>${project.version}</version>
         </dependency>
 
+        <!-- 2.3：跨模块只依赖 api 契约 artifact，编译期看不到 system/infra 内部实现 -->
         <dependency>
             <groupId>com.laoliu</groupId>
-            <artifactId>cas-module-system</artifactId>
+            <artifactId>cas-module-system-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.laoliu</groupId>
-            <artifactId>cas-module-infra</artifactId>
+            <artifactId>cas-module-infra-api</artifactId>
             <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>com.laoliu</groupId>
             <artifactId>cas-spring-boot-starter-mybatis</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!-- RedisUtil 被 AppointmentAssistantServiceImpl 直接使用（2.3 收窄跨模块依赖后显式声明） -->
+        <dependency>
+            <groupId>com.laoliu</groupId>
+            <artifactId>cas-spring-boot-starter-redis</artifactId>
             <version>${project.version}</version>
         </dependency>
 

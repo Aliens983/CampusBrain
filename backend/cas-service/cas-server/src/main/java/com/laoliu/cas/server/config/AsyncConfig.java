@@ -12,7 +12,7 @@ import java.util.concurrent.ThreadPoolExecutor;
  * 异步执行配置
  * <p>
  * 启用 {@code @EnableAsync} 后 {@code @Async} 才真正生效。此前全仓库没有该注解，
- * {@link com.laoliu.cas.infra.application.service.EmailService#sendEmail} 上的
+ * {@link com.laoliu.cas.infra.api.email.EmailService#sendEmail} 上的
  * {@code @Async} 形同虚设，方法在调用方线程同步执行——而调用方是
  * {@code auditPass} / {@code auditReject} 这类 {@code @Transactional} 方法，
  * 等于在数据库事务里做 SMTP(SSL 465) 网络调用，SMTP 慢会成倍拉长事务并长期占用连接。

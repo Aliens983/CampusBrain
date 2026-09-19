@@ -1,18 +1,18 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
 import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
-import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 
 import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
+import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
-import com.laoliu.cas.infra.application.service.EmailService;
-import com.laoliu.cas.system.application.service.NotificationSettingsService;
+import com.laoliu.cas.infra.api.email.EmailService;
+import com.laoliu.cas.system.api.NotificationSettingsApi;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -44,7 +44,7 @@ class ServiceStatusServiceImplTest {
     private EmailService emailService;
 
     @Mock
-    private NotificationSettingsService notificationSettings;
+    private NotificationSettingsApi notificationSettings;
 
     @Mock
     private BookingEventPublisher bookingEventPublisher;

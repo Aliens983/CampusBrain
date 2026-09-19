@@ -2,7 +2,7 @@ package com.laoliu.cas.infra.application.service.impl;
 
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.CommonErrorCode;
-import com.laoliu.cas.infra.application.service.FileService;
+import com.laoliu.cas.infra.api.file.FileService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
