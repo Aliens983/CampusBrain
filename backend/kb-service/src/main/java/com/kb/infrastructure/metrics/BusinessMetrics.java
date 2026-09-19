@@ -39,6 +39,7 @@ public class BusinessMetrics {
     private final Counter documentFailureCounter;
     private final Counter tokenInputCounter;
     private final Counter tokenOutputCounter;
+    private final Counter qaStreamCancelledCounter;
 
     // ---- Timers ----
     private final Timer qaLatencyTimer;
@@ -81,6 +82,11 @@ public class BusinessMetrics {
                 .tag("direction", "output")
                 .register(registry);
 
+        // 3.12：客户端断连导致流式问答中止的次数（区别于正常完成与错误）
+        this.qaStreamCancelledCounter = Counter.builder("kb.qa.stream.cancelled")
+                .description("Q&A stream cancelled by client")
+                .register(registry);
+
         this.qaLatencyTimer = Timer.builder("kb.qa.latency")
                 .description("Q&A end-to-end latency")
                 .register(registry);
@@ -110,6 +116,11 @@ public class BusinessMetrics {
 
     public void recordQaLatency(long durationMs) {
         qaLatencyTimer.record(durationMs, TimeUnit.MILLISECONDS);
+    }
+
+    /** 3.12：客户端断连导致流式问答中止（区别于错误与正常完成） */
+    public void recordStreamCancelled() {
+        qaStreamCancelledCounter.increment();
     }
 
     // ---- Document Metrics ----

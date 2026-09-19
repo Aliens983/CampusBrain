@@ -78,8 +78,12 @@ public class LangChain4jLlmService implements LlmService {
     @Value("${llm.fallback.siliconflow-api-key:${SILICONFLOW_API_KEY:${EMBEDDING_API_KEY:}}}")
     private String fallbackSiliconflowApiKey;
 
-    /** 注入 LLM 的历史消息上限（超出部分丢弃最早的记录） */
-    private static final int MAX_HISTORY_MESSAGES = 6;
+    /**
+     * 注入 LLM 的历史消息上限（1.6：与 AnswerPipeline 的 {@code kb.qa.history-limit}
+     * 统一为单一配置项，此前常量 6 与配置 8 双口径冲突，实际生效被二次截断为 6）。
+     */
+    @Value("${kb.qa.history-limit:8}")
+    private int maxHistoryMessages;
 
     /**
      * 流式生成的最长等待时间（秒）。
@@ -99,6 +103,10 @@ public class LangChain4jLlmService implements LlmService {
 
     /** 熔断打开/主备耗尽时面向用户的统一兜底文案（A-07；不含任何内部失败细节） */
     private static final String LLM_FALLBACK_MESSAGE = "AI 服务暂时不可用，请稍后重试。";
+
+    /** 3.2（深度审查 P0）：流式入口 token 消费者判空兜底（no-op），避免同步链路传 null 导致 NPE */
+    private static final java.util.function.Consumer<String> NOOP_CONSUMER = token -> {
+    };
 
     /** 绑定实时查询工具的 AI 助手（AiServices，同步 Function Calling） */
     private ToolAssistant toolAssistant;
@@ -164,16 +172,18 @@ public class LangChain4jLlmService implements LlmService {
                                            List<ChatMessage> conversationHistory,
                                            Consumer<String> tokenConsumer,
                                            CancellationToken cancellationToken) {
+        // 3.2（深度审查 P0）：同步无召回等入口可能传 null，归一化为 no-op 防止下游 accept NPE
+        Consumer<String> sink = tokenConsumer == null ? NOOP_CONSUMER : tokenConsumer;
         List<dev.langchain4j.data.message.ChatMessage> messages = toLangChainMessages(
                 promptEngine.buildFullPrompt(query, retrievedDocs, conversationHistory));
         try {
             return streamRagWithGate(query, messages, conversationHistory,
-                    tokenConsumer, cancellationToken);
+                    sink, cancellationToken);
         } catch (StreamCancelledException e) {
             throw e;
         } catch (Exception e) {
             log.error("RAG streaming failed, trying fallback model", e);
-            return tryFallbackStreaming(messages, tokenConsumer, cancellationToken);
+            return tryFallbackStreaming(messages, sink, cancellationToken);
         }
     }
 
@@ -273,6 +283,8 @@ public class LangChain4jLlmService implements LlmService {
                                                     Consumer<String> tokenConsumer,
                                                     String contextHint,
                                                     CancellationToken cancellationToken) {
+        // 3.2（深度审查 P0）：null 消费者归一化，防止 onNext/fallback accept 时 NPE
+        Consumer<String> sink = tokenConsumer == null ? NOOP_CONSUMER : tokenConsumer;
         String userMessage = buildToolUserMessage(query, retrievedDocs, conversationHistory, contextHint);
         StreamingToolAssistant assistant = AiServices.builder(StreamingToolAssistant.class)
                 .streamingChatLanguageModel(streamingModelFactory.create(cancellationToken))
@@ -285,7 +297,7 @@ public class LangChain4jLlmService implements LlmService {
                 .onNext(token -> {
                     if (!cancellationToken.isCancelled()) {
                         full.append(token);
-                        tokenConsumer.accept(token);
+                        sink.accept(token);
                     }
                 })
                 .onComplete(response -> future.complete(full.toString()))
@@ -307,7 +319,7 @@ public class LangChain4jLlmService implements LlmService {
             // 与同步链路一致：工具链路失败时退化为纯 RAG（同步生成一次，保证有答案）
             String fallback = generateAnswer(query, retrievedDocs, conversationHistory);
             if (!cancellationToken.isCancelled()) {
-                tokenConsumer.accept(fallback);
+                sink.accept(fallback);
             }
             return fallback;
         }
@@ -368,6 +380,8 @@ public class LangChain4jLlmService implements LlmService {
     public String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
                                                 Consumer<String> tokenConsumer,
                                                 CancellationToken cancellationToken) {
+        // 3.2（深度审查 P0）：null 消费者归一化，防止 onNext/fallback accept 时 NPE
+        Consumer<String> sink = tokenConsumer == null ? NOOP_CONSUMER : tokenConsumer;
         List<dev.langchain4j.data.message.ChatMessage> messages = buildDirectMessages(query, conversationHistory);
         StringBuilder full = new StringBuilder();
         try {
@@ -380,7 +394,7 @@ public class LangChain4jLlmService implements LlmService {
                         return;
                     }
                     full.append(token);
-                    tokenConsumer.accept(token);
+                    sink.accept(token);
                 }
 
                 @Override
@@ -399,7 +413,7 @@ public class LangChain4jLlmService implements LlmService {
         } catch (Exception e) {
             log.error("Direct streaming failed, trying fallback model", e);
             if (!cancellationToken.isCancelled()) {
-                tokenConsumer.accept(tryFallback(messages));
+                sink.accept(tryFallback(messages));
             }
         }
         return full.toString();
@@ -515,8 +529,15 @@ public class LangChain4jLlmService implements LlmService {
     /**
      * 等待流式完成：服务端 90s 硬超时会中止在途请求；客户端取消会抛
      * {@link StreamCancelledException}，上层不推错误文案。
+     * <p>
+     * 3.12（深度审查 P2）：取消时<b>提前结束等待</b>——在令牌上注册
+     * {@code future.cancel(false)}，join 立即以 CancellationException 返回并转为
+     * StreamCancelledException；真正中止供应商在途 SSE 由模型层
+     * {@code CancellableOpenAiStreamingChatModel} 的 onAbort → ResponseHandle.cancel() 完成。
+     * </p>
      */
     private void awaitStream(CompletableFuture<Void> future, CancellationToken cancellationToken) {
+        cancellationToken.onAbort(() -> future.cancel(false));
         try {
             future.orTimeout(LLM_STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
         } catch (java.util.concurrent.CompletionException ce) {
@@ -537,6 +558,8 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     private String awaitFuture(CompletableFuture<String> future, CancellationToken cancellationToken) {
+        // 3.12：取消时提前结束等待，不等供应商剩余超时
+        cancellationToken.onAbort(() -> future.cancel(false));
         try {
             return future.orTimeout(LLM_STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
         } catch (java.util.concurrent.CompletionException ce) {
@@ -594,15 +617,16 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * 追加最近若干条历史消息。只取最近 6 条，避免串题与 token 浪费。
+     * 追加最近若干条历史消息。条数取 {@code kb.qa.history-limit}
+     * （与 AnswerPipeline 同一配置，1.6 统一口径），避免串题与 token 浪费。
      */
     private void appendRecentHistory(List<dev.langchain4j.data.message.ChatMessage> messages,
                                      List<ChatMessage> conversationHistory) {
         if (conversationHistory == null || conversationHistory.isEmpty()) {
             return;
         }
-        List<ChatMessage> recent = conversationHistory.size() > MAX_HISTORY_MESSAGES
-                ? conversationHistory.subList(conversationHistory.size() - MAX_HISTORY_MESSAGES,
+        List<ChatMessage> recent = conversationHistory.size() > maxHistoryMessages
+                ? conversationHistory.subList(conversationHistory.size() - maxHistoryMessages,
                                               conversationHistory.size())
                 : conversationHistory;
         for (ChatMessage cm : recent) {
