@@ -47,6 +47,12 @@ public class CarouselRepositoryImpl implements CarouselRepository {
     }
 
     @Override
+    public Carousel findById(Long id) {
+        CarouselDO row = carouselMapper.selectById(id);
+        return row == null ? null : row.toEntity();
+    }
+
+    @Override
     public void deleteById(Long id) {
         carouselMapper.deleteById(id);
     }

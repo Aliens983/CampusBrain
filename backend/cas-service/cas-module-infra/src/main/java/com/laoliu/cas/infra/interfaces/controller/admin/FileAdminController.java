@@ -29,8 +29,8 @@ public class FileAdminController {
     @Operation(summary = "上传文件", description = "上传本地文件并获取文件的访问URL地址")
     @PostMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
-    public CommonResult<String> uploadFile(@Validated FileUploadRequest fileUploadReqVO) {
-        String fileUrl = fileService.uploadFile(fileUploadReqVO.getFile(), fileUploadReqVO.getSubDir());
+    public CommonResult<String> uploadFile(@Validated FileUploadRequest fileUploadRequest) {
+        String fileUrl = fileService.uploadFile(fileUploadRequest.getFile(), fileUploadRequest.getSubDir());
         return CommonResult.success(fileUrl);
     }
 }

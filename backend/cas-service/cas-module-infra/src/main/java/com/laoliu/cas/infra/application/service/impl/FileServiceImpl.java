@@ -103,6 +103,72 @@ public class FileServiceImpl implements FileService {
         return buildAccessUrl(subDir, dest);
     }
 
+    @Override
+    public String uploadFile(byte[] content, String originalFilename, String subDir) {
+        if (content == null || content.length == 0) {
+            throw new BusinessException(CommonErrorCode.FILE_EMPTY);
+        }
+        if (content.length > maxSize) {
+            throw new BusinessException(CommonErrorCode.FILE_TOO_LARGE);
+        }
+        String extension = resolveAllowedExtension(originalFilename);
+        File dest = prepareDestination(extension, subDir);
+        try (FileOutputStream fos = new FileOutputStream(dest)) {
+            fos.write(content);
+        } catch (IOException e) {
+            log.error("文件上传失败", e);
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
+        }
+        log.info("文件上传成功: {}", dest.getAbsolutePath());
+        return buildAccessUrl(subDir, dest);
+    }
+
+    @Override
+    public void deleteByUrl(String accessUrl) {
+        if (accessUrl == null || accessUrl.isBlank()) {
+            return;
+        }
+        try {
+            File baseDir = new File(uploadDir).getAbsoluteFile();
+            String basePath = baseDir.getCanonicalFile().getPath();
+            // 去掉访问 URL 前缀（可能带 /subDir），得到相对上传根的路径
+            String relative = accessUrl;
+            if (relative.startsWith(urlPrefix)) {
+                relative = relative.substring(urlPrefix.length());
+            }
+            // 剥掉 query/锚点，防止 tail 构造出非预期文件名
+            int cut = relative.length();
+            int q = relative.indexOf('?');
+            int h = relative.indexOf('#');
+            if (q >= 0) {
+                cut = Math.min(cut, q);
+            }
+            if (h >= 0) {
+                cut = Math.min(cut, h);
+            }
+            relative = relative.substring(0, cut);
+            while (relative.startsWith("/")) {
+                relative = relative.substring(1);
+            }
+            if (relative.isEmpty()) {
+                return;
+            }
+            File target = new File(baseDir, relative).getCanonicalFile();
+            String targetPath = target.getPath();
+            // 目录包含校验：只允许删除上传根目录内的文件（防 /uploads/../../etc 式 URL 穿越）
+            if (!targetPath.equals(basePath) && !targetPath.startsWith(basePath + File.separator)) {
+                log.warn("拒绝删除上传根目录之外的文件: url={}", accessUrl);
+                return;
+            }
+            if (target.exists() && !target.delete()) {
+                log.warn("删除上传文件失败（文件系统拒绝）: {}", targetPath);
+            }
+        } catch (IOException | SecurityException e) {
+            // fail-open：存储清理失败不应回滚/阻塞业务记录删除
+            log.warn("删除上传文件异常，忽略: url={}", accessUrl, e);
+        }
+    }
+
     /**
      * 校验并提取扩展名：必须存在、在白名单内；统一转小写，
      * 避免 {@code .PNG} 与 {@code .png.png} 之类的混淆。

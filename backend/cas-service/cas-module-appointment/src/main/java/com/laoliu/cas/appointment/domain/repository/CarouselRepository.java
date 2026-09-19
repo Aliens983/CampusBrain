@@ -20,6 +20,9 @@ public interface CarouselRepository {
     /** 新增轮播图，回填自增 id */
     void save(Carousel carousel);
 
+    /** 按 id 查询（2.11：删除前需取回 imageUrl 清理物理文件） */
+    Carousel findById(Long id);
+
     /** 按 id 删除 */
     void deleteById(Long id);
 

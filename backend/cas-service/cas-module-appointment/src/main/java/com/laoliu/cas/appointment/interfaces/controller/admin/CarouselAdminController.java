@@ -1,10 +1,13 @@
 package com.laoliu.cas.appointment.interfaces.controller.admin;
 
+import com.laoliu.cas.appointment.application.service.CarouselImage;
 import com.laoliu.cas.appointment.application.service.CarouselService;
 import com.laoliu.cas.appointment.interfaces.convert.CarouselConvert;
 import com.laoliu.cas.appointment.application.dto.response.CarouselResponse;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.enums.UserRoleEnum;
+import com.laoliu.cas.common.exception.BusinessException;
+import com.laoliu.cas.common.exception.code.CommonErrorCode;
 import com.laoliu.cas.common.result.CommonResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -46,7 +50,14 @@ public class CarouselAdminController {
     @PostMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
     public CommonResult<Void> add(@Parameter(description = "图片文件") @RequestParam("file") MultipartFile file) {
-        carouselService.add(file);
+        // 2.10：Servlet 类型只在 interfaces 层解包，应用层只接收纯数据载体
+        byte[] content;
+        try {
+            content = file.getBytes();
+        } catch (IOException e) {
+            throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
+        }
+        carouselService.add(new CarouselImage(file.getOriginalFilename(), content));
         return CommonResult.success("轮播图已添加", null);
     }
 
