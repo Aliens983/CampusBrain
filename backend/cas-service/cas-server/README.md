@@ -7,7 +7,9 @@ cas-service 的 Spring Boot 启动模块，聚合全部业务模块依赖并承�
 cas-server/
 ├── src/main/java/com/laoliu/cas/server/
 │   ├── CampusAppointmentApplication.java   # 启动类（@SpringBootApplication + @MapperScan + @ComponentScan）
-│   ├── DbResetConfig.java                  # 仅 APP_DB_RESET_ON_STARTUP=true 时启动 clean+migrate（compose 演示）
+│   ├── DbResetConfig.java                  # 演示环境重置：默认全关，须显式置 APP_DB_RESET_ON_STARTUP=true
+│                                           # 且 FLYWAY_CLEAN_DISABLED=false 才 clean+migrate（双重开关防误删），
+│                                           # Redis 清库另由 APP_REDIS_FLUSH_ON_RESET 独立控制
 │   └── controller/                         # 仅演示控制器（无业务）
 │       ├── ConfigDemoController.java       # GET /config-demo/greeting（Nacos 配置热更新演示）
 │       └── SentinelDemoController.java     # GET /sentinel-demo/limited（限流演示）
@@ -18,7 +20,10 @@ cas-server/
 │       ├── V2__seed_initial_users.sql      # 初始账号 admin@campus.com / user@campus.com
 │       ├── V3__seed_teacher_users.sql      # 教师账号 + 咨询师 user_id 回填
 │       ├── V4__service_category.sql        # service_category 分类表 + 固定 4 类
-│       └── V5__consult_chat.sql            # 咨询沟通会话/消息两表
+│       ├── V5__consult_chat.sql            # 咨询沟通会话/消息两表
+│       ├── V6__services_end_date.sql       # 服务上下架结束日期
+│       ├── V7__item_unique_booking_guard.sql  # 通用/活动预约唯一约束（并发幂等兜底）
+│       └── V8__item_active_general_unique.sql # 生成列唯一索引：终态共存、资源类不误拦
 └── pom.xml
 ```
 

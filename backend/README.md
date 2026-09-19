@@ -25,10 +25,12 @@ frontend(统一前端) → gateway :8888  ← 唯一入口，统一 JWT 鉴权
 ```
 cas-dependencies         依赖 BOM（版本统一管理）
 cas-framework            框架聚合：cas-common + 各 spring-boot-starter-*（web/security/mybatis/redis/test…）
-cas-module-infra         文件上传(本地/OSS)、二维码、邮件
-cas-module-system        用户/注册登录/验证码/角色/通知策略
-cas-module-appointment   预约核心：服务目录、咨询/教室/设备/活动、审核、轮播图
-cas-thirdparty           天气、AI 模型(Qwen)、阿里云短信/OSS
+cas-module-system-api    零实现契约 artifact：用户信息/通知设置跨模块接口
+cas-module-infra-api     零实现契约 artifact：文件/邮件跨模块接口
+cas-module-infra         文件上传(本地/OSS/删除)、二维码、邮件（实现 infra-api 契约）
+cas-module-system        用户/注册登录/验证码/角色/通知策略（实现 system-api 契约）
+cas-module-appointment   预约核心：服务目录、咨询/教室/设备/活动、审核、轮播图（编译期仅依赖两个契约 artifact）
+cas-thirdparty           天气、阿里云短信/OSS（旧 Qwen AI 对话已下线删除）
 cas-server               启动入口(application.yml/@MapperScan)，含 Flyway 迁移脚本
 ```
 
@@ -79,7 +81,7 @@ docker compose up -d      # nacos + kb-mysql/redis/es/qdrant/rabbitmq
 ### 2. 起三个服务（推荐一键脚本）
 ```bash
 ./scripts/run-local.sh gateway    # 先起网关，:8888
-./scripts/run-local.sh cas        # :18080  —— 自动执行 Flyway（V1~V5：schema + 种子账号 + 服务分类 + 咨询沟通表）
+./scripts/run-local.sh cas        # :18080  —— 自动执行 Flyway（V1~V8：schema + 种子账号 + 服务分类 + 咨询沟通 + 预约并发唯一索引）
 ./scripts/run-local.sh kb         # :8081
 ```
 脚本行为：加载 `.env` → `mvn -DskipTests -pl <模块> -am package` → `java -jar`；`--fast` 跳过打包。
@@ -105,9 +107,9 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 
 ## 五、数据库与 Flyway 约定
 
-- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图；服务表直接建 `category_id`，不存 `category` 编码串）、`V2__seed_initial_users.sql`（初始账号）、`V3__seed_teacher_users.sql`（教师账号 + 咨询师 user_id 回填）、`V4__service_category.sql`（**仅新增**分类表 `service_category` + 固定 4 类种子：教师咨询/设备借用/教室空间/活动报名）、`V5__consult_chat.sql`（**仅新增**咨询沟通会话表 `consult_chat_conversation` + 消息表 `consult_chat_message`，学生⇄教师 1:1 在线留言）、`V6__services_end_date.sql`（服务上下架结束日期）。
-- **迁移约定**：V*.sql 面向**全新机器**，只含建表/种子等增量，**不写 ALTER/UPDATE 改既有表结构**。服务分类落库 = 服务分类：全新库由 V1 直接建出 `services.category_id`，老库按 `cas-service/UPGRADE-service-category.md` 直接 SQL 演进（ALTER + 回填 + DROP `category`），V4 建表/补种子幂等可重复。
-- KB 迁移位于 `kb-service/src/main/resources/db/migration/`：`V1__init_document_and_conversation.sql`（文档/分块/会话等）、`V2__conversation_add_user_id.sql`（AI 会话归属：`conversation.user_id` 绑定 + 历史/重置/反馈归属校验）。多租户 `tenant_id` 已于 2026-09-12 下线：原 `V4__add_tenant_id_to_business_tables.sql` 连同 `TenantContext`/`TenantFilter` 一并移除，业务代码与 H2 测试 schema 均不再保留租户字段。
+- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图；服务表直接建 `category_id`，不存 `category` 编码串）、`V2__seed_initial_users.sql`（初始账号）、`V3__seed_teacher_users.sql`（教师账号 + 咨询师 user_id 回填）、`V4__service_category.sql`（**仅新增**分类表 `service_category` + 固定 4 类种子：教师咨询/设备借用/教室空间/活动报名）、`V5__consult_chat.sql`（**仅新增**咨询沟通会话表 `consult_chat_conversation` + 消息表 `consult_chat_message`，学生⇄教师 1:1 在线留言）、`V6__services_end_date.sql`（服务上下架结束日期）、`V7__item_unique_booking_guard.sql`（通用/活动类预约 `uk_user_service_status` 唯一约束 + INSERT IGNORE 并发幂等兜底）、`V8__item_active_general_unique.sql`（以生成列唯一索引修正 V7：终态单可共存、资源类单不误拦、存量库可平滑升级）。
+- **迁移约定**：迁移文件只追加、不改写历史（避免 Flyway checksum 失败）；结构演进以新文件增量表达（如 V7/V8 即在 V1 基础上的增量 ALTER，全新库按序自动执行）。服务分类落库 = 服务分类：全新库由 V1 直接建出 `services.category_id`，老库按 `cas-service/UPGRADE-service-category.md` 直接 SQL 演进（ALTER + 回填 + DROP `category`），V4 建表/补种子幂等可重复。
+- KB 迁移位于 `kb-service/src/main/resources/db/migration/`：`V1__init_document_and_conversation.sql`（文档/分块/会话等）、`V2__conversation_add_user_id.sql`（AI 会话归属：`conversation.user_id` 绑定 + 历史/重置/反馈归属校验）、`V3__index_delete_failure.sql`（外部索引删除失败对账表，补偿任务周期重试直至成功/告警）。多租户 `tenant_id` 已于 2026-09-12 下线：原 `V4__add_tenant_id_to_business_tables.sql` 连同 `TenantContext`/`TenantFilter` 一并移除，业务代码与 H2 测试 schema 均不再保留租户字段。
 - **新机器**：CAS/KB 首次启动自动执行全部迁移，零手工 SQL。
 - **Schema 唯一来源是 Flyway**：容器内 `cas-mysql` 不再挂载 `docker-entrypoint-initdb.d` 初始化脚本（原 `cas-service/sql/` 已删除，避免与 Flyway 双源漂移）。**升级到该版本的存量部署**，若旧卷曾被 initdb 建过旧结构，需一次性清理空业务卷后重建（生产库含数据时勿执行）：
   `docker compose -f docker-compose.yml -f docker-compose.business.yml down && docker volume rm backend_cas-mysql-data`，再启动由 Flyway 全量建表。
@@ -125,13 +127,16 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 - **活动容量**：`capacity`（-1 不限）+ `booked_count` 原子扣减，超额拒绝。
 - **预约状态机**：`manage_status` 0待审/1通过/2拒绝/3取消/4完成；`BookingAutoCompleteTask`（`@EnableScheduling`，60s 轮询）把已过窗口的预约自动置为完成。
 - **通知**：`notification_policy`（全局）+ `user.email_notify`（用户偏好）双开关，审核结果邮件按开关发送。
-- **轮播图**：`carousel` 表 + 管理端上传/删除/拖拽排序（≤6）+ 用户端列表。
+- **轮播图**：`carousel` 表 + 管理端上传/删除（同步删除物理文件）/拖拽排序，数量上限配置项 `carousel.max-count`（默认 6）+ 用户端列表。
+- **僵尸单管理员兜底**：管理端可强制取消/完结任意待审核/已通过预约（`PATCH /admin/bookings/{id}/cancel|complete`），原子释放名额与咨询时段。
 - **账号**：图形验证码登录、邮箱验证码注册、忘记密码、改密（旧密码校验）、`@RequireRole` 四级 RBAC（普通用户/教师/管理员/超管；教师审「自己名下咨询档期」）。
 
 ### KB 知识库
 - 文档上传 → 解析 → 分块（sliding_window 512/50）→ Embedding（硅基流动 Qwen3-Embedding-0.6B，1024 维）
 - 检索：ES 关键词（top10）+ Qdrant 向量（top10）→ RRF 融合（top5）→ DeepSeek（`deepseek-chat`）生成，Resilience4j 熔断。
 - 存储：KB 元数据在 `knowledge_base`(MySQL)，文档正文在本地磁盘卷，关键词索引 ES，向量 Qdrant。
+- **归属隔离**：文档/ES/Qdrant/语义缓存均带归属维度，检索按「本人或共享」过滤（取不到登录身份 fail-closed）；文档 READY/FAILED 事件经合并窗口增量淘汰相关缓存。
+- **可靠性**：文档处理走 MQ 异步消费 + Redis 处理锁（本机在途登记双判据、Watchdog 续约、僵尸文档重投前探锁）；混合检索单侧超时/异常降级为空结果；限流、SSE 并发、线程池容量均可配置。
 
 ### KB × CAS 预约集成（AI 助手）
 - **多轮上下文**：`ChatSession`（槽位 + 待确认动作）存 Redis（TTL 6h）；
@@ -151,7 +156,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 ```bash
 cd backend && mvn -B test
 ```
-- 后端共 **154 个测试方法**（CAS 84 · KB 70），CAS 分布在 appointment/infra/system/thirdparty，KB 集成测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）。
+- 后端共 **327 个测试方法**：CAS 系 175（appointment 83 · system 48 · infra 13 · thirdparty 6 · cas-server 22 · framework 3）+ common-auth 6 + gateway 16 + KB 130。KB 测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）；cas-server 含一个 MySQL 集成测试（默认 Testcontainers，也可用 `IT_MYSQL_*` 环境变量指向外部 MySQL）。
 - GitHub Actions `.github/workflows/ci.yml`：push/PR 自动跑 `mvn -B test` + 前端 type-check/build。
 
 ## 八、Docker 部署（服务器）
@@ -175,6 +180,6 @@ cd backend && mvn -B test
 ## 九、代码约定
 - Controller 统一返回 `CommonResult<T>`；业务异常抛 `BusinessException(ErrorCode)` 由全局处理器兜底。
 - **HTTP 状态语义（2026-09-12 起）**：业务异常 400 / 未授权 401 / 禁权 403 / 未找到 404 / 系统异常 500。此前业务错误也返回 200（仅靠 body 的 code 区分），现已补齐 `@ResponseStatus`；catch-all 仅返回通用文案，堆栈只进日志。
-- 跨模块调用走 `api/` 接口，模块间不直接依赖 Mapper。
+- 跨模块调用只依赖零实现契约 artifact（`cas-module-system-api` / `cas-module-infra-api`），运行时由 `cas-server` 装配实现；模块间不直接依赖彼此实现或 Mapper。
 - `domain/` 纯净实体，无 Spring 注解；应用层编排、基础设施层落实现。
 - 新增密钥不入库，一律经环境变量注入。

@@ -42,47 +42,49 @@
 
 </div>
 
-**CampusBrain 智汇校园** —— 面向高校的智慧校园预约平台（毕设 / 简历项目）。以 Spring Cloud Alibaba 微服务将**校园预约系统（CAS）**与**知识库问答平台（KB）**合为一体：统一 Vue 前端、统一网关 JWT 鉴权；KB 作为专属 AI 助手，提供知识库 RAG 问答，并可 **Function Calling 实时查询预约数据**。
+**CampusBrain 智汇校园** —— 面向高校的智慧校园预约平台（毕设 / 简历项目）。以 Spring Cloud Alibaba 微服务将\*\*校园预约系统（CAS）**与**知识库问答平台（KB）\*\*合为一体：统一 Vue 前端、统一网关 JWT 鉴权；KB 作为专属 AI 助手，提供知识库 RAG 问答，并可 **Function Calling 实时查询预约数据**。
 
-平台围绕**杭州师范大学两校区**场景建模（仓前 / 下沙），预约服务、咨询师、教室、设备均**按校区分离**；界面采用 **HZNU 校徽蓝 `#3FB6FF`** 主题。
+平台围绕**杭州师范大学两校区**场景建模（仓前 / 下沙），预约服务、咨询师、教室、设备均**按校区分离**；界面采用 **HZNU 校徽蓝** **`#3FB6FF`** 主题。
 
----
+***
 
 ## 一、功能状态（对应当前代码）
 
 ### 校园预约（CAS）—— 主体业务
 
-| 能力 | 状态 | 说明 |
-|---|---|---|
-| 按校区分流 | ✅ | 仓前(cq)/下沙(xs) 各自一套服务目录与资源（咨询师/教室/设备）；用户端可切校区，工作台区分 |
-| 服务目录 | ✅ | 多分类：`space` 教室空间 · `teacher` 教师咨询 · `equipment` 设备借用 · `activity` 活动报名，**分类字典落库 `service_category`（固定 4 类）**，`services.category_id` 代码级外键引用；支持服务上下架、封面图 |
-| 咨询时段预约 | ✅ | 咨询师 + 日期可约时段（`time_slot` 落库）；预约占用时段，冲突被拒；审核/取消/到点自动释放 |
-| 教室时段预约 | ✅ | **一间教室同一时间段仅一人可约**（唯一性约束 + 冲突检测），按 `slot_date + start/end` 排他 |
-| 设备窗口借用 | ✅ | 固定时段窗口 + 库存扣减（`available_stock`）；到点自动归还（转 COMPLETED） |
-| 活动容量预约 | ✅ 免审直通 | `capacity` 容量扣减，-1 不限；**容量够即直接成功（无人工审核）**，开始前可自助取消并释放名额 |
-| 预约审核/取消 | ✅ | 0待审→1通过/2拒绝/3取消/4完成；拒绝必填原因；审核/取消自动释放占用的时段与库存 |
-| 教师自审档期 | ✅ | 教师端 `/teacher/*`：待我审核 / 我的咨询，教师只审自己名下咨询预约 |
-| 咨询在线沟通 | ✅ | 学生⇄教师 1:1 留言（`consult_chat_conversation`/`consult_chat_message`，Flyway V5）；仅教师咨询场景开放，按 `afterId` 增量轮询 + 未读/已读 |
-| 自动完成调度 | ✅ | `@Scheduled` 定时扫描，窗口过期自动置 COMPLETED（设备到点归还、教室释放） |
-| 邮件通知 | ✅ | 审核结果邮件（受**全局通知策略** + **用户邮件偏好**开关控制） |
-| 首页轮播图 | ✅ | 管理端上传 / 删除 / 拖拽排序（最多 6 张），用户端工作台渲染；默认 6 张校区/校园图 |
-| 账号体系 | ✅ | 图形验证码登录、邮箱验证码注册、忘记密码、个人中心改密（旧密码校验）；四级 RBAC：学生/教师/管理员/超管，教师自审名下咨询档期 |
-| 通知设置 | ✅ | 管理端策略（邮件通道开关）+ 用户偏好联动 |
+| 能力       | 状态     | 说明                                                                                                                                                          |
+| -------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 按校区分流    | ✅      | 仓前(cq)/下沙(xs) 各自一套服务目录与资源（咨询师/教室/设备）；用户端可切校区，工作台区分                                                                                                          |
+| 服务目录     | ✅      | 多分类：`space` 教室空间 · `teacher` 教师咨询 · `equipment` 设备借用 · `activity` 活动报名，**分类字典落库** **`service_category`（固定 4 类）**，`services.category_id` 代码级外键引用；支持服务上下架、封面图 |
+| 咨询时段预约   | ✅      | 咨询师 + 日期可约时段（`time_slot` 落库）；预约占用时段，冲突被拒；审核/取消/到点自动释放                                                                                                       |
+| 教室时段预约   | ✅      | **一间教室同一时间段仅一人可约**（唯一性约束 + 冲突检测），按 `slot_date + start/end` 排他                                                                                               |
+| 设备窗口借用   | ✅      | 固定时段窗口 + 库存扣减（`available_stock`）；到点自动归还（转 COMPLETED）                                                                                                        |
+| 活动容量预约   | ✅ 免审直通 | `capacity` 容量扣减，-1 不限；**容量够即直接成功（无人工审核）**，开始前可自助取消并释放名额                                                                                                     |
+| 预约审核/取消  | ✅      | 0待审→1通过/2拒绝/3取消/4完成；拒绝必填原因；审核/取消自动释放占用的时段与库存                                                                                                                |
+| 僵尸单管理员兜底 | ✅      | 管理端可强制取消/完结任意待审核/已通过预约并原子释放占用；通用/活动类有效态单由数据库唯一索引（V7/V8）做并发幂等兜底                                                                                              |
+| 教师自审档期   | ✅      | 教师端 `/teacher/*`：待我审核 / 我的咨询，教师只审自己名下咨询预约                                                                                                                   |
+| 咨询在线沟通   | ✅      | 学生⇄教师 1:1 留言（`consult_chat_conversation`/`consult_chat_message`，Flyway V5）；仅教师咨询场景开放，按 `afterId` 增量轮询 + 未读/已读                                               |
+| 自动完成调度   | ✅      | `@Scheduled` 定时扫描，窗口过期自动置 COMPLETED（设备到点归还、教室释放）                                                                                                            |
+| 邮件通知     | ✅      | 审核结果邮件（受**全局通知策略** + **用户邮件偏好**开关控制）                                                                                                                        |
+| 首页轮播图    | ✅      | 管理端上传 / 删除（同步清理物理文件）/ 拖拽排序，数量上限可配置（`carousel.max-count`，默认 6），用户端工作台渲染                                                                                      |
+| 账号体系     | ✅      | 图形验证码登录、邮箱验证码注册、忘记密码、个人中心改密（旧密码校验）；四级 RBAC：学生/教师/管理员/超管，教师自审名下咨询档期                                                                                          |
+| 通知设置     | ✅      | 管理端策略（邮件通道开关）+ 用户偏好联动                                                                                                                                       |
 
 ### 知识库问答（KB）与工程能力
 
-| 能力 | 状态 | 说明 |
-|---|---|---|
-| RAG 知识库问答 | ✅ | 文档上传 → 解析分块 → Embedding(Qwen3) → **ES 关键词 + Qdrant 向量双路召回 → RRF 融合** → DeepSeek 生成 |
-| AI 助手入口 | ✅ | 前端 `/assistant`（QaPortal），知识库资料优先回答；文档上传仅管理员 |
-| 多轮对话上下文 | ✅ | 槽位（校区/分类/日期/时段/资源）在会话内累积继承；"仓前校区上午9-10点能约教师吗" → "换成下沙校区呢？" 自动沿用分类与时段 |
-| 预约查询（深度集成） | ✅ | 服务/咨询师与时段/教室/设备/我的预约，全部按校区、分类、日期时段过滤并回填余量与空闲状态 |
-| 协助完成预约 | ✅ | **两段式闭环**：AI 只生成待确认草稿 → 前端渲染确认卡片 → 用户点「确认预约」才真正下单；取消预约同样需确认 |
-| 预约实时查询 | ⚠️ 需 Key | KB 经 Feign + Nacos + 内网签名直连 CAS 助手接口；LangChain4j `@Tool` 实现 Function Calling（需配 `OPENAI_API_KEY`/`EMBEDDING_API_KEY`） |
-| RabbitMQ 预约事件 | ⚠️ 部分 | CAS 发布 `appointment.changed`；KB 已监听接收，仅记录日志（索引更新为 TODO） |
-| CI 质量门禁 | ✅ | GitHub Actions：后端 `mvn -B test` + 前端 type-check/build，push 自动触发 |
-| 交付脚本 | ✅ | `backend/scripts/run-local.sh`（本地一键起服务）/ `publish.sh`（一行发版）/ `deploy-server.sh`（服务器部署） |
-| 数据库迁移 | ✅ | CAS 与 KB 均启用 **Flyway**，启动自动建表 + 种子数据（校区、咨询师、教师账号、教室、设备、轮播图、服务分类字典、初始账号） |
+| 能力            | 状态       | 说明                                                                                                                    |
+| ------------- | -------- | --------------------------------------------------------------------------------------------------------------------- |
+| RAG 知识库问答     | ✅        | 文档上传 → 解析分块 → Embedding(Qwen3) → **ES 关键词 + Qdrant 向量双路召回 → RRF 融合** → DeepSeek 生成；单侧超时/异常按空结果降级，不阻断问答                |
+| 文档归属隔离        | ✅        | 文档写入落归属标识，ES/Qdrant 检索与语义缓存均按「本人或共享」范围过滤（取不到登录身份 fail-closed）；文档 READY/FAILED 事件合并窗口增量失效缓存                            |
+| AI 助手入口       | ✅        | 前端 `/assistant`（QaPortal），知识库资料优先回答；文档上传仅管理员                                                                          |
+| 多轮对话上下文       | ✅        | 槽位（校区/分类/日期/时段/资源）在会话内累积继承；"仓前校区上午9-10点能约教师吗" → "换成下沙校区呢？" 自动沿用分类与时段                                                  |
+| 预约查询（深度集成）    | ✅        | 服务/咨询师与时段/教室/设备/我的预约，全部按校区、分类、日期时段过滤并回填余量与空闲状态                                                                        |
+| 协助完成预约        | ✅        | **两段式闭环**：AI 只生成待确认草稿 → 前端渲染确认卡片 → 用户点「确认预约」才真正下单；取消预约同样需确认                                                           |
+| 预约实时查询        | ⚠️ 需 Key | KB 经 Feign + Nacos + 内网签名直连 CAS 助手接口；LangChain4j `@Tool` 实现 Function Calling（需配 `OPENAI_API_KEY`/`EMBEDDING_API_KEY`） |
+| RabbitMQ 预约事件 | ✅        | CAS 发布 `appointment.changed`；KB 消费后联动失效精确 QA 缓存 + 语义缓存两层（防过期余量答案；失效失败仅告警，不阻塞消费）                                       |
+| CI 质量门禁       | ✅        | GitHub Actions：后端 `mvn -B test` + 前端 type-check/build，push 自动触发                                                       |
+| 交付脚本          | ✅        | `backend/scripts/run-local.sh`（本地一键起服务）/ `publish.sh`（一行发版）/ `deploy-server.sh`（服务器部署）                                |
+| 数据库迁移         | ✅        | CAS 与 KB 均启用 **Flyway**，启动自动建表 + 种子数据（校区、咨询师、教师账号、教室、设备、轮播图、服务分类字典、初始账号）                                              |
 
 ## 二、架构
 
@@ -111,9 +113,12 @@
 ```
 
 **服务间协作**
-- **预约查询 / 代办（AI 助手）**：KB 经 OpenFeign + Nacos 调用 CAS 的 `/appointments/assistant/**`，以内网签名头标识受信服务。查询接口按校区/分类/时段过滤并回填余量；预约动作走「草稿 → 确认」两段式，确认时复用 CAS 既有下单逻辑（同一套防冲突 / 防超卖 / 幂等）。
-- **预约余量实时查询（轻量）**：另有 `/appointments/availability`、`/appointments/mine` 两个精简只读接口。
-- **预约变更事件**：CAS 预约创建/取消后发布 RabbitMQ `appointment.changed`，KB 监听消费。
+
+* **预约查询 / 代办（AI 助手）**：KB 经 OpenFeign + Nacos 调用 CAS 的 `/appointments/assistant/**`，以内网签名头标识受信服务。查询接口按校区/分类/时段过滤并回填余量；预约动作走「草稿 → 确认」两段式，确认时复用 CAS 既有下单逻辑（同一套防冲突 / 防超卖 / 幂等）。
+
+* **预约余量实时查询（轻量）**：另有 `/appointments/availability`、`/appointments/mine` 两个精简只读接口。
+
+* **预约变更事件**：CAS 预约创建/取消后发布 RabbitMQ `appointment.changed`，KB 监听消费并失效精确 QA + 语义两层问答缓存，避免把过期余量答案继续返回用户。
 
 ## 三、目录结构（git 追踪范围）
 
@@ -145,16 +150,20 @@ CampusBrain/
 ## 四、快速开始（本地开发）
 
 ### 1. 前置条件
+
 JDK 17 · Maven 3.9 · Node ≥ 18 · Docker；本地 MySQL 与 Redis（CAS 用宿主实例）。
 
 ### 2. 配置环境变量
+
 ```bash
 cd backend
 cp .env.example .env        # 至少填 MYSQL_ROOT_PASSWORD；JWT_SECRET / INTERNAL_SIGN_SECRET 建议自定义
 ```
+
 > 密钥已全部环境变量化，`application.yml` 不含真实凭据（生产必须覆盖内置示例默认值）。
 
 ### 3. 启动基础设施 + 三个服务
+
 ```bash
 cd backend
 docker compose up -d                                  # Nacos + KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ
@@ -162,9 +171,11 @@ docker compose up -d                                  # Nacos + KB 的 MySQL/Red
 ./scripts/run-local.sh cas       # :18080 （预约 CAS，Flyway 自动建表 + 种子）
 ./scripts/run-local.sh kb        # :8081  （知识库 KB）
 ```
+
 `run-local.sh` 自动加载 `.env` → `mvn package`（跳过测试）→ `java -jar`；代码没改可加 `--fast` 直接起 jar。
 
 ### 4. 启动前端
+
 ```bash
 cd frontend
 npm install
@@ -172,45 +183,63 @@ npm run dev        # http://localhost:3000
 ```
 
 ### 5. 登录账号（Flyway V2 种子）
-| 角色 | 邮箱 | 密码 |
-|---|---|---|
-| 管理员 | `admin@campus.com` | `123456` |
-| 普通用户 | `user@campus.com` | `123456` |
+
+| 角色   | 邮箱                 | 密码       |
+| ---- | ------------------ | -------- |
+| 管理员  | `admin@campus.com` | `123456` |
+| 普通用户 | `user@campus.com`  | `123456` |
 
 ### 6. 验证
-- 浏览器登录后：工作台 → 服务中心（切校区、按分类选服务）→ 咨询/教室/设备预约 → 我的预约；
-- 管理端（admin 账号）：服务治理 / 预约审核 / 系统设置（轮播图、通知策略）；
-- AI 助手 `/assistant`：配置好 LLM Key 后可 RAG 问答；试着连续问「仓前校区上午9-10点能预约教师吗」→「换成下沙校区呢？」，或直接说「帮我约一个」走确认卡片完成预约。
+
+* 浏览器登录后：工作台 → 服务中心（切校区、按分类选服务）→ 咨询/教室/设备预约 → 我的预约；
+
+* 管理端（admin 账号）：服务治理 / 预约审核 / 系统设置（轮播图、通知策略）；
+
+* AI 助手 `/assistant`：配置好 LLM Key 后可 RAG 问答；试着连续问「仓前校区上午9-10点能预约教师吗」→「换成下沙校区呢？」，或直接说「帮我约一个」走确认卡片完成预约。
 
 ## 五、测试与 CI
+
 ```bash
-cd backend && mvn -B test     # 154 个测试方法：CAS 84 + KB 70（KB 用 H2 + @MockBean 隔离中间件）
+cd backend && mvn -B test     # 327 个测试方法：CAS 系 175（appointment 83 / system 48 / infra 13 / thirdparty 6 / cas-server 22 / framework 3）+ common-auth 6 + gateway 16 + KB 130（KB 用 H2 + @MockBean 隔离中间件）
 cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 ```
+
 推送到 GitHub 自动触发 `ci.yml`（后端 test + 前端 type-check/build）作为质量门禁。
 
 ## 六、关键设计
-- **统一网关鉴权**：网关验签 JWT → 透传身份头；服务内 `@RequireRole` 细粒度授权；服务间用 `X-Internal-Sign` 内网签名。
-- **预约防冲突**：时段类预约（咨询/教室）行级加锁 + 重叠查询保证唯一；设备/活动库存 `available_stock` / `capacity` 原子扣减防超卖，取消/拒绝释放。
-- **两校区数据模型**：服务、咨询师、教室、设备均带 `campus`/挂校区服务，用户端按校区隔离浏览。
-- **Flyway 迁移**：启动自动建库建表并灌入校区种子与初始账号（新机器零手工 SQL）。
-- **RAG 混合检索**：ES 关键词 + Qdrant 向量双路召回 → RRF 融合 → LLM（Resilience4j 熔断）。
-- **多轮上下文（Slot Filling）**：会话槽位存 Redis（TTL 6h），规则抽取校区/分类/日期/时段（确定性强、未配 LLM Key 也可用），LLM 负责指代消解兜底；工具漏传参数时自动回退到会话槽位。
-- **预约两段式确认**：AI 只能生成草稿（`prepareBooking`），用户明确确认后才由应用层调用 CAS 下单；转移话题会自动丢弃过期草稿，杜绝 AI 擅自替用户预约。
+
+* **统一网关鉴权**：网关验签 JWT → 透传身份头；服务内 `@RequireRole` 细粒度授权；服务间用 `X-Internal-Sign` 内网签名。
+
+* **预约防冲突**：时段类预约（咨询/教室）行级加锁 + 重叠查询保证唯一；设备/活动库存 `available_stock` / `capacity` 原子扣减防超卖，取消/拒绝释放。
+
+* **两校区数据模型**：服务、咨询师、教室、设备均带 `campus`/挂校区服务，用户端按校区隔离浏览。
+
+* **Flyway 迁移**：启动自动建库建表并灌入校区种子与初始账号（新机器零手工 SQL）。
+
+* **RAG 混合检索**：ES 关键词 + Qdrant 向量双路召回 → RRF 融合 → LLM（Resilience4j 熔断）。
+
+* **多轮上下文（Slot Filling）**：会话槽位存 Redis（TTL 6h），规则抽取校区/分类/日期/时段（确定性强、未配 LLM Key 也可用），LLM 负责指代消解兜底；工具漏传参数时自动回退到会话槽位。
+
+* **预约两段式确认**：AI 只能生成草稿（`prepareBooking`），用户明确确认后才由应用层调用 CAS 下单；转移话题会自动丢弃过期草稿，杜绝 AI 擅自替用户预约。
 
 ## 七、已知限制
-- **AI 问答依赖外部 Key**：KB 需 `OPENAI_API_KEY`（DeepSeek 兼容）+ `EMBEDDING_API_KEY`（硅基流动），缺省时 AI 助手不可用（登录/预约不受影响）。
-- **RabbitMQ 消费不完整**：KB 收到预约事件仅记录日志，索引/缓存更新仍为 TODO。
-- **响应包装类尚未合并**：CAS 用 `CommonResult`（`com.laoliu`）、KB 用 `ApiResponse`（`com.kb`），类名不同属历史演进结果；但**响应码契约已统一**（2026-09-12）——两侧 `code = 200`（Integer）均为成功、错误码均为数值，前端统一用 `API_SUCCESS_CODE` 判断。（Maven groupId 不统一仍存在：`com.laoliu` vs `com.kb`。）
-- **Sentinel 已接入但流控规则为空**（Nacos `cas-sentinel-flow-rules`），预留生产调优。
-- **邮件 / 短信 / 天气 / OSS** 为可选外部集成，未配对应 Key 时相应能力降级。
+
+* **AI 问答依赖外部 Key**：KB 需 `OPENAI_API_KEY`（DeepSeek 兼容）+ `EMBEDDING_API_KEY`（硅基流动），缺省时 AI 助手不可用（登录/预约不受影响）。
+
+* **响应包装类尚未合并**：CAS 用 `CommonResult`（`com.laoliu`）、KB 用 `ApiResponse`（`com.kb`），类名不同属历史演进结果；但**响应码契约已统一**（2026-09-12）——两侧 `code = 200`（Integer）均为成功、错误码均为数值，前端统一用 `API_SUCCESS_CODE` 判断。（Maven groupId 不统一仍存在：`com.laoliu` vs `com.kb`。）
+
+* **Sentinel 已接入但流控规则为空**（Nacos `cas-sentinel-flow-rules`），预留生产调优。
+
+* **邮件 / 短信 / 天气 / OSS** 为可选外部集成，未配对应 Key 时相应能力降级。
 
 ## 八、文档索引
-| 文档 | 内容 |
-|---|---|
-| `backend/README.md` | 后端模块、端口、中间件、环境变量、启动与部署 |
-| `frontend/README.md` | 前端技术栈、路由、开发 / 构建、代理、账号 |
-| `backend/cas-service/README.md` | cas-service 模块级说明（DDD 分层、预约领域模型） |
-| `backend/cas-service/CLAUDE.md` | cas-service 给 AI 助手的权威工作指南（模块/接口/约定/现状） |
-| `backend/cas-service/**/AGENTS.md` | cas-service 及各子模块的 Agent 快速指引 |
-| `backend/cas-service/UPGRADE-*.md` | 老库手工演进说明（服务分类落库、教师角色） |
+
+| 文档                                 | 内容                                      |
+| ---------------------------------- | --------------------------------------- |
+| `backend/README.md`                | 后端模块、端口、中间件、环境变量、启动与部署                  |
+| `frontend/README.md`               | 前端技术栈、路由、开发 / 构建、代理、账号                  |
+| `backend/cas-service/README.md`    | cas-service 模块级说明（DDD 分层、预约领域模型）        |
+| `backend/cas-service/CLAUDE.md`    | cas-service 给 AI 助手的权威工作指南（模块/接口/约定/现状） |
+| `backend/cas-service/**/AGENTS.md` | cas-service 及各子模块的 Agent 快速指引           |
+| `backend/cas-service/UPGRADE-*.md` | 老库手工演进说明（服务分类落库、教师角色）                   |
+

@@ -20,18 +20,20 @@ CAS 以 **杭州师范大学两校区（仓前 cq / 下沙 xs）** 建模：服�
 cas-service/
 ├── cas-dependencies    依赖 BOM（第三方版本统一）
 ├── cas-framework       框架聚合：cas-common + 各 cas-spring-boot-starter-*（web/security/mybatis/redis/mq/test）
-├── cas-module-infra    基础设施服务：本地文件上传(按子目录 uuid 命名)、OSS、二维码、邮件
-├── cas-module-system   用户与账号：登录/注册/图形验证码/邮箱验证码/忘记密码/改密/角色/通知策略
+├── cas-module-system-api   零实现契约：用户信息/通知设置跨模块接口（UserInfoApi 等）
+├── cas-module-infra-api    零实现契约：文件/邮件跨模块接口（api.file.FileService / api.email.EmailService）
+├── cas-module-infra    基础设施服务：本地文件上传(按子目录 uuid 命名)/删除、OSS、二维码、邮件（实现 infra-api 契约）
+├── cas-module-system   用户与账号：登录/注册/图形验证码/邮箱验证码/忘记密码/改密/角色/通知策略（实现 system-api 契约）
 ├── cas-module-appointment  预约核心：服务目录、四类预约、审核、时段/库存防冲突、自动完成、轮播图
 ├── cas-thirdparty      第三方集成：天气 / 阿里云 OSS / 短信（旧 Qwen AI 对话已下线）
 └── cas-server          启动入口：application.yml、@MapperScan、Demo 控制器、Flyway 脚本
 ```
 
-依赖约束：`infra` 只依赖 framework；业务模块经 `api/` 接口互相调用、不直接注入对方 Mapper；`server` 不写业务代码。
+依赖约束：`infra`/`system` 只依赖 framework 并各自实现 `*-api` 契约；`appointment` 编译期仅依赖两个零实现契约 artifact（不依赖 system/infra 实现模块），跨模块调用不直接注入对方 Mapper；`server` 不写业务代码，仅在运行时装配全部实现。
 
 ## DDD 分层
 
-业务模块内统一 `interfaces（controller admin/app + dto）/ application（service + impl）/ domain（entity + repository）/ infrastructure（persistence：dataobject + mapper + repositoryImpl）/ api（跨模块接口）`。`domain/` 保持纯 Java、零框架注解。轮播图（carousel）作为独立子包位于 `cas-module-appointment`。
+业务模块内统一 `interfaces（controller admin/app + convert）/ application（service + impl + dto）/ domain（entity + repository）/ infrastructure（persistence：dataobject + mapper + repositoryImpl）`；跨模块契约不在业务模块内，而在独立的零实现 artifact `cas-module-system-api` / `cas-module-infra-api`。`domain/` 保持纯 Java、零框架注解（并有领域边界测试守卫，禁止反向依赖 application/infrastructure）。轮播图（carousel）作为独立子包位于 `cas-module-appointment`。
 
 ## 预约领域模型（对应 `db/migration/V1` 表）
 
@@ -59,6 +61,8 @@ notification_policy 全局通知策略（单行，邮件通道开关）
 
 - **释放**：审核拒绝 / 用户取消自动释放占用的时段与库存。
 - **自动完成**：`BookingAutoCompleteTask`（`@EnableScheduling`，60s 轮询）将已过预约窗口的单自动置为 `完成`（设备到点归还、教室释放）。
+- **管理员兜底**：可强制取消/完结任意待审核/已通过预约（含用户侧不可取消的已通过单），锁定读防并发并原子释放占用，用于僵尸单人工处置。
+- **并发幂等**：通用/活动类"同用户同服务有效态单"由数据库唯一索引兜底（V7 初版、V8 生成列修正），配合 `INSERT IGNORE`，双端同时点击也不会重复落单。
 
 ## 主要接口
 
@@ -75,8 +79,8 @@ notification_policy 全局通知策略（单行，邮件通道开关）
 | 咨询沟通 | `/app/chat/consult/conversations/**` | 学生⇄教师 1:1 留言：会话列表/未读数/打开会话/发消息/已读（参与者鉴权） |
 | 教师端 | `GET /teacher/bookings` | 教师查看并审核自己名下咨询预约（`PATCH` 通过/拒绝） |
 | 余量 | `GET /appointments/availability`、`GET /appointments/mine` | 实时余量（供 KB Function Calling 只读调用，内网签名鉴权） |
-| 轮播图 | `GET /app/carousel`、`GET/POST/DELETE /admin/carousel`、`POST /admin/carousel/reorder` | 用户端启用列表；管理端上传(≤6)/删除/拖拽排序 |
-| 管理端 | `GET/PUT /admin/services`、`GET/PATCH /admin/bookings`、`GET/PUT /admin/users`、`GET/PUT /admin/settings/notify`、`POST /admin/files` | 服务治理/预约审核/用户角色/通知策略/封面上传 |
+| 轮播图 | `GET /app/carousel`、`GET/POST/DELETE /admin/carousel`、`POST /admin/carousel/reorder` | 用户端启用列表；管理端上传（上限 `carousel.max-count`，默认 6）/删除（同步清物理文件）/拖拽排序 |
+| 管理端 | `GET/PUT /admin/services`、`GET/PATCH /admin/bookings`（含 `/{id}/cancel`、`/{id}/complete` 强制兜底）、`GET/PUT /admin/users`、`GET/PUT /admin/settings/notify`、`POST /admin/files` | 服务治理/预约审核/强制取消完结/用户角色/通知策略/封面上传 |
 | 其他 | `GET /weather`、`GET /weather/local`、`GET /app/qr-code`、`GET /config-demo/greeting`、`GET /sentinel-demo/limited` | 天气 / 二维码 / Nacos 热更新与 Sentinel 演示 |
 
 ## 数据库迁移与种子（Flyway）
@@ -87,8 +91,11 @@ notification_policy 全局通知策略（单行，邮件通道开关）
 - `V3__seed_teacher_users.sql` —— 教师账号种子 + 咨询师 `user_id` 回填（教师端登录用）。
 - `V4__service_category.sql` —— `service_category` 分类表 + 固定 4 类种子（教师咨询/设备借用/教室空间/活动报名）。
 - `V5__consult_chat.sql` —— 咨询沟通 `consult_chat_conversation` / `consult_chat_message`（学生⇄教师 1:1，仅新增表）。
+- `V6__services_end_date.sql` —— 服务上下架结束日期 `end_date`。
+- `V7__item_unique_booking_guard.sql` —— 通用/活动类预约唯一约束 `uk_user_service_status` + 写入改 `INSERT IGNORE`，并发重复提交幂等兜底。
+- `V8__item_active_general_unique.sql` —— 以生成列 `active_dedup` 唯一索引替代 V7 旧约束：终态单（拒绝/取消/完结）可共存、资源类单（咨询/教室/设备）不误拦、存量重复数据不阻塞迁移。
 
-新机器首次启动 CAS 自动建库建表；**已有库**不改写历史 `V*.sql`（Flyway checksum），结构演进直接对库执行 SQL 或按 `UPGRADE-*.md` 操作（约定见 `../README.md`）。
+新机器首次启动 CAS 自动建库建表（V1~V8 顺序执行）；**已有库**不改写历史 `V*.sql`（Flyway checksum），结构演进直接对库执行 SQL 或按 `UPGRADE-*.md` 操作（约定见 `../README.md`）。
 
 ## 构建 / 运行 / 测试
 
@@ -100,7 +107,10 @@ cd ../..
 # 构建产物
 mvn clean package -DskipTests     # cas-server/target/cas-server-1.0.0.jar
 
-# 测试（appointment/system/infra/thirdparty 共 84 个测试方法 / 13 个测试类）
+# 测试（cas-service 共 175 个测试方法 / 25 个测试类：
+#   appointment 83(11 类) · system 48(5 类) · infra 13(3 类) · thirdparty 6(2 类)
+#   · cas-server 22(3 类，含 V8 MySQL 集成测试，默认 Testcontainers 或 IT_MYSQL_* 外部库)
+#   · framework starter-security 3(1 类)）
 mvn -B -pl cas-service -am test
 ```
 
