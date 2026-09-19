@@ -8,7 +8,7 @@ import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ConsultantDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.mapper.ConsultantMapper;
 import com.laoliu.cas.appointment.infrastructure.persistence.mapper.TimeSlotMapper;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
+import com.laoliu.cas.appointment.domain.view.TimeSlotView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.util.StringUtils;
@@ -70,10 +70,10 @@ public class ConsultantRepositoryImpl implements ConsultantRepository {
     }
 
     @Override
-    public List<TimeSlotResponse> findTimeSlots(Long consultantId, String date) {
+    public List<TimeSlotView> findTimeSlots(Long consultantId, String date) {
         LocalDate day = (date == null || date.isBlank()) ? LocalDate.now() : LocalDate.parse(date);
         return timeSlotMapper.findAvailableByConsultantAndDate(consultantId, day).stream()
-                .map(slot -> TimeSlotResponse.builder()
+                .map(slot -> TimeSlotView.builder()
                         .slotId(slot.getId())
                         .startTime(slot.getStartTime())
                         .endTime(slot.getEndTime())

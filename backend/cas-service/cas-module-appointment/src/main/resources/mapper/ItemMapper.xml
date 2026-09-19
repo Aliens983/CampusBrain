@@ -14,8 +14,9 @@
         <result property="reason" column="reason"/>
     </resultMap>
 
-    <resultMap id="ServiceStatusResultMap" type="com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse">
+    <resultMap id="ServiceStatusResultMap" type="com.laoliu.cas.appointment.domain.view.BookingQueryView">
         <id property="orderId" column="order_id"/>
+        <result property="serviceId" column="service_id"/>
         <result property="userId" column="user_id"/>
         <result property="username" column="username"/>
         <result property="serviceName" column="service_name"/>
@@ -43,7 +44,7 @@
 
     <!-- 预约单详情的统一列清单与 JOIN：7 个查询共用，加字段只需改这一处 -->
     <sql id="ServiceStatus_Columns">
-        i.order_id, i.user_id, u.name AS username,
+        i.order_id, i.service_id, i.user_id, u.name AS username,
         s.service_name, s.service_describe, s.campus AS campus, i.reason,
         i.create_time, i.update_time, i.manage_status,
         c.name AS consultantName, i.slot_date AS slotDate,

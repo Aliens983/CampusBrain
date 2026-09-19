@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.ConsultationService;
 import com.laoliu.cas.appointment.interfaces.dto.request.ConsultationBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ConsultantResponse;
+import com.laoliu.cas.appointment.domain.view.TimeSlotView;
+import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
 import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
 import com.laoliu.cas.common.pojo.PageParam;
@@ -59,7 +61,8 @@ public class ConsultationAppController {
     public CommonResult<List<TimeSlotResponse>> getAvailableTime(
             @Parameter(description = "咨询师ID", required = true) @PathVariable Long consultantId,
             @Parameter(description = "日期 yyyy-MM-dd", required = true) @RequestParam String date) {
-        return CommonResult.success(consultationService.getAvailableTimeSlots(consultantId, date));
+        List<TimeSlotView> slots = consultationService.getAvailableTimeSlots(consultantId, date);
+        return CommonResult.success(BookingViewConverter.toSlotResponses(slots));
     }
 
     @Operation(summary = "预约咨询时段", description = "占用该咨询师指定时段，生成一条待审核咨询预约")

@@ -2,7 +2,7 @@ package com.laoliu.cas.appointment.application.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.interfaces.dto.response.ConsultantResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
+import com.laoliu.cas.appointment.domain.view.TimeSlotView;
 
 import java.util.List;
 
@@ -31,7 +31,7 @@ public interface ConsultationService {
     /**
      * 获取指定咨询师的可用时段
      */
-    List<TimeSlotResponse> getAvailableTimeSlots(Long consultantId, String date);
+    List<TimeSlotView> getAvailableTimeSlots(Long consultantId, String date);
 
     /**
      * 为指定用户预约咨询师时段

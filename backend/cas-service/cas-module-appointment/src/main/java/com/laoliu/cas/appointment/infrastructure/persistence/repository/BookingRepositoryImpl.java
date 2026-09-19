@@ -7,7 +7,7 @@ import com.laoliu.cas.appointment.infrastructure.config.BookingProperties;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.mapper.ItemMapper;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.enums.ManageStatus;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -144,32 +144,32 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatus(int page, int pageSize, Integer manageStatus, String serviceName) {
+    public IPage<BookingQueryView> getServiceStatus(int page, int pageSize, Integer manageStatus, String serviceName) {
         return itemMapper.getServiceStatusWithPage(new Page<>(page, pageSize), manageStatus, serviceName);
     }
 
     @Override
-    public List<ServiceStatusResponse> getServiceStatusByUserId(Long userId) {
+    public List<BookingQueryView> getServiceStatusByUserId(Long userId) {
         return itemMapper.getServiceStatusByUserId(userId);
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, int page, int pageSize, Integer manageStatus, String serviceName) {
+    public IPage<BookingQueryView> getServiceStatusByUserId(Long userId, int page, int pageSize, Integer manageStatus, String serviceName) {
         return itemMapper.getServiceStatusByUserIdWithPage(userId, new Page<>(page, pageSize), manageStatus, serviceName);
     }
 
     @Override
-    public ServiceStatusResponse getServiceStatusByOrderId(Long orderId) {
+    public BookingQueryView getServiceStatusByOrderId(Long orderId) {
         return itemMapper.getServiceStatusByOrderId(orderId);
     }
 
     @Override
-    public ServiceStatusResponse getServiceStatusByOrderIdAndUserId(Long userId, Long orderId) {
+    public BookingQueryView getServiceStatusByOrderIdAndUserId(Long userId, Long orderId) {
         return itemMapper.getServiceStatusByOrderIdAndUserId(userId, orderId);
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getTeacherBookings(Long teacherId, int page, int pageSize, Integer manageStatus) {
+    public IPage<BookingQueryView> getTeacherBookings(Long teacherId, int page, int pageSize, Integer manageStatus) {
         return itemMapper.getTeacherBookingsWithPage(teacherId, new Page<>(page, pageSize), manageStatus);
     }
 

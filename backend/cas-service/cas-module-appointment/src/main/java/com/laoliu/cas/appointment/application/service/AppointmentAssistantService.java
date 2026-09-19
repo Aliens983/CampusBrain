@@ -7,8 +7,8 @@ import com.laoliu.cas.appointment.interfaces.dto.response.AssistantConsultantRes
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.domain.view.TimeSlotView;
 
 import java.util.List;
 
@@ -34,7 +34,7 @@ public interface AppointmentAssistantService {
     List<AssistantConsultantResponse> findConsultants(String campus, String keyword, String date);
 
     /** 查询某咨询师某日的可预约时段 */
-    List<TimeSlotResponse> findConsultantSlots(Long consultantId, String date);
+    List<TimeSlotView> findConsultantSlots(Long consultantId, String date);
 
     /** 查询教室（传 date+起止时间时附带是否空闲） */
     List<AssistantRoomResponse> findRooms(String campus, String date, String startTime, String endTime);
@@ -44,7 +44,7 @@ public interface AppointmentAssistantService {
                                              String startTime, String endTime);
 
     /** 查询我的预约（manageStatus 为空表示全部） */
-    List<ServiceStatusResponse> findMyBookings(Long userId, Integer manageStatus);
+    List<BookingQueryView> findMyBookings(Long userId, Integer manageStatus);
 
     /** 生成预约草稿（只校验 + 预览，不落库） */
     AssistantBookingDraft createDraft(Long userId, AssistantBookingDraftRequest request);

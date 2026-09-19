@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.application.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 
 /**
  * 教师审核服务 —— 教师审「自己名下咨询档期」的学生申请
@@ -11,7 +11,7 @@ import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 public interface TeacherAuditService {
 
     /** 我名下咨询档期的申请列表（manageStatus 可空=全部） */
-    IPage<ServiceStatusResponse> listMyBookings(Long teacherId, int page, int pageSize, Integer manageStatus);
+    IPage<BookingQueryView> listMyBookings(Long teacherId, int page, int pageSize, Integer manageStatus);
 
     /** 审核通过（仅限本人名下咨询档期） */
     void approve(Long teacherId, Long orderId, String reason);

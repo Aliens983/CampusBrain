@@ -6,7 +6,7 @@ import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
@@ -32,8 +32,8 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     private final BookingMetrics bookingMetrics;
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest req) {
-        IPage<ServiceStatusResponse> result = bookingRepository.getServiceStatus(
+    public IPage<BookingQueryView> getServiceStatus(ServiceStatusPageRequest req) {
+        IPage<BookingQueryView> result = bookingRepository.getServiceStatus(
                 req.getPageNo(), req.getPageSize(),
                 req.getManageStatus(), req.getServiceName());
         result.getRecords().forEach(this::setStatusDescription);
@@ -41,26 +41,26 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public List<ServiceStatusResponse> getServiceStatusByUserId(Long userId) {
+    public List<BookingQueryView> getServiceStatusByUserId(Long userId) {
         return bookingRepository.getServiceStatusByUserId(userId);
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest req) {
+    public IPage<BookingQueryView> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest req) {
         return bookingRepository.getServiceStatusByUserId(userId, req.getPageNo(), req.getPageSize(),
                 req.getManageStatus(), req.getServiceName());
     }
 
     @Override
-    public List<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId) {
-        List<ServiceStatusResponse> statusList = bookingRepository.getServiceStatusByUserId(userId);
+    public List<BookingQueryView> getServiceStatusByUserIdWithDescription(Long userId) {
+        List<BookingQueryView> statusList = bookingRepository.getServiceStatusByUserId(userId);
         statusList.forEach(this::setStatusDescription);
         return statusList;
     }
 
     @Override
-    public IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req) {
-        IPage<ServiceStatusResponse> statusPage = bookingRepository.getServiceStatusByUserId(
+    public IPage<BookingQueryView> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req) {
+        IPage<BookingQueryView> statusPage = bookingRepository.getServiceStatusByUserId(
                 userId, req.getPageNo(), req.getPageSize(),
                 req.getManageStatus(), req.getServiceName());
         statusPage.getRecords().forEach(this::setStatusDescription);
@@ -68,7 +68,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
-    public ServiceStatusResponse getServiceStatusByOrderId(Long orderId) {
+    public BookingQueryView getServiceStatusByOrderId(Long orderId) {
         return bookingRepository.getServiceStatusByOrderId(orderId);
     }
 
@@ -92,7 +92,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     @CacheEvict(value = "services", allEntries = true)
     public void auditPass(Long orderId, String reason, AuditSource source) {
         long startNanos = System.nanoTime();
-        ServiceStatusResponse serviceInfo = getServiceStatusByOrderId(orderId);
+        BookingQueryView serviceInfo = getServiceStatusByOrderId(orderId);
         if (serviceInfo == null) {
             throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
         }
@@ -130,7 +130,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
             throw new BusinessException(BookErrorCode.AUDIT_REASON_REQUIRED);
         }
 
-        ServiceStatusResponse serviceInfo = getServiceStatusByOrderId(orderId);
+        BookingQueryView serviceInfo = getServiceStatusByOrderId(orderId);
         if (serviceInfo == null) {
             throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
         }
@@ -164,7 +164,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     /** 咨询/设备预约的邮件补充行（无资源明细返回空串） */
-    private String slotLine(ServiceStatusResponse r) {
+    private String slotLine(BookingQueryView r) {
         StringBuilder sb = new StringBuilder();
         if (r.getConsultantName() != null) {
             sb.append("\n咨询师：").append(r.getConsultantName())
@@ -184,7 +184,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
      * 状态中文描述统一经 {@link ManageStatus#of(Integer)} 取自枚举，
      * 与 {@code BookServiceImpl#getStatusDescription} 同源，消除重复的 switch 0..4。
      */
-    private void setStatusDescription(ServiceStatusResponse response) {
+    private void setStatusDescription(BookingQueryView response) {
         ManageStatus status = ManageStatus.of(response.getManageStatus());
         response.setStatusDescription(status == null ? "未知状态" : status.getMessage());
     }

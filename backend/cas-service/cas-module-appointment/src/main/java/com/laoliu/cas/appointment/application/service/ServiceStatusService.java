@@ -1,7 +1,7 @@
 package com.laoliu.cas.appointment.application.service;
 
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 
@@ -17,26 +17,26 @@ public interface ServiceStatusService {
     /**
      * 分页查询所有服务预约状态（支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatus(ServiceStatusPageRequest req);
+    IPage<BookingQueryView> getServiceStatus(ServiceStatusPageRequest req);
 
     /** 根据用户ID获取预约状态 */
-    List<ServiceStatusResponse> getServiceStatusByUserId(Long userId);
+    List<BookingQueryView> getServiceStatusByUserId(Long userId);
 
     /**
      * 分页查询用户的预约状态（支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest req);
+    IPage<BookingQueryView> getServiceStatusByUserId(Long userId, ServiceStatusPageRequest req);
 
     /** 获取用户预约状态（含描述） */
-    List<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId);
+    List<BookingQueryView> getServiceStatusByUserIdWithDescription(Long userId);
 
     /**
      * 分页查询用户的预约状态（含状态描述，支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req);
+    IPage<BookingQueryView> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req);
 
     /** 根据订单ID获取预约状态 */
-    ServiceStatusResponse getServiceStatusByOrderId(Long orderId);
+    BookingQueryView getServiceStatusByOrderId(Long orderId);
 
     /** 发送审核邮件 */
     void sendAuditEmail(Long orderId, String title, String content);

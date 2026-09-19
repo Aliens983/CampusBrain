@@ -8,7 +8,10 @@ import com.laoliu.cas.appointment.interfaces.dto.response.AssistantEquipmentResp
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantRoomResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.AssistantServiceResponse;
 import com.laoliu.cas.appointment.application.service.AppointmentAssistantService;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.TimeSlotView;
 import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
@@ -77,7 +80,8 @@ public class AppointmentAssistantController {
     public CommonResult<List<TimeSlotResponse>> consultantSlots(
             @Parameter(description = "咨询师ID", required = true) @PathVariable Long consultantId,
             @Parameter(description = "日期 yyyy-MM-dd", required = true) @RequestParam String date) {
-        return CommonResult.success(assistantService.findConsultantSlots(consultantId, date));
+        return CommonResult.success(BookingViewConverter.toSlotResponses(
+                assistantService.findConsultantSlots(consultantId, date)));
     }
 
     @Operation(summary = "查询教室（传日期时段则附带是否空闲）")
@@ -110,7 +114,8 @@ public class AppointmentAssistantController {
         if (userId == null) {
             return CommonResult.badRequest("缺少用户身份");
         }
-        return CommonResult.success(assistantService.findMyBookings(userId, manageStatus));
+        return CommonResult.success(BookingViewConverter.toResponses(
+                assistantService.findMyBookings(userId, manageStatus)));
     }
 
     // ==================== 两段式预约 ====================

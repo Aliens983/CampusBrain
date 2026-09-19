@@ -5,7 +5,7 @@ import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.application.service.TeacherAuditService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.exception.ForbiddenException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,7 +23,7 @@ public class TeacherAuditServiceImpl implements TeacherAuditService {
     private final ServiceStatusService serviceStatusService;
 
     @Override
-    public IPage<ServiceStatusResponse> listMyBookings(Long teacherId, int page, int pageSize, Integer manageStatus) {
+    public IPage<BookingQueryView> listMyBookings(Long teacherId, int page, int pageSize, Integer manageStatus) {
         return bookingRepository.getTeacherBookings(teacherId, page, pageSize, manageStatus);
     }
 

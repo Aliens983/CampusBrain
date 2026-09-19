@@ -2,6 +2,8 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
 import com.laoliu.cas.appointment.interfaces.dto.request.ServiceStatusPageRequest;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
@@ -40,9 +42,9 @@ public class ServiceStatusController {
         if (userId == null) {
             return CommonResult.badRequest("无法获取用户信息，请重新登录");
         }
-        IPage<ServiceStatusResponse> statusPage = serviceStatusService
+        IPage<BookingQueryView> statusPage = serviceStatusService
                 .getServiceStatusByUserIdWithDescription(userId, req);
-        return CommonResult.success(PageResult.of(statusPage));
+        return CommonResult.success(PageResult.of(statusPage.convert(BookingViewConverter::toResponse)));
     }
 
 }

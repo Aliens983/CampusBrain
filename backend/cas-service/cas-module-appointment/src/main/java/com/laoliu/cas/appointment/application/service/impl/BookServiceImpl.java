@@ -9,7 +9,7 @@ import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.interfaces.dto.response.BookingResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
@@ -129,12 +129,12 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public IPage<BookingResponse> getAllBookings(Long userId, int page, int pageSize) {
-        IPage<ServiceStatusResponse> statusPage = bookingRepository.getServiceStatusByUserId(
+        IPage<BookingQueryView> statusPage = bookingRepository.getServiceStatusByUserId(
                 userId, page, pageSize, null, null);
         return statusPage.convert(this::convertToDTO);
     }
 
-    private BookingResponse convertToDTO(ServiceStatusResponse status) {
+    private BookingResponse convertToDTO(BookingQueryView status) {
         BookingResponse dto = new BookingResponse();
         dto.setOrderId(status.getOrderId());
         dto.setUserId(status.getUserId());
@@ -201,7 +201,7 @@ public class BookServiceImpl implements BookService {
 
     @Override
     public BookingResponse getBookingById(Long userId, Long orderId) {
-        ServiceStatusResponse status = bookingRepository.getServiceStatusByOrderIdAndUserId(userId, orderId);
+        BookingQueryView status = bookingRepository.getServiceStatusByOrderIdAndUserId(userId, orderId);
         if (status == null) {
             return null;
         }

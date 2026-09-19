@@ -9,7 +9,7 @@ import com.laoliu.cas.appointment.domain.repository.ConsultChatRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.interfaces.dto.response.ConversationResponse;
 import com.laoliu.cas.appointment.interfaces.dto.response.MessageResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.ChatErrorCode;
@@ -85,7 +85,7 @@ public class ConsultChatServiceImpl implements ConsultChatService {
     @Override
     @Transactional
     public ConversationResponse openByBooking(Long callerId, Long orderId) {
-        ServiceStatusResponse booking = bookingRepository.getServiceStatusByOrderIdAndUserId(callerId, orderId);
+        BookingQueryView booking = bookingRepository.getServiceStatusByOrderIdAndUserId(callerId, orderId);
         if (booking == null) {
             throw new BusinessException(ChatErrorCode.BOOKING_NOT_FOUND);
         }

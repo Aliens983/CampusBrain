@@ -8,7 +8,7 @@ import com.laoliu.cas.appointment.domain.entity.ServiceItem;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
@@ -337,7 +337,7 @@ class BookServiceImplTest {
         @DisplayName("应当返回用户的预约列表")
         void shouldReturnUserBookings() {
             // Given
-            ServiceStatusResponse status = buildStatusResponse();
+            BookingQueryView status = buildStatusResponse();
             when(bookingRepository.getServiceStatusByUserId(USER_ID))
                     .thenReturn(List.of(status));
 
@@ -354,7 +354,7 @@ class BookServiceImplTest {
         @DisplayName("应当返回单个预约详情")
         void shouldReturnBookingDetail() {
             // Given
-            ServiceStatusResponse status = buildStatusResponse();
+            BookingQueryView status = buildStatusResponse();
             when(bookingRepository.getServiceStatusByOrderIdAndUserId(USER_ID, ORDER_ID)).thenReturn(status);
 
             // When
@@ -433,8 +433,8 @@ class BookServiceImplTest {
         return dto;
     }
 
-    private ServiceStatusResponse buildStatusResponse() {
-        ServiceStatusResponse response = new ServiceStatusResponse();
+    private BookingQueryView buildStatusResponse() {
+        BookingQueryView response = new BookingQueryView();
         response.setOrderId(ORDER_ID);
         response.setUserId(USER_ID);
         response.setUsername("测试用户");

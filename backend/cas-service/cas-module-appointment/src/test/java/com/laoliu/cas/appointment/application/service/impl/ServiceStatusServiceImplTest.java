@@ -6,7 +6,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import com.laoliu.cas.appointment.application.service.AuditSource;
 import com.laoliu.cas.appointment.application.service.ServiceStatusService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
@@ -67,7 +67,7 @@ class ServiceStatusServiceImplTest {
         @DisplayName("应当成功审核通过并发送邮件（无备注）")
         void shouldApproveAndSendEmailWithoutReason() {
             // Given
-            ServiceStatusResponse status = buildPendingStatus();
+            BookingQueryView status = buildPendingStatus();
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
             when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), isNull(),
                     eq(List.of(ManageStatus.SUBMIT))))
@@ -88,7 +88,7 @@ class ServiceStatusServiceImplTest {
         @DisplayName("应当成功审核通过并发送邮件（含备注）")
         void shouldApproveAndSendEmailWithReason() {
             // Given
-            ServiceStatusResponse status = buildPendingStatus();
+            BookingQueryView status = buildPendingStatus();
             String reason = "预约信息完整，予以通过";
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
             when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.APPROVED.getCode()), eq(reason),
@@ -122,7 +122,7 @@ class ServiceStatusServiceImplTest {
         @DisplayName("审核更新失败时应当抛出 AUDIT_FAILED 异常")
         void shouldThrowExceptionWhenAuditUpdateFails() {
             // Given
-            ServiceStatusResponse status = buildPendingStatus();
+            BookingQueryView status = buildPendingStatus();
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
             when(bookingRepository.auditService(eq(VALID_ORDER_ID), anyInt(), any(), anyList())).thenReturn(false);
 
@@ -144,7 +144,7 @@ class ServiceStatusServiceImplTest {
         @DisplayName("应当成功驳回并发送含拒绝原因的邮件")
         void shouldRejectAndSendEmailWithReason() {
             // Given
-            ServiceStatusResponse status = buildPendingStatus();
+            BookingQueryView status = buildPendingStatus();
             String reason = "预约时间与其他安排冲突";
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
             when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason),
@@ -165,7 +165,7 @@ class ServiceStatusServiceImplTest {
         @DisplayName("驳回成功时按订单释放库存（仅通用类预约在 SQL 层命中）")
         void shouldReleaseStockOnReject() {
             // Given
-            ServiceStatusResponse status = buildPendingStatus();
+            BookingQueryView status = buildPendingStatus();
             String reason = "预约信息不完整";
             when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(status);
             when(bookingRepository.auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason),
@@ -225,8 +225,8 @@ class ServiceStatusServiceImplTest {
 
     // ======================== 辅助方法 ========================
 
-    private ServiceStatusResponse buildPendingStatus() {
-        ServiceStatusResponse status = new ServiceStatusResponse();
+    private BookingQueryView buildPendingStatus() {
+        BookingQueryView status = new BookingQueryView();
         status.setOrderId(VALID_ORDER_ID);
         status.setUserId(100L);
         status.setUsername("测试用户");

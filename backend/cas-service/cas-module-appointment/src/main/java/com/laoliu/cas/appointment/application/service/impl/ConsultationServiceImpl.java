@@ -14,7 +14,7 @@ import com.laoliu.cas.appointment.domain.repository.TimeSlotRepository;
 import com.laoliu.cas.appointment.infrastructure.mq.BookingEventPublisher;
 import com.laoliu.cas.appointment.infrastructure.metrics.BookingMetrics;
 import com.laoliu.cas.appointment.interfaces.dto.response.ConsultantResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
+import com.laoliu.cas.appointment.domain.view.TimeSlotView;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
@@ -69,7 +69,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     @Override
-    public List<TimeSlotResponse> getAvailableTimeSlots(Long consultantId, String date) {
+    public List<TimeSlotView> getAvailableTimeSlots(Long consultantId, String date) {
         return consultantRepository.findTimeSlots(consultantId, date);
     }
 

@@ -3,6 +3,8 @@ package com.laoliu.cas.appointment.interfaces.controller.app;
 import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.interfaces.convert.BookingViewConverter;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
@@ -66,6 +68,7 @@ public class AvailabilityController {
         if (userId == null) {
             return CommonResult.badRequest("缺少用户身份");
         }
-        return CommonResult.success(bookingRepository.getServiceStatusByUserId(userId));
+        return CommonResult.success(BookingViewConverter.toResponses(
+                bookingRepository.getServiceStatusByUserId(userId)));
     }
 }

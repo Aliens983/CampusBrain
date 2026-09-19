@@ -34,8 +34,8 @@ import com.laoliu.cas.appointment.domain.repository.TimeSlotRepository;
 import com.laoliu.cas.appointment.interfaces.dto.request.ConsultationBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.request.EquipmentBookRequest;
 import com.laoliu.cas.appointment.interfaces.dto.request.RoomBookRequest;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.TimeSlotResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.appointment.domain.view.TimeSlotView;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.redis.util.RedisUtil;
@@ -151,7 +151,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     }
 
     @Override
-    public List<TimeSlotResponse> findConsultantSlots(Long consultantId, String date) {
+    public List<TimeSlotView> findConsultantSlots(Long consultantId, String date) {
         if (consultantId == null || date == null || date.isBlank()) {
             return Collections.emptyList();
         }
@@ -242,11 +242,11 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     }
 
     @Override
-    public List<ServiceStatusResponse> findMyBookings(Long userId, Integer manageStatus) {
+    public List<BookingQueryView> findMyBookings(Long userId, Integer manageStatus) {
         if (userId == null) {
             return Collections.emptyList();
         }
-        List<ServiceStatusResponse> all = bookingRepository.getServiceStatusByUserId(userId);
+        List<BookingQueryView> all = bookingRepository.getServiceStatusByUserId(userId);
         if (manageStatus == null) {
             return all;
         }
@@ -319,7 +319,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     @Override
     public AssistantBookingResult cancelBooking(Long userId, Long orderId) {
-        ServiceStatusResponse target = bookingRepository.getServiceStatusByOrderIdAndUserId(userId, orderId);
+        BookingQueryView target = bookingRepository.getServiceStatusByOrderIdAndUserId(userId, orderId);
         if (target == null) {
             throw new BusinessException(BookErrorCode.BOOKING_NOT_FOUND);
         }

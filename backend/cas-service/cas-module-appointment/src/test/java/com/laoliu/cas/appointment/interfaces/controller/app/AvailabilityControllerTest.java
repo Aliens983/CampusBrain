@@ -4,6 +4,7 @@ import com.laoliu.cas.appointment.application.service.ServiceItemService;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.common.result.CommonResult;
 import com.laoliu.cas.common.security.SecurityFrameworkUtils;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -48,7 +49,7 @@ class AvailabilityControllerTest {
             try (MockedStatic<SecurityFrameworkUtils> mocked =
                          mockStatic(SecurityFrameworkUtils.class)) {
                 mocked.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(LOGIN_USER_ID);
-                ServiceStatusResponse st = new ServiceStatusResponse();
+                BookingQueryView st = new BookingQueryView();
                 when(bookingRepository.getServiceStatusByUserId(LOGIN_USER_ID)).thenReturn(List.of(st));
 
                 CommonResult<List<ServiceStatusResponse>> result =
@@ -67,7 +68,7 @@ class AvailabilityControllerTest {
             try (MockedStatic<SecurityFrameworkUtils> mocked =
                          mockStatic(SecurityFrameworkUtils.class)) {
                 mocked.when(SecurityFrameworkUtils::getLoginUserId).thenReturn(null);
-                ServiceStatusResponse st = new ServiceStatusResponse();
+                BookingQueryView st = new BookingQueryView();
                 when(bookingRepository.getServiceStatusByUserId(FORGED_HEADER_ID)).thenReturn(List.of(st));
 
                 CommonResult<List<ServiceStatusResponse>> result =

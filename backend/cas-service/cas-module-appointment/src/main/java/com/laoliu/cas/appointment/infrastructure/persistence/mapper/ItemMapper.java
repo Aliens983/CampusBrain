@@ -6,7 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ItemDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO;
 import com.laoliu.cas.appointment.interfaces.dto.response.ServiceAvailabilityResponse;
-import com.laoliu.cas.appointment.interfaces.dto.response.ServiceStatusResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import java.util.List;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -67,16 +67,16 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     /**
      * 分页查询所有服务预约状态（支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatusWithPage(Page<?> page,
+    IPage<BookingQueryView> getServiceStatusWithPage(Page<?> page,
             @Param("manageStatus") Integer manageStatus,
             @Param("serviceName") String serviceName);
 
-    List<ServiceStatusResponse> getServiceStatusByUserId(@Param("userId") Long userId);
+    List<BookingQueryView> getServiceStatusByUserId(@Param("userId") Long userId);
 
     /**
      * 分页查询用户的预约状态（支持筛选）
      */
-    IPage<ServiceStatusResponse> getServiceStatusByUserIdWithPage(@Param("userId") Long userId, Page<?> page,
+    IPage<BookingQueryView> getServiceStatusByUserIdWithPage(@Param("userId") Long userId, Page<?> page,
             @Param("manageStatus") Integer manageStatus,
             @Param("serviceName") String serviceName);
 
@@ -92,14 +92,14 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                      @Param("reason") String reason,
                      @Param("fromStatuses") List<Integer> fromStatuses);
 
-    ServiceStatusResponse getServiceStatusByOrderId(Long orderId);
+    BookingQueryView getServiceStatusByOrderId(Long orderId);
 
-    ServiceStatusResponse getServiceStatusByOrderIdAndUserId(@Param("userId") Long userId, @Param("orderId") Long orderId);
+    BookingQueryView getServiceStatusByOrderIdAndUserId(@Param("userId") Long userId, @Param("orderId") Long orderId);
 
     /**
      * 分页查询某教师（咨询师绑定账号）名下咨询档期的申请
      */
-    IPage<ServiceStatusResponse> getTeacherBookingsWithPage(@Param("teacherId") Long teacherId, Page<?> page,
+    IPage<BookingQueryView> getTeacherBookingsWithPage(@Param("teacherId") Long teacherId, Page<?> page,
             @Param("manageStatus") Integer manageStatus);
 
     /** 查询某预约单对应的咨询师绑定账号ID（无归属返回 null，用于教师越权校验） */
