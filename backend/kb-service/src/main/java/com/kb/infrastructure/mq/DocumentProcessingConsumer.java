@@ -86,8 +86,8 @@ public class DocumentProcessingConsumer {
     /** 分块批量写入的单事务边界（A-03） */
     private final com.kb.infrastructure.persistence.mysql.DocumentChunkTransactionService chunkTransactionService;
 
-    /** 文档分块策略 */
-    @Value("${chunking.strategy}")
+    /** 文档分块策略（5.7：与 application.yml chunking.strategy 对齐，缺默认值时兜底为滑动窗口） */
+    @Value("${chunking.strategy:sliding_window}")
     private String chunkStrategy;
 
     /**
