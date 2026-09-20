@@ -3,6 +3,7 @@ package com.kb.infrastructure.rag.llm;
 import com.kb.domain.rag.CancellationToken;
 import com.kb.domain.rag.LlmService;
 import com.kb.domain.rag.RetrievalResult;
+import com.kb.domain.rag.StreamCancelledException;
 import com.kb.infrastructure.rag.tool.AppointmentTool;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;

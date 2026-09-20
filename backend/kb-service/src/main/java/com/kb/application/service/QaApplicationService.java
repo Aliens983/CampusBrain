@@ -14,7 +14,7 @@ import com.kb.domain.rag.RetrievalResult;
 import com.kb.infrastructure.common.BusinessException;
 import com.kb.infrastructure.common.ErrorCode;
 import com.kb.infrastructure.metrics.BusinessMetrics;
-import com.kb.infrastructure.rag.llm.StreamCancelledException;
+import com.kb.domain.rag.StreamCancelledException;
 import com.kb.infrastructure.rag.rewrite.ContextualQueryRewriter;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import lombok.RequiredArgsConstructor;
