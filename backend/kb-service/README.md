@@ -33,15 +33,14 @@ com.kb
     ├── cache/                # Redis 会话仓储、QA 缓存、语义缓存（Qdrant collection）、缓存淘汰器
     ├── mq/  schedule/        # 文档处理消费者/生产者、处理锁、僵尸文档回收、索引删除补偿
     ├── persistence/          # mysql（dataobject/mapper）· elasticsearch · qdrant
-    ├── client/  security/  ratelimit/  metrics/  config/
-    └── tenant/               # 多租户已下线，仅保留空壳（无业务引用）
+    └── client/  security/  ratelimit/  metrics/  config/
 ```
 
 跨模块端口（如 `IntentClassifier`、文档写路径端口）定义在 `domain`，实现下沉 `infrastructure`；纯委托 adapter 已删除，由现有组件直接 implements 端口。
 
 ## 核心链路
 
-**文档处理**：上传（业务侧 50MB 二次校验 + 展示标题脱敏）→ MQ 异步消费 → 解析/分块（sliding_window 512/重叠 50）→ 批量 Embedding → MySQL 元数据 + ES 关键词索引 + Qdrant 向量（均带文档归属标识）。处理状态机卡死由 `StuckDocumentReclaimer` 定时回收重投；外部索引删除失败进 `index_delete_failure` 对账表，补偿任务重试至成功。
+**文档处理**：上传（业务侧 50MB 二次校验 + 展示标题脱敏）→ MQ 异步消费 → 解析/分块（sliding_window 512/重叠 50）→ 批量 Embedding → MySQL 元数据 + ES 关键词索引 + Qdrant 向量（均带文档归属标识）。处理状态机卡死由 `StuckDocumentReclaimer` 定时回收重投；外部索引删除失败进 `index_delete_failure` 对账表，补偿任务周期重试至解决，超过重试上限置 GIVE_UP 并暴露指标告警。
 
 **问答**：意图判定（预约/知识）→ Redis QA 缓存 + Qdrant 语义缓存（阈值 0.95，TTL 24h，按归属过滤）→ ES + Qdrant 双路召回（各 top10，RRF 融合 top5，单侧超时/异常降级为空结果）→ LLM 生成；「无法回答」门控命中时切直答，语义缓存拒写套话答案防注入放大。流式入口支持客户端断连取消（取消指标可观测）。
 
@@ -90,8 +89,8 @@ com.kb
 cd ..
 ./scripts/run-local.sh kb          # :8081，首次启动执行 Flyway
 
-# 只构建本模块
-mvn clean package -DskipTests     # kb-service/target/kb-service-1.0.0.jar
+# 只构建本模块（在 backend/ 下执行）
+mvn -B -pl kb-service -am clean package -DskipTests   # kb-service/target/kb-service-1.0.0.jar
 
 # 测试：130 个测试方法（H2 + @MockBean 隔离 ES/MQ/Redis/Cas，无需 Docker）
 mvn -B -pl kb-service -am test

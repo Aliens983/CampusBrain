@@ -39,7 +39,7 @@ cas-service/
 
 ```
 user ───────────────┐
-services（服务目录：category/campus/image_url/capacity/booked_count）
+services（服务目录：category_id/campus/image_url/capacity/booked_count；end_date 见 V6）
  ├─ consultant     咨询师（挂 心理咨询/学业辅导 服务）
  │    └─ time_slot 该咨询师某日可约时段
  ├─ room           教室（挂 空闲教室 服务）
@@ -107,9 +107,9 @@ cd ../..
 # 构建产物
 mvn clean package -DskipTests     # cas-server/target/cas-server-1.0.0.jar
 
-# 测试（cas-service 共 175 个测试方法 / 25 个测试类：
+# 测试（cas-service 共 173 个测试方法 / 25 个测试类：
 #   appointment 83(11 类) · system 48(5 类) · infra 13(3 类) · thirdparty 6(2 类)
-#   · cas-server 22(3 类，含 V8 MySQL 集成测试，默认 Testcontainers 或 IT_MYSQL_* 外部库)
+#   · cas-server 20(3 类，含 V8 MySQL 集成测试 14 个，默认 Testcontainers 或 IT_MYSQL_* 外部库)
 #   · framework starter-security 3(1 类)）
 mvn -B -pl cas-service -am test
 ```

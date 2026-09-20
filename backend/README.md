@@ -156,7 +156,7 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 ```bash
 cd backend && mvn -B test
 ```
-- 后端共 **327 个测试方法**：CAS 系 175（appointment 83 · system 48 · infra 13 · thirdparty 6 · cas-server 22 · framework 3）+ common-auth 6 + gateway 16 + KB 130。KB 测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）；cas-server 含一个 MySQL 集成测试（默认 Testcontainers，也可用 `IT_MYSQL_*` 环境变量指向外部 MySQL）。
+- 后端共 **325 个测试方法**：CAS 系 173（appointment 83 · system 48 · infra 13 · thirdparty 6 · cas-server 20 · framework 3）+ common-auth 6 + gateway 16 + KB 130。KB 测试用 **H2 + `@MockBean` 隔离** ES/MQ/Redis/Cas 等中间件（无需 Docker）；cas-server 含一个 MySQL 集成测试（默认 Testcontainers，也可用 `IT_MYSQL_*` 环境变量指向外部 MySQL）。
 - GitHub Actions `.github/workflows/ci.yml`：push/PR 自动跑 `mvn -B test` + 前端 type-check/build。
 
 ## 八、Docker 部署（服务器）

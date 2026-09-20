@@ -42,9 +42,9 @@
 
 </div>
 
-**CampusBrain 智汇校园** —— 面向高校的智慧校园预约平台（毕设 / 简历项目）。以 Spring Cloud Alibaba 微服务将\*\*校园预约系统（CAS）**与**知识库问答平台（KB）\*\*合为一体：统一 Vue 前端、统一网关 JWT 鉴权；KB 作为专属 AI 助手，提供知识库 RAG 问答，并可 **Function Calling 实时查询预约数据**。
+**CampusBrain 智汇校园** —— 面向高校的智慧校园预约平台（毕设项目）。以 Spring Cloud Alibaba 微服务将**校园预约系统（CAS）**与**知识库问答平台（KB）**合为一体：统一 Vue 前端、统一网关 JWT 鉴权；KB 作为专属 AI 助手，提供知识库 RAG 问答，并可 **Function Calling 实时查询预约数据**。
 
-平台围绕**杭州师范大学两校区**场景建模（仓前 / 下沙），预约服务、咨询师、教室、设备均**按校区分离**；界面采用 **HZNU 校徽蓝** **`#3FB6FF`** 主题。
+平台围绕**杭州师范大学两校区**场景建模（仓前 / 下沙），预约服务、咨询师、教室、设备均**按校区分离**；界面采用 **HZNU 校徽蓝 `#3FB6FF`** 主题。
 
 ***
 
@@ -200,7 +200,7 @@ npm run dev        # http://localhost:3000
 ## 五、测试与 CI
 
 ```bash
-cd backend && mvn -B test     # 327 个测试方法：CAS 系 175（appointment 83 / system 48 / infra 13 / thirdparty 6 / cas-server 22 / framework 3）+ common-auth 6 + gateway 16 + KB 130（KB 用 H2 + @MockBean 隔离中间件）
+cd backend && mvn -B test     # 325 个测试方法：CAS 系 173（appointment 83 / system 48 / infra 13 / thirdparty 6 / cas-server 20 / framework 3）+ common-auth 6 + gateway 16 + KB 130（KB 用 H2 + @MockBean 隔离中间件）
 cd frontend && npm run type-check && npm run build   # vue-tsc + vite
 ```
 
