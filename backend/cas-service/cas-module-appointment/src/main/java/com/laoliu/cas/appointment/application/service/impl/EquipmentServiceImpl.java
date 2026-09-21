@@ -1,5 +1,6 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.domain.service.BookingWindowPolicy;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.EquipmentService;
 import com.laoliu.cas.appointment.domain.entity.Equipment;
@@ -93,9 +94,8 @@ public class EquipmentServiceImpl implements EquipmentService {
         } catch (Exception e) {
             throw new BusinessException(BookErrorCode.BORROW_TIME_INVALID);
         }
-        if (date.isBefore(LocalDate.now())) {
-            throw new BusinessException(BookErrorCode.BORROW_TIME_INVALID);
-        }
+        // P1-06：同教室预约——拒绝过去日期与今天已开始/已结束的时段
+        BookingWindowPolicy.assertEquipmentBorrowable(date, req.getStartTime());
 
         // 行锁读取设备，串行化同一设备的借用判定，防并发超借
         Equipment equipment = equipmentRepository.findByIdForUpdate(equipmentId)

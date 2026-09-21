@@ -1,5 +1,6 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.domain.service.BookingWindowPolicy;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.ConsultationService;
 import com.laoliu.cas.appointment.domain.entity.Consultant;
@@ -101,6 +102,9 @@ public class ConsultationServiceImpl implements ConsultationService {
             bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_SLOT_UNAVAILABLE);
             throw new BusinessException(BookErrorCode.SLOT_UNAVAILABLE);
         }
+        // P1-06：时段可用不代表还没到点——拒绝已过去或已开始的时段，
+        // 否则会生成"昨天的咨询预约"并把 available 永久锁 0。
+        BookingWindowPolicy.assertConsultationBookable(slot.getSlotDate(), slot.getStartTime());
 
         // 原子占用：仅 available=1 时置 0；失败=刚被抢走
         if (!timeSlotRepository.occupy(slotId)) {

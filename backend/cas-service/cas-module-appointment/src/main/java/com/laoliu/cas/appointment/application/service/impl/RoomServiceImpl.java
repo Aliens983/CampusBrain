@@ -1,5 +1,6 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.domain.service.BookingWindowPolicy;
 import com.laoliu.cas.appointment.application.service.RoomService;
 import com.laoliu.cas.appointment.domain.entity.Room;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
@@ -63,9 +64,9 @@ public class RoomServiceImpl implements RoomService {
         } catch (Exception e) {
             throw new BusinessException(BookErrorCode.BOOK_TIME_INVALID);
         }
-        if (date.isBefore(LocalDate.now())) {
-            throw new BusinessException(BookErrorCode.BOOK_TIME_INVALID);
-        }
+        // P1-06：此前只拒绝"早于今天"，导致可以对昨天、以及今天已开始的时段下单。
+        // 统一交给时间窗策略：过去日期 + 今天已开始/已结束的时段一律拒绝。
+        BookingWindowPolicy.assertRoomBookable(date, req.getStartTime());
 
         Room room = roomRepository.findByIdForUpdate(roomId)
                 .orElseThrow(() -> new BusinessException(BookErrorCode.ROOM_NOT_FOUND));
