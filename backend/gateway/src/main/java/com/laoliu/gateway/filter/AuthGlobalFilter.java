@@ -61,7 +61,10 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/register",
             "/api/v1/auth/verification-code",
             "/api/v1/auth/reset",
-            "/api/v1/captcha",
+            // 图形验证码：生成接口 /captcha 与取图接口 /captcha/image/{uuid} 都必须匿名可达。
+            // 此前只放行精确 /api/v1/captcha，取图子路径不匹配 → 登录页图片 401，
+            // 而登录提交又强制校验验证码，整条登录链路事实上不可用（P1-04）。
+            "/api/v1/captcha/**",
             // KB 健康探针
             "/api/v1/kb/health",
             // 上传文件：UUID 文件名不可枚举，由下游应用层控制访问

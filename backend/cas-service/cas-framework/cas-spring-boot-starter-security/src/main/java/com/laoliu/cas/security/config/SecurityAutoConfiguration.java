@@ -55,7 +55,8 @@ public class SecurityAutoConfiguration {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(
                                     "/auth/**",
-                                    "/captcha",
+                                    // 同网关白名单：放行生成与取图两个子路径（P1-04）
+                                    "/captcha/**",
                                     "/error",
                                     "/uploads/**",
                                     "/favicon.ico",
