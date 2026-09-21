@@ -62,6 +62,13 @@ public interface BookingRepository {
     int autoCompleteExpired();
 
     /**
+     * P1-06：超时未审核的待审单自动拒绝并释放所占资源（咨询时段 / 容量型名额）。
+     *
+     * @return 实际拒绝条数
+     */
+    int autoRejectStalePending();
+
+    /**
      * 幂等插入教室时段预约，返回新订单 orderId；重复提交返回 null。
      */
     Long insertRoomBooking(Long userId, Long serviceId, Long roomId, LocalDate date, String startTime, String endTime);

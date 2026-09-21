@@ -28,10 +28,13 @@ public class BookingAutoCompleteTask {
     @Scheduled(fixedDelay = 60_000, initialDelay = 30_000)
     public void autoCompleteExpiredBookings() {
         try {
-            int n = bookingRepository.autoCompleteExpired();
-            if (n > 0) {
-                log.info("到点自动归还/结束 {} 条预约", n);
-                // 4.8：容量型预约完结会回补 booked_count，但 services 缓存 TTL 最长 30 分钟，
+            int completed = bookingRepository.autoCompleteExpired();
+            // P1-06：超时未审核的待审单同样要清理，否则它们占着的时段/名额永远不会被释放
+            int rejected = bookingRepository.autoRejectStalePending();
+            if (completed + rejected > 0) {
+                log.info("到点自动归还/结束 {} 条预约，超时自动拒绝并释放 {} 条待审单",
+                        completed, rejected);
+                // 4.8：容量型预约完结/拒绝会回补 booked_count，但 services 缓存 TTL 最长 30 分钟，
                 // 不主动失效的话，用户在最长半小时内看到的仍是"名额已满"的旧余量。
                 // 仅在确有行变更时清缓存，空跑不打扰 Redis。
                 Cache cache = cacheManager.getCache(SERVICES_CACHE);

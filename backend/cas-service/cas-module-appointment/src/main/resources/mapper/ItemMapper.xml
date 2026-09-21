@@ -256,6 +256,37 @@
           AND item.manage_status IN (#{pendingCode}, #{approvedCode})
     </update>
 
+    <!-- P1-06：超时候审单自动拒绝并释放资源。
+         背景：老师不审、用户也不取消的待审咨询单，下单时已把 time_slot.available 置 0，
+         会永久锁住该时段；待审的教室/设备单则永久计入 overlap，后来者永远看到"冲突"。
+         而自动完结任务只扫「已通过」，待审单永远等不到清理 → 资源被僵尸单慢慢锁死。
+
+         本语句一次完成：置为已拒绝 + 释放咨询时段 + 回补容量型名额。
+         回补判据复用 CapacityBookingCondition，与取消/完结保持同一口径。
+
+         注意：只处理「待审核」且创建时间已超过 staleHours 的单，
+         不影响刚提交、正在等待审核的正常单。 -->
+
+    <update id="autoRejectStalePending">
+        UPDATE item
+        LEFT JOIN time_slot t ON t.id = item.slot_id
+        LEFT JOIN services s ON s.service_id = item.service_id
+        SET item.manage_status = #{rejectedCode},
+            item.reason = #{reason},
+            t.available = CASE
+                WHEN item.consultant_id IS NOT NULL AND item.slot_id IS NOT NULL
+                THEN 1
+                ELSE t.available
+            END,
+            s.booked_count = CASE
+                WHEN <include refid="CapacityBookingCondition"><property name="alias" value="item"/></include>
+                THEN GREATEST(s.booked_count - 1, 0)
+                ELSE s.booked_count
+            END
+        WHERE item.manage_status = #{pendingCode}
+          AND item.create_time &lt; DATE_SUB(NOW(), INTERVAL #{staleHours} HOUR)
+    </update>
+
     <!-- 审核：只允许从 fromStatuses 给出的状态流转（由 Service 层状态机决定，
          如 通过仅允许待审核单，拒绝允许待审核/已通过单），非法跃迁影响 0 行 -->
     <update id="auditService">

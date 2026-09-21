@@ -22,4 +22,13 @@ public class BookingProperties {
      * 现统一收敛到此配置，默认仍为 60 秒以保持原行为。
      */
     private int dedupeSeconds = 60;
+
+    /**
+     * 待审核单的超时时限（小时）。
+     * <p>
+     * P1-06：超过该时长仍未被审核、用户也未取消的待审单会被定时任务自动拒绝，
+     * 并按取消/完结的同一口径释放所占用的咨询时段与容量型名额，避免资源被
+     * 僵尸待审单永久锁死。设为 0 或负数表示关闭该能力。
+     */
+    private int pendingStaleHours = 24;
 }

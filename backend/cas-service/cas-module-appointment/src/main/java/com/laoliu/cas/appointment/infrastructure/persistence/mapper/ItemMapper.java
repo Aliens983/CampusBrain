@@ -196,6 +196,20 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                             @Param("completedCode") int completedCode);
 
     /**
+     * P1-06：超时未审核的待审单自动拒绝，并释放其占用的咨询时段与容量型名额。
+     *
+     * @param pendingCode  待审核状态码
+     * @param rejectedCode 拒绝状态码
+     * @param reason       写入 item.reason 的拒绝原因
+     * @param staleHours   超时时限（小时）
+     * @return 实际拒绝条数
+     */
+    int autoRejectStalePending(@Param("pendingCode") int pendingCode,
+                               @Param("rejectedCode") int rejectedCode,
+                               @Param("reason") String reason,
+                               @Param("staleHours") int staleHours);
+
+    /**
      * 幂等插入教室时段预约。成功时 orderId 回填到 {@code item}。
      *
      * @return 实际插入行数（0=重复提交）

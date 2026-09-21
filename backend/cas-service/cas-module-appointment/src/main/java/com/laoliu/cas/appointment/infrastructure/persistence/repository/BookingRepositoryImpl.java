@@ -36,6 +36,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     private static final int APPROVED = ManageStatus.APPROVED.getCode();
     private static final int CANCELLED = ManageStatus.CANCELLED.getCode();
     private static final int COMPLETED = ManageStatus.COMPLETED.getCode();
+    private static final int REJECTED = ManageStatus.REJECTED.getCode();
 
     private final ItemMapper itemMapper;
     private final BookingProperties bookingProperties;
@@ -126,6 +127,17 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public int autoCompleteExpired() {
         return itemMapper.autoCompleteExpired(APPROVED, COMPLETED);
+    }
+
+    @Override
+    public int autoRejectStalePending() {
+        int staleHours = bookingProperties.getPendingStaleHours();
+        // <=0 表示关闭该能力（留给运维按环境调节）
+        if (staleHours <= 0) {
+            return 0;
+        }
+        return itemMapper.autoRejectStalePending(
+                PENDING, REJECTED, "超过 " + staleHours + " 小时未审核，系统自动拒绝并释放资源", staleHours);
     }
 
     @Override
