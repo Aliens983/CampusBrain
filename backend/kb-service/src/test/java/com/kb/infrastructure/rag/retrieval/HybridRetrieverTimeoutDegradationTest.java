@@ -16,6 +16,7 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
@@ -62,13 +63,13 @@ class HybridRetrieverTimeoutDegradationTest {
     @Test
     @DisplayName("关键词检索超时 → 仅向量侧结果参与融合，不抛异常")
     void keywordTimeoutDegradesToVectorOnly() {
-        when(keywordRetriever.retrieve(anyString())).thenAnswer(inv -> {
+        when(keywordRetriever.retrieve(anyString(), any())).thenAnswer(inv -> {
             Thread.sleep(60_000);
             return List.of(chunk("k1"));
         });
-        when(vectorRetriever.retrieve(anyString())).thenReturn(List.of(chunk("v1"), chunk("v2")));
+        when(vectorRetriever.retrieve(anyString(), any())).thenReturn(List.of(chunk("v1"), chunk("v2")));
 
-        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题");
+        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题", null);
 
         assertThat(results).isNotEmpty();
         List<String> ids = results.stream().map(RetrievalResult::getChunkId).collect(Collectors.toList());
@@ -78,13 +79,13 @@ class HybridRetrieverTimeoutDegradationTest {
     @Test
     @DisplayName("向量检索超时 → 仅关键词侧结果参与融合，不抛异常")
     void vectorTimeoutDegradesToKeywordOnly() {
-        when(keywordRetriever.retrieve(anyString())).thenReturn(List.of(chunk("k1"), chunk("k2")));
-        when(vectorRetriever.retrieve(anyString())).thenAnswer(inv -> {
+        when(keywordRetriever.retrieve(anyString(), any())).thenReturn(List.of(chunk("k1"), chunk("k2")));
+        when(vectorRetriever.retrieve(anyString(), any())).thenAnswer(inv -> {
             Thread.sleep(60_000);
             return List.of(chunk("v1"));
         });
 
-        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题");
+        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题", null);
 
         assertThat(results).isNotEmpty();
         List<String> ids = results.stream().map(RetrievalResult::getChunkId).collect(Collectors.toList());
@@ -94,16 +95,16 @@ class HybridRetrieverTimeoutDegradationTest {
     @Test
     @DisplayName("两侧均超时 → 返回空列表，不抛异常（空召回走 LLM 兜底）")
     void bothTimeoutReturnEmptyWithoutException() {
-        when(keywordRetriever.retrieve(anyString())).thenAnswer(inv -> {
+        when(keywordRetriever.retrieve(anyString(), any())).thenAnswer(inv -> {
             Thread.sleep(60_000);
             return List.of(chunk("k1"));
         });
-        when(vectorRetriever.retrieve(anyString())).thenAnswer(inv -> {
+        when(vectorRetriever.retrieve(anyString(), any())).thenAnswer(inv -> {
             Thread.sleep(60_000);
             return List.of(chunk("v1"));
         });
 
-        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题");
+        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题", null);
 
         assertThat(results).isEmpty();
     }
@@ -111,11 +112,11 @@ class HybridRetrieverTimeoutDegradationTest {
     @Test
     @DisplayName("关键词检索异常完成 → 按空结果降级，向量侧照常融合（1.7 修正穿透）")
     void keywordExceptionDegradesToVectorOnly() {
-        when(keywordRetriever.retrieve(anyString()))
+        when(keywordRetriever.retrieve(anyString(), any()))
                 .thenThrow(new RuntimeException("ES 连接失败"));
-        when(vectorRetriever.retrieve(anyString())).thenReturn(List.of(chunk("v1")));
+        when(vectorRetriever.retrieve(anyString(), any())).thenReturn(List.of(chunk("v1")));
 
-        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题");
+        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题", null);
 
         List<String> ids = results.stream().map(RetrievalResult::getChunkId).collect(Collectors.toList());
         assertThat(ids).contains("v1").doesNotContain("k1");
@@ -124,11 +125,11 @@ class HybridRetrieverTimeoutDegradationTest {
     @Test
     @DisplayName("向量检索异常完成 → 按空结果降级，关键词侧照常融合")
     void vectorExceptionDegradesToKeywordOnly() {
-        when(keywordRetriever.retrieve(anyString())).thenReturn(List.of(chunk("k1")));
-        when(vectorRetriever.retrieve(anyString()))
+        when(keywordRetriever.retrieve(anyString(), any())).thenReturn(List.of(chunk("k1")));
+        when(vectorRetriever.retrieve(anyString(), any()))
                 .thenThrow(new RuntimeException("Qdrant 连接失败"));
 
-        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题");
+        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题", null);
 
         List<String> ids = results.stream().map(RetrievalResult::getChunkId).collect(Collectors.toList());
         assertThat(ids).contains("k1").doesNotContain("v1");
@@ -137,10 +138,10 @@ class HybridRetrieverTimeoutDegradationTest {
     @Test
     @DisplayName("两侧正常返回 → 融合结果包含双侧 chunk")
     void bothOnTimeFuseBothSides() {
-        when(keywordRetriever.retrieve(anyString())).thenReturn(List.of(chunk("k1")));
-        when(vectorRetriever.retrieve(anyString())).thenReturn(List.of(chunk("v1")));
+        when(keywordRetriever.retrieve(anyString(), any())).thenReturn(List.of(chunk("k1")));
+        when(vectorRetriever.retrieve(anyString(), any())).thenReturn(List.of(chunk("v1")));
 
-        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题");
+        List<RetrievalResult> results = hybridRetriever.hybridRetrieve("测试问题", null);
 
         List<String> ids = results.stream().map(RetrievalResult::getChunkId).collect(Collectors.toList());
         assertThat(ids).contains("k1", "v1");

@@ -95,8 +95,9 @@ class QaKnowledgeCacheTest {
         stubEmptySession();
         stubRewrite(QUERY);
         List<Conversation.CitationRef> citations = List.of();
-        when(qaCacheService.getCachedAnswer(QUERY))
-                .thenReturn(Optional.of(new QaCacheService.QaCacheEntry("缓存的答案", citations, 1L)));
+        when(qaCacheService.getCachedAnswer(QUERY, null))
+                // ownerId=null → 全局共享条目，任何用户都可命中（P1-02）
+                .thenReturn(Optional.of(new QaCacheService.QaCacheEntry("缓存的答案", citations, 1L, null)));
         when(conversationRepository.saveWithReferences(
                 anyString(), anyString(), eq("缓存的答案"), any(), any())).thenReturn(99L);
 
@@ -107,7 +108,7 @@ class QaKnowledgeCacheTest {
         assertThat(answer).isEqualTo("缓存的答案");
         assertThat(tokens).containsExactly("缓存的答案");
         assertThat(messageId[0]).isEqualTo(99L);
-        verify(graphRetriever, never()).retrieve(anyString());
+        verify(graphRetriever, never()).retrieve(anyString(), any());
         verify(rerankerService, never()).rerank(anyString(), anyList());
         verify(semanticCacheService, never()).lookup(anyString(), any());
         verify(llmService, never()).generateAnswer(anyString(), anyList(), anyList());
@@ -120,7 +121,7 @@ class QaKnowledgeCacheTest {
     void semanticCacheHit_skipsRetrieval() {
         stubEmptySession();
         stubRewrite(QUERY);
-        when(qaCacheService.getCachedAnswer(QUERY)).thenReturn(Optional.empty());
+        when(qaCacheService.getCachedAnswer(QUERY, null)).thenReturn(Optional.empty());
         when(semanticCacheService.lookup(eq(QUERY), any()))
                 .thenReturn(new SemanticCacheService.SemanticCacheHit("语义相似问题的答案", List.of()));
         when(conversationRepository.saveWithReferences(
@@ -129,7 +130,7 @@ class QaKnowledgeCacheTest {
         String answer = service.askStreaming(QUERY, "s1", t -> {}, c -> {}, id -> {});
 
         assertThat(answer).isEqualTo("语义相似问题的答案");
-        verify(graphRetriever, never()).retrieve(anyString());
+        verify(graphRetriever, never()).retrieve(anyString(), any());
         verify(metrics).recordCacheHit();
     }
 
@@ -138,12 +139,12 @@ class QaKnowledgeCacheTest {
     void cacheMiss_runsRagAndPopulatesCache() {
         stubEmptySession();
         stubRewrite(QUERY);
-        when(qaCacheService.getCachedAnswer(QUERY)).thenReturn(Optional.empty());
+        when(qaCacheService.getCachedAnswer(QUERY, null)).thenReturn(Optional.empty());
         when(semanticCacheService.lookup(eq(QUERY), any())).thenReturn(null);
         RetrievalResult doc = RetrievalResult.builder()
                 .chunkId("c1").documentId("d1").documentTitle("向量检索")
                 .content("...").chunkIndex(0).score(0.9).source("keyword").build();
-        when(graphRetriever.retrieve(QUERY)).thenReturn(List.of(doc));
+        when(graphRetriever.retrieve(QUERY, null)).thenReturn(List.of(doc));
         when(rerankerService.rerank(QUERY, List.of(doc))).thenReturn(List.of(doc));
         // SSE 链路走真流式 RAG：模拟供应商逐 token 回调并返回完整答案
         when(llmService.generateAnswerStreaming(
@@ -158,7 +159,7 @@ class QaKnowledgeCacheTest {
         String answer = service.askStreaming(QUERY, "s1", t -> {}, c -> {}, id -> {});
 
         assertThat(answer).isEqualTo("新鲜 RAG 答案");
-        verify(qaCacheService).cacheAnswer(eq(QUERY), eq("新鲜 RAG 答案"), anyList());
+        verify(qaCacheService).cacheAnswer(eq(QUERY), eq("新鲜 RAG 答案"), anyList(), any());
         verify(semanticCacheService).store(eq(QUERY), eq("新鲜 RAG 答案"), anyList(), any());
         verify(metrics).recordCacheMiss();
     }
@@ -169,7 +170,7 @@ class QaKnowledgeCacheTest {
         String query = "自习室还有名额吗";
         stubEmptySession();
         stubRewrite(query);
-        when(graphRetriever.retrieve(query)).thenReturn(List.of());
+        when(graphRetriever.retrieve(query, null)).thenReturn(List.of());
         when(rerankerService.rerank(query, List.of())).thenReturn(List.of());
         when(llmService.generateAnswerWithToolsStreaming(
                 anyString(), anyList(), anyList(), any(), any(), any())).thenAnswer(inv -> {
@@ -182,9 +183,9 @@ class QaKnowledgeCacheTest {
 
         service.askStreaming(query, "s1", t -> {}, c -> {}, id -> {});
 
-        verify(qaCacheService, never()).getCachedAnswer(anyString());
+        verify(qaCacheService, never()).getCachedAnswer(anyString(), any());
         verify(semanticCacheService, never()).lookup(anyString(), any());
-        verify(qaCacheService, never()).cacheAnswer(anyString(), anyString(), anyList());
+        verify(qaCacheService, never()).cacheAnswer(anyString(), anyString(), anyList(), any());
         verify(semanticCacheService, never()).store(anyString(), anyString(), anyList(), any());
     }
 
@@ -198,7 +199,7 @@ class QaKnowledgeCacheTest {
         // 改写结果继承已累积的校区槽位（真实 rewriter 会合并会话槽位）
         when(contextualRewriter.rewrite(eq(QUERY), anyList(), any(BookingSlots.class)))
                 .thenReturn(new ContextualQueryRewriter.RewriteResult(QUERY, slots, false));
-        when(graphRetriever.retrieve(QUERY)).thenReturn(List.of());
+        when(graphRetriever.retrieve(QUERY, null)).thenReturn(List.of());
         when(rerankerService.rerank(QUERY, List.of())).thenReturn(List.of());
         when(llmService.generateAnswerWithToolsStreaming(
                 anyString(), anyList(), anyList(), any(), any(), any())).thenAnswer(inv -> {
@@ -211,7 +212,7 @@ class QaKnowledgeCacheTest {
 
         service.askStreaming(QUERY, "s1", t -> {}, c -> {}, id -> {});
 
-        verify(qaCacheService, never()).getCachedAnswer(anyString());
+        verify(qaCacheService, never()).getCachedAnswer(anyString(), any());
         verify(semanticCacheService, never()).lookup(anyString(), any());
     }
 }

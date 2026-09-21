@@ -140,7 +140,7 @@ class QaBookingConfirmFlowTest {
     void shouldDiscardStaleDraftWhenTopicChanges() {
         when(contextualRewriter.rewrite(eq("知识库怎么用"), anyList(), any(BookingSlots.class)))
                 .thenReturn(new ContextualQueryRewriter.RewriteResult("知识库怎么用", new BookingSlots(), false));
-        when(graphRetriever.retrieve("知识库怎么用")).thenReturn(List.<RetrievalResult>of());
+        when(graphRetriever.retrieve("知识库怎么用", null)).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank("知识库怎么用", List.of())).thenReturn(List.<RetrievalResult>of());
         // 5.3（深度审查 P1）：生产走 4 参 generateAnswerDirectStreaming（含 CancellationToken），
         // 原 3 参打桩与生产不匹配返回 null，掩盖流式无召回兜底缺陷；现打 4 参桩并断言真实回答被落库
@@ -162,7 +162,7 @@ class QaBookingConfirmFlowTest {
         session.setPendingBooking(null);
         when(contextualRewriter.rewrite(eq("确认"), anyList(), any(BookingSlots.class)))
                 .thenReturn(new ContextualQueryRewriter.RewriteResult("确认", new BookingSlots(), false));
-        when(graphRetriever.retrieve("确认")).thenReturn(List.<RetrievalResult>of());
+        when(graphRetriever.retrieve("确认", null)).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank("确认", List.of())).thenReturn(List.<RetrievalResult>of());
         when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any(), any()))
                 .thenReturn("请问要确认什么？");

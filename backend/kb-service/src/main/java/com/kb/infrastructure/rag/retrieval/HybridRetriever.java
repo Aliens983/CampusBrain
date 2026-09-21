@@ -59,31 +59,34 @@ public class HybridRetriever implements com.kb.domain.rag.SearchService {
     }
 
     @Override
-    public List<RetrievalResult> search(String query) {
-        return hybridRetrieve(query);
+    public List<RetrievalResult> search(String query, Long userId) {
+        return hybridRetrieve(query, userId);
     }
 
     @Override
-    public List<RetrievalResult> keywordSearch(String query) {
-        return keywordRetriever.retrieve(query);
+    public List<RetrievalResult> keywordSearch(String query, Long userId) {
+        return keywordRetriever.retrieve(query, userId);
     }
 
     @Override
-    public List<RetrievalResult> vectorSearch(String query) {
-        return vectorRetriever.retrieve(query);
+    public List<RetrievalResult> vectorSearch(String query, Long userId) {
+        return vectorRetriever.retrieve(query, userId);
     }
 
     /**
      * Execute dual-recall + RRF fusion.
+     * @param userId 由请求线程解析后显式传入（P1-01），池线程不再依赖 SecurityContext
      */
-    public List<RetrievalResult> hybridRetrieve(String query) {
+    public List<RetrievalResult> hybridRetrieve(String query, Long userId) {
         // 1. Parallel dual-recall
+        // userId 是调用方在请求线程解析好的局部变量，被 lambda 捕获后带到池线程，
+        // 不依赖任何 ThreadLocal 传播（P1-01）。
         CompletableFuture<List<RetrievalResult>> keywordFuture =
                 CompletableFuture.supplyAsync(
-                        () -> keywordRetriever.retrieve(query), executor);
+                        () -> keywordRetriever.retrieve(query, userId), executor);
         CompletableFuture<List<RetrievalResult>> vectorFuture =
                 CompletableFuture.supplyAsync(
-                        () -> vectorRetriever.retrieve(query), executor);
+                        () -> vectorRetriever.retrieve(query, userId), executor);
 
         List<RetrievalResult> keywordResults;
         List<RetrievalResult> vectorResults;

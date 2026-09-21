@@ -84,7 +84,7 @@ class QaAppServiceToolRoutingTest {
         stubSession();
         when(contextualRewriter.rewrite(eq(query), anyList(), any(BookingSlots.class)))
                 .thenReturn(new ContextualQueryRewriter.RewriteResult(query, new BookingSlots(), false));
-        when(graphRetriever.retrieve(query)).thenReturn(List.<RetrievalResult>of());
+        when(graphRetriever.retrieve(query, null)).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank(query, List.of())).thenReturn(List.<RetrievalResult>of());
         when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                 .thenReturn(1L);
@@ -137,7 +137,7 @@ class QaAppServiceToolRoutingTest {
                     .chunkId("c1").documentId("d1").documentTitle("文档")
                     .content("向量检索是...").chunkIndex(0).score(0.9).source("keyword")
                     .build();
-            when(graphRetriever.retrieve(query)).thenReturn(List.of(doc));
+            when(graphRetriever.retrieve(query, null)).thenReturn(List.of(doc));
             when(rerankerService.rerank(query, List.of(doc))).thenReturn(List.of(doc));
             when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
                     .thenReturn(1L);

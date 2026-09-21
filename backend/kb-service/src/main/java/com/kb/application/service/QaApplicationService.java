@@ -149,7 +149,7 @@ public class QaApplicationService implements IQaApplicationService {
             }
 
             // ---- Step 2: 混合检索 + 重排（SSE 链路走图谱增强检索）----
-            List<RetrievalResult> reranked = pipeline.retrieveAndRerank(rewritten, true);
+            List<RetrievalResult> reranked = pipeline.retrieveAndRerank(rewritten, true, userId);
 
             // ---- Step 3: 保存用户消息 ----
             conversationRepository.save(sid, "user", query, userId);
@@ -239,7 +239,7 @@ public class QaApplicationService implements IQaApplicationService {
             }
 
             // 同步路径走关键词检索（非图谱增强）
-            List<RetrievalResult> reranked = pipeline.retrieveAndRerank(rewritten, false);
+            List<RetrievalResult> reranked = pipeline.retrieveAndRerank(rewritten, false, userId);
 
             conversationRepository.save(sid, "user", query, userId);
             String answer = pipeline.generate(rewritten, reranked, history, session, null,

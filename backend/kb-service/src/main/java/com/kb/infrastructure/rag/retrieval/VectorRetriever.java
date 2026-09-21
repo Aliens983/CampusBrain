@@ -35,12 +35,18 @@ public class VectorRetriever {
     /**
      * Convert query to embedding and search Qdrant for similar vectors.
      */
-    public List<RetrievalResult> retrieve(String query) {
+    /**
+     * @param query   检索词
+     * @param ownerId 归属用户（null = 仅共享文档，fail-closed）
+     *                <p>
+     *                P1-01：同 {@link KeywordRetriever#retrieve(String, Long)}，
+     *                ownerId 必须由调用方显式传入，不能在池线程内取 SecurityContext。
+     */
+    public List<RetrievalResult> retrieve(String query, Long ownerId) {
         // 1. Embed the query
         float[] queryVector = embeddingService.embed(query);
 
-        // 2. Search Qdrant（4.1 深度审查 P0：带归属过滤；取不到用户则仅共享文档，fail-closed）
-        Long ownerId = SecurityFrameworkUtils.getLoginUserId();
+        // 2. Search Qdrant（带归属过滤）
         List<VectorStoreService.ScoredVector> results =
                 vectorStore.search(queryVector, topK, similarityThreshold, ownerId);
 

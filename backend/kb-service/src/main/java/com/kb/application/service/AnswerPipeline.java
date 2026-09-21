@@ -83,11 +83,15 @@ public class AnswerPipeline {
      * </ul>
      * 行为与原 QaApplicationService 的 Step 2（含检索时延埋点）完全一致。
      */
-    public List<RetrievalResult> retrieveAndRerank(String rewritten, boolean graphAssisted) {
+    /**
+     * @param userId 归属用户，显式透传到检索侧（P1-01）。检索在线程池执行，
+     *               SecurityContext 无法跨越，必须在此处（请求线程）解析后传下去。
+     */
+    public List<RetrievalResult> retrieveAndRerank(String rewritten, boolean graphAssisted, Long userId) {
         long retrievalStart = System.currentTimeMillis();
         List<RetrievalResult> retrieved = graphAssisted
-                ? graphRetriever.retrieve(rewritten)
-                : searchService.search(rewritten);
+                ? graphRetriever.retrieve(rewritten, userId)
+                : searchService.search(rewritten, userId);
         metrics.recordRetrievalLatency(System.currentTimeMillis() - retrievalStart);
         return rerankerService.rerank(rewritten, retrieved);
     }

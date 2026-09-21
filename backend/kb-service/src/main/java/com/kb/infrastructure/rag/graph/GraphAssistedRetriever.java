@@ -33,10 +33,11 @@ public class GraphAssistedRetriever {
     /**
      * 图谱增强检索
      *
-     * @param query 用户原始查询
+     * @param query  用户原始查询
+     * @param userId 归属用户（P1-01：显式传入，不在池线程取 SecurityContext）
      * @return 融合后的检索结果
      */
-    public List<RetrievalResult> retrieve(String query) {
+    public List<RetrievalResult> retrieve(String query, Long userId) {
         // Step 1: 实体扩展
         Set<String> expansions = kgService.expandQuery(query);
 
@@ -48,8 +49,8 @@ public class GraphAssistedRetriever {
             log.debug("Graph-assisted query: [{}] → [{}]", query, enhancedQuery);
         }
 
-        // Step 3: 委托标准混合检索
-        return searchService.search(enhancedQuery);
+        // Step 3: 委托标准混合检索（把 userId 透传下去）
+        return searchService.search(enhancedQuery, userId);
     }
 
 }
