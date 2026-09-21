@@ -71,11 +71,12 @@ public class QaCacheService {
      * Redis 故障时本次写入整体失败，不残留 L1 中"新写失败后继续读旧值"的脏读。
      */
     public void cacheAnswer(String query, String answer,
-                             List<Conversation.CitationRef> citations) {
+                             List<Conversation.CitationRef> citations, Long ownerId) {
         if (!cacheEnabled) {
             return;
         }
-        QaCacheEntry entry = new QaCacheEntry(answer, citations, System.currentTimeMillis());
+        // P1-02：把生成者写进条目，读侧据此判定可见性（null = 来自共享文档）
+        QaCacheEntry entry = new QaCacheEntry(answer, citations, System.currentTimeMillis(), ownerId);
         String key = keyBuilder.qaCacheKey(query);
 
         try {
@@ -89,7 +90,13 @@ public class QaCacheService {
     /**
      * 查询缓存（L1 读缓存优先 → L2 为准 → 命中后回填 L1）
      */
-    public Optional<QaCacheEntry> getCachedAnswer(String query) {
+    /**
+     * 查询缓存（L1 读缓存优先 → L2 为准 → 命中后回填 L1）
+     *
+     * @param query  问题文本
+     * @param userId 当前用户，用于归属判定（null = 只能命中全局共享条目）
+     */
+    public Optional<QaCacheEntry> getCachedAnswer(String query, Long userId) {
         if (!cacheEnabled) {
             return Optional.empty();
         }
@@ -97,6 +104,12 @@ public class QaCacheService {
 
         QaCacheEntry local = localCache.getIfPresent(key);
         if (local != null) {
+            // P1-02：本地 Caffeine 也按纯 query 共享，必须同样做归属过滤，
+            // 否则修复 P1-01（私有文档可被召回）后，私有答案会经 L1 直接泄给他人。
+            if (!isVisibleTo(local, userId)) {
+                log.debug("L1 cache hit but owner mismatch, treated as miss");
+                return Optional.empty();
+            }
             log.debug("L1 cache hit");
             return Optional.of(local);
         }
@@ -105,24 +118,49 @@ public class QaCacheService {
             String json = stringRedisTemplate.opsForValue().get(key);
             if (json != null) {
                 QaCacheEntry entry = objectMapper.readValue(json, QaCacheEntry.class);
+                if (!isVisibleTo(entry, userId)) {
+                    log.debug("L2 cache hit but owner mismatch, treated as miss");
+                    return Optional.empty();
+                }
                 localCache.put(key, entry);
-                stringRedisTemplate.opsForZSet().incrementScore(
-                        keyBuilder.hotQueriesKey(), query, 1);
+                // 热度统计与命中无关，单独兜住，失败不应影响返回
+                try {
+                    stringRedisTemplate.opsForZSet().incrementScore(
+                            keyBuilder.hotQueriesKey(), query, 1);
+                } catch (Exception hotEx) {
+                    log.debug("Failed to record hot query", hotEx);
+                }
                 log.debug("L2 cache hit, backfilled L1");
                 return Optional.of(entry);
             }
-        } catch (JsonProcessingException e) {
-            log.warn("Failed to deserialize cached QA", e);
+        } catch (Exception e) {
+            // P1-03：Redis 抖动/连接异常不应让知识类问答整体失败——缓存是可重建的
+            // 派生数据，读不到就当 miss，继续走检索 + LLM。
+            // 此前只 catch JsonProcessingException，RedisConnectionFailureException 会
+            // 直接穿透到问答兜底文案。
+            log.warn("读取问答缓存失败，降级为未命中: key={}", key, e);
         }
         return Optional.empty();
     }
 
     /**
      * 缓存实体
+     *
+     * @param ownerId 生成者；null 表示条目来自全局共享文档，任何人可命中（P1-02）
      */
     public record QaCacheEntry(String answer,
                                List<Conversation.CitationRef> citations,
-                               long cachedAt) {}
+                               long cachedAt,
+                               Long ownerId) {}
+
+    /**
+     * 缓存条目是否对当前用户可见：无主（共享）条目人人可见，有主条目仅本人可见。
+     * 与语义缓存的归属口径保持一致。
+     */
+    private boolean isVisibleTo(QaCacheEntry entry, Long userId) {
+        Long owner = entry.ownerId();
+        return owner == null || owner.equals(userId);
+    }
 
     /**
      * 清空问答缓存（L1 本地 + L2 Redis）。

@@ -62,7 +62,8 @@ public class CacheGuard {
         List<Conversation.CitationRef> citations = List.of();
         String answer = null;
 
-        var exact = qaCacheService.getCachedAnswer(rewrittenQuery);
+        // P1-02：精确缓存同样按归属过滤（此前只有语义缓存带 userId）
+        var exact = qaCacheService.getCachedAnswer(rewrittenQuery, userId);
         if (exact.isPresent()) {
             answer = exact.get().answer();
             citations = exact.get().citations() == null ? List.of() : exact.get().citations();
@@ -109,7 +110,7 @@ public class CacheGuard {
     public void populateKnowledgeCache(String rewrittenQuery, String answer,
                                        List<Conversation.CitationRef> citations, Long ownerId) {
         try {
-            qaCacheService.cacheAnswer(rewrittenQuery, answer, citations);
+            qaCacheService.cacheAnswer(rewrittenQuery, answer, citations, ownerId);
             semanticCacheService.store(rewrittenQuery, answer, citations, ownerId);
         } catch (Exception e) {
             // 缓存写入失败绝不影响主链路回答
