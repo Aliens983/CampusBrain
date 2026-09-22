@@ -128,6 +128,9 @@ services:
       FLYWAY_CLEAN_DISABLED: ${FLYWAY_CLEAN_DISABLED:-true}
       APP_REDIS_FLUSH_ON_RESET: ${APP_REDIS_FLUSH_ON_RESET:-false}
       SPRING_DATA_REDIS_PASSWORD: ${CAS_REDIS_PASSWORD:-}
+      # 首次部署可注入种子账号新口令（仅重置仍为演示口令 123456 的 11 个种子账号）；
+      # 生效后请从部署环境删除该变量
+      SEED_ACCOUNT_PASSWORD: ${SEED_ACCOUNT_PASSWORD:-}
     volumes:
       - cas-uploads:/app/uploads
     depends_on:
