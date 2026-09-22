@@ -29,7 +29,7 @@ spring:
         - id: cas-service
           uri: lb://cas-service
           predicates:
-            - Path=/api/v1/auth/**, /api/v1/captcha, /api/v1/users/**, /api/v1/admin/**, /api/v1/app/**, /api/v1/appointments/**, /api/v1/teacher/**, /api/v1/weather/**, /api/v1/uploads/**
+            - Path=/api/v1/auth/**, /api/v1/captcha, /api/v1/captcha/**, /api/v1/users/**, /api/v1/admin/**, /api/v1/app/**, /api/v1/appointments/**, /api/v1/teacher/**, /api/v1/weather/**, /api/v1/uploads/**
         # KB 服务：KB 自带 context-path=/api/v1/kb（与 CAS 同一约定），网关原样转发不剥前缀
         - id: kb-service
           uri: lb://kb-service

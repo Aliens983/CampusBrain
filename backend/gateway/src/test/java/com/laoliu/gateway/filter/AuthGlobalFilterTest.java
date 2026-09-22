@@ -82,6 +82,18 @@ class AuthGlobalFilterTest {
     }
 
     @Test
+    @DisplayName("白名单：验证码取图子路径 /api/v1/captcha/image/{uuid} 匿名放行")
+    void whitelist_captchaImage_passesWithoutJwt() {
+        invoke(exchange(MockServerHttpRequest.get(
+                "/api/v1/captcha/image/550e8400-e29b-41d4-a716-446655440000").build()));
+
+        verify(chain).filter(any(ServerWebExchange.class));
+        verify(jwtUtils, never()).getLoginUserFromToken(anyString());
+        verify(internalSigner, never()).sign(anyString(), anyString(), anyString());
+    }
+
+
+    @Test
     @DisplayName("4.14 默认关闭：/doc.html、/v3/api-docs 不再白名单，无 token 一律 401")
     void swagger_blockedByDefault() {
         MockServerWebExchange apiDocs =
