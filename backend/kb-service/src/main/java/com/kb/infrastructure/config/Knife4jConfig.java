@@ -32,8 +32,7 @@ public class Knife4jConfig {
                         .description("Enterprise Intelligent Knowledge Base Q&A Platform — "
                                 + "基于 RAG 架构的企业级知识库问答系统。\n\n"
                                 + "## 认证方式\n"
-                                + "所有业务 API 需在 Header 中携带 `Authorization: Bearer {accessToken}`。\n"
-                                + "开发环境可使用 `Authorization: Bearer test1` Mock 登录。\n\n"
+                                + "所有业务 API 需在 Header 中携带 `Authorization: Bearer {accessToken}`。\n\n"
                                 + "## 双 Token 机制\n"
                                 + "- **Access Token**：2 小时有效期，用于业务请求\n"
                                 + "- **Refresh Token**：7 天有效期，用于刷新 Access Token")

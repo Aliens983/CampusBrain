@@ -41,8 +41,9 @@ spring:
   mvc:
     async:
       request-timeout: 120s
-  profiles:
-    active: dev
+
+  # 不在 jar 内写死 spring.profiles.active：容器由 SPRING_PROFILES_ACTIVE=docker 注入，
+  # 本地开发 source scripts/load-env.sh 时默认 dev（见脚本）。未指定时走 default（INFO 日志）。
 
   # ---------- MySQL Datasource ----------
   datasource:
@@ -110,7 +111,7 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: 0
-    validate-on-migrate: false   # V1~V3 已裁剪孤儿表(2026-09-07)；服务器演示模式每次启动 clean+migrate，此项留 false 仅防本地存量库校验误报
+    validate-on-migrate: true    # 与 CAS 对齐：迁移脚本与库结构漂移必须显式暴露，避免脏 schema 静默运行
     table: flyway_schema_history
     # 默认禁用 clean：清库能力必须由部署侧显式放开（FLYWAY_CLEAN_DISABLED=false），
     # 避免误设 APP_DB_RESET_ON_STARTUP 就无声清空生产库
@@ -314,8 +315,6 @@ app:
   file-storage-path: ${FILE_STORAGE_PATH:../file}
   security:
     token-header: Authorization
-    mock-enable: false
-    mock-secret: test
     access-token-validity-seconds: 7200
     refresh-token-validity-seconds: 604800
 
@@ -350,5 +349,6 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
   level:
     root: INFO
-    com.kb: DEBUG
+    # 默认 INFO：DEBUG 会把用户提问与检索片段写入日志，仅 dev profile（application-dev.yml）开启
+    com.kb: INFO
     com.kb.infrastructure.persistence: INFO

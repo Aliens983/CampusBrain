@@ -110,8 +110,6 @@ app:
   file-storage-path: /tmp/kb-test-files
   security:
     token-header: Authorization
-    mock-enable: true
-    mock-secret: test
     access-token-validity-seconds: 7200
     refresh-token-validity-seconds: 604800
 

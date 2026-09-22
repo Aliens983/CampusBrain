@@ -23,3 +23,8 @@ else
   echo "   请先执行: cp backend/.env.example backend/.env  并填入真实值"
 fi
 set +a
+
+# 本地开发默认激活 dev profile（邮件配置、DEBUG 日志）；
+# jar 内不再写死 spring.profiles.active，容器由 compose 注入 docker。
+# 已显式设置（含 .env 中的值）时不覆盖。
+export SPRING_PROFILES_ACTIVE="${SPRING_PROFILES_ACTIVE:-dev}"

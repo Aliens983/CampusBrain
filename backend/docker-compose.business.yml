@@ -157,13 +157,15 @@ services:
       QDRANT_PORT: 6334
       JWT_SECRET: ${JWT_SECRET}
       INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
+      # 容器统一走 docker profile（INFO 日志、仅控制台输出；jar 内不再写死 active profile）
+      SPRING_PROFILES_ACTIVE: docker
       # 大模型：对话走 DeepSeek（OpenAI 兼容接口），Embedding 走硅基流动
       OPENAI_API_KEY: ${DEEPSEEK_API_KEY}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
-      # 演示模式：每次启动 flyway clean→migrate 重建 knowledge_base（AI 会话/上传文档不保留）
-      # 清库需「双开关」同时放开，缺一不可，防止误配导致生产库被清空
-      APP_DB_RESET_ON_STARTUP: "true"
-      FLYWAY_CLEAN_DISABLED: "false"
+      # 默认不清库（数据持久化）。纯演示环境在宿主机 .env 或导出环境变量显式打开：
+      # APP_DB_RESET_ON_STARTUP=true + FLYWAY_CLEAN_DISABLED=false（双开关缺一不动库）
+      APP_DB_RESET_ON_STARTUP: ${APP_DB_RESET_ON_STARTUP:-false}
+      FLYWAY_CLEAN_DISABLED: ${FLYWAY_CLEAN_DISABLED:-true}
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
     depends_on:
