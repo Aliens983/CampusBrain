@@ -19,6 +19,9 @@ spring:
     nacos:
       discovery:
         server-addr: ${NACOS_ADDR:localhost:8848}
+        # Nacos 开启鉴权时由 NACOS_USERNAME/NACOS_PASSWORD 注入；未开启时留空即可
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
     # Feign 超时：默认是连接 10s / 读取 60s。
     # 预约确认链路是「SSE → LLM → Feign → CAS」，60s 的读超时在 SSE 场景根本等不到结果，
     # 只会让 Tomcat 线程一直挂到容器超时；这里按交互式操作收紧。
@@ -63,6 +66,8 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6380}
+      # 本地开发 Redis 无口令时留空；容器由 compose 注入 KB_REDIS_PASSWORD
+      password: ${REDIS_PASSWORD:}
       timeout: 3000ms
       lettuce:
         pool:
@@ -159,6 +164,8 @@ elasticsearch:
 qdrant:
   host: ${QDRANT_HOST:localhost}
   port: ${QDRANT_PORT:6334}
+  # 本地开发不设 Key 时留空；容器由 compose 注入 QDRANT_API_KEY
+  api-key: ${QDRANT_API_KEY:}
   collection-name: kb_chunks
   vector-size: 1024
   distance: Cosine

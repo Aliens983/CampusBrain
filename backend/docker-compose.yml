@@ -20,9 +20,17 @@ services:
     restart: unless-stopped
     environment:
       MODE: standalone
+      # 鉴权默认关闭（本地开发）；部署到非可信网络时在 .env 置 NACOS_AUTH_ENABLE=true
+      # 并填写下面四项（token 需 Base64 编码且长度 ≥ 32 字节），同时给各业务服务
+      # 配置 NACOS_USERNAME / NACOS_PASSWORD
+      NACOS_AUTH_ENABLE: ${NACOS_AUTH_ENABLE:-false}
+      NACOS_AUTH_TOKEN: ${NACOS_AUTH_TOKEN:-}
+      NACOS_AUTH_IDENTITY_KEY: ${NACOS_AUTH_IDENTITY_KEY:-}
+      NACOS_AUTH_IDENTITY_VALUE: ${NACOS_AUTH_IDENTITY_VALUE:-}
     ports:
-      - "8848:8848"
-      - "9848:9848"
+      # 仅绑回环：注册中心不对宿主机所在网络暴露
+      - "127.0.0.1:8848:8848"
+      - "127.0.0.1:9848:9848"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8848/nacos/v1/console/health/readiness || exit 1"]
       interval: 10s
@@ -38,7 +46,8 @@ services:
       MYSQL_ROOT_PASSWORD: ${KB_MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: knowledge_base
     ports:
-      - "3307:3306"
+      # 仅绑回环：数据库不对宿主机所在网络暴露，调试可用 127.0.0.1:3307
+      - "127.0.0.1:3307:3306"
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       - kb-mysql-data:/var/lib/mysql
@@ -53,12 +62,18 @@ services:
     image: redis:7.2-alpine
     container_name: kb-redis
     restart: unless-stopped
+    environment:
+      # 留空则不启用口令（本地开发）；部署时在 .env 设置 KB_REDIS_PASSWORD
+      KB_REDIS_PASSWORD: ${KB_REDIS_PASSWORD:-}
+    # requirepass 传空串等价于关闭认证（Redis 语义），保证留空时本地行为不变
+    command: ["sh", "-c", "exec redis-server --requirepass \"$${KB_REDIS_PASSWORD}\""]
     ports:
-      - "6380:6379"
+      # 仅绑回环：Redis 内有验证码/会话等明文数据，不向宿主机所在网络暴露
+      - "127.0.0.1:6380:6379"
     volumes:
       - kb-redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD-SHELL", "redis-cli $${KB_REDIS_PASSWORD:+-a $$KB_REDIS_PASSWORD} --no-auth-warning ping | grep -q PONG"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -72,7 +87,9 @@ services:
       - xpack.security.enabled=false
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
-      - "9200:9200"
+      # ES 未启用 xpack 安全模块（演示单机部署），故只绑回环，不向宿主机所在网络暴露；
+      # 业务流量走容器内网。需要跨主机访问时必须先开启 xpack 安全与 HTTPS
+      - "127.0.0.1:9200:9200"
     volumes:
       - kb-es-data:/usr/share/elasticsearch/data
     healthcheck:
@@ -86,9 +103,13 @@ services:
     image: qdrant/qdrant:v1.9.0
     container_name: kb-qdrant
     restart: unless-stopped
+    environment:
+      # API Key 留空则不鉴权（本地开发）；部署时在 .env 设置 QDRANT_API_KEY
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
     ports:
-      - "6333:6333"
-      - "6334:6334"
+      # 仅绑回环：向量库不对宿主机所在网络暴露
+      - "127.0.0.1:6333:6333"
+      - "127.0.0.1:6334:6334"
     volumes:
       - kb-qdrant-data:/qdrant/storage
     healthcheck:
@@ -106,8 +127,9 @@ services:
       RABBITMQ_DEFAULT_USER: admin
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      # 仅绑回环（AMQP 与管理台均已设口令，管理台仍不对宿主机所在网络暴露）
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
     volumes:
       - kb-rabbitmq-data:/var/lib/rabbitmq
       # 除管理插件外启用内置 rabbitmq_prometheus（容器内 15692/metrics，供 Prometheus 抓队列积压）

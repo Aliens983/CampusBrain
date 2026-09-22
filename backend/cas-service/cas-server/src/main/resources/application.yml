@@ -12,9 +12,14 @@ spring:
     nacos:
       discovery:
         server-addr: ${NACOS_ADDR:localhost:8848}
+        # Nacos 开启鉴权时由 NACOS_USERNAME/NACOS_PASSWORD 注入；未开启时留空即可
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
       config:
         server-addr: ${NACOS_ADDR:localhost:8848}
         file-extension: yaml
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
     sentinel:
       datasource:
         flow:
@@ -59,6 +64,8 @@ spring:
     redis:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
+      # 本地开发 Redis 无口令时留空；容器由 compose 注入 CAS_REDIS_PASSWORD
+      password: ${SPRING_DATA_REDIS_PASSWORD:${REDIS_PASSWORD:}}
       database: 0
 
   # Flyway 数据库迁移：启动自动执行 classpath:db/migration 下的 V*.sql

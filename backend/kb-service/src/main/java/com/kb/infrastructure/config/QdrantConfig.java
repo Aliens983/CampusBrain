@@ -24,13 +24,18 @@ public class QdrantConfig {
     @Value("${qdrant.port}")
     private int port;
 
+    /** Qdrant 服务 API Key；本地开发未启用鉴权时为空 */
+    @Value("${qdrant.api-key:}")
+    private String apiKey;
+
     @Bean
     public QdrantClient qdrantClient() {
         String resolvedHost = "localhost".equals(host) ? "127.0.0.1" : host;
-        return new QdrantClient(
-                QdrantGrpcClient.newBuilder(resolvedHost, port, false)
-                        .withTimeout(Duration.ofSeconds(30))
-                        .build()
-        );
+        QdrantGrpcClient.Builder builder = QdrantGrpcClient.newBuilder(resolvedHost, port, false)
+                .withTimeout(Duration.ofSeconds(30));
+        if (apiKey != null && !apiKey.isBlank()) {
+            builder.withApiKey(apiKey);
+        }
+        return new QdrantClient(builder.build());
     }
 }

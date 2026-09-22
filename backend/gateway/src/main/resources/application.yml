@@ -8,6 +8,9 @@ spring:
     nacos:
       discovery:
         server-addr: ${NACOS_ADDR:localhost:8848}
+        # Nacos 开启鉴权时由 NACOS_USERNAME/NACOS_PASSWORD 注入；未开启时留空即可
+        username: ${NACOS_USERNAME:}
+        password: ${NACOS_PASSWORD:}
     gateway:
       # CORS 唯一入口（4.1.8）：所有跨域在网关统一处理，
       # 下游 CAS/KB 不再各自配置，避免「同一域名两处配、漏配一处部分接口失败」。
