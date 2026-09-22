@@ -11,6 +11,7 @@ import com.laoliu.auth.dto.LoginUser;
 import com.laoliu.cas.system.interfaces.dto.request.UserRegisterRequest;
 import com.laoliu.cas.system.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -184,7 +185,13 @@ public class AuthService {
                 .password(encodedPassword)
                 .build();
 
-        User savedUser = userRepository.save(user);
-        return savedUser.getId();
+        try {
+            User savedUser = userRepository.save(user);
+            return savedUser.getId();
+        } catch (DuplicateKeyException e) {
+            // 邮箱唯一索引兜底：两个请求同时通过前面的「先查」并发注册时，
+            // 数据库拒绝第二个插入，统一返回「邮箱已注册」而非把 1062 抛成 500
+            throw new BusinessException(UserErrorCode.USER_ALREADY_EXISTS);
+        }
     }
 }

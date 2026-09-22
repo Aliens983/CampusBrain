@@ -18,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -338,6 +339,24 @@ class AuthServiceTest {
             // Given
             UserRegisterRequest request = buildRegisterRequest();
             when(userRepository.getUserIdByEmail(EMAIL)).thenReturn(USER_ID);
+
+            // When & Then
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> authService.register(request));
+            assertEquals(UserErrorCode.USER_ALREADY_EXISTS.getCode(), exception.getCode());
+        }
+
+        @Test
+        @DisplayName("并发注册：先查未命中但插入触发唯一索引冲突时，转成 USER_ALREADY_EXISTS")
+        void shouldThrowUserAlreadyExistsWhenDuplicateKeyAtInsert() {
+            // Given：两个请求都通过「先查」，第二个在数据库层撞唯一索引
+            UserRegisterRequest request = buildRegisterRequest();
+            String redisKey = "verification_code:" + EMAIL;
+            when(userRepository.getUserIdByEmail(EMAIL)).thenReturn(null);
+            when(redisUtil.getVerificationCode(redisKey)).thenReturn(VERIFICATION_CODE);
+            passwordUtilsMock.when(() -> PasswordUtils.encode(PASSWORD)).thenReturn(ENCODED_PASSWORD);
+            when(userRepository.save(any(User.class)))
+                    .thenThrow(new DuplicateKeyException("Duplicate entry 'test@example.com' for key 'uk_user_email'"));
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
