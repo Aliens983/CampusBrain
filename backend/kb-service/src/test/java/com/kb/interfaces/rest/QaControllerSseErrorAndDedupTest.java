@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,7 +63,8 @@ class QaControllerSseErrorAndDedupTest {
         assertThat(events).extracting(ServerSentEvent::event)
                 .contains("error");
         assertThat(String.valueOf(events.get(events.size() - 1).data())).isEqualTo("[DONE]");
-        verify(limiter).release();
+        // doFinally 在 boundedElastic 线程异步触发，低配 CI runner 上需等待窗口，避免与 block 返回竞态
+        verify(limiter, timeout(2000)).release();
     }
 
     @Test
@@ -106,6 +108,6 @@ class QaControllerSseErrorAndDedupTest {
                 .block(Duration.ofSeconds(5));
 
         assertThat(String.valueOf(events.get(0).data())).isEqualTo("答案");
-        verify(limiter).release();
+        verify(limiter, timeout(2000)).release();
     }
 }
