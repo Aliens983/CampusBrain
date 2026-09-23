@@ -2,7 +2,6 @@ package com.kb.interfaces.rest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kb.application.service.IQaApplicationService;
-import com.kb.domain.chat.AssistantEvent;
 import com.kb.infrastructure.concurrency.SseConcurrencyLimiter;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,6 +77,7 @@ class QaControllerSseConcurrencyTest {
         assertThat(events).hasSize(2);
         assertThat(String.valueOf(events.get(0).data())).isEqualTo("答案片段");
         assertThat(String.valueOf(events.get(1).data())).isEqualTo("[DONE]");
-        verify(limiter).release();
+        // doFinally 在终止信号之后异步触发，需留等待窗口，避免与有界弹性线程调度竞态
+        verify(limiter, timeout(2000)).release();
     }
 }
