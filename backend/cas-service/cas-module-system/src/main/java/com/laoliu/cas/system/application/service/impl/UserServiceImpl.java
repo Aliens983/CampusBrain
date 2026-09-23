@@ -5,6 +5,7 @@ import com.laoliu.cas.common.result.PageResult;
 import com.laoliu.cas.system.application.service.UserService;
 import com.laoliu.cas.system.domain.entity.User;
 import com.laoliu.cas.system.domain.repository.UserRepository;
+import com.laoliu.cas.system.interfaces.convert.UserConvert;
 import com.laoliu.cas.system.interfaces.dto.response.BookingRecordResponse;
 import com.laoliu.cas.system.interfaces.dto.response.UserInfoAndServicesViaMPResponse;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,8 @@ public class UserServiceImpl implements UserService {
     public UserInfoAndServicesViaMPResponse getUserInfoAndBookings(Long userId) {
         User user = userRepository.findById(userId).orElse(null);
         UserInfoAndServicesViaMPResponse resp = new UserInfoAndServicesViaMPResponse();
-        resp.setUser(user);
+        // 经 UserResponse 投影输出，密码哈希不进入响应体
+        resp.setUser(UserConvert.INSTANCE.convert(user));
         resp.setBookings(userRepository.getAllBookings(userId));
         return resp;
     }

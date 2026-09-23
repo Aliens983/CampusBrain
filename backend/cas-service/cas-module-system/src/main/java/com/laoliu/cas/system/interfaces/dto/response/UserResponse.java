@@ -36,6 +36,6 @@ public class UserResponse implements Serializable {
     @Schema(description = "邮箱", requiredMode = Schema.RequiredMode.REQUIRED, example = "user@example.com")
     private String email;
 
-    @Schema(description = "角色（1-普通用户，2-管理员，3-超级管理员）", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @Schema(description = "角色（0-普通用户，1-管理员，2-超级管理员，3-教师）", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")
     private Integer role;
 }

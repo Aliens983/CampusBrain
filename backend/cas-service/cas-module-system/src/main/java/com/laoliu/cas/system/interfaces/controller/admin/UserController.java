@@ -65,7 +65,7 @@ public class UserController {
             }
             log.info("获取用户信息成功，用户 ID：{}", userId);
             User user = userRepository.findById(userId).orElse(null);
-            log.info("User :{}", user);
+            // 不得 log 整个 User：toString 含 BCrypt 密码哈希；且响应经 UserResponse 投影
             return CommonResult.success(UserConvert.INSTANCE.convert(user));
         } catch (Exception e) {
             log.error("获取用户信息失败", e);
@@ -206,7 +206,8 @@ public class UserController {
         Long userId = getUserIdViaTokenApi.getUserId();
         var bookingsPage = userService.getUserBookings(userId, pageParam.getPageNo(), pageParam.getPageSize());
         UserInfoAndServicesViaMPResponse resp = new UserInfoAndServicesViaMPResponse();
-        resp.setUser(userRepository.findById(userId).orElse(null));
+        // 经 UserResponse 投影输出，密码哈希不进入响应体
+        resp.setUser(UserConvert.INSTANCE.convert(userRepository.findById(userId).orElse(null)));
         resp.setBookings(bookingsPage.getRecords());
         return CommonResult.success(resp);
     }

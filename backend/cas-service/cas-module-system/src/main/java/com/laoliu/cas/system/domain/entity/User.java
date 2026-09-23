@@ -40,7 +40,8 @@ public class User implements Serializable {
     /** 邮箱 */
     private String email;
 
-    /** 密码 */
+    /** 密码（BCrypt 哈希）：永不进日志，toString 排除，避免误打实体时外泄 */
+    @ToString.Exclude
     private String password;
 
     /** 角色 */

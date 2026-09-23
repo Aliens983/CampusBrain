@@ -8,6 +8,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 import java.io.Serializable;
 
@@ -41,10 +42,11 @@ public class UserDO implements Serializable {
     /** 邮箱 */
     private String email;
 
-    /** 密码 */
+    /** 密码（BCrypt 哈希）：排除出 toString，防止误打 DO 时把哈希写入日志 */
+    @ToString.Exclude
     private String password;
 
-    /** 角色（1-普通用户，2-管理员，3-超级管理员） */
+    /** 角色（0-普通用户，1-管理员，2-超级管理员，3-教师） */
     private Integer role;
 
     public User toEntity() {
