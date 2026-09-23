@@ -41,9 +41,9 @@ class QaControllerSseConcurrencyTest {
     @DisplayName("并发名额已满：返回 503，不调用问答服务，也不释放名额")
     void shouldReturn503WhenConcurrencyFull() {
         when(limiter.tryAcquire()).thenReturn(false);
-        QaController controller = new QaController(qaService, new ObjectMapper(), limiter);
+        QaController controller = new QaController(qaService, new ObjectMapper(), limiter, null);
 
-        Flux<ServerSentEvent<?>> flux = controller.askStreaming("什么是 RAG？", "s1");
+        Flux<ServerSentEvent<?>> flux = controller.askStreaming("什么是 RAG？", "s1", null);
 
         assertThatThrownBy(() -> flux.blockLast(Duration.ofSeconds(2)))
                 .isInstanceOf(ResponseStatusException.class)
@@ -66,10 +66,10 @@ class QaControllerSseConcurrencyTest {
                     onToken.accept("答案片段");
                     return "完整答案";
                 });
-        QaController controller = new QaController(qaService, new ObjectMapper(), limiter);
+        QaController controller = new QaController(qaService, new ObjectMapper(), limiter, null);
 
         List<ServerSentEvent<?>> events = controller
-                .askStreaming("什么是 RAG？", "s1")
+                .askStreaming("什么是 RAG？", "s1", null)
                 .collectList()
                 .block(Duration.ofSeconds(5));
 

@@ -157,6 +157,20 @@ class QaBookingConfirmFlowTest {
     }
 
     @Test
+    @org.mockito.junit.jupiter.MockitoSettings(strictness = org.mockito.quality.Strictness.LENIENT)
+    @DisplayName("会话载入（Redis）失败：走统一错误分支返回通用文案，不向上抛触发 SSE 传输错误")
+    void shouldReturnFriendlyErrorWhenSessionLoadFails() {
+        org.mockito.Mockito.doThrow(new org.springframework.data.redis.RedisConnectionFailureException("redis down"))
+                .when(chatSessionRepository).loadForUser(anyString(), any());
+
+        String answer = service.askStreaming("你好", "s1", 1L,
+                com.kb.domain.rag.CancellationToken.none(),
+                t -> {}, c -> {}, id -> {}, e -> {});
+
+        assertTrue(answer.contains("错误") && answer.contains("稍后再试"), answer);
+    }
+
+    @Test
     @DisplayName("CAS 调用失败 → 保留待确认草稿与槽位，提示稍后重试，不清状态")
     void shouldKeepPendingWhenCasConfirmFails() {
         // 预置槽位，验证失败重试路径不被清空

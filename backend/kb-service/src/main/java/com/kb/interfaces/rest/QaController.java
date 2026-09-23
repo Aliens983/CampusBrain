@@ -22,11 +22,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Flux;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 
 /**
  * REST controller for Q&A with SSE streaming.
@@ -42,6 +45,12 @@ public class QaController {
     /** 流式结束信号：前端收到后才主动 close，避免 EventSource 走 error 并自动重连 */
     private static final String DONE_SIGNAL = "[DONE]";
 
+    /** 业务终止事件（区别于传输层 onerror）：前端按终态错误关闭连接、展示提示，不自动重连 */
+    private static final String ERROR_EVENT = "error";
+
+    /** 同一 requestId 防重复提交（EventSource 异常自动重连会原样重发 GET）的在途窗口 */
+    private static final Duration REQUEST_INFLIGHT_TTL = Duration.ofMinutes(3);
+
     /** Q&A 应用服务 */
     private final IQaApplicationService qaService;
 
@@ -50,6 +59,9 @@ public class QaController {
 
     /** SSE 在途连接的全局限流器：并发问答数超出上限时快速失败，防止慢 LLM 拖垮实例 */
     private final SseConcurrencyLimiter sseConcurrencyLimiter;
+
+    /** 在途问答幂等闸（同用户 + requestId）；Redis 故障时 fail-open，不因旁路设施挡住问答 */
+    private final StringRedisTemplate redisTemplate;
 
     /**
      * Streaming Q&A via Server-Sent Events.
@@ -85,16 +97,23 @@ public class QaController {
     @GetMapping(value = "/ask/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<?>> askStreaming(
             @Parameter(description = "用户问题") @RequestParam String query,
-            @Parameter(description = "会话 ID，不传则自动生成新会话") @RequestParam(required = false, defaultValue = "") String sessionId) {
+            @Parameter(description = "会话 ID，不传则自动生成新会话") @RequestParam(required = false, defaultValue = "") String sessionId,
+            @Parameter(description = "本轮请求 ID，用于在途幂等去重") @RequestParam(required = false) String requestId) {
 
         // 在 Servlet 线程内解析身份：SSE 的 Flux 会在异步线程执行，
         // 不能依赖 SecurityContext 的线程继承
         Long userId = SecurityFrameworkUtils.getLoginUserId();
 
+        // 在途幂等闸：EventSource 遇到传输错误会自动用同一 URL 重发，同一轮问答
+        // （含同一 requestId）在途重复到达时直接 409，避免重复落库/重复计费/重复触发
+        // 待确认预约。Redis 故障 fail-open：旁路幂等设施不能挡住正常问答。
+        String inflightKey = acquireInflightSlot(userId, requestId);
+
         // 实例级 SSE 并发兜底：在响应头未提交前拒绝，直接返回 HTTP 503
         // （此时还未建立 text/event-stream 响应，前端可按普通错误提示重试）
         if (!sseConcurrencyLimiter.tryAcquire()) {
             log.warn("SSE 问答并发已达上限 {}，拒绝新连接", sseConcurrencyLimiter.getMaxConcurrent());
+            releaseInflightSlot(inflightKey);
             return Flux.error(new ResponseStatusException(
                     HttpStatus.SERVICE_UNAVAILABLE, "当前问答用户较多，请稍后再试"));
         }
@@ -163,8 +182,22 @@ public class QaController {
                     // 断连收尾过程中产生的异常不再向已死的 sink 传播
                     log.debug("SSE 已取消，忽略收尾异常: {}", e.toString());
                 } else {
+                    // 不能 sink.error：那是传输层错误，浏览器 EventSource 会自动重连并
+                    // 原样重发 GET，整轮问答重跑（重复落库、重复调 LLM、甚至重复执行
+                    // 待确认预约）。改为在 HTTP 200 的 SSE 流内发终止 error 事件 +
+                    // DONE 后正常 complete，前端据终态事件关闭连接、展示提示。
                     log.error("SSE streaming error", e);
-                    sink.error(e);
+                    try {
+                        sink.next(ServerSentEvent.builder()
+                                .event(ERROR_EVENT)
+                                .data(objectMapper.writeValueAsString(Map.of(
+                                        "message", "服务处理本次问答时出错，请稍后再试")))
+                                .build());
+                        sink.next(ServerSentEvent.builder().data(DONE_SIGNAL).build());
+                        sink.complete();
+                    } catch (Exception terminalEx) {
+                        log.debug("发送 SSE 终止事件失败，连接可能已断开: {}", terminalEx.toString());
+                    }
                 }
             }
         })
@@ -172,9 +205,49 @@ public class QaController {
         // 而 askStreaming 全程同步阻塞（检索 + LLM + Feign），会一直占住 Tomcat 工作线程。
         // 并发问答数因此约等于可用线程数，LLM 变慢时少量请求即可打满、健康检查也挂。
         .subscribeOn(Schedulers.boundedElastic())
-        // 无论正常结束、异常还是客户端断开（cancel），都归还并发名额。
+        // 无论正常结束、异常还是客户端断开（cancel），都归还并发名额并释放在途幂等槽。
         // 许可在控制器方法体内、Flux 订阅前获取，doFinally 恰好触发一次，保证不漏不重。
-        .doFinally(signal -> sseConcurrencyLimiter.release());
+        .doFinally(signal -> {
+            sseConcurrencyLimiter.release();
+            releaseInflightSlot(inflightKey);
+        });
+    }
+
+    /**
+     * 在途幂等槽：同用户 + requestId 的问答仍在处理时占用 Redis NX 键。
+     * 重复请求（典型来源：EventSource 传输错误后的自动重连）直接 409；
+     * 键带 3 分钟 TTL，即使在途实例崩溃也会自动过期。Redis 故障 fail-open。
+     */
+    private String acquireInflightSlot(Long userId, String requestId) {
+        if (requestId == null || requestId.isBlank()) {
+            return null;
+        }
+        String key = "qa:stream:inflight:" + (userId == null ? "anon" : userId) + ":" + requestId;
+        try {
+            Boolean acquired = redisTemplate.opsForValue()
+                    .setIfAbsent(key, "1", REQUEST_INFLIGHT_TTL);
+            if (Boolean.FALSE.equals(acquired)) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT, "相同请求正在处理中，请勿重复提交");
+            }
+            return key;
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            log.warn("在途幂等闸不可用，放行本次问答: {}", e.toString());
+            return null;
+        }
+    }
+
+    /** 释放在途幂等槽（Redis 故障仅记日志，键会自行靠 TTL 过期） */
+    private void releaseInflightSlot(String inflightKey) {
+        if (inflightKey == null) {
+            return;
+        }
+        try {
+            redisTemplate.delete(inflightKey);
+        } catch (Exception e) {
+            log.debug("释放在途幂等槽失败，等待 TTL 过期: key={}", inflightKey);
+        }
     }
 
     @RateLimit(permits = 30, seconds = 60, message = "问答请求过于频繁，请稍后再试")

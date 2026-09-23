@@ -114,7 +114,6 @@ public class QaApplicationService implements IQaApplicationService {
         long startTime = System.currentTimeMillis();
         String sid = ensureSessionId(sessionId);
         Long userId = currentUserId != null ? currentUserId : SecurityFrameworkUtils.getLoginUserId();
-        ChatSession session = chatSessionRepository.loadForUser(sid, userId);
 
         // 累积本次已生成的回答：客户端中途断连时用于尽力落库已生成部分，
         // 同时所有下游回调统一走 tokenCollector（回调本身可感知 sink 已取消）。
@@ -126,7 +125,13 @@ public class QaApplicationService implements IQaApplicationService {
             }
         };
 
+        // 会话载入纳入 try：此前 loadForUser 在 try 之外，Redis 故障会直接抛出
+        // （SSE 控制器只能 sink.error → 浏览器自动重连重发）；现统一走错误分支，
+        // 落通用错误回答并由控制器发终止事件，不触发重连。
+        ChatSession session;
         try {
+            session = chatSessionRepository.loadForUser(sid, userId);
+
             // ---- Step 0: 上一轮遗留的"待确认动作"优先处理 ----
             String handledAction = handlePendingBookingAction(query, sid, userId, session,
                     tokenCollector, onCitations, onMessageId, onEvent, startTime);

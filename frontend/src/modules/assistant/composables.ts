@@ -271,7 +271,7 @@ export function useQaPortal() {
     query.value = ''
     scrollToBottom()
 
-    const params = new URLSearchParams({ query: q, sessionId: currentSessionId.value, token: userStore.token })
+    const params = new URLSearchParams({ query: q, sessionId: currentSessionId.value, token: userStore.token, requestId: uuid() })
     es = new EventSource(`${BASE}/qa/ask/stream?${params.toString()}`)
     // 看门狗：服务端既不返回也不关闭连接时（LLM 挂起、网关丢连接），
     // streaming 会永远为 true，输入框被永久锁死，只能刷新页面。
@@ -316,6 +316,18 @@ export function useQaPortal() {
       aiMsg.content += event.data
       scheduleScroll()
     }
+    // 服务端业务终态错误（HTTP 200 的 SSE 流内 error 事件）：按终态收尾并
+    // close 连接——它不是传输层错误，绝不能让 EventSource 自动重连把同一轮
+    // 问答（含相同 requestId）原样重发。真正的传输层错误才走下方 onerror。
+    es.addEventListener('error', event => {
+      let msg = '服务处理本次问答时出错，请稍后再试'
+      try {
+        const data = JSON.parse((event as MessageEvent).data) as { message?: string }
+        if (data?.message) msg = data.message
+      } catch { /* 非 JSON 错误体时使用通用文案 */ }
+      aiMsg.content += (aiMsg.content ? '\n\n' : '') + `（${msg}）`
+      stopStream(aiMsg, q)
+    })
     es.onerror = () => {
       if (!aiMsg.content) aiMsg.content = '连接失败，请确认后端服务已启动。'
       stopStream(aiMsg, q)
