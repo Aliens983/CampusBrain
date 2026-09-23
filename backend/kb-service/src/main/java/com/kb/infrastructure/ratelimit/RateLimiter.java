@@ -1,6 +1,7 @@
 package com.kb.infrastructure.ratelimit;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,7 @@ import java.util.UUID;
  *
  * @author forever-king
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class RateLimiter {
@@ -62,14 +64,23 @@ public class RateLimiter {
     public boolean isAllowed(String redisKey, int permits, int seconds) {
         long now = System.currentTimeMillis();
 
-        Long result = stringRedisTemplate.execute(
-                new DefaultRedisScript<>(LUA_SCRIPT, Long.class),
-                List.of(redisKey),
-                String.valueOf(now),
-                String.valueOf(seconds),
-                String.valueOf(permits),
-                UUID.randomUUID().toString()
-        );
-        return result != null && result == 1;
+        try {
+            Long result = stringRedisTemplate.execute(
+                    new DefaultRedisScript<>(LUA_SCRIPT, Long.class),
+                    List.of(redisKey),
+                    String.valueOf(now),
+                    String.valueOf(seconds),
+                    String.valueOf(permits),
+                    UUID.randomUUID().toString()
+            );
+            return result != null && result == 1;
+        } catch (Exception e) {
+            // 限流是旁路保护设施，Redis 故障（宕机/连接拒绝/超时）时 fail-open：
+            // 若 fail-closed，Redis 一抖动所有接口（问答/登录/上传）会整体不可用，
+            // 故障面被中间件放大；放行后由网关并发闸、服务自身容量兜底。
+            log.warn("限流器 Redis 不可用，本次请求 fail-open 放行: key={}, cause={}",
+                    redisKey, e.toString());
+            return true;
+        }
     }
 }
