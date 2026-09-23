@@ -41,8 +41,10 @@ public class AdminCreateUserRequest {
     @Schema(description = "密码", requiredMode = Schema.RequiredMode.REQUIRED, example = "password123")
     private String password;
 
-    @Min(value = 0, message = "角色值必须为0/1/2")
-    @Max(value = 2, message = "角色值必须为0/1/2")
-    @Schema(description = "角色（0=普通用户, 1=管理员, 2=超级管理员）", example = "1")
+    // Bean Validation 只做基础范围；「不可创建超级管理员(2)」的提权防护在控制层
+    // 复用 RolePolicy.isAssignableUserRole 统一判据（与管理员改角色同一口径）。
+    @Min(value = 0, message = "角色值必须为0/1/3")
+    @Max(value = 3, message = "角色值必须为0/1/3")
+    @Schema(description = "角色（0=普通用户, 1=管理员, 3=教师；不支持创建超级管理员）", example = "0")
     private Integer role;
 }

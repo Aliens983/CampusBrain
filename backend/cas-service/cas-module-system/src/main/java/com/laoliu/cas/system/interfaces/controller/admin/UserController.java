@@ -3,6 +3,7 @@ package com.laoliu.cas.system.interfaces.controller.admin;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.common.annotation.RequireRole;
 import com.laoliu.cas.common.api.GetUserIdViaTokenApi;
+import com.laoliu.auth.policy.RolePolicy;
 import com.laoliu.cas.common.pojo.PageParam;
 import com.laoliu.cas.system.domain.entity.User;
 import com.laoliu.cas.common.enums.UserRoleEnum;
@@ -107,12 +108,20 @@ public class UserController {
                 return CommonResult.badRequest("该邮箱已被注册");
             }
 
+            // 提权防护：可分配角色集合与「管理员改角色」共用 RolePolicy 唯一判据——
+            // 仅 0 普通用户 / 1 管理员 / 3 教师；超级管理员(2) 不可经接口创建，
+            // null 视为普通用户(0)
+            Integer targetRole = request.getRole() != null ? request.getRole() : 0;
+            if (!RolePolicy.isAssignableUserRole(targetRole)) {
+                return CommonResult.badRequest("角色仅支持 0 普通用户 / 1 管理员 / 3 教师，不能创建超级管理员");
+            }
+
             User user = User.builder()
                     .name(request.getName()).email(request.getEmail())
                     .password(PasswordUtils.encode(request.getPassword()))
                     .grade(request.getGrade()).sex(request.getSex())
                     .age(request.getAge())
-                    .role(request.getRole() != null ? request.getRole() : 0)
+                    .role(targetRole)
                     .build();
 
             userRepository.save(user);
