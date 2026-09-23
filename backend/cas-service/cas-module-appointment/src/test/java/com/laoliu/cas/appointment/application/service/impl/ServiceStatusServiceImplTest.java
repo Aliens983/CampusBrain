@@ -89,6 +89,9 @@ class ServiceStatusServiceImplTest {
                     eq(List.of(ManageStatus.SUBMIT)));
             verify(bookingRepository).getUserEmailByOrderId(VALID_ORDER_ID);
             verify(emailService).sendEmail(eq("test@example.com"), contains("通过"), anyString());
+            // 审核通过必须发 APPROVED 事件，驱动 KB 失效问答/语义缓存
+            verify(bookingEventPublisher)
+                    .publishChanged(BOOKING_USER_ID, BOOKING_SERVICE_ID, "APPROVED");
         }
 
         @Test
@@ -166,6 +169,9 @@ class ServiceStatusServiceImplTest {
             verify(bookingRepository).auditService(eq(VALID_ORDER_ID), eq(ManageStatus.REJECTED.getCode()), eq(reason),
                     eq(List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED)));
             verify(emailService).sendEmail(eq("student@example.com"), contains("未通过"), contains(reason));
+            // 审核拒绝回补余量/时段后必须发 REJECTED 事件，避免 KB 缓存继续返回过期可约答案
+            verify(bookingEventPublisher)
+                    .publishChanged(BOOKING_USER_ID, BOOKING_SERVICE_ID, "REJECTED");
         }
 
         @Test

@@ -89,6 +89,11 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         }
         bookingMetrics.recordAudit(true, source, System.nanoTime() - startNanos);
 
+        // 审核通过同样改变「可约状态 / 我的预约」，必须发事件让 KB 失效问答与语义缓存，
+        // 否则旧答案（如仍显示待审核/不可约）会继续命中缓存返回；afterCommit 发送，回滚不发
+        bookingEventPublisher.publishChanged(
+                serviceInfo.getUserId(), serviceInfo.getServiceId(), "APPROVED");
+
         // 3.1.8：邮件措辞区分审核人（咨询师本人 vs 管理员）
         String emailContent = "您好！您的预约已通过" + source.reviewerLabel() + "审核。\n预约服务："
                 + serviceInfo.getServiceName()
@@ -134,6 +139,11 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         bookingRepository.releaseStockByOrderId(orderId);
         // 咨询时段预约：同时释放占用的老师时段
         bookingRepository.releaseSlotByOrderId(orderId);
+
+        // 拒绝改变可约余量/时段与「我的预约」，同样必须发事件失效 KB 问答/语义缓存
+        // （此前只有强制取消/完结发事件，审核两类操作静默导致缓存答案过期）
+        bookingEventPublisher.publishChanged(
+                serviceInfo.getUserId(), serviceInfo.getServiceId(), "REJECTED");
 
         // 3.1.8：邮件措辞区分审核人（咨询师本人 vs 管理员）
         String emailContent = "您好！您的预约未通过" + source.reviewerLabel() + "审核。\n预约服务："
