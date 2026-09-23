@@ -217,14 +217,24 @@ public class PendingBookingExecutor {
             } else if (result.isSuccess() && result.getData() != null) {
                 answer = result.getData().getMessage();
             } else {
-                answer = "操作失败：" + (result.getMessage() == null ? "预约服务返回异常" : result.getMessage());
+                answer = "操作失败：" + (result.getMessage() == null ? "预约服务返回异常" : result.getMessage())
+                        + "。请稍后重新回复「确认」再试一次。";
             }
         }
 
-        session.setPendingBooking(null);
-        // 预约完成后清空槽位，避免下一次提问沿用已完成的预约条件
-        if (confirmed) {
-            session.setSlots(new BookingSlots());
+        // CAS 调用失败（503 不可用 / 业务失败）时不能清空 pending：此前失败也落 null，
+        // 用户再次「确认」时已无待执行动作，只能从头重填整张预约单。改为保留 pending
+        // （仍受 10 分钟 TTL 约束）与槽位，用户可直接再回复「确认」重试；
+        // 仅用户主动放弃 或 CAS 真正成功才收尾清空。
+        boolean casSucceeded = confirmed
+                && result != null && result.isSuccess() && result.getData() != null;
+        if (!confirmed || casSucceeded) {
+            session.setPendingBooking(null);
+            // 预约完成后清空槽位，避免下一次提问沿用已完成的预约条件；
+            // 失败重试路径保留槽位，重新确认时沿用原预约条件
+            if (confirmed) {
+                session.setSlots(new BookingSlots());
+            }
         }
         chatSessionRepository.save(session);
 

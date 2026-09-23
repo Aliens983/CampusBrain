@@ -362,6 +362,9 @@ public class AppointmentTool {
                 .orderId(orderId)
                 .summary("取消预约单 " + orderId)
                 .confirmPrompt("请确认是否取消预约单 " + orderId + "？")
+                // CANCEL 不经过 CAS 草稿、没有服务端 TTL，必须自带与草稿一致的 10 分钟
+                // 有效期，否则取消意向会一直挂在会话上，跨轮/跨天的「确认」仍会真实取消
+                .expiresAt(PendingBooking.defaultExpiresAt())
                 .build();
         savePending(pending);
         return "已登记取消意向：预约单 " + orderId + "。"

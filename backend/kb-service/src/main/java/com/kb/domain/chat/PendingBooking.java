@@ -29,6 +29,19 @@ public class PendingBooking implements Serializable {
     public static final String ACTION_BOOK = "BOOK";
     public static final String ACTION_CANCEL = "CANCEL";
 
+    /**
+     * 待确认意向有效期：与 CAS 侧预约草稿 TTL（10 分钟）对齐。
+     * BOOK 动作直接透传 CAS 草稿的 expiresAt（以 CAS 为准）；
+     * CANCEL 动作没有 CAS 草稿，用本窗口兜底，避免取消意向永久挂起、
+     * 用户隔轮甚至跨天说「确认」仍真实执行取消。
+     */
+    public static final long CONFIRM_TTL_MILLIS = java.time.Duration.ofMinutes(10).toMillis();
+
+    /** 无 CAS 草稿动作（CANCEL）的过期时间戳（毫秒） */
+    public static long defaultExpiresAt() {
+        return System.currentTimeMillis() + CONFIRM_TTL_MILLIS;
+    }
+
     /** CAS 侧草稿ID（BOOK 动作有效） */
     private String draftId;
 

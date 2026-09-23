@@ -157,6 +157,29 @@ class QaBookingConfirmFlowTest {
     }
 
     @Test
+    @DisplayName("CAS 调用失败 → 保留待确认草稿与槽位，提示稍后重试，不清状态")
+    void shouldKeepPendingWhenCasConfirmFails() {
+        // 预置槽位，验证失败重试路径不被清空
+        session.setSlots(BookingSlots.builder().serviceId(9L).date("2026-09-12").build());
+        CasResult<CasBookingResult> failed = new CasResult<>();
+        failed.setCode(503);
+        failed.setMessage("预约服务暂时不可用");
+        when(casClient.confirmBookingDraft("draft-1")).thenReturn(failed);
+        when(conversationRepository.saveWithReferences(anyString(), anyString(), anyString(), any(), any()))
+                .thenReturn(13L);
+
+        String answer = service.askStreaming("确认", "s1", t -> {}, c -> {}, id -> {}, e -> {});
+
+        verify(casClient).confirmBookingDraft("draft-1");
+        assertTrue(answer.contains("失败") || answer.contains("稍后"), answer);
+        // pending 必须原样保留（draftId 不丢），用户再回复「确认」即可重试
+        PendingBooking retained = session.getPendingBooking();
+        org.junit.jupiter.api.Assertions.assertNotNull(retained, "CAS 失败不应清空待确认草稿");
+        assertEquals("draft-1", retained.getDraftId());
+        assertEquals(9L, session.slotsOrEmpty().getServiceId(), "失败路径应保留槽位供重试");
+    }
+
+    @Test
     @DisplayName("没有待确认草稿时，'确认' 只是普通提问，不会误下单")
     void shouldNotBookWhenNoPendingDraft() {
         session.setPendingBooking(null);
