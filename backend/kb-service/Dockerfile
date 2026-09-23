@@ -3,9 +3,8 @@ FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY target/kb-service-1.0.0.jar app.jar
 EXPOSE 8081
-# 探活路径必须带 context-path（server.servlet.context-path=/api/v1/kb）。
-# 此前写成 /kb/health，每次探活 404 → 容器恒为 unhealthy，
-# 编排的健康判断/重启/摘流全部失真（P1-10）。
+# 探活走独立管理端口 9102 的 liveness 探针（不含 ES/Qdrant/Redis 等依赖状态；
+# 独立端口无 context-path，actuator 不在业务 8081 暴露）
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD wget -qO- http://localhost:8081/api/v1/kb/health || exit 1
+  CMD wget -qO- http://localhost:9102/actuator/health/liveness || exit 1
 ENTRYPOINT ["java", "-Xms512m", "-Xmx1g", "-jar", "app.jar"]

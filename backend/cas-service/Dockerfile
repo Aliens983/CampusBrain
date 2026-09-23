@@ -4,7 +4,8 @@ WORKDIR /app
 COPY cas-server/target/cas-server-1.0.0.jar app.jar
 RUN mkdir -p /app/uploads
 EXPOSE 18080
-# 补齐探活：此前 cas 镜像完全没有 HEALTHCHECK（P1-10）。注意 context-path 为 /api/v1。
+# 探活走独立管理端口 9101 的 liveness 探针（不含 DB/Rabbit/邮件等依赖状态，
+# actuator 不在业务端口暴露，见 application.yml management.server.port）
 HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
-  CMD wget -qO- http://localhost:18080/api/v1/actuator/health || exit 1
+  CMD wget -qO- http://localhost:9101/actuator/health/liveness || exit 1
 ENTRYPOINT ["java", "-Xms256m", "-Xmx512m", "-jar", "app.jar"]

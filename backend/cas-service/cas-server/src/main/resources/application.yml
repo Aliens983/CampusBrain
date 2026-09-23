@@ -155,6 +155,11 @@ aliyun:
   region-id: cn-hangzhou
 
 management:
+  # Actuator 独立管理端口：业务 18080 上不再暴露任何 /actuator 端点，
+  # Prometheus 与镜像 HEALTHCHECK 走容器内网 9101（compose 不发布到宿主机），
+  # 因此无需放开安全链，避免指标端点在业务端口被未认证访问
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:9101}
   endpoints:
     web:
       exposure:
@@ -166,6 +171,12 @@ management:
   endpoint:
     health:
       show-details: when_authorized
+      # 启用 liveness/readiness 探针组：liveness 只反映进程存活（ApplicationAvailability），
+      # 不含 db/redis/rabbit/mail 等依赖指示器——避免邮件/Rabbit 等外围依赖抖动导致
+      # 容器被 HEALTHCHECK 判死反复重启；镜像探活与编排摘流走 /actuator/health/liveness。
+      # 依赖完备性仍可在独立管理端口查 /actuator/health（聚合状态）。
+      probes:
+        enabled: true
   health:
     mail:
       enabled: true

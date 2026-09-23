@@ -215,6 +215,10 @@ retrieval:
 
 # ---------- Actuator ----------
 management:
+  # Actuator 独立管理端口：业务 8081 上不再暴露任何 /actuator 端点，
+  # Prometheus 走容器内网 9102（compose 不发布到宿主机），无需放开安全链
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:9102}
   endpoints:
     web:
       exposure:
@@ -222,6 +226,10 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      # 探针组：liveness 只反映进程存活，不含 ES/Qdrant/Redis 等依赖指示器，
+      # 容器探活走 /actuator/health/liveness，依赖抖动不触发容器重启
+      probes:
+        enabled: true
   health:
     mail:
       enabled: true

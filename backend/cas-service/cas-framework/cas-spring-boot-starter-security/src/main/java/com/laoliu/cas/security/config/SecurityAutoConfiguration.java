@@ -60,7 +60,14 @@ public class SecurityAutoConfiguration {
                                     "/error",
                                     "/uploads/**",
                                     "/favicon.ico",
-                                    "/weather/**"
+                                    "/weather/**",
+                                    // 只读监控端点：仅由独立管理端口（默认 9101，容器内网、
+                                    // 不发布宿主机）上的 Actuator 实际提供；业务 18080 上
+                                    // 不存在这些映射，放行后访问业务端口只会得到 404
+                                    "/actuator/health",
+                                    "/actuator/health/**",
+                                    "/actuator/info",
+                                    "/actuator/prometheus"
                             ).permitAll();
                     // 4.14：接口文档默认不暴露，仅显式 cas.security.swagger-enabled=true（本地/内网开发）
                     // 时放行，生产环境 /doc.html 与 /v3/api-docs 均需认证，避免接口结构裸奔

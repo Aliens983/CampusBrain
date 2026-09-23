@@ -41,7 +41,14 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
      */
     private static final List<String> PUBLIC_PATHS = List.of(
             "/health",
-            "/auth/**"
+            "/auth/**",
+            // 只读监控端点：仅由独立管理端口（默认 9102，容器内网、不发布宿主机）上的
+            // Actuator 实际提供；业务 8081 与网关均不存在这些映射，外部不可达。
+            // 不过滤器放行会导致 Prometheus 抓取与容器探活被「内网签名」校验拒绝。
+            "/actuator/health",
+            "/actuator/health/**",
+            "/actuator/info",
+            "/actuator/prometheus"
     );
 
     private final InternalSigner internalSigner;

@@ -48,6 +48,15 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/health").permitAll()
+                        // 只读监控端点：仅由独立管理端口（默认 9102，容器内网、不发布宿主机）
+                        // 上的 Actuator 实际提供；业务 8081 上不存在这些映射（放行后为 404），
+                        // 网关亦未放行 /actuator，外部不可达
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/health/**",
+                                "/actuator/info",
+                                "/actuator/prometheus"
+                        ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         // 文档上传仅限管理员；删除允许「owner 本人或管理员」，
                         // 具体归属判定由 DocumentApplicationService 完成（4.1.12）

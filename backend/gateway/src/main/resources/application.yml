@@ -57,12 +57,21 @@ logging:
     # 5.2.1：[%X{traceId}] 与 CAS、KB 对齐；traceId 由 TraceIdGlobalFilter 生成并透传
     console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [%X{traceId}] %-5level %logger{36} - %msg%n"
 
-# 5.2.2：暴露 Prometheus 指标（/actuator/prometheus 已在 AuthGlobalFilter 白名单）
+# 5.2.2：Prometheus 指标走独立管理端口 9103（容器内网），不在业务 80 端口暴露
 management:
+  # Actuator 独立管理端口：业务 80 上不再暴露 /actuator 端点，
+  # Prometheus 走容器内网 9103（compose 不发布到宿主机），无需进入鉴权白名单
+  server:
+    port: ${MANAGEMENT_SERVER_PORT:9103}
   endpoints:
     web:
       exposure:
         include: health,info,prometheus
+  endpoint:
+    health:
+      # 容器探活走 /actuator/health/liveness（仅反映进程存活）
+      probes:
+        enabled: true
   metrics:
     tags:
       application: gateway

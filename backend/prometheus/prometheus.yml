@@ -1,10 +1,11 @@
 # ============================================================
 # Prometheus 抓取配置（5.2.2 / 可观测性）
 #
-# 三个目标均走容器内网，不经过网关/公网：
-#   gateway:80                  /actuator/prometheus
-#   cas-service:18080           /api/v1/actuator/prometheus（context-path=/api/v1）
-#   kb-service:8081             /api/v1/kb/actuator/prometheus（context-path=/api/v1/kb）
+# 三个目标均走容器内网的独立 Actuator 管理端口（不经过网关、不发布到宿主机，
+# 因此指标端点不经业务安全链、也不对外暴露）：
+#   gateway:9103     /actuator/prometheus
+#   cas-service:9101 /actuator/prometheus（独立管理端口无 context-path）
+#   kb-service:9102  /actuator/prometheus
 # ============================================================
 global:
   scrape_interval: 15s
@@ -26,21 +27,21 @@ scrape_configs:
   - job_name: gateway
     metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["gateway:80"]
+      - targets: ["gateway:9103"]
         labels:
           service: gateway
 
   - job_name: cas-service
-    metrics_path: /api/v1/actuator/prometheus
+    metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["cas-service:18080"]
+      - targets: ["cas-service:9101"]
         labels:
           service: cas-service
 
   - job_name: kb-service
-    metrics_path: /api/v1/kb/actuator/prometheus
+    metrics_path: /actuator/prometheus
     static_configs:
-      - targets: ["kb-service:8081"]
+      - targets: ["kb-service:9102"]
         labels:
           service: kb-service
 
