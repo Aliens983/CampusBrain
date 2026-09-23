@@ -6,7 +6,11 @@ import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultChatRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.application.dto.response.ConversationResponse;
+import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.enums.UserRoleEnum;
+import com.laoliu.cas.common.exception.BusinessException;
+import com.laoliu.cas.common.exception.code.ChatErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -131,5 +135,48 @@ class ConsultChatServiceImplTest {
         verify(consultChatRepository, never()).findUserNames(any());
         verify(consultChatRepository, never()).findLastMessages(any());
         verify(consultChatRepository, never()).countUnread(anyCollection(), eq(7L));
+    }
+
+    @Test
+    @DisplayName("openByBooking：已拒绝/已取消/已完成等终态单不得发起会话，直接 40028 且不建会话")
+    void shouldRejectOpenByBookingForTerminalStatus() {
+        for (int code : new int[]{
+                ManageStatus.REJECTED.getCode(),
+                ManageStatus.CANCELLED.getCode(),
+                ManageStatus.COMPLETED.getCode()}) {
+            BookingQueryView view = new BookingQueryView();
+            view.setOrderId(500L);
+            view.setManageStatus(code);
+            when(bookingRepository.getServiceStatusByOrderIdAndUserId(7L, 500L)).thenReturn(view);
+
+            BusinessException ex = org.junit.jupiter.api.Assertions.assertThrows(
+                    BusinessException.class,
+                    () -> service.openByBooking(7L, 500L));
+            assertEquals(ChatErrorCode.BOOKING_STATUS_NOT_ALLOWED.getCode(), ex.getCode());
+            verify(bookingRepository, never()).selectConsultantOwnerByOrderId(anyLong());
+            verify(consultChatRepository, never()).getOrCreateConversation(anyLong(), anyLong());
+        }
+    }
+
+    @Test
+    @DisplayName("openByBooking：已通过的咨询预约正常打开会话")
+    void shouldOpenByBookingForApprovedBooking() {
+        BookingQueryView view = new BookingQueryView();
+        view.setOrderId(501L);
+        view.setManageStatus(ManageStatus.APPROVED.getCode());
+        when(bookingRepository.getServiceStatusByOrderIdAndUserId(7L, 501L)).thenReturn(view);
+        when(bookingRepository.selectConsultantOwnerByOrderId(501L)).thenReturn(8L);
+        when(consultChatRepository.getOrCreateConversation(7L, 8L))
+                .thenReturn(conversation(11L, 7L, 8L));
+        when(consultChatRepository.findUserName(8L)).thenReturn(java.util.Optional.of("王老师"));
+        when(consultChatRepository.lastMessage(11L)).thenReturn(java.util.Optional.empty());
+        when(consultChatRepository.countUnread(11L, 7L)).thenReturn(0L);
+
+        ConversationResponse result = service.openByBooking(7L, 501L);
+
+        assertEquals(11L, result.getId());
+        assertEquals(8L, result.getPeerUserId());
+        assertEquals("teacher", result.getPeerRole());
+        verify(consultChatRepository).getOrCreateConversation(7L, 8L);
     }
 }

@@ -33,4 +33,7 @@ public interface ChatErrorCode {
     /** 预约单不存在或无权限 */
     ErrorCode BOOKING_NOT_FOUND = new ErrorCode(40027, "预约单不存在或无权限访问");
 
+    /** 预约状态不允许发起沟通（仅待审核/已通过可聊，已拒绝/已取消/已完成废单不可聊） */
+    ErrorCode BOOKING_STATUS_NOT_ALLOWED = new ErrorCode(40028, "当前预约状态不支持在线沟通");
+
 }

@@ -26,11 +26,16 @@ public interface ConsultChatConversationMapper extends BaseMapper<ConsultChatCon
             """)
     long countTeacherConsultant(@Param("teacherUserId") Long teacherUserId);
 
-    /** 该学生是否咨询过该教师（教师对学生发起会话时校验：存在该教师名下咨询档期的预约） */
+    /**
+     * 该学生是否咨询过该教师（教师对学生发起会话时校验：存在该教师名下咨询档期的预约）。
+     * 仅统计活动单（0 待审核 / 1 已通过）；已拒绝/已取消/已完成等终态废单不得作为
+     * 发起会话的凭据，与服务层 openByBooking 的状态白名单同口径。
+     */
     @Select("""
             SELECT COUNT(*) FROM item i
               JOIN consultant c ON c.id = i.consultant_id
             WHERE i.user_id = #{studentUserId} AND c.user_id = #{teacherUserId}
+              AND i.manage_status IN (0, 1)
             """)
     long countStudentConsultedTeacher(@Param("studentUserId") Long studentUserId,
                                       @Param("teacherUserId") Long teacherUserId);

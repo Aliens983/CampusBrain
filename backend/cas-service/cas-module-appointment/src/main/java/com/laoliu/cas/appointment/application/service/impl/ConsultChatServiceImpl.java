@@ -10,6 +10,7 @@ import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.application.dto.response.ConversationResponse;
 import com.laoliu.cas.appointment.application.dto.response.MessageResponse;
 import com.laoliu.cas.appointment.domain.view.BookingQueryView;
+import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.ChatErrorCode;
@@ -109,6 +110,13 @@ public class ConsultChatServiceImpl implements ConsultChatService {
         BookingQueryView booking = bookingRepository.getServiceStatusByOrderIdAndUserId(callerId, orderId);
         if (booking == null) {
             throw new BusinessException(ChatErrorCode.BOOKING_NOT_FOUND);
+        }
+        // 仅 待审核(0)/已通过(1) 的活动单可发起沟通；已拒绝/已取消/已完成等终态废单
+        // 不得借此与咨询师建立会话（状态判据与教师侧 countStudentConsultedTeacher SQL 统一）
+        Integer status = booking.getManageStatus();
+        if (status == null
+                || (status != ManageStatus.SUBMIT.getCode() && status != ManageStatus.APPROVED.getCode())) {
+            throw new BusinessException(ChatErrorCode.BOOKING_STATUS_NOT_ALLOWED);
         }
         Long teacherId = bookingRepository.selectConsultantOwnerByOrderId(orderId);
         if (teacherId == null) {
