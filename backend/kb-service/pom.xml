@@ -375,6 +375,15 @@
                         </exclude>
                     </excludes>
                 </configuration>
+                <!-- 并入聚合父后不再继承 spring-boot-starter-parent 的隐式 repackage 绑定，
+                     必须显式声明，否则 package 只产薄 jar，Docker 内 java -jar 无法启动 -->
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
             <plugin>
                 <groupId>org.jacoco</groupId>
