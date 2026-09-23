@@ -56,11 +56,23 @@ public class EsDocumentRepository implements DocumentIndexCleaner {
         try {
             BulkResponse response = esClient.bulk(bulkBuilder.build());
             if (response.errors()) {
-                log.warn("ES bulk index had errors: {}",
-                        response.items().stream()
-                                .filter(item -> item.error() != null)
-                                .map(item -> item.error().reason())
-                                .collect(Collectors.joining(", ")));
+                // 分片失败不得只 warn：部分 chunk 未落 ES 时文档却会被标记 READY，
+                // 关键词检索永久丢片，且对账链路感知不到。收集失败明细后上抛，
+                // 由 MQ 消费端按可重试异常退避重试（按 chunkId 幂等覆盖写），
+                // 超限进 DLQ 人工补偿，不留「READY 但索引残缺」的静默不一致。
+                String details = response.items().stream()
+                        .filter(item -> item.error() != null)
+                        .map(item -> "{id=" + item.id()
+                                + ", status=" + item.status()
+                                + ", reason=" + item.error().reason() + "}")
+                        .collect(Collectors.joining(", "));
+                long failedCount = response.items().stream()
+                        .filter(item -> item.error() != null)
+                        .count();
+                log.error("ES bulk index 部分分片失败: total={}, failed={}, errors={}",
+                        documents.size(), failedCount, details);
+                throw new RuntimeException("ES bulk index 部分分片失败: failed="
+                        + failedCount + "/" + documents.size() + " — " + details);
             }
         } catch (IOException e) {
             throw new RuntimeException("ES bulk index failed", e);
