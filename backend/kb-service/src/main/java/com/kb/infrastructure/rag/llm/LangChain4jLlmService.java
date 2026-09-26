@@ -5,11 +5,16 @@ import com.kb.domain.rag.LlmService;
 import com.kb.domain.rag.RetrievalResult;
 import com.kb.domain.rag.StreamCancelledException;
 import com.kb.infrastructure.rag.tool.AppointmentTool;
+import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.agent.tool.ToolSpecification;
+import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.chat.StreamingChatLanguageModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
+import dev.langchain4j.service.tool.DefaultToolExecutor;
+import dev.langchain4j.service.tool.ToolExecutor;
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -18,11 +23,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.time.LocalDate;
+import java.time.format.TextStyle;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 /**
@@ -129,7 +140,7 @@ public class LangChain4jLlmService implements LlmService {
         log.info("LLM provider configured: {} (base={})", mp.getDisplayName(), mp.getBaseUrl());
         toolAssistant = AiServices.builder(ToolAssistant.class)
                 .chatLanguageModel(chatModel)
-                .tools(appointmentTool)
+                .tools(trackedToolExecutors(new ToolTurnTracker()))
                 .build();
         log.info("Tool assistant initialized with AppointmentTool (Function Calling)");
     }
@@ -287,17 +298,132 @@ public class LangChain4jLlmService implements LlmService {
         // 3.2（深度审查 P0）：null 消费者归一化，防止 onNext/fallback accept 时 NPE
         Consumer<String> sink = tokenConsumer == null ? NOOP_CONSUMER : tokenConsumer;
         String userMessage = buildToolUserMessage(query, retrievedDocs, conversationHistory, contextHint);
+
+        try {
+            // 第一轮：门控缓冲——工具真正开始执行前不把模型输出下发。
+            // 防止模型只说"我这就为您查询…"就结束本轮（零工具空承诺，2026-09-26 真实故障），
+            // 承诺句被直接推给前端且整轮结束、用户只能反复催促。
+            ToolTurnTracker tracker = new ToolTurnTracker();
+            TurnResult turn = runToolTurn(userMessage, tracker, sink, cancellationToken);
+            if (cancellationToken.isCancelled()) {
+                return turn.text();
+            }
+
+            if (tracker.count() == 0 && ToolCallGuard.isEmptyPromise(turn.text())) {
+                // 零工具 + 空承诺：丢弃缓冲的承诺句（尚未下发），带强制指令重试一次
+                log.warn("预约链路模型未调用工具且仅输出承诺语，强制重试: query={}, answer={}",
+                        query, abbreviate(turn.text()));
+                ToolTurnTracker retryTracker = new ToolTurnTracker();
+                TurnResult retry = runToolTurn(
+                        userMessage + ToolCallGuard.forcedRetryInstruction(),
+                        retryTracker, sink, cancellationToken);
+                if (cancellationToken.isCancelled()) {
+                    return retry.text();
+                }
+                if (retryTracker.count() > 0 || !ToolCallGuard.isEmptyPromise(retry.text())) {
+                    // 重试轮零工具但是有效直接回答时，门控未开、文本尚未下发，在此放行
+                    if (retryTracker.count() == 0 && !cancellationToken.isCancelled()) {
+                        sink.accept(retry.text());
+                    }
+                    return retry.text();
+                }
+                // 重试仍不调工具：给诚实兜底，绝不空头承诺
+                sink.accept(ToolCallGuard.retryExhaustedMessage());
+                return ToolCallGuard.retryExhaustedMessage();
+            }
+
+            // 零工具但是正常直接作答（如寒暄误入工具链路）：门控一直未开，整体放行
+            if (tracker.count() == 0) {
+                sink.accept(turn.text());
+                return turn.text();
+            }
+
+            // 工具执行过但最终回答停在"让我看看/我再确认"的计划式旁白、没有结论：
+            // 补一轮强制指令（新 turn 无记忆，模型会重新调用工具取数，GET 幂等可安全重放）
+            if (ToolCallGuard.isIncompleteNarrative(turn.text())) {
+                log.warn("预约链路工具已执行但回答停在计划式旁白，补救一轮: query={}, answer={}",
+                        query, abbreviate(turn.text()));
+                ToolTurnTracker repairTracker = new ToolTurnTracker();
+                TurnResult repair = runToolTurn(
+                        userMessage + ToolCallGuard.narrativeRetryInstruction(),
+                        repairTracker, sink, cancellationToken);
+                if (cancellationToken.isCancelled()) {
+                    return repair.text();
+                }
+                // 补救轮零工具但是有效直接回答时，门控未开、文本尚未下发，先放行
+                if (repairTracker.count() == 0 && repair.text() != null && !repair.text().isBlank()
+                        && !ToolCallGuard.isIncompleteNarrative(repair.text())) {
+                    sink.accept(repair.text());
+                    return turn.text() + repair.text();
+                }
+                // 旁白已在前一轮下发；补救轮若没有给出任何有效文本，追加诚实兜底
+                if (repair.text() == null || repair.text().isBlank()
+                        || ToolCallGuard.isIncompleteNarrative(repair.text())) {
+                    sink.accept(ToolCallGuard.retryExhaustedMessage());
+                    return turn.text() + ToolCallGuard.retryExhaustedMessage();
+                }
+                return turn.text() + repair.text();
+            }
+            return turn.text();
+        } catch (StreamCancelledException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("Tool-enhanced streaming failed, fallback to plain RAG", e);
+            // 与同步链路一致：工具链路失败时退化为纯 RAG（同步生成一次，保证有答案）
+            String fallback = generateAnswer(query, retrievedDocs, conversationHistory);
+            if (!cancellationToken.isCancelled()) {
+                sink.accept(fallback);
+            }
+            return fallback;
+        }
+    }
+
+    /**
+     * 执行一轮工具增强流式对话，带"工具启动门控"：
+     * <ul>
+     *   <li>第一个 @Tool 开始执行前，模型输出只缓冲不下发（工具启动瞬间一次性 flush）；</li>
+     *   <li>工具一旦开始，门打开，后续 token（工具结果返回后的最终回答）直通，
+     *       保留打字机效果；</li>
+     *   <li>整轮零工具时缓冲不下发，交由上层判定（正常回答放行 / 空承诺重试）。</li>
+     * </ul>
+     * 说明：DeepSeek 决定发起 function call 时首轮 content 通常为空，
+     * 因此正常路径下缓冲基本为空，不影响首字延迟。
+     */
+    private TurnResult runToolTurn(String userMessage, ToolTurnTracker tracker,
+                                   Consumer<String> sink, CancellationToken cancellationToken) {
         StreamingToolAssistant assistant = AiServices.builder(StreamingToolAssistant.class)
                 .streamingChatLanguageModel(streamingModelFactory.create(cancellationToken))
-                .tools(appointmentTool)
+                .tools(trackedToolExecutors(tracker))
                 .build();
 
         StringBuilder full = new StringBuilder();
+        StringBuilder gate = new StringBuilder();
+        AtomicBoolean gateOpen = new AtomicBoolean(false);
+        tracker.onFirstTool(() -> {
+            synchronized (gate) {
+                gateOpen.set(true);
+                if (gate.length() > 0 && !cancellationToken.isCancelled()) {
+                    sink.accept(gate.toString());
+                }
+                gate.setLength(0);
+            }
+        });
+
         CompletableFuture<String> future = new CompletableFuture<>();
         assistant.chat(userMessage)
                 .onNext(token -> {
-                    if (!cancellationToken.isCancelled()) {
-                        full.append(token);
+                    if (cancellationToken.isCancelled()) {
+                        return;
+                    }
+                    full.append(token);
+                    boolean open;
+                    synchronized (gate) {
+                        open = gateOpen.get();
+                        if (!open) {
+                            gate.append(token);
+                        }
+                    }
+                    if (open) {
                         sink.accept(token);
                     }
                 })
@@ -311,19 +437,16 @@ public class LangChain4jLlmService implements LlmService {
                 })
                 .start();
 
-        try {
-            return awaitFuture(future, cancellationToken);
-        } catch (StreamCancelledException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("Tool-enhanced streaming failed, fallback to plain RAG", e);
-            // 与同步链路一致：工具链路失败时退化为纯 RAG（同步生成一次，保证有答案）
-            String fallback = generateAnswer(query, retrievedDocs, conversationHistory);
-            if (!cancellationToken.isCancelled()) {
-                sink.accept(fallback);
+        String answer = awaitFuture(future, cancellationToken);
+
+        // 工具执行过：兜底 flush 残留前缀（正常已在首个工具启动时 flush）
+        synchronized (gate) {
+            if (gateOpen.get() && gate.length() > 0 && !cancellationToken.isCancelled()) {
+                sink.accept(gate.toString());
+                gate.setLength(0);
             }
-            return fallback;
         }
+        return new TurnResult(answer, tracker.count());
     }
 
     @SuppressWarnings("unused")
@@ -576,6 +699,79 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
+     * 一轮工具流式对话的结果：完整回答文本 + 本轮 @Tool 实际执行次数。
+     */
+    private record TurnResult(String text, int toolCount) {
+    }
+
+    /**
+     * 单轮工具执行追踪器：统计 @Tool 实际被调用的次数，并在第一个工具开始时回调
+     * （用于打开流式门控、把承诺缓冲提前放行）。
+     */
+    static final class ToolTurnTracker {
+        private final AtomicInteger count = new AtomicInteger(0);
+        private volatile Runnable firstToolCallback;
+
+        void onFirstTool(Runnable callback) {
+            this.firstToolCallback = callback;
+        }
+
+        void markStarted(String toolName) {
+            if (count.getAndIncrement() == 0 && firstToolCallback != null) {
+                firstToolCallback.run();
+            }
+        }
+
+        int count() {
+            return count.get();
+        }
+    }
+
+    /**
+     * 为 AppointmentTool 的每个 @Tool 方法构建带"执行计数 + 结构化日志"的执行器。
+     * <p>
+     * 此前工具调用对日志完全不可见（只有启动时一行初始化日志），模型"光说不调"时
+     * 无法从服务端判断到底有没有发起查询；包装后每个工具的开始/耗时/失败均有 INFO/WARN。
+     * </p>
+     */
+    private Map<ToolSpecification, ToolExecutor> trackedToolExecutors(ToolTurnTracker tracker) {
+        Map<ToolSpecification, ToolExecutor> executors = new HashMap<>();
+        for (java.lang.reflect.Method method : AppointmentTool.class.getDeclaredMethods()) {
+            if (!method.isAnnotationPresent(Tool.class)) {
+                continue;
+            }
+            ToolSpecification spec = ToolSpecifications.toolSpecificationFrom(method);
+            DefaultToolExecutor delegate = new DefaultToolExecutor(appointmentTool, method);
+            executors.put(spec, (request, memoryId) -> {
+                tracker.markStarted(spec.name());
+                String args = abbreviate(request.arguments());
+                log.info("AppointmentTool 调用开始: tool={}, args={}", spec.name(), args);
+                long start = System.currentTimeMillis();
+                try {
+                    String result = delegate.execute(request, memoryId);
+                    log.info("AppointmentTool 调用完成: tool={}, 耗时={}ms, 返回{}字符",
+                            spec.name(), System.currentTimeMillis() - start,
+                            result == null ? 0 : result.length());
+                    return result;
+                } catch (RuntimeException e) {
+                    log.warn("AppointmentTool 调用异常: tool={}, 耗时={}ms, {}: {}",
+                            spec.name(), System.currentTimeMillis() - start,
+                            e.getClass().getSimpleName(), e.getMessage());
+                    throw e;
+                }
+            });
+        }
+        return executors;
+    }
+
+    private static String abbreviate(String s) {
+        if (s == null) {
+            return "";
+        }
+        return s.length() <= 200 ? s : s.substring(0, 200) + "...";
+    }
+
+    /**
      * 创建与客户端取消令牌联动的内部令牌：客户端取消会传播到内部令牌，
      * 但内部令牌（服务端超时/门控切换）取消不影响客户端令牌语义。
      */
@@ -640,16 +836,38 @@ public class LangChain4jLlmService implements LlmService {
                                         List<ChatMessage> conversationHistory, String contextHint) {
         String context = buildRagContext(retrievedDocs);
         String historyText = buildHistoryText(conversationHistory);
+        LocalDate today = LocalDate.now();
+        String weekday = today.getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.SIMPLIFIED_CHINESE);
+        String todayLine = "【当前日期】今天是 " + today + "（" + weekday + "）。"
+                + "用户只说“N号/N日”时指本月该日（该日已过则顺延到下月同一天），"
+                + "“周X/星期X”若本周该日已过则算下周；回答中引用的日期一律按此推算，"
+                + "严禁臆测年份或月份（曾出现把“26号”误当成 2025-03-26 的严重错误）。";
         return "对话历史：\n" + historyText
+                + "\n\n" + todayLine
                 + "\n\n用户问题：" + query
                 + "\n\n知识库参考内容：\n" + context
                 + (contextHint == null || contextHint.isBlank()
                     ? "" : "\n\n【当前已知的预约条件】" + contextHint
                          + "\n调用工具时若用户未重新说明，请沿用这些条件；用户本轮明确改变了某项则以本轮为准。")
-                + "\n\n你是校园预约助手。**仅当**用户询问「当前/今天有哪些服务可预约、预约余量、会议室/设备/咨询是否可用」这类需要实时预约数据的问题时，"
-                + "才调用预约查询工具获取实时数据回答；其他问题（自我介绍、能力介绍、闲聊、知识问答等）请直接回答，不要调用任何工具。"
-                + "\n\n用户要求预约或取消时，只能调用 prepareBooking / requestCancelBooking 生成待确认草稿，"
-                + "并明确询问用户「是否确认预约？」。**严禁**在用户明确答复之前做任何写操作。";
+                + "\n\n你是校园预约助手，必须严格遵守以下规则："
+                + "\n1.【实时数据必须调工具】用户询问需要实时预约数据的问题（某天有哪些服务可预约、"
+                + "余量/名额、咨询师/教师、教室/自习室/会议室、设备是否可用、我的预约）时，"
+                + "必须在本轮直接调用对应的预约查询工具，依据工具返回的真实数据回答。"
+                + "\n2.【禁止空承诺】处于查询语境时（包括用户催促追问：“查到了吗”“好了吗”"
+                + "“怎么还没结果”“hello?”等），本轮也必须真正发起工具调用；"
+                + "严禁只回复“我这就查/稍等/正在查询/马上为您查询”之类的过程性承诺就结束本轮，"
+                + "拿到工具结果前不要输出这类空话。"
+                + "若一个工具返回后还需要再调用别的工具才能回答（例如先查到咨询师、"
+                + "还要查具体时段），直接继续调用，不要输出“让我看看/我再确认一下”之类的"
+                + "计划旁白后结束，必须一路查到能给出最终结论为止。"
+                + "\n3.【催促即立即重查】用户催促时，按【当前已知的预约条件】与对话历史继承参数，"
+                + "立即重新调用工具，不要反问、不要再次承诺。"
+                + "\n4.【缺参数才提问】只有缺少必填参数（如日期、校区）导致无法调用工具时，"
+                + "才用一句话说明还缺什么；工具返回失败或空结果时如实转述，绝不编造余量数字。"
+                + "\n5. 用户要求预约或取消时，只能调用 prepareBooking / requestCancelBooking "
+                + "生成待确认草稿，并明确询问用户「是否确认预约？」。严禁在用户明确答复之前做任何写操作。"
+                + "\n6. 与实时预约无关的问题（自我介绍、能力介绍、闲聊、纯知识问答）直接回答，不要调用工具。"
+                + "\n7.【语言】始终使用简体中文回答，禁止输出英文。";
     }
 
     /** 各 Provider 的默认兜底模型名（不能共用一个名字，否则请求必然失败） */

@@ -89,6 +89,37 @@ class BookingSlotExtractorTest {
     }
 
     @Test
+    @DisplayName("裸“N号”按本月当天解析（今天说26号就是今天）")
+    void shouldExtractBareDayOfMonth() {
+        LocalDate today = LocalDate.now();
+        BookingSlots slots = BookingSlotExtractor.extract("仓前校区26号教师咨询还有名额吗");
+        assertEquals(today.withDayOfMonth(Math.min(26, today.lengthOfMonth())).toString(),
+                slots.getDate(), "当天未过时裸日期应解析为本月该日");
+    }
+
+    @Test
+    @DisplayName("裸“N日”已过则顺延到下月同一天")
+    void shouldRollBareDayToNextMonthWhenPassed() {
+        LocalDate today = LocalDate.now();
+        int pastDay = Math.max(1, today.getDayOfMonth() - 1);
+        LocalDate expected = today.withDayOfMonth(pastDay).plusMonths(1);
+        assertEquals(expected.toString(),
+                BookingSlotExtractor.extract(pastDay + "日的教室").getDate());
+    }
+
+    @Test
+    @DisplayName("“3月26号”仍按月/日解析，不被裸日期规则二次命中")
+    void shouldKeepMonthDayPrecedence() {
+        BookingSlots slots = BookingSlotExtractor.extract("3月26号有可预约的教师吗");
+        int year = LocalDate.now().getYear();
+        LocalDate expected = LocalDate.of(year, 3, 26);
+        if (expected.isBefore(LocalDate.now())) {
+            expected = expected.plusYears(1);
+        }
+        assertEquals(expected.toString(), slots.getDate());
+    }
+
+    @Test
     @DisplayName("无预约条件时返回空槽位")
     void shouldReturnEmptyWhenNothingMatched() {
         BookingSlots slots = BookingSlotExtractor.extract("介绍一下知识库的用法");

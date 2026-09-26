@@ -36,6 +36,10 @@ public final class BookingSlotExtractor {
     private static final Pattern DATE_SHORT = Pattern.compile(
             "(?<!\\d)(\\d{1,2})\\s*[月/]\\s*(\\d{1,2})\\s*[日号]?");
 
+    /** 裸日期：只有"日/号"没有月份，如"26号""3日"（必须排在 DATE_SHORT 之后匹配） */
+    private static final Pattern DATE_DAY_ONLY = Pattern.compile(
+            "(?<!\\d)(\\d{1,2})\\s*[日号](?![\\d])");
+
     private static final Pattern WEEKDAY = Pattern.compile(
             "(下{0,1})\\s*(?:周|星期|礼拜)\\s*([一二三四五六日天1-7])");
 
@@ -162,7 +166,32 @@ public final class BookingSlotExtractor {
                 return new String[]{candidate.toString(), rest.replace(shortDate.group(), " ")};
             }
         }
+
+        // "26号"：没有月份，默认本月该日；该日已过则顺延到下月同一天。
+        // 此前不支持裸日期，槽位里没有日期、提示词里也没有当前日期，模型会把
+        // "26号"臆测成"2025-03-26"等错误日期（2026-09-26 真实故障）。
+        Matcher dayOnly = DATE_DAY_ONLY.matcher(rest);
+        if (dayOnly.find()) {
+            int day = Integer.parseInt(dayOnly.group(1));
+            if (day >= 1 && day <= 31) {
+                LocalDate candidate = resolveDayOnly(today, day);
+                if (candidate != null) {
+                    return new String[]{candidate.toString(), rest.replace(dayOnly.group(), " ")};
+                }
+            }
+        }
         return new String[]{null, rest};
+    }
+
+    /** 裸"N号/N日"解析：本月有该日取本月（含今天），本月该日已过或本月无此日则取下月 */
+    private static LocalDate resolveDayOnly(LocalDate today, int day) {
+        if (day <= today.lengthOfMonth()) {
+            LocalDate candidate = today.withDayOfMonth(day);
+            return candidate.isBefore(today) ? candidate.plusMonths(1) : candidate;
+        }
+        // 本月没有这一天（如 2 月说"31号"）：下月有则取下月，否则放弃避免抛 DateTimeException
+        LocalDate nextMonth = today.plusMonths(1);
+        return day <= nextMonth.lengthOfMonth() ? nextMonth.withDayOfMonth(day) : null;
     }
 
     // ==================== 时段 ====================
