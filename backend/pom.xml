@@ -15,6 +15,10 @@
         <java.version>17</java.version>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
+        <!-- 保留方法参数名（class 生成 MethodParameters 属性）：Spring 6 无名 @RequestParam/@PathVariable
+             参数绑定依赖此属性，否则 jar 运行报 "Name for argument not specified"；IDEA 默认开启，
+             命令行构建必须显式声明，与 spring-boot-starter-parent 默认行为对齐 -->
+        <maven.compiler.parameters>true</maven.compiler.parameters>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <spring-boot.version>3.3.5</spring-boot.version>
