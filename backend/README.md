@@ -107,13 +107,9 @@ curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8888/api/v1/kb/health 
 
 ## 五、数据库与 Flyway 约定
 
-- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（表结构 + 校区种子 + 轮播图；服务表直接建 `category_id`，不存 `category` 编码串）、`V2__seed_initial_users.sql`（初始账号）、`V3__seed_teacher_users.sql`（教师账号 + 咨询师 user_id 回填）、`V4__service_category.sql`（**仅新增**分类表 `service_category` + 固定 4 类种子：教师咨询/设备借用/教室空间/活动报名）、`V5__consult_chat.sql`（**仅新增**咨询沟通会话表 `consult_chat_conversation` + 消息表 `consult_chat_message`，学生⇄教师 1:1 在线留言）、`V6__services_end_date.sql`（服务上下架结束日期）、`V7__item_unique_booking_guard.sql`（通用/活动类预约 `uk_user_service_status` 唯一约束 + INSERT IGNORE 并发幂等兜底）、`V8__item_active_general_unique.sql`（以生成列唯一索引修正 V7：终态单可共存、资源类单不误拦、存量库可平滑升级）。
-- **迁移约定**：迁移文件只追加、不改写历史（避免 Flyway checksum 失败）；结构演进以新文件增量表达（如 V7/V8 即在 V1 基础上的增量 ALTER，全新库按序自动执行）。服务分类落库 = 服务分类：全新库由 V1 直接建出 `services.category_id`，老库按 `cas-service/UPGRADE-service-category.md` 直接 SQL 演进（ALTER + 回填 + DROP `category`），V4 建表/补种子幂等可重复。
-- KB 迁移位于 `kb-service/src/main/resources/db/migration/`：`V1__init_document_and_conversation.sql`（文档/分块/会话等）、`V2__conversation_add_user_id.sql`（AI 会话归属：`conversation.user_id` 绑定 + 历史/重置/反馈归属校验）、`V3__index_delete_failure.sql`（外部索引删除失败对账表，补偿任务周期重试直至成功/告警）。多租户 `tenant_id` 已于 2026-09-12 下线：原 `V4__add_tenant_id_to_business_tables.sql` 连同 `TenantContext`/`TenantFilter` 一并移除，业务代码与 H2 测试 schema 均不再保留租户字段。
-- **新机器**：CAS/KB 首次启动自动执行全部迁移，零手工 SQL。
-- **Schema 唯一来源是 Flyway**：容器内 `cas-mysql` 不再挂载 `docker-entrypoint-initdb.d` 初始化脚本（原 `cas-service/sql/` 已删除，避免与 Flyway 双源漂移）。**升级到该版本的存量部署**，若旧卷曾被 initdb 建过旧结构，需一次性清理空业务卷后重建（生产库含数据时勿执行）：
-  `docker compose -f docker-compose.yml -f docker-compose.business.yml down && docker volume rm backend_cas-mysql-data`，再启动由 Flyway 全量建表。
-- **已有库**：迁移文件用于全新环境，已上线的库请直接执行 SQL 演进，**不要改写历史 `V*.sql` 去适配旧库**（否则 Flyway checksum 校验失败）；如需调整结构，本地直接对库执行 SQL 即可。
+- CAS 迁移位于 `cas-service/cas-server/src/main/resources/db/migration/`：`V1__init_schema.sql`（**全量基线**：全部表结构——含 `service_category` 分类字典与 4 类种子、`consult_chat_*` 咨询沟通两表、`services.end_date`、item 生成列唯一索引 `uk_item_active_general`、`user.email` 唯一索引——+ 两校区服务/咨询师/教室/设备/轮播图种子）、`V2__seed_initial_users.sql`（初始账号 admin@/user@campus.com，密码 123456）、`V3__seed_teacher_users.sql`（教师账号 + 咨询师 user_id 回填）。
+- **迁移约定（开发期）**：项目尚未上线、数据库均为测试库无存量数据，因此表结构变更**直接改 `V1__init_schema.sql` 建表语句，不写 ALTER 增量脚本**；改完执行 `scripts/reset-dev-env.sh` 清空开发环境（MySQL DROP/CREATE、Redis FLUSHALL、Qdrant collection、ES kb_* 索引），重启服务后 Flyway 重放 V1~V3，等同全新机器。KB 同理：迁移只保留 `V1__init_document_and_conversation.sql`（文档/分块/会话，含 `conversation.user_id` + `index_delete_failure` 对账表）。将来上线、存在不可丢弃的存量数据后，再恢复「Vn 只追加、不改写历史文件（Flyway checksum）」规范。
+- **新机器 / 清库重建**：首次启动 CAS/KB 自动执行全部迁移，零手工 SQL；Qdrant collection、ES 索引由应用启动时自动创建。容器不挂载 initdb 初始化脚本（避免与 Flyway 双源漂移）。
 
 ## 六、核心能力（对应当前代码）
 

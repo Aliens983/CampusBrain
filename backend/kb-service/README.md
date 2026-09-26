@@ -78,9 +78,8 @@ com.kb
 
 ## 数据库迁移（Flyway）
 
-- `V1__init_document_and_conversation.sql` —— document / document_chunk / conversation 等初始表。
-- `V2__conversation_add_user_id.sql` —— AI 会话归属 `conversation.user_id`（历史/重置/反馈归属校验）。
-- `V3__index_delete_failure.sql` —— 外部索引删除失败对账表（补偿重试 + 告警指标）。
+- `V1__init_document_and_conversation.sql` —— **全量基线**：document / document_chunk / conversation（含 `user_id` 归属 + `idx_user_session`）/ index_delete_failure（外部索引删除失败对账，补偿重试 + 告警指标）全部表。
+- **开发期约定**：表结构变更直接改 V1 建表语句，不写 ALTER 增量脚本；用 `../scripts/reset-dev-env.sh` 清库后重启重放。上线有存量数据后再恢复 Vn 只追加规范。
 
 ## 构建 / 运行 / 测试
 

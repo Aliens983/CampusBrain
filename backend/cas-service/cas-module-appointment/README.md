@@ -11,7 +11,7 @@ DDD 业务模块，承载预约全流程：服务目录、四类预约（咨询/
   - 活动：`capacity` 容量扣减（-1 不限），超额拒绝。
 - **审核 / 取消**：通过/拒绝（拒绝必填原因），自动释放时段与库存；`BookingAutoCompleteTask` 定时把已过窗口的单置为「完成」。
 - **管理员兜底**：强制取消/完结任意待审核/已通过单（僵尸单处置），锁定读防并发、原子释放占用，变更同样发布预约事件。
-- **并发幂等**：通用/活动类"同用户同服务有效态单"由 V8 生成列唯一索引 + `INSERT IGNORE` 在 DB 层兜底。
+- **并发幂等**：通用/活动类"同用户同服务有效态单"由 item 表生成列唯一索引 `uk_item_active_general` + `INSERT IGNORE` 在 DB 层兜底。
 - **轮播图**：`carousel` 独立子包（controller/admin + app、service、mapper、dataobject），管理端上传/删除（同步删除物理文件）/拖拽排序，数量上限配置项 `carousel.max-count`（默认 6 张）+ 用户端启用列表。
 
 ## 目录结构
@@ -40,8 +40,8 @@ com.laoliu.cas.appointment
 | `GET/POST/PUT /admin/services`、`GET /admin/bookings` + `PATCH /admin/bookings/{id}/approve\|reject\|cancel\|complete` | 服务治理 / 预约审核 / 强制取消完结僵尸单 |
 | `GET/POST/DELETE /admin/carousel`、`POST /admin/carousel/reorder` | 轮播图管理（上限可配，删除同步清物理文件） |
 
-## 核心数据表（Flyway V1/V4/V5/V6/V7/V8）
-`services`（目录：category_id/campus/image_url/capacity/booked_count/end_date）+ `service_category`（固定 4 类）→ `item`（预约单：service_id + 资源列其一；`manage_status` 0待审/1通过/2拒绝/3取消/4完成；V8 生成列 `active_dedup` 唯一索引兜底通用/活动类并发）→ 资源 `consultant`+`time_slot`、`room`、`equipment`；独立 `carousel`；`consult_chat_conversation`+`consult_chat_message`（V5 咨询沟通）。
+## 核心数据表（Flyway 全量基线 V1）
+`services`（目录：category_id/campus/image_url/capacity/booked_count/end_date）+ `service_category`（固定 4 类）→ `item`（预约单：service_id + 资源列其一；`manage_status` 0待审/1通过/2拒绝/3取消/4完成；生成列 `active_dedup` 唯一索引兜底通用/活动类并发）→ 资源 `consultant`+`time_slot`、`room`、`equipment`；独立 `carousel`；`consult_chat_conversation`+`consult_chat_message`（咨询沟通）。
 
 ## 依赖
 编译期仅依赖零实现契约 `cas-module-system-api`（用户/角色）、`cas-module-infra-api`（邮件/文件），不依赖 system/infra 实现模块，实现由 cas-server 运行时装配；测试 11 个测试类、83 个 `@Test`（预约/审核/教师自审/余量/并发幂等/管理员兜底，Mockito + 领域边界守卫）。

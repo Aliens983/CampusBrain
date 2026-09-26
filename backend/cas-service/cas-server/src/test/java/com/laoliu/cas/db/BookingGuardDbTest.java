@@ -36,14 +36,14 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * V8 唯一约束的真实 MySQL 集成验证（深度审查报告 3.1 / 5.1 / 5.2，D-A1）。
+ * 预约防重/防超卖唯一约束的真实 MySQL 集成验证（深度审查报告 3.1 / 5.1 / 5.2，D-A1）。
  *
- * <p>此前 CAS 侧 17 个测试全是 Mockito 单测，ItemMapper.xml 的 SQL 从不执行，
- * V7 唯一约束的三重故障（二次取消撞键 / 同服务第二间教室 500 / 存量库迁移失败）
- * 与四类并发防冲突全部零覆盖。本类用 Testcontainers MySQL 8.0：
+ * <p>ItemMapper.xml 的 SQL 不在 Mockito 单测中执行，本类用 Testcontainers MySQL 8.0
+ * （或 IT_MYSQL_URL 指定的外部库）验证：
  * <ol>
- *   <li>Flyway 冒烟：V1→V8 全量迁移成功，旧索引下线、生成列与新约束就位；</li>
- *   <li>故障 A/B 场景在真实 SQL 上回归；</li>
+ *   <li>Flyway 冒烟：开发期全量基线 V1（含生成列与 uk_item_active_general）迁移成功，
+ *       不存在历史增量脚本版本；</li>
+ *   <li>终态共存 / 资源类单共存场景在真实 SQL 上回归；</li>
  *   <li>多线程并发验证：通用下单 DB 层收敛 1 行、容量不超卖、时段占用单赢家。</li>
  * </ol>
  *
@@ -53,7 +53,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @Testcontainers(disabledWithoutDocker = true)
 @TestMethodOrder(MethodOrderer.DisplayName.class)
-class V8BookingGuardDbTest {
+class BookingGuardDbTest {
 
     private static final int PENDING = 0;
     private static final int APPROVED = 1;
@@ -99,7 +99,7 @@ class V8BookingGuardDbTest {
         }
         dataSource.setMaximumPoolSize(20);
 
-        // 5.1 冒烟本身：V1→V8 全量迁移，任一脚本有误会在此抛出。
+        // 5.1 冒烟本身：全量基线 V1 一次迁移完成，任一 SQL 有误会在此抛出。
         // 外部库可能残留上一轮对象，clean 后重放；全新容器库 clean 为空操作。
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
@@ -133,8 +133,8 @@ class V8BookingGuardDbTest {
     // ==================== 5.1 Flyway 冒烟 ====================
 
     @Test
-    @DisplayName("5.1 冒烟：V8 已执行，旧约束下线、生成列+新唯一约束就位")
-    void v8ReplacesV7ConstraintWithGeneratedColumn() {
+    @DisplayName("5.1 冒烟：全量基线 V1 就位（生成列+新唯一约束），历史增量版本不存在")
+    void baselineV1ContainsGeneratedColumnAndUniqueConstraint() {
         Integer newIndex = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.table_constraints "
                         + "WHERE constraint_schema = DATABASE() AND table_name = 'item' "
@@ -150,14 +150,31 @@ class V8BookingGuardDbTest {
                         + "WHERE table_schema = DATABASE() AND table_name = 'item' "
                         + "AND column_name = 'active_dedup' AND extra LIKE '%GENERATED%'",
                 Integer.class);
-        Integer v8Applied = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '8' AND success = 1",
+        Integer v1Applied = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM flyway_schema_history WHERE version = '1' AND success = 1",
+                Integer.class);
+        Integer incrementalVersions = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM flyway_schema_history "
+                        + "WHERE version IN ('4','5','6','7','8','9')",
+                Integer.class);
+        Integer endDateColumn = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.columns "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'services' "
+                        + "AND column_name = 'end_date'",
+                Integer.class);
+        Integer uniqueEmail = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM information_schema.statistics "
+                        + "WHERE table_schema = DATABASE() AND table_name = 'user' "
+                        + "AND index_name = 'uk_user_email' AND non_unique = 0",
                 Integer.class);
 
         assertThat(newIndex).isEqualTo(1);
         assertThat(oldIndex).isZero();
         assertThat(generatedColumn).isEqualTo(1);
-        assertThat(v8Applied).isEqualTo(1);
+        assertThat(v1Applied).isEqualTo(1);
+        assertThat(incrementalVersions).isZero();
+        assertThat(endDateColumn).isEqualTo(1);
+        assertThat(uniqueEmail).isEqualTo(1);
     }
 
     // ==================== 故障 A：二次取消 / 终态共存 ====================
@@ -186,7 +203,7 @@ class V8BookingGuardDbTest {
 
         try (SqlSession session = factory.openSession()) {
             ItemMapper mapper = session.getMapper(ItemMapper.class);
-            // 第二轮：再约 → 再取消（V7 下这里必撞 (u,s,3) 报 1062）
+            // 第二轮：再约 → 再取消（旧 UNIQUE(u,s,status) 设计下这里必撞 (u,s,3) 报 1062）
             second = insertGeneral(mapper, userId, serviceId);
             session.commit();
         }
@@ -220,7 +237,7 @@ class V8BookingGuardDbTest {
     // ==================== 故障 B：同服务多资源单 ====================
 
     @Test
-    @DisplayName("3.1-B 同一服务的两间教室/两位咨询师/两台设备待审单共存（V7 下第二笔 500）")
+    @DisplayName("3.1-B 同一服务的两间教室/两位咨询师/两台设备待审单共存（旧约束下第二笔 500）")
     void multipleResourceBookingsOfSameServiceCoexist() {
         long userId = 9202L;
         int serviceId = 9202;
@@ -318,7 +335,7 @@ class V8BookingGuardDbTest {
                         // REPEATABLE READ 下 INSERT...SELECT 的间隙锁会让同时起跑的并发事务
                         // 互相死锁（1213）：InnoDB 回滚落败方整个事务。它不会产生重复行，
                         // 落败方语义上等同于"未抢到"，仅 UX 上表现为需重试（已在看板第 7 节
-                        // 登记：是否加应用层有限重试/改 RC 由用户裁定，不在 V8 SQL 范围内）。
+                        // 登记：是否加应用层有限重试/改 RC 由用户裁定，不在 DB 约束范围内）。
                         if (isDeadlock(e)) {
                             deadlocked.incrementAndGet();
                         } else {

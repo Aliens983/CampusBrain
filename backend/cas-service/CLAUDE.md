@@ -136,11 +136,11 @@ domain 层禁止引用 interfaces/application 包，由 `DomainLayerBoundaryTest
 | `equipment` | total_stock / available_stock / unit / location |
 | `item` | 预约单：service_id + 资源列其一（consultant_id/slot_id… 或 room_id… 或 equipment_id/quantity）；manage_status 0待审/1通过/2拒绝/3取消/4完成；reason |
 | `carousel` | image_url / sort / enabled（上限 `${carousel.max-count:6}`，40030 CAROUSEL_LIMIT_EXCEEDED） |
-| `consult_chat_conversation` / `consult_chat_message` | V5 新增，学生⇄教师 1:1 唯一会话；read_flag 未读 |
+| `consult_chat_conversation` / `consult_chat_message` | 学生⇄教师 1:1 唯一会话；read_flag 未读 |
 
 种子：V1 两校区服务/咨询师/教室/设备/轮播图/分类；V2 admin@campus.com、user@campus.com（密码 123456）；V3 教师账号 + 咨询师回填。
 
-**迁移约定**：V1~V6 面向全新库建表/种子；V7/V8 是预约防重/唯一约束守卫（V8 用生成列 + 唯一索引，兼容存量重复数据）。已上线库的结构演进直接对库执行 SQL，参考 `UPGRADE-service-category.md`、`UPGRADE-teacher-role.md`。禁止改写已应用的历史 V 文件（checksum，6.1 已恢复 validate-on-migrate）。`sql/` 目录是演进/参考脚本，不参与 Flyway。
+**迁移约定（开发期）**：当前无线上存量数据，全部表结构直接维护在 `V1__init_schema.sql` 全量基线中（含生成列唯一索引、end_date、email 唯一索引等），不写 ALTER 增量脚本；结构变更后用 `backend/scripts/reset-dev-env.sh` 清空开发库（MySQL/Redis/Qdrant/ES），重启时 Flyway 重放 V1~V3。`sql/` 目录是演进/参考脚本，不参与 Flyway。将来上线、存在不可丢弃的存量数据后，再恢复「Vn 只追加、不改旧文件（checksum）」规范。
 
 ## 关键业务规则
 

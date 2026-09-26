@@ -1,7 +1,10 @@
 -- ============================================================
--- Flyway V1: CAS 初始 Schema + 参考/样例数据
+-- Flyway V1: CAS 全量基线 Schema + 参考/样例数据
 -- 由 Flyway 应用启动时自动执行（不再手工跑 sql/ 脚本）
--- 对应旧 cas-service/sql 的 02~09 脚本，合并整理于此。
+--
+-- 开发期约定：当前无线上存量数据，所有表结构一律直接维护在本文件，
+-- 不以 ALTER 增量脚本演进；确需改表就直接改这里（全新库重建生效）。
+-- 将来上线、存在不可丢弃的存量数据后，再恢复「新增 Vn 只追加不改旧文件」规范。
 -- ============================================================
 
 -- ---------- 用户表 ----------
@@ -18,7 +21,8 @@ CREATE TABLE `user`
     email_notify tinyint(1) default 1 not null comment '是否接收邮件通知(0/1，通知设置)'
 ) collate = utf8mb4_unicode_ci comment = '用户表';
 
-CREATE INDEX idx_user_email ON `user` (`email`);
+-- email 全局唯一：防「先查后插」并发注册产生重复账号（V9 折叠；全新库直接建唯一索引，无需存量清洗）
+CREATE UNIQUE INDEX uk_user_email ON `user` (`email`);
 
 -- ---------- 全局通知策略（单行 id=1） ----------
 CREATE TABLE notification_policy
@@ -42,7 +46,8 @@ CREATE TABLE services
     campus          VARCHAR(8)  NOT NULL DEFAULT 'cq' comment '校区: cq仓前 / xs下沙',
     image_url       VARCHAR(255) NOT NULL DEFAULT '' comment '服务封面图URL',
     capacity        INT NOT NULL DEFAULT -1 comment '可预约容量，-1=不限',
-    booked_count    INT NOT NULL DEFAULT 0 comment '已预约数（乐观锁扣减）',
+    end_date        DATE DEFAULT NULL comment '活动/通用服务完结日期（次日零点后，无时段的已通过预约自动完成；NULL=长期有效，不自动完结）',
+    booked_count    INT NOT NULL DEFAULT 0 comment '容量型服务(活动/通用)有效预约数，乐观锁扣减；窗口型资源(咨询/教室/设备)按时段动态计算，此列恒0',
     create_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP comment 'Record creation time',
     update_time     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP comment 'Record update time',
     PRIMARY KEY (service_id),
@@ -50,6 +55,24 @@ CREATE TABLE services
     KEY idx_services_state (service_state),
     KEY idx_services_category (category_id)
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = 'Services table - stores appointment services';
+
+-- ---------- 服务业务分类字典（固定 4 类，不在管理端增删改） ----------
+CREATE TABLE service_category
+(
+    id         INT         NOT NULL AUTO_INCREMENT COMMENT '分类ID',
+    code       VARCHAR(20) NOT NULL COMMENT '分类编码: teacher/equipment/space/activity',
+    name       VARCHAR(20) NOT NULL COMMENT '分类中文名',
+    sort       INT         NOT NULL DEFAULT 0 COMMENT '展示排序',
+    created_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_category_code (code)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COMMENT = '服务业务分类（固定4类种子）';
+
+INSERT INTO service_category (id, code, name, sort) VALUES
+    (1, 'teacher',   '教师咨询', 1),
+    (2, 'equipment', '设备借用', 2),
+    (3, 'space',     '教室空间', 3),
+    (4, 'activity',  '活动报名', 4);
 
 -- ---------- 预约记录表 ----------
 CREATE TABLE item
@@ -67,6 +90,18 @@ CREATE TABLE item
     room_id       BIGINT      NULL comment '教室ID（教室时段预约时非空）',
     manage_status INT NOT NULL DEFAULT 0 comment 'Manage status: 0-pending,1-pass,2-reject,3-cancelled,4-completed',
     reason        VARCHAR(255) DEFAULT NULL comment 'Reject reason when audit is rejected',
+    -- 有效态去重标记（生成列）：通用/活动单处于待审/已通过且无任何资源外键时为 0，
+    -- 终态单(2/3/4)与资源类单（咨询/教室/设备，任一资源外键非空）为 NULL。
+    -- 配合唯一索引：MySQL 唯一索引中多个 NULL 互不相等，因此
+    --   同一用户对同一服务只允许一笔有效态通用/活动单；终态行可共存、资源类单不受限。
+    active_dedup  TINYINT GENERATED ALWAYS AS (
+                      CASE WHEN manage_status IN (0, 1)
+                                AND consultant_id IS NULL
+                                AND slot_id IS NULL
+                                AND room_id IS NULL
+                                AND equipment_id IS NULL
+                           THEN 0 ELSE NULL END
+                  ) VIRTUAL comment '通用/活动类有效态去重标记：0=参与唯一约束，NULL=终态或资源类不约束',
     create_time   TIMESTAMP DEFAULT CURRENT_TIMESTAMP comment 'Order creation time',
     update_time   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP comment 'Order update time',
     PRIMARY KEY (order_id),
@@ -76,6 +111,7 @@ CREATE TABLE item
     KEY idx_user_status (user_id, manage_status),
     KEY idx_item_consultant_slot (consultant_id, slot_date),
     KEY idx_item_room (room_id),
+    UNIQUE KEY uk_item_active_general (user_id, service_id, active_dedup),
     CONSTRAINT fk_item_user FOREIGN KEY (user_id) REFERENCES `user` (id) ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT fk_item_service FOREIGN KEY (service_id) REFERENCES services (service_id) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = 'Order table - stores user appointment orders';
@@ -219,3 +255,34 @@ INSERT INTO carousel (image_url, sort, enabled) VALUES
 ('/uploads/carousel/xs_gateway.jpg', 4, 1),
 ('/uploads/carousel/xs_library.jpg', 5, 1),
 ('/uploads/carousel/xs_xilin.jpg', 6, 1);
+
+-- ---------- 咨询沟通：学生 ⇄ 教师 1:1 在线留言（仅教师咨询场景开放） ----------
+-- 会话/消息均使用“代码级外键”（不建 DB 外键，与 services.category_id 约定一致）
+CREATE TABLE consult_chat_conversation
+(
+    id         BIGINT   NOT NULL AUTO_INCREMENT COMMENT '会话ID',
+    student_id BIGINT   NOT NULL COMMENT '学生用户ID（user.id，代码级外键）',
+    teacher_id BIGINT   NOT NULL COMMENT '咨询教师用户ID（user.id，代码级外键，须为某 teacher 分类咨询师绑定账号）',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (id),
+    UNIQUE KEY uk_cc_student_teacher (student_id, teacher_id),
+    KEY idx_cc_teacher (teacher_id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = '咨询沟通会话表（学生-教师 1:1，一对唯一）';
+
+CREATE TABLE consult_chat_message
+(
+    id              BIGINT      NOT NULL AUTO_INCREMENT COMMENT '消息ID',
+    conversation_id BIGINT      NOT NULL COMMENT '会话ID（代码级外键 → consult_chat_conversation.id）',
+    sender_id       BIGINT      NOT NULL COMMENT '发送者用户ID（学生或教师，代码级外键 → user.id）',
+    content         TEXT        NOT NULL COMMENT '消息内容',
+    read_flag       TINYINT(1)  NOT NULL DEFAULT 0 COMMENT '对方是否已读（1已读 0未读，轮询拉取/打开会话时置1）',
+    created_at      DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
+    PRIMARY KEY (id),
+    KEY idx_ccm_conv (conversation_id, id)
+) ENGINE = InnoDB
+  DEFAULT CHARSET = utf8mb4
+  COLLATE = utf8mb4_unicode_ci
+  COMMENT = '咨询沟通消息表';

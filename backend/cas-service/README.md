@@ -62,7 +62,7 @@ notification_policy 全局通知策略（单行，邮件通道开关）
 - **释放**：审核拒绝 / 用户取消自动释放占用的时段与库存。
 - **自动完成**：`BookingAutoCompleteTask`（`@EnableScheduling`，60s 轮询）将已过预约窗口的单自动置为 `完成`（设备到点归还、教室释放）。
 - **管理员兜底**：可强制取消/完结任意待审核/已通过预约（含用户侧不可取消的已通过单），锁定读防并发并原子释放占用，用于僵尸单人工处置。
-- **并发幂等**：通用/活动类"同用户同服务有效态单"由数据库唯一索引兜底（V7 初版、V8 生成列修正），配合 `INSERT IGNORE`，双端同时点击也不会重复落单。
+- **并发幂等**：通用/活动类"同用户同服务有效态单"由 item 表生成列唯一索引 `uk_item_active_general` 兜底（终态单 active_dedup 为 NULL 可共存、资源类单不参与约束），配合 `INSERT IGNORE`，双端同时点击也不会重复落单。
 
 ## 主要接口
 
@@ -86,16 +86,11 @@ notification_policy 全局通知策略（单行，邮件通道开关）
 ## 数据库迁移与种子（Flyway）
 
 迁移位于 `cas-server/src/main/resources/db/migration/`：
-- `V1__init_schema.sql` —— 全部建表 + 校区种子：cq/xs 两套服务目录、咨询师（仓前肖/周/刘/石/管、下沙姚/裘/孙/管）、教室（勤园/恕园/A~E 号楼）、设备、初始轮播图 6 张、服务分类字典。
+- `V1__init_schema.sql` —— **全量基线**：全部表结构（含 `service_category` 分类字典、`consult_chat_*` 咨询沟通两表、`services.end_date`、item 生成列唯一索引 `uk_item_active_general`、`user.email` 唯一索引）+ 校区种子：cq/xs 两套服务目录、咨询师、教室、设备、分类、初始轮播图 6 张。
 - `V2__seed_initial_users.sql` —— 初始账号：`admin@campus.com` 与 `user@campus.com`，密码均 `123456`（BCrypt，登录后请改密）。
 - `V3__seed_teacher_users.sql` —— 教师账号种子 + 咨询师 `user_id` 回填（教师端登录用）。
-- `V4__service_category.sql` —— `service_category` 分类表 + 固定 4 类种子（教师咨询/设备借用/教室空间/活动报名）。
-- `V5__consult_chat.sql` —— 咨询沟通 `consult_chat_conversation` / `consult_chat_message`（学生⇄教师 1:1，仅新增表）。
-- `V6__services_end_date.sql` —— 服务上下架结束日期 `end_date`。
-- `V7__item_unique_booking_guard.sql` —— 通用/活动类预约唯一约束 `uk_user_service_status` + 写入改 `INSERT IGNORE`，并发重复提交幂等兜底。
-- `V8__item_active_general_unique.sql` —— 以生成列 `active_dedup` 唯一索引替代 V7 旧约束：终态单（拒绝/取消/完结）可共存、资源类单（咨询/教室/设备）不误拦、存量重复数据不阻塞迁移。
 
-新机器首次启动 CAS 自动建库建表（V1~V8 顺序执行）；**已有库**不改写历史 `V*.sql`（Flyway checksum），结构演进直接对库执行 SQL 或按 `UPGRADE-*.md` 操作（约定见 `../README.md`）。
+**开发期约定（当前无存量数据）**：表结构变更直接改 `V1__init_schema.sql`，不写 ALTER 增量脚本；用 `backend/scripts/reset-dev-env.sh` 清空开发库后重启，Flyway 重新执行 V1~V3 即得到全新结构。将来上线、存在不可丢弃的存量数据后，再恢复「新增 Vn 只追加、不改旧文件」规范。
 
 ## 构建 / 运行 / 测试
 

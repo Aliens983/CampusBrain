@@ -19,12 +19,12 @@ cas-server/
     └── resources/
         ├── application.yml                        全部 ${ENV_VAR}（无明文密钥，仅本地示例默认值）
         └── db/migration/
-            ├── V1__init_schema.sql                建表 + 两校区/分类/轮播图种子
+            ├── V1__init_schema.sql                全量基线：全部表结构 + 两校区/分类/咨询沟通/轮播图种子
             ├── V2__seed_initial_users.sql         admin@ / user@campus.com
-            ├── V3__seed_teacher_users.sql         教师账号 + 咨询师回填
-            ├── V4__service_category.sql           service_category + 4 类
-            └── V5__consult_chat.sql               咨询沟通两表
+            └── V3__seed_teacher_users.sql         教师账号 + 咨询师回填
 ```
+
+> 开发期表结构变更直接改 V1（配合 `backend/scripts/reset-dev-env.sh` 清库重建），不写 ALTER 增量脚本；上线有存量数据后再恢复 Vn 只追加规范。
 
 > 已无 `application.yml.example`；历史「yml 内含真实凭据 / SQL 输出 StdOutImpl / 日志 debug」均不成立：
 > 当前密钥全部环境变量化，MyBatis 不打印 SQL，日志级别 info。

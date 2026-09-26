@@ -90,7 +90,7 @@
          主键 order_id 通过 useGeneratedKeys 回填到入参 ItemDO，调用方据此拿到真实订单号，
          不再使用"查用户最新一单"这种存在竞态的绕行方案。
          并发兜底：NOT EXISTS 子查询为快照读，双事务并发窗口可能同时通过；
-         配合 V8 生成列唯一约束 uk_item_active_general(user_id, service_id, active_dedup)，
+         配合生成列唯一约束（基线 schema） uk_item_active_general(user_id, service_id, active_dedup)，
          冲突时 INSERT IGNORE 降级为影响 0 行（业务层"去重回补库存"流程不变）。
          终态单/资源类单 active_dedup 为 NULL，不约束，可自由共存。 -->
     <insert id="insertSingleService"
@@ -107,7 +107,7 @@
 
     <!-- 咨询时段预约：幂等插入（同一咨询师同一时段 dedupeSeconds 秒内待审核不重复）。
          时段占用在业务事务内完成，本插入失败回滚即自动释放时段。
-         V8（3.1）：改 INSERT IGNORE 作第二道防线——资源类单不参与
+         INSERT IGNORE 作第二道防线——资源类单不参与
          uk_item_active_general（active_dedup 恒为 NULL），此处兜底任何
          唯一键冲突为 0 行，上层按重复提交回滚时段，绝不把 1062 抛成 500。 -->
     <insert id="insertConsultationBooking"
@@ -340,7 +340,7 @@
     </update>
 
     <!-- 设备借用：幂等插入（同一用户同一设备同一窗口 dedupeSeconds 秒内待审核不重复）。
-         V8（3.1）：INSERT IGNORE 兜底唯一键冲突为 0 行，上层按重复提交处理。 -->
+         INSERT IGNORE 兜底唯一键冲突为 0 行，上层按重复提交处理。 -->
     <insert id="insertEquipmentBooking"
             useGeneratedKeys="true" keyProperty="item.orderId">
         INSERT IGNORE INTO item(user_id, service_id, equipment_id, quantity, slot_date, start_time, end_time)
@@ -401,7 +401,7 @@
     </update>
 
     <!-- 教室时段预约：幂等插入（同一用户同一教室同一窗口 dedupeSeconds 秒内待审核不重复）。
-         V8（3.1）：INSERT IGNORE 兜底唯一键冲突为 0 行，上层按重复提交处理；
+         INSERT IGNORE 兜底唯一键冲突为 0 行，上层按重复提交处理；
          同一服务的不同教室可各自下单（active_dedup 为 NULL，互不冲突）。 -->
     <insert id="insertRoomBooking"
             useGeneratedKeys="true" keyProperty="item.orderId">

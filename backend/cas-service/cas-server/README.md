@@ -16,16 +16,13 @@ cas-server/
 ├── src/main/resources/
 │   ├── application.yml                     # 端口 18080、context-path /api/v1、Nacos/RabbitMQ/DS/Redis、Flyway 等
 │   └── db/migration/
-│       ├── V1__init_schema.sql             # 全部建表 + 两校区种子（服务/咨询师/教室/设备/轮播图/分类）
+│       ├── V1__init_schema.sql             # 全量基线：全部表结构 + 两校区种子（服务/咨询师/教室/设备/轮播图/分类/咨询沟通）
 │       ├── V2__seed_initial_users.sql      # 初始账号 admin@campus.com / user@campus.com
-│       ├── V3__seed_teacher_users.sql      # 教师账号 + 咨询师 user_id 回填
-│       ├── V4__service_category.sql        # service_category 分类表 + 固定 4 类
-│       ├── V5__consult_chat.sql            # 咨询沟通会话/消息两表
-│       ├── V6__services_end_date.sql       # 服务上下架结束日期
-│       ├── V7__item_unique_booking_guard.sql  # 通用/活动预约唯一约束（并发幂等兜底）
-│       └── V8__item_active_general_unique.sql # 生成列唯一索引：终态共存、资源类不误拦
+│       └── V3__seed_teacher_users.sql      # 教师账号 + 咨询师 user_id 回填
 └── pom.xml
 ```
+
+> 开发期表结构变更直接改 V1（配合 `backend/scripts/reset-dev-env.sh` 清库重建），不写 ALTER 增量脚本。
 
 ## 关键配置（application.yml）
 | 配置项 | 值 | 说明 |
