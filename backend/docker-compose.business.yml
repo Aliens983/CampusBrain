@@ -8,13 +8,14 @@
 # 职责边界（每个服务只允许在一个文件中定义，6.2.2）：
 #   - docker-compose.yml：基础设施底座（Nacos / KB 的 MySQL/Redis/ES/Qdrant/RabbitMQ）
 #   - 本文件：业务服务（gateway / cas-service / kb-service / frontend）
-#     及 CAS 专属中间件（cas-mysql / cas-redis；开发时 CAS 用宿主机 MySQL/Redis）
+#     及 CAS 专属中间件（cas-mysql / cas-redis；本地 IDE 开发也连这两个容器，
+#     宿主机映射 127.0.0.1:13306 / 16379，不再使用宿主机原生 MySQL/Redis）
 #
 # 文档文件存储：kb-service 使用本地磁盘（容器内 /file，命名卷 kb-file-data 持久化），
 # CAS 上传文件使用 cas-uploads 卷；项目不部署 MinIO。
 #
-# Schema 唯一来源是 Flyway（6.2.4）：cas-mysql 不再挂载 initdb 脚本，
-# 全新空库由 cas-service 启动时 Flyway 自动建表（V1~V8）。
+# Schema 唯一来源是 Flyway（6.2.4）：cas-mysql 不挂载 initdb 脚本，
+# 全新空库由 cas-service 启动时 Flyway 自动建表（开发期全量基线 V1~V3）。
 #
 # 镜像 tag 通过 ${TAG} 注入（默认 latest），pull_policy: never 保证用本地刚构建的镜像；
 # 所有密钥从环境变量插值（Jenkins 注入），避免硬编码。
