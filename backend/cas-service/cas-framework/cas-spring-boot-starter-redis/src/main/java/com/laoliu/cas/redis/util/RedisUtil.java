@@ -61,6 +61,26 @@ public class RedisUtil {
         return redisTemplate.opsForValue().increment(key, delta);
     }
 
+    /**
+     * 读取 INCR 计数器并统一转为 Long。
+     * <p>
+     * INCR 在 Redis 中写入的是裸数字串，而 value 走 Jackson2Json 反序列化，
+     * 小数值会被还原成 Integer（大数值才是 Long）；直接用泛型 {@code get} 接收为 Long
+     * 会在 checkcast 处抛 ClassCastException。计数器场景一律走本方法。
+     *
+     * @return key 不存在时返回 null
+     */
+    public Long getCounter(String key) {
+        Object value = redisTemplate.opsForValue().get(key);
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return Long.valueOf(value.toString());
+    }
+
     // ========== Hash 操作 ==========
 
     public <T> void hSet(String key, String field, T value) {

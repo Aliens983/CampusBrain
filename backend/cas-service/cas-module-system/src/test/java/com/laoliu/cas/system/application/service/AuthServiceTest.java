@@ -82,7 +82,7 @@ class AuthServiceTest {
         @DisplayName("应当成功登录并返回 JWT Token，且清零失败计数")
         void shouldLoginSuccessfully() {
             // Given
-            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(null);
+            when(redisUtil.getCounter(LOGIN_FAIL_KEY)).thenReturn(null);
             when(userRepository.getEncodePasswordByEmail(EMAIL)).thenReturn(ENCODED_PASSWORD);
             passwordUtilsMock.when(() -> PasswordUtils.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(true);
             when(userRepository.getUserIdByEmail(EMAIL)).thenReturn(USER_ID);
@@ -119,7 +119,7 @@ class AuthServiceTest {
         @DisplayName("用户不存在时应当抛出 USER_NOT_EXIST 异常并记录一次失败")
         void shouldThrowExceptionWhenUserNotExist() {
             // Given
-            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(null);
+            when(redisUtil.getCounter(LOGIN_FAIL_KEY)).thenReturn(null);
             when(userRepository.getEncodePasswordByEmail(EMAIL)).thenReturn(null);
 
             // When & Then
@@ -133,9 +133,25 @@ class AuthServiceTest {
         @DisplayName("密码错误时应当抛出 PASSWORD_ERROR 异常并记录一次失败")
         void shouldThrowExceptionWhenPasswordError() {
             // Given
-            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(null);
+            when(redisUtil.getCounter(LOGIN_FAIL_KEY)).thenReturn(null);
             when(userRepository.getEncodePasswordByEmail(EMAIL)).thenReturn(ENCODED_PASSWORD);
             passwordUtilsMock.when(() -> PasswordUtils.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(false);
+
+            // When & Then
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> authService.login(EMAIL, PASSWORD, CAPTCHA_UUID, CAPTCHA_CODE));
+            assertEquals(UserErrorCode.PASSWORD_ERROR.getCode(), exception.getCode());
+            verify(redisUtil).increment(LOGIN_FAIL_KEY);
+        }
+
+        @Test
+        @DisplayName("已有失败计数（第二次输错）时正常累计并抛 PASSWORD_ERROR，不发生 Integer→Long 类型转换异常")
+        void shouldRecordFailureWhenCounterAlreadyExists() {
+            // Given：模拟上一次输错后计数器已存在（线上该值由 INCR 写入、JSON 反序列化形态不定）
+            when(redisUtil.getCounter(LOGIN_FAIL_KEY)).thenReturn(1L);
+            when(userRepository.getEncodePasswordByEmail(EMAIL)).thenReturn(ENCODED_PASSWORD);
+            passwordUtilsMock.when(() -> PasswordUtils.matches(PASSWORD, ENCODED_PASSWORD)).thenReturn(false);
+            when(redisUtil.increment(LOGIN_FAIL_KEY)).thenReturn(2L);
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
@@ -148,7 +164,7 @@ class AuthServiceTest {
         @DisplayName("图形验证码校验不通过时应当直接抛出，且不再查询用户密码")
         void shouldThrowExceptionWhenCaptchaInvalid() {
             // Given
-            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(null);
+            when(redisUtil.getCounter(LOGIN_FAIL_KEY)).thenReturn(null);
             doThrow(new BusinessException(UserErrorCode.VERIFICATION_CODE_ERROR))
                     .when(captchaService).validateCaptcha(CAPTCHA_UUID, CAPTCHA_CODE);
 
@@ -163,7 +179,7 @@ class AuthServiceTest {
         @DisplayName("失败次数达到阈值时应当抛出 LOGIN_FAILED_TOO_MANY_TIMES 且不再消耗验证码")
         void shouldThrowExceptionWhenLoginLocked() {
             // Given
-            when(redisUtil.<Long>get(LOGIN_FAIL_KEY)).thenReturn(5L);
+            when(redisUtil.getCounter(LOGIN_FAIL_KEY)).thenReturn(5L);
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
@@ -278,7 +294,7 @@ class AuthServiceTest {
         @DisplayName("4.13 试错达 5 次锁定：直接抛 RESET_CODE_TRY_LOCKED，不读验证码、不查库")
         void shouldThrowExceptionWhenResetLocked() {
             // Given
-            when(redisUtil.<Long>get(RESET_FAIL_KEY)).thenReturn(5L);
+            when(redisUtil.getCounter(RESET_FAIL_KEY)).thenReturn(5L);
 
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,

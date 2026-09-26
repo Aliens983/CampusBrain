@@ -60,7 +60,7 @@ public class AuthService {
 
         // 1. 限频前置：已锁定账号直接拒绝，避免继续消耗验证码
         String failKey = LOGIN_FAIL_KEY_PREFIX + email;
-        Long failCount = redisUtil.get(failKey);
+        Long failCount = redisUtil.getCounter(failKey);
         if (failCount != null && failCount >= MAX_LOGIN_FAIL) {
             throw new BusinessException(UserErrorCode.LOGIN_FAILED_TOO_MANY_TIMES);
         }
@@ -105,7 +105,7 @@ public class AuthService {
 
         // 4.13 试错锁定：6 位数字码有效期 5 分钟，无计数可在线穷举，必须先锁再验
         String failKey = RESET_FAIL_KEY_PREFIX + email;
-        Long failCount = redisUtil.get(failKey);
+        Long failCount = redisUtil.getCounter(failKey);
         if (failCount != null && failCount >= MAX_RESET_CODE_FAIL) {
             throw new BusinessException(UserErrorCode.RESET_CODE_TRY_LOCKED);
         }
