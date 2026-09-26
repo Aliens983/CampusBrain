@@ -8,8 +8,8 @@
 #                  -f docker-compose.business.yml \
 #                  [-f docker-compose.observability.yml] up -d
 #
-# CAS 依赖的 MySQL/Redis：本地开发用宿主机（localhost:3306/6379），
-# 全栈部署由 docker-compose.business.yml 提供 cas-mysql/cas-redis。
+# CAS 依赖的 MySQL/Redis：由 docker-compose.business.yml 提供 cas-mysql/cas-redis
+# 容器（127.0.0.1:13306/16379），本地 IDE 与容器化部署均使用，不用宿主机原生服务。
 # ============================================================
 name: ${COMPOSE_PROJECT_NAME:-campus-appointment}
 
@@ -104,8 +104,10 @@ services:
     container_name: kb-qdrant
     restart: unless-stopped
     environment:
-      # API Key 留空则不鉴权（本地开发）；部署时在 .env 设置 QDRANT_API_KEY
-      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY:-}
+      # Qdrant v1.9 行为：该变量只要被注入（即使空串）也强制鉴权，
+      # 故本地开发在 .env 配固定 dev key（compose / kb 应用 / reset 脚本三处一致），
+      # 部署时改为 openssl rand -base64 24
+      QDRANT__SERVICE__API_KEY: ${QDRANT_API_KEY}
     ports:
       # 仅绑回环：向量库不对宿主机所在网络暴露
       - "127.0.0.1:6333:6333"
@@ -147,3 +149,11 @@ volumes:
   kb-es-data:
   kb-qdrant-data:
   kb-rabbitmq-data:
+
+# 固定子网，避开宿主机可能所在的 172.16~31 段（iPhone 热点固定 172.20.10.x，
+# 曾与 Docker 默认分配的 172.20.0.0/16 冲突导致容器端口全部超时）。
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 10.89.0.0/24

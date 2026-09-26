@@ -164,7 +164,8 @@ elasticsearch:
 qdrant:
   host: ${QDRANT_HOST:localhost}
   port: ${QDRANT_PORT:6334}
-  # 本地开发不设 Key 时留空；容器由 compose 注入 QDRANT_API_KEY
+  # 本地开发由 .env 注入固定 dev key（QDRANT_API_KEY，与 compose/reset 脚本一致）；
+  # Qdrant v1.9 一旦配置 key 即强制鉴权，空 key 也无法访问
   api-key: ${QDRANT_API_KEY:}
   collection-name: kb_chunks
   vector-size: 1024
