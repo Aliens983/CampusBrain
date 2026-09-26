@@ -45,10 +45,13 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${KB_MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: knowledge_base
+      # 容器 OS 与 MySQL 会话时区统一东八区：DATETIME 列的 DEFAULT CURRENT_TIMESTAMP
+      # 才会写北京时间；否则容器默认 UTC，与 JVM/serverTimezone=Asia/Shanghai 混用差 8 小时
+      TZ: Asia/Shanghai
     ports:
       # 仅绑回环：数据库不对宿主机所在网络暴露，调试可用 127.0.0.1:3307
       - "127.0.0.1:3307:3306"
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --default-time-zone=+08:00
     volumes:
       - kb-mysql-data:/var/lib/mysql
     healthcheck:
