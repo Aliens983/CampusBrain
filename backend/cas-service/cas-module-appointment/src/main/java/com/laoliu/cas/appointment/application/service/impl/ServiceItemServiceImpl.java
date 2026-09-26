@@ -54,9 +54,11 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     }
 
     @Override
-    // 4.8：Optional.empty() 不是 null，disableCachingNullValues 拦不住，会把"服务不存在"
-    // 缓存 30 分钟（此间新建同 ID 服务也读不到）。unless 显式排除空 Optional，只缓存命中结果。
-    @Cacheable(value = "services", key = "#id", unless = "#result == null or !#result.isPresent()")
+    // Spring 6 缓存抽象对 Optional 一等支持：入库前自动拆包，#result 拿到的是内容实体
+    // （Optional.empty() 对应 null），命中时再自动包回 Optional 返回。因此 unless 只能
+    // 判 null——写 #result.isPresent() 会在实体类型上找不到方法（EL1004E），导致详情 500。
+    // null 不缓存：disableCachingNullValues + unless 双保险，避免"服务不存在"缓存 30 分钟。
+    @Cacheable(value = "services", key = "#id", unless = "#result == null")
     public Optional<ServiceItem> getServiceById(Long id) {
         return serviceRepository.findById(id);
     }
