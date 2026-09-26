@@ -2,6 +2,7 @@ package com.kb.infrastructure.persistence.mysql;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.kb.infrastructure.persistence.mysql.dataobject.ConversationDO;
+import com.kb.infrastructure.persistence.mysql.dataobject.ConversationSummaryDO;
 import org.apache.ibatis.annotations.*;
 
 import java.util.List;
@@ -62,4 +63,19 @@ public interface ConversationMapper extends BaseMapper<ConversationDO> {
     @Delete("DELETE FROM conversation WHERE session_id = #{sessionId} AND user_id = #{userId}")
     int deleteBySessionId(@Param("sessionId") String sessionId,
                           @Param("userId") Long userId);
+
+    /**
+     * 聚合查询某用户的会话摘要列表（历史侧边栏数据源）：
+     * title 取该会话第一条用户消息（相关子查询按 id 正序取 1 行），
+     * updatedAt 取会话内最后一条消息时间，按最近活跃倒序。
+     * 仅统计归属当前用户的消息（4.1.13）。
+     */
+    @Select("SELECT c.session_id AS sessionId, " +
+            "(SELECT c2.content FROM conversation c2 WHERE c2.session_id = c.session_id " +
+            " AND c2.user_id = #{userId} AND c2.role = 'user' ORDER BY c2.id ASC LIMIT 1) AS title, " +
+            "MAX(c.created_at) AS updatedAt " +
+            "FROM conversation c WHERE c.user_id = #{userId} " +
+            "GROUP BY c.session_id ORDER BY updatedAt DESC LIMIT #{limit}")
+    List<ConversationSummaryDO> selectSessionSummaries(@Param("userId") Long userId,
+                                                       @Param("limit") int limit);
 }

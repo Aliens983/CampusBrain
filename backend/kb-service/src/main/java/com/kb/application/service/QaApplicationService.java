@@ -8,6 +8,7 @@ import com.kb.domain.chat.ChatSessionRepository;
 import com.kb.domain.chat.PendingBooking;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.conversation.ConversationRepository;
+import com.kb.domain.conversation.ConversationSummary;
 import com.kb.domain.rag.CancellationToken;
 import com.kb.domain.rag.LlmService;
 import com.kb.domain.rag.RetrievalResult;
@@ -285,6 +286,15 @@ public class QaApplicationService implements IQaApplicationService {
     public List<Conversation> getConversationHistory(String sessionId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return conversationRepository.findBySession(sessionId, userId);
+    }
+
+    /** 历史会话列表上限：侧边栏只展示最近 50 个会话 */
+    private static final int SESSION_LIST_LIMIT = 50;
+
+    @Override
+    public List<ConversationSummary> listConversations() {
+        Long userId = SecurityFrameworkUtils.getLoginUserId();
+        return conversationRepository.findSessionsByUser(userId, SESSION_LIST_LIMIT);
     }
 
     /**

@@ -40,7 +40,7 @@ export function useQaPortal() {
   const pending = ref<PendingView | null>(null)
   const pendingIndex = ref<number | null>(null)
 
-  // ===== 会话列表（localStorage） =====
+  // ===== 会话列表（以服务端 conversation 表为唯一数据源；localStorage 仅记住当前会话 ID） =====
   const sessions = ref<SessionMeta[]>([])
   const currentSessionId = ref('')
 
@@ -131,47 +131,51 @@ export function useQaPortal() {
     throw new Error(result.message || '请求失败')
   }
 
-  function sessionsKey() { return `campusbrain:kb_sessions:${uid.value}` }
+  /** 仅持久化"上次打开的会话 ID"这类 UI 偏好；会话列表本身存服务端，清库/换设备后不会残留 */
   function currentKey() { return `campusbrain:kb_current:${uid.value}` }
+  /** 旧版本把会话元数据存在 localStorage（campusbrain:kb_sessions:<uid>），
+   *  数据库清空后侧边栏仍显示死链；进入页面时一次性清除 */
+  function legacySessionsKey() { return `campusbrain:kb_sessions:${uid.value}` }
   function uuid() {
     return crypto.randomUUID ? crypto.randomUUID() : `s-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
   }
-  function loadSessionsFromStorage(): SessionMeta[] {
-    try {
-      const raw = localStorage.getItem(sessionsKey())
-      return raw ? JSON.parse(raw) as SessionMeta[] : []
-    } catch { return [] }
-  }
-  function persistSessions() { localStorage.setItem(sessionsKey(), JSON.stringify(sessions.value)) }
-  function persistCurrent() { localStorage.setItem(currentKey(), currentSessionId.value) }
 
-  function ensureSession() {
-    const current = localStorage.getItem(currentKey())
-    const all = loadSessionsFromStorage().filter(s => s.title !== '新对话')
-    sessions.value = all
-    currentSessionId.value = current && all.some(s => s.id === current) ? current : ''
-    persistSessions()
+  /** 从服务端拉取会话摘要列表（标题=首条提问，按最后活跃时间倒序） */
+  async function refreshSessions() {
+    try {
+      const rows = await fetchRaw('/qa/conversations') as Array<{ sessionId?: string; title?: string; updatedAt?: string }>
+      const serverIds = new Set((rows || []).map(r => r.sessionId))
+      // 本次运行期内新建、首条消息尚未落库的当前会话予以保留，避免侧边栏闪烁丢失；
+      // 清库场景进入页面时内存为空，不会有乐观项可保留
+      const optimistic = currentSessionId.value && !serverIds.has(currentSessionId.value)
+        ? sessions.value.filter(s => s.id === currentSessionId.value)
+        : []
+      sessions.value = [
+        ...optimistic,
+        ...(rows || []).map(r => ({ id: r.sessionId || '', title: r.title || '未命名对话', updatedAt: r.updatedAt || '' }))
+      ]
+    } catch (e) { console.error('获取会话列表失败', e) }
   }
+
+  /** 提问瞬间乐观插入列表（服务端列表要到消息落库后才能看到），不做本地持久化 */
   function registerActive(title: string) {
     const found = sessions.value.find(s => s.id === currentSessionId.value)
     if (!found) {
       sessions.value = [{ id: currentSessionId.value, title: title.slice(0, 30), updatedAt: new Date().toISOString() }, ...sessions.value]
-    } else {
-      found.title = found.title || title.slice(0, 30)
-      found.updatedAt = new Date().toISOString()
     }
-    persistSessions(); persistCurrent()
   }
+  /** 流式进行中仅更新内存展示；最终标题/时间以服务端刷新结果为准 */
   function touchSessionTitle(title: string) {
     const found = sessions.value.find(s => s.id === currentSessionId.value)
     if (found) {
       found.title = found.title || title.slice(0, 30)
       found.updatedAt = new Date().toISOString()
     }
-    persistSessions()
   }
   function formatSessionDate(value: string) {
-    const date = new Date(value)
+    if (!value) return ''
+    // 后端 Jackson 输出 "yyyy-MM-dd HH:mm:ss"，补 T 后各浏览器均可稳定解析
+    const date = new Date(value.includes('T') ? value : value.replace(' ', 'T'))
     if (Number.isNaN(date.getTime())) return '刚刚'
     const now = new Date()
     return date.toDateString() === now.toDateString()
@@ -182,12 +186,28 @@ export function useQaPortal() {
     return `${s.title || '未命名对话'} · ${formatSessionDate(s.updatedAt)}`
   }
 
+  /** 服务端已无该会话（清库/换设备/过期）：移除选中态、刷新列表并提示 */
+  async function handleMissingSession(id: string) {
+    if (currentSessionId.value === id) {
+      currentSessionId.value = ''
+      localStorage.setItem(currentKey(), '')
+    }
+    messages.value = []
+    ElMessage.info('该会话历史已不存在')
+    await refreshSessions()
+  }
+
   async function loadHistory(id: string) {
     messages.value = []
     if (!id) return
     try {
       const rows = await fetchRaw(`/qa/conversation/${id}`) as Array<{ id?: number; role?: string; content?: string }>
-      for (const row of rows || []) {
+      // 归属隔离下他人/已删除会话也返回空：本地列表项是死链，必须自愈而不是留白屏
+      if (!rows || rows.length === 0) {
+        await handleMissingSession(id)
+        return
+      }
+      for (const row of rows) {
         if (row.role === 'user' || row.role === 'assistant') {
           messages.value.push({ id: row.id, role: row.role, content: row.content || '' })
         }
@@ -199,7 +219,7 @@ export function useQaPortal() {
   function onSwitchSession(id: string) {
     if (streaming.value || id === '__empty__') return
     currentSessionId.value = id
-    persistCurrent()
+    localStorage.setItem(currentKey(), id)
     clearContext()
     loadHistory(id)
   }
@@ -208,7 +228,7 @@ export function useQaPortal() {
     currentSessionId.value = ''
     messages.value = []
     query.value = ''
-    persistCurrent()
+    localStorage.setItem(currentKey(), '')
     clearContext()
   }
   /** 仅清本地上下文展示，不请求后端（切换/新建会话时后端会以新 sessionId 重新开始） */
@@ -246,7 +266,11 @@ export function useQaPortal() {
     streaming.value = false
     // 只有正常收尾才刷新会话标题：异常或超时时答案不完整，
     // 让会话停留在旧标题反而更利于用户回看
-    if (title) touchSessionTitle(title)
+    if (title) {
+      touchSessionTitle(title)
+      // 以后端聚合结果为准校正标题/时间（乐观插入的标题可能被截断）
+      void refreshSessions()
+    }
     if (aiMsg) {
       if (hint) aiMsg.content += (aiMsg.content ? '\n\n' : '') + hint
       else if (!aiMsg.content) aiMsg.content = '（连接已中断，请重试）'
@@ -258,6 +282,7 @@ export function useQaPortal() {
     const q = query.value.trim()
     if (!q || streaming.value) return
     if (!currentSessionId.value) currentSessionId.value = uuid()
+    localStorage.setItem(currentKey(), currentSessionId.value)
     registerActive(q)
     streaming.value = true
     // 新一轮提问即作废上一张确认卡片（后端也会丢弃过期草稿）
@@ -392,8 +417,14 @@ export function useQaPortal() {
     // 分类中文名以后端字典为准（全局只拉一次，失败用兜底）
     void loadCategoryDictionary()
     if (isAdmin.value) refreshDocuments()
-    ensureSession()
-    await loadHistory(currentSessionId.value)
+    // 旧版本地会话列表是死链来源，清库后也不消失：进入页面一次性清除
+    localStorage.removeItem(legacySessionsKey())
+    // 会话列表以服务端为准，再决定恢复哪个上次打开的会话
+    await refreshSessions()
+    const saved = localStorage.getItem(currentKey())
+    currentSessionId.value = saved && sessions.value.some(s => s.id === saved) ? saved : ''
+    localStorage.setItem(currentKey(), currentSessionId.value)
+    if (currentSessionId.value) await loadHistory(currentSessionId.value)
   })
   onUnmounted(() => {
     if (scrollFrame) cancelAnimationFrame(scrollFrame)

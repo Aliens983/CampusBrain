@@ -5,9 +5,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.conversation.ConversationRepository;
+import com.kb.domain.conversation.ConversationSummary;
 import com.kb.infrastructure.common.BusinessException;
 import com.kb.infrastructure.common.ErrorCode;
 import com.kb.infrastructure.persistence.mysql.dataobject.ConversationDO;
+import com.kb.infrastructure.persistence.mysql.dataobject.ConversationSummaryDO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
@@ -89,6 +91,13 @@ public class ConversationRepositoryImpl implements ConversationRepository {
     public List<Conversation> findBySession(String sessionId, Long userId) {
         return conversationMapper.selectBySessionId(sessionId, userId).stream()
                 .map(this::toConversation)
+                .toList();
+    }
+
+    @Override
+    public List<ConversationSummary> findSessionsByUser(Long userId, int limit) {
+        return conversationMapper.selectSessionSummaries(userId, limit).stream()
+                .map(s -> new ConversationSummary(s.getSessionId(), s.getTitle(), s.getUpdatedAt()))
                 .toList();
     }
 

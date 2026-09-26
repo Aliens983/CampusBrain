@@ -2,6 +2,7 @@ package com.kb.application.service;
 
 import com.kb.domain.chat.AssistantEvent;
 import com.kb.domain.conversation.Conversation;
+import com.kb.domain.conversation.ConversationSummary;
 import com.kb.domain.rag.CancellationToken;
 
 import java.util.List;
@@ -58,6 +59,9 @@ public interface IQaApplicationService {
     String ask(String query, String sessionId);
 
     List<Conversation> getConversationHistory(String sessionId);
+
+    /** 查询当前登录用户的历史会话摘要列表（按最后活跃时间倒序） */
+    List<ConversationSummary> listConversations();
 
     void recordFeedback(Long messageId, String feedback);
 

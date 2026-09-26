@@ -36,6 +36,11 @@ public interface ConversationRepository {
     List<Conversation> findBySession(String sessionId, Long userId);
 
     /**
+     * 查询某用户的历史会话摘要列表（标题=首条用户消息，按最后活跃时间倒序）。
+     */
+    List<ConversationSummary> findSessionsByUser(Long userId, int limit);
+
+    /**
      * 更新消息反馈，带归属条件。
      *
      * @return true 表示命中且更新成功；false 表示消息不存在或不属于该用户

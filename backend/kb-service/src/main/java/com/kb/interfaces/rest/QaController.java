@@ -3,6 +3,7 @@ package com.kb.interfaces.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kb.application.service.IQaApplicationService;
 import com.kb.domain.conversation.Conversation;
+import com.kb.domain.conversation.ConversationSummary;
 import com.kb.domain.rag.CancellationToken;
 import com.kb.domain.conversation.Conversation.CitationRef;
 import com.kb.interfaces.dto.ApiResponse;
@@ -294,6 +295,12 @@ public class QaController {
             @Parameter(description = "会话 ID") @PathVariable String sessionId) {
         List<Conversation> history = qaService.getConversationHistory(sessionId);
         return ApiResponse.success(history);
+    }
+
+    @Operation(summary = "历史会话列表", description = "返回当前用户最近的会话摘要（标题取首条提问，按最后活跃时间倒序）")
+    @GetMapping("/conversations")
+    public ApiResponse<List<ConversationSummary>> listConversations() {
+        return ApiResponse.success(qaService.listConversations());
     }
 
     @Operation(summary = "清空会话上下文",
