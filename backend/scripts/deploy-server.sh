@@ -99,9 +99,9 @@ done
 # 镜像构建在 down 之前完成：构建失败时不触碰在跑的环境。
 COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.business.yml -f docker-compose.observability.yml)
 echo "═══ compose down -v（清空全部数据卷，等效新机部署）═══"
-TAG=deploy docker compose "${COMPOSE_FILES[@]}" down -v --remove-orphans
+TAG=deploy docker compose -p backend "${COMPOSE_FILES[@]}" down -v --remove-orphans
 echo "═══ compose up -d（全量拉起，TAG=deploy）═══"
-TAG=deploy docker compose "${COMPOSE_FILES[@]}" up -d
+TAG=deploy docker compose -p backend "${COMPOSE_FILES[@]}" up -d
 
 # ---------- 4) 冒烟 ----------
 echo "═══ 冒烟测试 ═══"
@@ -133,7 +133,7 @@ for s in gateway cas-service kb-service; do
   n=0
   for i in $(seq 1 19); do
     n=$(curl -sf -m 6 "http://localhost:8848/nacos/v1/ns/instance/list?serviceName=${s}" 2>/dev/null \
-        | python3 -c "import sys,json;print(len(json.load(sys.stdin).get('hosts',[])))" 2>/dev/null || echo 0)
+        | grep -o '"instanceId"' | wc -l | tr -d ' ' || echo 0)
     [ "${n}" -ge 1 ] && break
     sleep 8
   done

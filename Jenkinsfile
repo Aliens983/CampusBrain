@@ -79,7 +79,7 @@ pipeline {
                 dir('backend') {
                     // 合并 中间件编排(docker-compose.yml) + 业务服务编排(docker-compose.business.yml)
                     // TAG 注入本次镜像标签；密钥直接来自流水线环境，compose 自动插值
-                    sh 'TAG="${IMAGE_TAG}" docker compose -f docker-compose.yml -f docker-compose.business.yml up -d'
+                    sh 'TAG="${IMAGE_TAG}" docker compose -p backend -f docker-compose.yml -f docker-compose.business.yml up -d'
                 }
             }
         }
