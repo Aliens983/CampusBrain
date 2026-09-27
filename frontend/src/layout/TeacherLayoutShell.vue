@@ -68,6 +68,7 @@ const userStore = useUserStore()
 const navItems = [
   { label: '待我审核', path: '/teacher/review' },
   { label: '我的咨询', path: '/teacher/consultations' },
+  { label: '我的排班', path: '/teacher/schedule' },
   { label: '消息', path: '/teacher/messages', chat: true },
   { label: '个人中心', path: '/teacher/profile' },
 ]

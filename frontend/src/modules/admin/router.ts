@@ -25,6 +25,12 @@ export const adminRoutes: RouteRecordRaw[] = [
         meta: { title: '预约审核', requiresAuth: true, requiresAdmin: true },
       },
       {
+        path: 'schedule-cancellations',
+        name: 'admin-schedule-cancellations',
+        component: () => import('@/views/admin/ScheduleCancellationManage.vue'),
+        meta: { title: '停诊审批', requiresAuth: true, requiresAdmin: true },
+      },
+      {
         path: 'users',
         name: 'admin-users',
         component: () => import('@/views/admin/UserManage.vue'),

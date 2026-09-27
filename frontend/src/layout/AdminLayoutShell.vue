@@ -74,6 +74,7 @@ const navItems = [
   { label: '管理概览', path: '/admin', icon: 'Odometer' },
   { label: '服务治理', path: '/admin/services', icon: 'Grid' },
   { label: '预约审核', path: '/admin/bookings', icon: 'Calendar' },
+  { label: '停诊审批', path: '/admin/schedule-cancellations', icon: 'CircleClose' },
   { label: '用户与权限', path: '/admin/users', icon: 'User' },
   { label: '系统设置', path: '/admin/system', icon: 'Setting' },
   { label: '工具箱', path: '/admin/tools', icon: 'Tools' },
