@@ -7,11 +7,11 @@
 # 用法：  cd /opt/campusbrain/backend && bash scripts/deploy-server.sh
 #
 # 职责（幂等，HEAD 未变则直接退出）：
-#   1. 判定相对上次部署的改动，得出要重建的服务集合
+#   1. 判定相对上次部署的改动，得出要重建的镜像集合（仅影响镜像构建，省时间）
 #   2. mvn clean 全量打包 backend（clean 防 stale 产物：删类/删资源/删迁移时旧文件会残留 target/classes 被打进 jar；
 #      并避免 cas-server 嵌套模块 -pl 漏编的坑，2026-09-07 起加 clean）
 #   3. 只 docker build 改动服务的镜像（frontend 仅当其源码改动才构建，需联网拉 npm）
-#   4. TAG=deploy docker compose up -d 对应服务（复用 /opt 下的 .env）
+#   4. compose down -v 清空全部数据卷（新机部署语义，2026-09-27 起），再全量 up -d
 #   5. 冒烟：容器无 Restarting / 前端与网关链路 200 / Nacos 三服务注册
 #   6. 记录本次部署的 commit 到 .last-deploy-commit（gitignore）
 # ============================================================
@@ -89,17 +89,19 @@ for s in ${TO_BUILD}; do
   esac
 done
 
-# ---------- 3) compose up（改动服务 + infra 变化时全量重排）----------
-UP_TARGETS=""
-for s in ${TO_BUILD}; do
-  case "${s}" in gateway) UP_TARGETS="${UP_TARGETS} gateway";; cas) UP_TARGETS="${UP_TARGETS} cas-service";; kb) UP_TARGETS="${UP_TARGETS} kb-service";; frontend) UP_TARGETS="${UP_TARGETS} frontend";; esac
-done
-[ "${INFRA_CHANGED}" = "yes" ] && UP_TARGETS=""   # infra 变 → 全量 up -d 重排
-echo "═══ compose up${UP_TARGETS:+ prometheus ${UP_TARGETS}}（TAG=deploy）═══"
-# 增量发布时也显式带上 prometheus，保证可观测性栈随首次部署即拉起（已运行则 No-Op）；
-# INFRA_CHANGED 全量重排时 UP_TARGETS 为空，三个 -f 中的所有服务一并 up
-# shellcheck disable=SC2086
-TAG=deploy docker compose -f docker-compose.yml -f docker-compose.business.yml -f docker-compose.observability.yml up -d ${UP_TARGETS:+prometheus} ${UP_TARGETS}
+# ---------- 3) 清空全部数据卷（新机部署语义）+ 全量拉起 ----------
+# 约定（2026-09-27 起）：本服务器是演示/开发环境，每次部署都等效"在一台新机器上部署"——
+# down -v 删除 compose 项目的所有命名卷（两个 MySQL / 两个 Redis / ES / Qdrant / RabbitMQ /
+# Prometheus 数据），随后全量 up：
+#   - MySQL 空实例靠 MYSQL_DATABASE 自动建库（cas_db / knowledge_base），
+#     再由 Flyway 以最新 V1 基线全新迁移，彻底避免增量迁移折叠带来的 checksum 冲突；
+#   - 其余中间件空启动自初始化。
+# 镜像构建在 down 之前完成：构建失败时不触碰在跑的环境。
+COMPOSE_FILES=(-f docker-compose.yml -f docker-compose.business.yml -f docker-compose.observability.yml)
+echo "═══ compose down -v（清空全部数据卷，等效新机部署）═══"
+TAG=deploy docker compose "${COMPOSE_FILES[@]}" down -v --remove-orphans
+echo "═══ compose up -d（全量拉起，TAG=deploy）═══"
+TAG=deploy docker compose "${COMPOSE_FILES[@]}" up -d
 
 # ---------- 4) 冒烟 ----------
 echo "═══ 冒烟测试 ═══"
