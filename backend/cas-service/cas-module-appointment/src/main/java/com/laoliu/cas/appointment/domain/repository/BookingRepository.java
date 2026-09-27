@@ -39,6 +39,8 @@ public interface BookingRepository {
     /** 释放单个预约单占用的咨询时段（审核拒绝时调用；非咨询预约自动跳过） */
     int releaseSlotByOrderId(Long orderId);
 
+    int countActiveConsultationBookingsBySlot(Long slotId);
+
     /** 审核拒绝时按订单释放库存：仅通用类预约命中，资源类预约（咨询/教室/设备）不扣不补（7.3.6） */
     int releaseStockByOrderId(Long orderId);
 

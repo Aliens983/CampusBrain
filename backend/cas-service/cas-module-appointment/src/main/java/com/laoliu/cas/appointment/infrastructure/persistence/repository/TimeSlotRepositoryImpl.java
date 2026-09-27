@@ -32,6 +32,38 @@ public class TimeSlotRepositoryImpl implements TimeSlotRepository {
     }
 
     @Override
+    public Optional<Integer> findAvailability(Long id) {
+        return Optional.ofNullable(timeSlotMapper.selectById(id)).map(TimeSlotDO::getAvailable);
+    }
+
+    @Override
+    public Optional<Integer> findAvailabilityForUpdate(Long id) {
+        return Optional.ofNullable(timeSlotMapper.selectAvailabilityForUpdate(id));
+    }
+
+    @Override
+    public Optional<TimeSlot> findByIdForUpdate(Long id) {
+        return Optional.ofNullable(timeSlotMapper.selectByIdForUpdate(id)).map(TimeSlotDO::toEntity);
+    }
+
+    @Override
+    public List<TimeSlot> findByConsultantsAndDateRange(Collection<Long> consultantIds, LocalDate startDate, LocalDate endDate) {
+        if (consultantIds == null || consultantIds.isEmpty()) return List.of();
+        return timeSlotMapper.findByConsultantsAndDateRange(consultantIds, startDate, endDate).stream()
+                .map(TimeSlotDO::toEntity).toList();
+    }
+
+    @Override
+    public boolean insertIfMissing(Long consultantId, LocalDate date, String startTime, String endTime) {
+        return timeSlotMapper.insertIfMissing(consultantId, date, startTime, endTime) > 0;
+    }
+
+    @Override
+    public boolean markCancelledIfAvailable(Long slotId) {
+        return timeSlotMapper.markCancelledIfAvailable(slotId) == 1;
+    }
+
+    @Override
     public List<TimeSlot> findAvailable(Long consultantId, LocalDate date) {
         return timeSlotMapper.findAvailableByConsultantAndDate(consultantId, date).stream()
                 .map(TimeSlotDO::toEntity)

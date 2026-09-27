@@ -170,6 +170,10 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     /** 释放单个预约单占用的咨询时段（审核拒绝时调用，非咨询预约自动跳过） */
     int releaseSlotByOrderId(@Param("orderId") Long orderId);
 
+    int countActiveConsultationBookingsBySlot(@Param("slotId") Long slotId,
+                                               @Param("pendingCode") int pendingCode,
+                                               @Param("approvedCode") int approvedCode);
+
     /**
      * 幂等插入设备借用。成功时 orderId 回填到 {@code item}。
      *

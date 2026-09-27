@@ -20,6 +20,10 @@ public interface ConsultantRepository {
 
     List<Consultant> findAll();
 
+    List<Consultant> findActiveTeacherConsultants();
+
+    List<Consultant> findTeacherConsultantsByUserId(Long userId);
+
     /** 分页查询咨询师，支持按名称/部门/所属服务筛选 */
     IPage<Consultant> findPage(int page, int pageSize, String name, String department, Long serviceId);
 

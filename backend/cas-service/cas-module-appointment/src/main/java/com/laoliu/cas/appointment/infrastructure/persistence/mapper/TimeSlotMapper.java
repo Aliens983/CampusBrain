@@ -5,6 +5,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
+import org.apache.ibatis.annotations.Insert;
 
 import java.time.LocalDate;
 import java.util.Collection;
@@ -22,6 +23,33 @@ public interface TimeSlotMapper {
             "start_time AS startTime, end_time AS endTime, available " +
             "FROM time_slot WHERE id = #{id}")
     TimeSlotDO selectById(@Param("id") Long id);
+
+    @Select("SELECT available FROM time_slot WHERE id = #{id} FOR UPDATE")
+    Integer selectAvailabilityForUpdate(@Param("id") Long id);
+
+    @Select({"<script>",
+            "SELECT id, consultant_id AS consultantId, slot_date AS slotDate, start_time AS startTime, end_time AS endTime, available",
+            "FROM time_slot WHERE consultant_id IN",
+            "<foreach collection='consultantIds' item='id' open='(' separator=',' close=')'>#{id}</foreach>",
+            "AND slot_date BETWEEN #{startDate} AND #{endDate} ORDER BY consultant_id, slot_date, start_time",
+            "</script>"})
+    List<TimeSlotDO> findByConsultantsAndDateRange(@Param("consultantIds") Collection<Long> consultantIds,
+                                                   @Param("startDate") LocalDate startDate,
+                                                   @Param("endDate") LocalDate endDate);
+
+    @Insert("INSERT IGNORE INTO time_slot(consultant_id, slot_date, start_time, end_time, available) " +
+            "VALUES(#{consultantId}, #{date}, #{startTime}, #{endTime}, 1)")
+    int insertIfMissing(@Param("consultantId") Long consultantId,
+                        @Param("date") LocalDate date,
+                        @Param("startTime") String startTime,
+                        @Param("endTime") String endTime);
+
+    @Select("SELECT id, consultant_id AS consultantId, slot_date AS slotDate, start_time AS startTime, end_time AS endTime, available " +
+            "FROM time_slot WHERE id = #{id} FOR UPDATE")
+    TimeSlotDO selectByIdForUpdate(@Param("id") Long id);
+
+    @Update("UPDATE time_slot SET available = -1 WHERE id = #{slotId} AND available = 1")
+    int markCancelledIfAvailable(@Param("slotId") Long slotId);
 
     @Select("SELECT id, consultant_id AS consultantId, slot_date AS slotDate, " +
             "start_time AS startTime, end_time AS endTime, available " +

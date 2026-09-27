@@ -18,6 +18,18 @@ public interface TimeSlotRepository {
     /** 按ID查询时段 */
     Optional<TimeSlot> findById(Long id);
 
+    Optional<Integer> findAvailability(Long id);
+
+    Optional<Integer> findAvailabilityForUpdate(Long id);
+
+    Optional<TimeSlot> findByIdForUpdate(Long id);
+
+    List<TimeSlot> findByConsultantsAndDateRange(Collection<Long> consultantIds, LocalDate startDate, LocalDate endDate);
+
+    boolean insertIfMissing(Long consultantId, LocalDate date, String startTime, String endTime);
+
+    boolean markCancelledIfAvailable(Long slotId);
+
     /** 查询某咨询师某日仍可预约（available=1）的时段 */
     List<TimeSlot> findAvailable(Long consultantId, LocalDate date);
 

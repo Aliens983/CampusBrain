@@ -330,14 +330,23 @@
           AND i.equipment_id IS NULL
     </update>
 
-    <!-- 释放单个预约单占用的咨询时段（审核拒绝时调用；仅咨询预约命中） -->
+    <!-- 释放单个预约单占用的咨询时段（审核拒绝时调用；仅咨询预约命中）。
+         available=0 才允许释放：停诊(-1)与本就可约(1)的时段不得被预约链路改动，
+         防御异常/重复释放把已停诊时段"复活"。 -->
     <update id="releaseSlotByOrderId">
         UPDATE time_slot t
         INNER JOIN item i ON i.slot_id = t.id
         SET t.available = 1
         WHERE i.order_id = #{orderId}
           AND i.consultant_id IS NOT NULL
+          AND t.available = 0
     </update>
+
+    <select id="countActiveConsultationBookingsBySlot" resultType="int">
+        SELECT COUNT(*) FROM item
+        WHERE slot_id = #{slotId}
+          AND manage_status IN (#{pendingCode}, #{approvedCode})
+    </select>
 
     <!-- 设备借用：幂等插入（同一用户同一设备同一窗口 dedupeSeconds 秒内待审核不重复）。
          INSERT IGNORE 兜底唯一键冲突为 0 行，上层按重复提交处理。 -->

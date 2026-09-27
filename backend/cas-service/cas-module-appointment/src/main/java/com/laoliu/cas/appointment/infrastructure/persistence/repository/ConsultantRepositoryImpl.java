@@ -51,6 +51,20 @@ public class ConsultantRepositoryImpl implements ConsultantRepository {
     }
 
     @Override
+    public List<Consultant> findActiveTeacherConsultants() {
+        return consultantMapper.findActiveTeacherConsultants().stream()
+                .map(ConsultantDO::toEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Consultant> findTeacherConsultantsByUserId(Long userId) {
+        return consultantMapper.findTeacherConsultantsByUserId(userId).stream()
+                .map(ConsultantDO::toEntity)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public IPage<Consultant> findPage(int page, int pageSize, String name, String department, Long serviceId) {
         LambdaQueryWrapper<ConsultantDO> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.hasText(name)) {

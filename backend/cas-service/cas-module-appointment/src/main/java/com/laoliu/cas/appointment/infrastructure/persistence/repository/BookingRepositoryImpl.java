@@ -87,6 +87,12 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
+    public int countActiveConsultationBookingsBySlot(Long slotId) {
+        return itemMapper.countActiveConsultationBookingsBySlot(slotId,
+                ManageStatus.SUBMIT.getCode(), ManageStatus.APPROVED.getCode());
+    }
+
+    @Override
     public int releaseStockByOrderId(Long orderId) {
         return itemMapper.releaseStockByOrderId(orderId);
     }

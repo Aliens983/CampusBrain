@@ -158,6 +158,11 @@ CREATE TABLE equipment
 ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = '设备信息表';
 
 -- ---------- 咨询可预约时段表 ----------
+-- 排班规则（2026-09-26）：教师咨询固定 4 个工作时段
+-- 09:00-10:00 / 11:00-12:00 / 14:00-15:00 / 16:00-17:00，
+-- 由 ScheduleGenerateTask 在服务启动时及每天 00:15 幂等生成
+-- （今天起未来 14 天、仅工作日，INSERT IGNORE 依赖下方唯一键）。
+-- available 三态：1=可预约，0=已被预约占用，-1=教师申请停诊且管理员已审批通过。
 CREATE TABLE time_slot
 (
     id             BIGINT AUTO_INCREMENT PRIMARY KEY comment '时段ID',
@@ -165,10 +170,41 @@ CREATE TABLE time_slot
     slot_date      DATE NOT NULL comment '日期',
     start_time     VARCHAR(5) NOT NULL comment '开始时间 HH:mm',
     end_time       VARCHAR(5) NOT NULL comment '结束时间 HH:mm',
-    available      TINYINT(1) NOT NULL DEFAULT 1 comment '是否可预约',
-    INDEX idx_time_slot_consultant (consultant_id, slot_date),
+    available      TINYINT NOT NULL DEFAULT 1 comment '1可预约 0已被预约占用 -1停诊（审批通过）',
+    UNIQUE KEY uk_time_slot_consultant_date_start (consultant_id, slot_date, start_time),
+    CONSTRAINT ck_time_slot_available CHECK (available IN (-1, 0, 1)),
     CONSTRAINT fk_time_slot_consultant FOREIGN KEY (consultant_id) REFERENCES consultant (id)
-) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = '咨询可预约时段表';
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = '咨询可预约时段表（固定排班+停诊标记）';
+
+-- ---------- 教师停诊（取消排班）申请表 ----------
+-- 教师对自己未来某一时段申请停诊 → 管理员审批；通过后对应 time_slot.available 置 -1，
+-- 学生端与 AI 助手立即查不到该时段。已有未完成预约（manage_status 0/1）的时段禁止申请。
+CREATE TABLE schedule_cancel_request
+(
+    id            BIGINT AUTO_INCREMENT PRIMARY KEY comment '申请ID',
+    consultant_id BIGINT NOT NULL comment '咨询师ID',
+    slot_id       BIGINT NOT NULL comment '申请停诊的时段ID（time_slot.id）',
+    slot_date     DATE NOT NULL comment '时段日期（冗余，便于列表展示）',
+    start_time    VARCHAR(5) NOT NULL comment '时段开始 HH:mm（冗余）',
+    end_time      VARCHAR(5) NOT NULL comment '时段结束 HH:mm（冗余）',
+    reason        VARCHAR(255) NOT NULL DEFAULT '' comment '教师填写的停诊事由',
+    status        TINYINT NOT NULL DEFAULT 0 comment '0待审核 1已通过 2已拒绝',
+    pending_slot_id BIGINT GENERATED ALWAYS AS (CASE WHEN status = 0 THEN slot_id ELSE NULL END) STORED,
+    teacher_user_id BIGINT NOT NULL comment '提交申请的教师账号ID',
+    auditor_id    BIGINT NULL comment '审批管理员账号ID',
+    audit_remark  VARCHAR(255) NULL comment '审批意见（拒绝原因等）',
+    audit_time    DATETIME NULL comment '审批时间',
+    create_time   TIMESTAMP DEFAULT CURRENT_TIMESTAMP comment '申请时间',
+    update_time   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP comment '更新时间',
+    INDEX idx_scr_status (status),
+    INDEX idx_scr_consultant (consultant_id, slot_date),
+    INDEX idx_scr_slot (slot_id),
+    UNIQUE KEY uk_scr_pending_slot (pending_slot_id),
+    CONSTRAINT fk_scr_consultant FOREIGN KEY (consultant_id) REFERENCES consultant (id),
+    CONSTRAINT fk_scr_slot FOREIGN KEY (slot_id) REFERENCES time_slot (id),
+    CONSTRAINT fk_scr_teacher FOREIGN KEY (teacher_user_id) REFERENCES `user` (id),
+    CONSTRAINT fk_scr_auditor FOREIGN KEY (auditor_id) REFERENCES `user` (id)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci comment = '教师停诊（取消排班）申请表';
 
 -- ============================================================
 -- 样例/参考数据
@@ -202,15 +238,8 @@ INSERT INTO equipment (name, category, description, total_stock, available_stock
 ('录音笔', '音频设备', '专业录音笔，支持远距离录音，适合课堂记录', 30, 22, '支', '下沙设备中心', 12),
 ('摄像机', '摄影摄像', 'SONY 4K摄像机，适用于活动拍摄和课程录制', 8, 3, '台', '下沙设备中心', 12);
 
-INSERT INTO time_slot (consultant_id, slot_date, start_time, end_time, available) VALUES
-(1, CURDATE(), '09:00', '10:00', 1),
-(1, CURDATE(), '10:00', '11:00', 1),
-(1, CURDATE(), '14:00', '15:00', 1),
-(2, CURDATE(), '09:00', '10:00', 1),
-(2, CURDATE(), '15:00', '16:00', 1),
-(6, CURDATE(), '09:00', '10:00', 1),
-(6, CURDATE(), '10:00', '11:00', 1),
-(6, CURDATE(), '14:00', '15:00', 1);
+-- 教师咨询时段（time_slot）不再手工写死：固定 4 个工作时段由
+-- ScheduleGenerateTask 在服务启动时及每日 00:15 幂等生成（未来 14 天工作日）。
 
 -- ---------- 教室表 ----------
 CREATE TABLE room

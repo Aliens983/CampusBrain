@@ -34,6 +34,7 @@ public class TimeSlotDO {
                 .startTime(startTime)
                 .endTime(endTime)
                 .available(available != null && available == 1)
+                .rawAvailability(available)
                 .build();
     }
 }

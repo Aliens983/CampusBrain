@@ -39,4 +39,7 @@ public class TimeSlot implements Serializable {
 
     /** 是否可预约 */
     private boolean available;
+
+    /** 原始数据库状态，仅排班管理区分已占用与停诊；预约逻辑仍使用 available。 */
+    private Integer rawAvailability;
 }
