@@ -91,20 +91,20 @@ class BookingSlotExtractorTest {
     @Test
     @DisplayName("裸“N号”按本月当天解析（今天说26号就是今天）")
     void shouldExtractBareDayOfMonth() {
-        LocalDate today = LocalDate.now();
-        BookingSlots slots = BookingSlotExtractor.extract("仓前校区26号教师咨询还有名额吗");
-        assertEquals(today.withDayOfMonth(Math.min(26, today.lengthOfMonth())).toString(),
+        LocalDate today = LocalDate.of(2026, 9, 26);
+        BookingSlots slots = BookingSlotExtractor.extract("仓前校区26号教师咨询还有名额吗", today);
+        assertEquals(today.toString(),
                 slots.getDate(), "当天未过时裸日期应解析为本月该日");
     }
 
     @Test
     @DisplayName("裸“N日”已过则顺延到下月同一天")
     void shouldRollBareDayToNextMonthWhenPassed() {
-        LocalDate today = LocalDate.now();
-        int pastDay = Math.max(1, today.getDayOfMonth() - 1);
+        LocalDate today = LocalDate.of(2026, 9, 26);
+        int pastDay = 25;
         LocalDate expected = today.withDayOfMonth(pastDay).plusMonths(1);
         assertEquals(expected.toString(),
-                BookingSlotExtractor.extract(pastDay + "日的教室").getDate());
+                BookingSlotExtractor.extract(pastDay + "日的教室", today).getDate());
     }
 
     @Test

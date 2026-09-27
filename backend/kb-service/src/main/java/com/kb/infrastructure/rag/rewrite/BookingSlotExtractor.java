@@ -50,6 +50,10 @@ public final class BookingSlotExtractor {
      * 从用户提问中抽取预约条件
      */
     public static BookingSlots extract(String text) {
+        return extract(text, LocalDate.now());
+    }
+
+    static BookingSlots extract(String text, LocalDate today) {
         BookingSlots slots = new BookingSlots();
         if (text == null || text.isBlank()) {
             return slots;
@@ -61,7 +65,7 @@ public final class BookingSlotExtractor {
 
         // 先抽日期并把命中片段从文本中剔除：
         // 否则"2026-09-12"里的数字会被时段正则误当成"20:26-09"这样的伪时段
-        String[] dateAndRest = extractDateAndRest(q);
+        String[] dateAndRest = extractDateAndRest(q, today);
         slots.setDate(dateAndRest[0]);
         String rest = dateAndRest[1];
 
@@ -114,8 +118,7 @@ public final class BookingSlotExtractor {
      *
      * @return [日期 yyyy-MM-dd（可为 null）, 剔除日期后的剩余文本]
      */
-    private static String[] extractDateAndRest(String q) {
-        LocalDate today = LocalDate.now();
+    private static String[] extractDateAndRest(String q, LocalDate today) {
         String rest = q;
 
         // 相对日期（顺序敏感："大后天"必须先于"后天"匹配）
