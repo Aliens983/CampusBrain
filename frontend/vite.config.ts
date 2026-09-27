@@ -20,6 +20,7 @@ export default defineConfig({
       '/uploads': {
         target: 'http://localhost:18080',
         changeOrigin: true,
+        rewrite: (path) => `/api/v1${path}`,
       },
       // KB 路径已带 /api/v1/kb 前缀，直接透传给网关，不再加 /v1
       '/api/v1/kb': {
