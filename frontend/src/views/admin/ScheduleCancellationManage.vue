@@ -1,7 +1,7 @@
 <template>
   <div class="admin-page">
     <header class="page-head">
-      <div><h1>停诊审批</h1><p>审批教师提交的咨询时段停诊申请</p></div>
+      <div><h1>排班调整审批</h1><p>审批教师提交的咨询时段取消排班申请</p></div>
       <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
     </header>
     <section class="summary"><span>待处理申请</span><strong>{{ requests.length }}</strong></section>
@@ -52,7 +52,7 @@ async function load() {
 async function audit(item: ScheduleRequest, approve: boolean) {
   let remark: string | undefined
   try {
-    const result = await ElMessageBox.prompt(approve ? '审批意见（可选）' : '请填写拒绝原因', approve ? '批准停诊申请' : '拒绝停诊申请', {
+    const result = await ElMessageBox.prompt(approve ? '审批意见（可选）' : '请填写拒绝原因', approve ? '通过取消排班申请' : '拒绝取消排班申请', {
       inputType: 'textarea', inputPlaceholder: '审批意见',
       inputValidator: (value: string) => approve || Boolean(value.trim()) || '拒绝时请填写原因',
       confirmButtonText: approve ? '确认通过' : '确认拒绝',
@@ -64,7 +64,7 @@ async function audit(item: ScheduleRequest, approve: boolean) {
   try {
     const suffix = approve ? 'approve' : 'reject'
     await request.patch(`/admin/schedule-cancellations/${item.id}/${suffix}`, { remark })
-    ElMessage.success(approve ? '申请已通过，时段已停诊' : '申请已拒绝')
+    ElMessage.success(approve ? '申请已通过，该时段已取消' : '申请已拒绝')
     await load()
   } catch (error) { ElMessage.error((error as Error).message || '审批失败') }
   finally { busyId.value = null }

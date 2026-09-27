@@ -28,7 +28,7 @@ export const adminRoutes: RouteRecordRaw[] = [
         path: 'schedule-cancellations',
         name: 'admin-schedule-cancellations',
         component: () => import('@/views/admin/ScheduleCancellationManage.vue'),
-        meta: { title: '停诊审批', requiresAuth: true, requiresAdmin: true },
+        meta: { title: '排班调整审批', requiresAuth: true, requiresAdmin: true },
       },
       {
         path: 'users',

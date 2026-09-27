@@ -46,7 +46,7 @@
               type="primary"
               plain
               @click="openApply(slot)"
-            >申请停诊</el-button>
+            >申请取消排班</el-button>
           </article>
           <el-empty v-if="!loading && slots.length === 0" :description="isWeekend(selectedDate) ? '周末不排班' : '该日期没有工作日排班'" />
         </div>
@@ -61,14 +61,14 @@
             </div>
             <el-tag :type="requestType(item.status)">{{ requestLabel(item.status) }}</el-tag>
           </article>
-          <el-empty v-if="!requestsLoading && requests.length === 0" description="暂无停诊申请记录" />
+          <el-empty v-if="!requestsLoading && requests.length === 0" description="暂无排班调整申请记录" />
         </div>
       </el-tab-pane>
     </el-tabs>
 
-    <el-dialog v-model="applyVisible" title="申请停诊" width="460px">
+    <el-dialog v-model="applyVisible" title="申请取消排班" width="460px">
       <p v-if="selectedSlot" class="dialog-meta">{{ selectedDate }} {{ selectedSlot.startTime }}–{{ selectedSlot.endTime }}</p>
-      <el-input v-model="reason" type="textarea" :rows="4" maxlength="255" show-word-limit placeholder="请填写停诊事由" />
+      <el-input v-model="reason" type="textarea" :rows="4" maxlength="255" show-word-limit placeholder="请填写取消排班原因" />
       <template #footer>
         <el-button @click="applyVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="submitApply">提交申请</el-button>
@@ -118,7 +118,7 @@ const dates = computed(() => Array.from({ length: 14 }, (_, i) => dayjs().add(i,
 
 const today = dayjs().format('YYYY-MM-DD')
 function isWeekend(value: string) { const day = dayjs(value).day(); return day === 0 || day === 6 }
-/** 与后端规则一致：仅未来工作日、可预约且无待审批申请时才能申请停诊 */
+/** 与后端规则一致：仅未来工作日、可预约且无待审批申请时才能申请取消排班 */
 function canApply(slot: ScheduleSlot) {
   return slot.availability === 1 && !slot.pendingRequestId && slot.date > today && !isWeekend(slot.date)
 }
@@ -128,8 +128,8 @@ function disableDate(date: Date) {
 }
 function weekday(value: string) { return ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][dayjs(value).day()] }
 function statusLabel(slot: ScheduleSlot) {
-  if (slot.pendingRequestId) return '停诊申请待审批'
-  return ({ 1: '可预约', 0: '已预约', '-1': '已停诊' } as Record<number, string>)[slot.availability] || '不可用'
+  if (slot.pendingRequestId) return '取消排班待审批'
+  return ({ 1: '可预约', 0: '已预约', '-1': '已取消' } as Record<number, string>)[slot.availability] || '不可用'
 }
 function statusType(slot: ScheduleSlot) {
   if (slot.pendingRequestId) return 'warning'
@@ -153,11 +153,11 @@ async function loadRequests() {
 }
 function openApply(slot: ScheduleSlot) { selectedSlot.value = slot; reason.value = ''; applyVisible.value = true }
 async function submitApply() {
-  if (!selectedSlot.value || !reason.value.trim()) { ElMessage.warning('请填写停诊事由'); return }
+  if (!selectedSlot.value || !reason.value.trim()) { ElMessage.warning('请填写取消排班原因'); return }
   submitting.value = true
   try {
     await request.post('/teacher/schedule/requests', { slotId: selectedSlot.value.slotId, reason: reason.value.trim() })
-    ElMessage.success('停诊申请已提交')
+    ElMessage.success('取消排班申请已提交')
     applyVisible.value = false
     await Promise.all([loadSchedule(), loadRequests()])
   } catch (error) { ElMessage.error((error as Error).message || '提交失败') }
