@@ -211,10 +211,9 @@ async function generateQr() {
   qrLoading.value = true
   try {
     const imageUrl = await request.get('/app/qr-code', { params: { content: qrContent.value } }) as string
-    // 后端返回 http://localhost:18080/api/v1/uploads/xxx.png
-    // 转为走Vite代理的路径 /api/uploads/xxx.png
+    // 二维码图片使用与文件服务一致的同源 /uploads 路径。
     const path = new URL(imageUrl).pathname.replace('/api/v1', '')
-    qrImage.value = '/api' + path
+    qrImage.value = path
   } catch { ElMessage.error('二维码生成失败') }
   finally { qrLoading.value = false }
 }

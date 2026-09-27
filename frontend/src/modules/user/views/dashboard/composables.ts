@@ -24,10 +24,9 @@ export interface DashboardTodo {
   path: string
 }
 
-/** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
+/** 保持文件服务返回的同源 /uploads 路径。 */
 export { assetUrl }
 
-/** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
 function bannerUrl(p: string) {
   return assetUrl(p)
 }

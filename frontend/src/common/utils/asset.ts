@@ -1,7 +1,6 @@
-/** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
+/** 静态资源统一使用与文件服务一致的同源 /uploads 路径。 */
 export function assetUrl(p?: string): string {
   if (!p) return ''
   if (/^https?:/.test(p)) return p
-  if (p.startsWith('/uploads')) return `/api${p}`
   return p
 }

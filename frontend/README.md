@@ -100,8 +100,9 @@ npm run lint         # eslint . --fix
 |---|---|---|
 | `/api/v1/kb` | `http://localhost:8888` | KB 路径已带 `/v1`，直接透传 |
 | `/api` | `http://localhost:8888` | CAS 路径补 `/v1` 前缀后转发（rewrite `/api` → `/api/v1`） |
+| `/uploads` | `http://localhost:18080` | 图片等上传静态资源直接走 CAS 文件服务，与生产 Nginx 一致 |
 
-网关按 `/api/v1/kb/**` → kb-service、其余 → cas-service 路由。图片静态资源 `/uploads/**`（含轮播图、封面、验证码）同样经 `/api` 前缀代理到网关放行。生产 `frontend/nginx.conf` 保持两条同构的 `location`。
+网关按 `/api/v1/kb/**` → kb-service、其余 → cas-service 路由。上传静态资源统一使用 `/uploads/**`，开发环境由 Vite 直接代理到 CAS；生产由 `frontend/nginx.conf` 直接代理到 CAS 文件服务，不经过 API 网关。
 
 ## 登录与账号
 - 统一走 CAS 认证（`/api/v1/auth/login`，图形验证码）；token 由 Pinia persistedstate 持久化到 localStorage，路由守卫按角色决定首页/管理端准入。

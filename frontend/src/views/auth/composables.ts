@@ -70,10 +70,9 @@ export function useAuthPage() {
       const response = await request.get('/captcha') as unknown as { uuid: string; imageUrl: string }
       // uuid 需随验证码答案一起提交；图形验证码一次性，提交后即失效
       captchaUuid.value = response.uuid
-      // 后端返回 http://localhost:18080/api/v1/uploads/xxx.png
-      // 转为走Vite代理的路径 /api/uploads/xxx.png
+      // 验证码图片使用与文件服务一致的同源 /uploads 路径。
       const path = new URL(response.imageUrl).pathname.replace('/api/v1', '')
-      captchaImage.value = '/api' + path
+      captchaImage.value = path
     } catch {
       captchaUuid.value = ''
       captchaImage.value = ''

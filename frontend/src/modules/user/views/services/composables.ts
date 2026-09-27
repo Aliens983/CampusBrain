@@ -37,7 +37,7 @@ export interface RoomLite {
   seats?: number
 }
 
-/** /uploads/xx → /api/uploads/xx（走 vite 代理到网关） */
+/** 保持文件服务返回的同源 /uploads 路径。 */
 export { assetUrl } from '@/common/utils/asset'
 
 /** 本地时区 yyyy-MM-dd（避免 toISOString 的 UTC 跨天问题） */
