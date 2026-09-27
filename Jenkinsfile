@@ -64,7 +64,7 @@ pipeline {
                     // 三个后端 Dockerfile 均为"运行阶段"，COPY 的是第②步产出的 jar
                     // 构建上下文必须指向对应模块目录（Dockerfile 里的 target/ 是相对它的）
                     sh 'docker build -t gateway:${IMAGE_TAG}     -f gateway/Dockerfile     gateway/'
-                    sh 'docker build -t cas-service:${IMAGE_TAG} -f cas-service/Dockerfile cas-service/'
+                    sh 'docker build -t cas-service:${IMAGE_TAG} -f cas-service/Dockerfile .'
                     sh 'docker build -t kb-service:${IMAGE_TAG}  -f kb-service/Dockerfile  kb-service/'
                 }
                 dir('frontend') {

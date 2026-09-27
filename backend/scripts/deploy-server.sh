@@ -83,7 +83,7 @@ grep -E "BUILD (SUCCESS|FAILURE)" /tmp/deploy-mvn.log | tail -1
 for s in ${TO_BUILD}; do
   case "${s}" in
     gateway)  echo "── docker build gateway ──";  docker build -q -t gateway:deploy     -f gateway/Dockerfile      gateway/      ;;
-    cas)      echo "── docker build cas-service ──"; docker build -q -t cas-service:deploy -f cas-service/Dockerfile cas-service/  ;;
+    cas)      echo "── docker build cas-service ──"; docker build -q -t cas-service:deploy -f cas-service/Dockerfile . ;;
     kb)       echo "── docker build kb-service ──";  docker build -q -t kb-service:deploy  -f kb-service/Dockerfile  kb-service/   ;;
     frontend) echo "── docker build frontend（多阶段，较慢）──"; docker build -q -t frontend:deploy "${REPO}/frontend" ;;
   esac
