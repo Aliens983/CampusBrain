@@ -14,6 +14,7 @@
 #   4. compose down -v 清空全部数据卷（新机部署语义，2026-09-27 起），再全量 up -d
 #   5. 冒烟：容器无 Restarting / 前端与网关链路 200 / Nacos 三服务注册
 #   6. 记录本次部署的 commit 到 .last-deploy-commit（gitignore）
+#   7. 部署成功后清理 >24h 的悬空镜像与停止容器，防止磁盘逐次部署膨胀
 # ============================================================
 set -euo pipefail
 
@@ -147,6 +148,14 @@ if [ "${RC}" -gt 0 ]; then echo "❌ 有容器在重启 (${RC})"; fail=1; fi
 if [ "${fail}" = "0" ]; then
   echo "✅ 部署成功，记录部署点 ${HEAD}"
   echo "${HEAD}" > "${LAST_FILE}"
+
+  # ---------- 5) 清理构建垃圾，防止磁盘逐次部署膨胀 ----------
+  # 经典 docker build 每次构建会留下一批 <none> 悬空中间镜像（曾累积 124 个 / 11GB）。
+  # 只清 24h 之前的：保留本次构建的中间层作为下次构建的缓存（避免 npm/maven 全量重下），
+  # 更早的历史中间层一律回收。容器/卷已由上面的 down -v 处理，这里只兜底停止容器。
+  echo "═══ 清理悬空镜像(>24h)与停止容器 ═══"
+  docker image prune -f --filter "until=24h" | tail -1 || true
+  docker container prune -f | tail -1 || true
 else
   echo "❌ 冒烟未通过（服务已尝试拉起，见上）。未记录部署点，可手动重跑。" >&2
   exit 1
