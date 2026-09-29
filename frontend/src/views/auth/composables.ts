@@ -70,8 +70,10 @@ export function useAuthPage() {
       const response = await request.get('/captcha') as unknown as { uuid: string; imageUrl: string }
       // uuid 需随验证码答案一起提交；图形验证码一次性，提交后即失效
       captchaUuid.value = response.uuid
-      // 验证码图片使用与文件服务一致的同源 /uploads 路径。
-      const path = new URL(response.imageUrl).pathname.replace('/api/v1', '')
+      // 只取路径并与 axios baseURL(/api) 对齐：/api/v1 → /api，
+      // 由同源代理补回版本段（dev: vite proxy /api → 网关 /api/v1；prod: nginx 同规则）。
+      // 不能直接删掉 /api/v1，裸 /captcha/** 无任何代理规则，dev 会被 SPA 兜底成 HTML 导致破图。
+      const path = new URL(response.imageUrl).pathname.replace(/^\/api\/v1/, '/api')
       captchaImage.value = path
     } catch {
       captchaUuid.value = ''
