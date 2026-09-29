@@ -1,6 +1,7 @@
 package com.kb.infrastructure.rag.llm;
 
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * 预约工具链路的"空承诺"判定（Function Calling 守卫）。
@@ -40,6 +41,16 @@ final class ToolCallGuard {
             "为您查询", "为你查询", "去查一下",
             "illquery", "letme", "willquery", "haveyouquery", "querydown", "queryforyou");
 
+    /**
+     * 英文"即将去查"句式（2026-09-29 复发：用户夹杂英文催促时模型整轮回英文承诺，
+     * 如 "I'll look up the available consultants for you."，旧标记只覆盖 query 漏掉了 look up）。
+     * 在保留单词边界的规范化原文（小写、弯引号转正、压空白）上匹配，
+     * 避免 "ill" 命中 still/will 等普通词。
+     */
+    private static final Pattern ENGLISH_INTENT = Pattern.compile(
+            "(?is)\\b(i'll|i will|let me|i'm going to|i am going to|going to|gonna)\\b"
+                    + "[\\w', ]{0,40}?\\b(look up|look|check|query|search|find|retrieve)\\b");
+
     private ToolCallGuard() {
     }
 
@@ -62,6 +73,10 @@ final class ToolCallGuard {
             if (compact.contains(marker)) {
                 return true;
             }
+        }
+        // 英文承诺句："I'll look up ... for you."、"Let me check that."（零工具、短句）
+        if (ENGLISH_INTENT.matcher(normalizeRaw(text)).find()) {
+            return true;
         }
         // 历史故障中模型输出过整句英文搪塞（无任何中文、无数据）
         if (!containsChinese(compact) && compact.contains("query")) {
@@ -91,7 +106,8 @@ final class ToolCallGuard {
                 return true;
             }
         }
-        return false;
+        // 英文计划旁白："Let me check the time slots first."（工具已返回但没给结论）
+        return ENGLISH_INTENT.matcher(normalizeRaw(text)).find();
     }
 
     /** 模型零工具空承诺后，追加到重试请求末尾的强制指令 */
@@ -125,5 +141,12 @@ final class ToolCallGuard {
 
     private static boolean containsChinese(String s) {
         return s.codePoints().anyMatch(c -> c >= 0x4E00 && c <= 0x9FFF);
+    }
+
+    /** 保留单词边界的规范化：小写、弯引号转正、空白压缩，供英文意图正则使用 */
+    private static String normalizeRaw(String text) {
+        return text.toLowerCase(java.util.Locale.ROOT)
+                .replace('’', '\'').replace('‘', '\'')
+                .replaceAll("\\s+", " ").trim();
     }
 }

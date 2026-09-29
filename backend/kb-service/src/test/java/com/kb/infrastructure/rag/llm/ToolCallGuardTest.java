@@ -48,6 +48,35 @@ class ToolCallGuardTest {
     }
 
     @Test
+    @DisplayName("2026-09-29 复发：look up/check 类英文承诺句命中")
+    void englishLookUpPromiseHits() {
+        assertThat(ToolCallGuard.isEmptyPromise("I'll look up the available consultants for you."))
+                .isTrue();
+        assertThat(ToolCallGuard.isEmptyPromise("I'll look up the available equipment for you."))
+                .isTrue();
+        assertThat(ToolCallGuard.isEmptyPromise("Let me check the available rooms first."))
+                .isTrue();
+        assertThat(ToolCallGuard.isEmptyPromise("I’m going to search for available services now."))
+                .isTrue();
+        // 含 look 的计划旁白（工具已执行）也要补救
+        assertThat(ToolCallGuard.isIncompleteNarrative("Let me look up the detailed time slots."))
+                .isTrue();
+    }
+
+    @Test
+    @DisplayName("英文正常能力介绍与含 still/will 的句子不被误判")
+    void englishNormalAnswerNotPromised() {
+        // 能力介绍用 I can（非将来时承诺），不应触发重试
+        assertThat(ToolCallGuard.isEmptyPromise(
+                "I can help you look up available consultants. Which campus do you prefer?"))
+                .isFalse();
+        // 单词边界：still/will 里的 ill 不能误命中
+        assertThat(ToolCallGuard.isEmptyPromise(
+                "I still need the date to proceed; which day would you like to book?"))
+                .isFalse();
+    }
+
+    @Test
     @DisplayName("带真实数据的长回答不命中")
     void dataBackedAnswerNotPromised() {
         String real = "查询结果出来了：仓前校区2026-09-26的教师咨询，目前5位咨询师当天可约时段情况如下：\n"

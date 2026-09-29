@@ -867,7 +867,9 @@ public class LangChain4jLlmService implements LlmService {
                 + "\n5. 用户要求预约或取消时，只能调用 prepareBooking / requestCancelBooking "
                 + "生成待确认草稿，并明确询问用户「是否确认预约？」。严禁在用户明确答复之前做任何写操作。"
                 + "\n6. 与实时预约无关的问题（自我介绍、能力介绍、闲聊、纯知识问答）直接回答，不要调用工具。"
-                + "\n7.【语言】始终使用简体中文回答，禁止输出英文。";
+                + "\n7.【语言】始终使用简体中文回答，禁止输出英文。即使用户混用英文催促"
+                + "（如“hello?”“have you queried?”），也必须用简体中文回复并照常立即调用工具，"
+                + "严禁回“I'll look up/check…”之类的英文承诺句。";
     }
 
     /** 各 Provider 的默认兜底模型名（不能共用一个名字，否则请求必然失败） */
