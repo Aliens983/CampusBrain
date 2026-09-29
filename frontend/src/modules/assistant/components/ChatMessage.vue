@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import type { ChatMsg } from '../composables'
+import { renderMarkdown } from '../utils/markdown'
 
 /** 单条消息：正文 + 打字指示器 + 动作回执 + 待确认卡片 */
 const props = defineProps<{
@@ -13,6 +15,11 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'reply', text: string): void
 }>()
+
+/** AI 正文按 Markdown 渲染（表格/加粗/列表）；用户消息保持纯文本 */
+const renderedContent = computed(() =>
+  props.message.role === 'assistant' ? renderMarkdown(props.message.content) : '',
+)
 </script>
 
 <template>
@@ -21,7 +28,12 @@ const emit = defineEmits<{
     <div class="chat-msg__content">
       <div class="chat-msg__meta">{{ props.message.role === 'user' ? '你' : 'CampusBrain AI' }}</div>
       <div class="chat-msg__bubble">
-        <span v-if="props.message.content" class="chat-msg__text">{{ props.message.content }}</span>
+        <div
+          v-if="props.message.content && props.message.role === 'assistant'"
+          class="chat-msg__text md-body"
+          v-html="renderedContent"
+        />
+        <span v-else-if="props.message.content" class="chat-msg__text">{{ props.message.content }}</span>
         <span v-else-if="props.streaming" class="chat-msg__typing">AI 正在检索知识库并生成答案…</span>
         <span v-else class="chat-msg__typing">…</span>
 
@@ -100,6 +112,71 @@ const emit = defineEmits<{
 .chat-msg.user .chat-msg__bubble { border-radius: 16px 6px 16px 16px; background: #e4f7ec; }
 .chat-msg__text { white-space: pre-wrap; word-break: break-word; font-size: 14px; }
 .chat-msg__typing { color: #7aa7cf; font-size: 13px; }
+
+/* ===== Markdown 正文（AI 回复） ===== */
+.md-body {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.75;
+}
+.md-body :first-child { margin-top: 0; }
+.md-body :last-child { margin-bottom: 0; }
+.md-body p { margin: 6px 0; }
+.md-body strong { color: #14466e; }
+.md-body ul,
+.md-body ol { margin: 6px 0; padding-left: 22px; }
+.md-body li { margin: 3px 0; }
+.md-body h1,
+.md-body h2,
+.md-body h3,
+.md-body h4 { margin: 12px 0 6px; line-height: 1.4; color: #14466e; }
+.md-body h1 { font-size: 18px; }
+.md-body h2 { font-size: 16px; }
+.md-body h3,
+.md-body h4 { font-size: 15px; }
+.md-body a { color: #0e6cd6; text-decoration: underline; }
+.md-body blockquote {
+  margin: 8px 0;
+  padding: 4px 12px;
+  border-left: 3px solid #9cc7ef;
+  color: #4a6278;
+  background: rgba(156, 199, 239, .12);
+  border-radius: 0 6px 6px 0;
+}
+.md-body code {
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(14, 108, 214, .08);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12.5px;
+}
+.md-body pre {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #0f2437;
+  overflow-x: auto;
+}
+.md-body pre code { padding: 0; background: transparent; color: #d7e8f7; }
+/* 表格：余量/可约清单的主要展示形态 */
+.md-body table {
+  display: block;
+  max-width: 100%;
+  margin: 10px 0;
+  border-collapse: collapse;
+  overflow-x: auto;
+  font-size: 13px;
+}
+.md-body th,
+.md-body td {
+  padding: 6px 12px;
+  border: 1px solid #cfe0f0;
+  text-align: left;
+  white-space: nowrap;
+}
+.md-body th { background: #e7f1fb; color: #14466e; font-weight: 700; }
+.md-body tr:nth-child(even) td { background: rgba(231, 241, 251, .45); }
+.md-body hr { margin: 12px 0; border: none; border-top: 1px solid #d6e4f2; }
 
 /* 预约动作回执 */
 .action-badge {
