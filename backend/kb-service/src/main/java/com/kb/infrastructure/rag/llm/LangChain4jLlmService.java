@@ -5,6 +5,7 @@ import com.kb.domain.rag.LlmService;
 import com.kb.domain.rag.RetrievalResult;
 import com.kb.domain.rag.StreamCancelledException;
 import com.kb.infrastructure.rag.tool.AppointmentTool;
+import com.kb.infrastructure.rag.tool.DeterministicBookingFallback;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolSpecification;
 import dev.langchain4j.agent.tool.ToolSpecifications;
@@ -63,6 +64,8 @@ public class LangChain4jLlmService implements LlmService {
     private final AppointmentTool appointmentTool;
     /** 可取消流式模型工厂（内部复用单例 OpenAiClient 连接池） */
     private final StreamingModelFactory streamingModelFactory;
+    /** 动作式预约指令模型两轮都不调工具时的确定性兜底（查咨询师→时段→草稿） */
+    private final DeterministicBookingFallback deterministicBookingFallback;
 
     /** LLM Provider（从配置读取，默认 deepSeek），用于 fallback 路由和启动诊断日志 */
     @Value("${llm.provider:deepseek}")
@@ -339,8 +342,22 @@ public class LangChain4jLlmService implements LlmService {
                     }
                     return retry.text();
                 }
-                // 重试仍不调工具：预约缺参给确定性反问；其他场景给诚实兜底，绝不空头承诺
-                String exhausted = ToolCallGuard.slotClarification(query, contextHint);
+                // 重试仍不调工具：教师咨询预约（槽位齐全）走服务端确定性兜底；
+                // 其余场景给确定性反问或诚实兜底，绝不空头承诺
+                log.warn("预约链路强制重试后仍未调用工具: query={}, toolCount={}, retryAnswer={}",
+                        query, retryTracker.count(), abbreviate(retry.text()));
+                String exhausted = null;
+                if (ToolCallGuard.isBookingIntent(query)) {
+                    try {
+                        exhausted = deterministicBookingFallback.tryPrepareTeacherBooking(query);
+                    } catch (Exception e) {
+                        // 兜底自身故障不能炸穿整条问答：记日志后退回通用文案
+                        log.warn("确定性预约兜底执行失败，退回通用兜底", e);
+                    }
+                }
+                if (exhausted == null) {
+                    exhausted = ToolCallGuard.slotClarification(query, contextHint);
+                }
                 if (exhausted == null) {
                     exhausted = ToolCallGuard.retryExhaustedMessage();
                 }

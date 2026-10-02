@@ -38,7 +38,7 @@ class LlmFallbackTemplateTest {
     @Test
     @DisplayName("流式链路：返回兜底文案且推送给 token 消费者")
     void streamingPushesMessageToConsumer() throws Exception {
-        LangChain4jLlmService service = new LangChain4jLlmService(null, null, null, null);
+        LangChain4jLlmService service = new LangChain4jLlmService(null, null, null, null, null);
         List<String> pushed = new ArrayList<>();
         Throwable cause = new RuntimeException(
                 "CircuitBreaker 'llmService' is OPEN and does not permit further calls");
@@ -52,7 +52,7 @@ class LlmFallbackTemplateTest {
     @Test
     @DisplayName("同步链路：consumer 为 null 时只返回文案，不外泄失败原因")
     void syncReturnsMessageWithoutConsumer() throws Exception {
-        LangChain4jLlmService service = new LangChain4jLlmService(null, null, null, null);
+        LangChain4jLlmService service = new LangChain4jLlmService(null, null, null, null, null);
         Throwable cause = new LlmUnavailableException("LLM 主备供应商均不可用: 通义千问");
 
         Object result = invokeTemplate(service, "rag-sync", null, cause);
