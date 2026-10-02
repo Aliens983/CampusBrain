@@ -133,6 +133,12 @@ public class QaApplicationService implements IQaApplicationService {
         try {
             session = chatSessionRepository.loadForUser(sid, userId);
 
+            // 会话上下文必须在 Step 0 之前绑定：待确认动作（确认/取消）在 Step 0 就会发起
+            // Feign 调用，CasFeignConfig 靠 ChatContextHolder 透传真实用户 ID；此前上下文
+            // 到 Step 1 才设置，导致确认下单以服务身份(0)读取草稿，CAS 查不到 key 误报"已过期"
+            ChatContextHolder.set(
+                    new ChatContextHolder.ChatContext(sid, userId, session.slotsOrEmpty()));
+
             // ---- Step 0: 上一轮遗留的"待确认动作"优先处理 ----
             String handledAction = handlePendingBookingAction(query, sid, userId, session,
                     tokenCollector, onCitations, onMessageId, onEvent, startTime);
@@ -226,6 +232,11 @@ public class QaApplicationService implements IQaApplicationService {
         ChatSession session = chatSessionRepository.loadForUser(sid, userId);
 
         try {
+            // 与 SSE 链路同口径：Step 0 的待确认动作执行前先绑定会话上下文，
+            // 保证 CasFeignConfig 在任何线程模型下都能透传真实用户 ID
+            ChatContextHolder.set(
+                    new ChatContextHolder.ChatContext(sid, userId, session.slotsOrEmpty()));
+
             String handledAction = handlePendingBookingAction(query, sid, userId, session,
                     null, null, null, null, startTime);
             if (handledAction != null) {
