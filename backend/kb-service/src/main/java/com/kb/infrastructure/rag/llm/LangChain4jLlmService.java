@@ -310,12 +310,24 @@ public class LangChain4jLlmService implements LlmService {
             }
 
             if (tracker.count() == 0 && ToolCallGuard.isEmptyPromise(turn.text())) {
+                // 预约意图且槽位不全：模型缺的是用户补充的信息，重试也只会再输出一遍承诺，
+                // 直接给确定性中文反问（零延迟、绝不英文），引导用户补下一项条件
+                String clarification = ToolCallGuard.slotClarification(query, contextHint);
+                if (clarification != null) {
+                    log.warn("预约链路缺关键槽位，直接反问补参: query={}, hint={}",
+                            query, abbreviate(contextHint == null ? "" : contextHint));
+                    sink.accept(clarification);
+                    return clarification;
+                }
                 // 零工具 + 空承诺：丢弃缓冲的承诺句（尚未下发），带强制指令重试一次
                 log.warn("预约链路模型未调用工具且仅输出承诺语，强制重试: query={}, answer={}",
                         query, abbreviate(turn.text()));
+                String retryInstruction = ToolCallGuard.isBookingIntent(query)
+                        ? ToolCallGuard.forcedBookingRetryInstruction()
+                        : ToolCallGuard.forcedRetryInstruction();
                 ToolTurnTracker retryTracker = new ToolTurnTracker();
                 TurnResult retry = runToolTurn(
-                        userMessage + ToolCallGuard.forcedRetryInstruction(),
+                        userMessage + retryInstruction,
                         retryTracker, sink, cancellationToken);
                 if (cancellationToken.isCancelled()) {
                     return retry.text();
@@ -327,9 +339,13 @@ public class LangChain4jLlmService implements LlmService {
                     }
                     return retry.text();
                 }
-                // 重试仍不调工具：给诚实兜底，绝不空头承诺
-                sink.accept(ToolCallGuard.retryExhaustedMessage());
-                return ToolCallGuard.retryExhaustedMessage();
+                // 重试仍不调工具：预约缺参给确定性反问；其他场景给诚实兜底，绝不空头承诺
+                String exhausted = ToolCallGuard.slotClarification(query, contextHint);
+                if (exhausted == null) {
+                    exhausted = ToolCallGuard.retryExhaustedMessage();
+                }
+                sink.accept(exhausted);
+                return exhausted;
             }
 
             // 零工具但是正常直接作答（如寒暄误入工具链路）：门控一直未开，整体放行

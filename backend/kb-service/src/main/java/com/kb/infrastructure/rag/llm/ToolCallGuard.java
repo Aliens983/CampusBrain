@@ -24,13 +24,18 @@ final class ToolCallGuard {
     private static final int MAX_PROMISE_LEN = 100;
 
     /** 工具已执行但回答仍停在"计划下一步"时的长度上限（真实结论通常更长） */
-    private static final int MAX_NARRATIVE_LEN = 140;
+    private static final int MAX_NARRATIVE_LEN = 400;
+
+    /** 有效收尾标志：已明确把选择权交给用户（带问号的具体提问），不再是计划式旁白 */
+    private static final List<String> CLARIFYING_MARKERS = List.of(
+            "请问", "您想约", "你想约", "您要选", "您选择", "哪位老师", "哪个时段",
+            "需要我帮您", "要不要我帮您", "是否需要");
 
     /** 工具链中途的"计划式旁白"标记：说了要继续查却结束了输出，没有给出最终结论 */
     private static final List<String> NARRATIVE_MARKERS = List.of(
             "让我看看", "让我查", "让我确认", "我看看", "我再查", "我再看", "确认一下",
             "接下来我", "这就看看", "这就去看", "继续查", "我进一步", "再帮您确认",
-            "letmecheck", "letmesee", "iwillcheck");
+            "我先查", "我先看", "我先确认", "我先帮", "帮您查一下", "去看一下");
 
     /** 去空白/标点后匹配的承诺标记（含历史故障中出现的英文搪塞句）。
      *  注意：不放"帮您查/帮你查"这类裸词——能力介绍"我可以帮你查询可预约服务"也会命中，
@@ -101,13 +106,24 @@ final class ToolCallGuard {
         if (compact.length() > MAX_NARRATIVE_LEN) {
             return false;
         }
+        boolean hitsMarker = false;
         for (String marker : NARRATIVE_MARKERS) {
             if (compact.contains(marker)) {
-                return true;
+                hitsMarker = true;
+                break;
             }
         }
-        // 英文计划旁白："Let me check the time slots first."（工具已返回但没给结论）
-        return ENGLISH_INTENT.matcher(normalizeRaw(text)).find();
+        if (!hitsMarker && !ENGLISH_INTENT.matcher(normalizeRaw(text)).find()) {
+            return false;
+        }
+        // 命中计划旁白，但若已经明确向用户提问（"请问您想约哪位老师？"），
+        // 说明球已交给用户、属于有效收尾，不再补救（避免重复拼接一轮废话）
+        for (String ask : CLARIFYING_MARKERS) {
+            if (compact.contains(ask)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     /** 模型零工具空承诺后，追加到重试请求末尾的强制指令 */
@@ -118,8 +134,68 @@ final class ToolCallGuard {
                 现在必须立即调用合适的查询工具（searchConsultants / searchRooms /
                 searchEquipment / searchAvailableServices / searchMyBookings），
                 参数从上文【当前已知的预约条件】和对话历史继承，拿到工具返回的真实数据后
-                再用简体中文回答。严禁再次只输出"我这就查询"之类的承诺而不调用工具；
-                若确实缺少必填参数，只用一句话说明缺什么，不要承诺会去查。""";
+                再用简体中文回答。严禁再次只输出"I'll look up/我这就查询"之类的承诺而不调用工具；
+                若确实缺少必填参数，只用一句简体中文说明缺什么，不要承诺会去查。""";
+    }
+
+    /**
+     * 预约意图下零工具承诺时的强制指令：槽位已基本齐全，要求本轮把工具链一路走完
+     * （searchConsultants → searchConsultantTimeSlots → prepareBooking），不要停在查询计划上。
+     */
+    static String forcedBookingRetryInstruction() {
+        return """
+
+                【系统纠正·最高优先级】你上一轮只回复了"要去查/帮您预约"，却没有真正调用任何工具。
+                用户的意图是【预约】。现在必须在本轮内连续完成：
+                1) 若尚未锁定咨询师，先调 searchConsultants（keyword 用对话中的老师姓名）；
+                2) 调 searchConsultantTimeSlots 取该老师当天的时段ID；
+                3) 调 prepareBooking 生成待确认草稿，并询问用户是否确认。
+                参数从上文【当前已知的预约条件】和对话历史继承，全部用简体中文。
+                严禁输出英文，严禁只说"I'll look up/我先帮您查"就结束；
+                只有在缺少校区、日期或时段等必填信息时，才用一句简体中文向用户追问缺失的那一项。""";
+    }
+
+    /**
+     * 预约意图 + 槽位不全时的<b>确定性中文反问</b>（不依赖模型，防止模型连续输出
+     * 英文承诺、重试也无效时给用户错误的"查询失败"兜底）。
+     *
+     * @param query       用户原话（用于判断是否预约意图）
+     * @param contextHint 会话槽位的人类可读描述（BookingSlots.describe()）
+     * @return 应直接下发给用户的反问；null 表示无法确定性反问（槽位已齐或非预约意图）
+     */
+    static String slotClarification(String query, String contextHint) {
+        if (!isBookingIntent(query)) {
+            return null;
+        }
+        String hint = contextHint == null ? "" : contextHint;
+        // 按业务交互顺序逐项询问，一次只问一个，避免连环追问
+        if (!hint.contains("校区")) {
+            return "请问您想预约哪个校区呢？目前开放仓前校区和下沙校区。";
+        }
+        if (!hint.contains("日期")) {
+            return "请问您想预约哪一天？可以直接说“明天”“下周一”或具体日期。";
+        }
+        boolean teacher = hint.contains("教师咨询");
+        boolean hasTime = hint.contains("时段：") || hint.contains("开始：");
+        if (!hasTime) {
+            return teacher
+                    ? "教师咨询每个工作日有 4 个固定时段：09:00–10:00、11:00–12:00、"
+                      + "14:00–15:00、16:00–17:00，您想约哪个时段？"
+                    : "请问您想预约的起止时间是？（例如 上午9:00–10:00）";
+        }
+        return null;
+    }
+
+    /** 判断用户意图是否为"要预约"（含"可以预约吗"这类可约性询问不算，但其槽位通常齐全，不受影响） */
+    static boolean isBookingIntent(String query) {
+        if (query == null) {
+            return false;
+        }
+        String compact = query.replaceAll("[\\s\\p{Punct}，。！？、：；…—·“”‘’（）()\\-]+", "");
+        return compact.contains("预约") || compact.contains("预定")
+                || compact.contains("帮我约") || compact.contains("我要约")
+                || compact.contains("约一下") || compact.contains("订一下")
+                || compact.contains("订一个") || compact.contains("约个");
     }
 
     /** 工具已返回但模型停在"计划式旁白"时，要求其立即补全最终结论的指令 */
@@ -127,10 +203,12 @@ final class ToolCallGuard {
         return """
 
                 【系统纠正·最高优先级】你上一轮已经拿到了工具返回的数据，却只说了下一步打算
-                （"让我看看/我再确认"）就结束了，没有给出最终答复。现在请：
+                （"让我看看/我再确认/我先帮您查"）就结束了，没有给出最终答复。现在请：
                 若已有工具数据足以回答，直接基于这些数据给出完整的简体中文结论；
                 若必须再调用工具才能回答（例如需要具体时段），立即继续调用工具后给出结论。
-                严禁再次只描述计划而不给结论。""";
+                严禁再次只描述计划而不给结论。
+                若下一步确实需要用户做出选择（选哪位老师、选哪个时段），直接用一句简体中文
+                提出具体选项并结束本轮即可，不要再承诺"我先帮您查"，也不要重复上一轮已告知的内容。""";
     }
 
     /** 两次都失败时给用户的诚实兜底（不假装查到、不再空头承诺） */

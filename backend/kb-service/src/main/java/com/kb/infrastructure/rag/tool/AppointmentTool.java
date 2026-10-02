@@ -19,6 +19,9 @@ import dev.langchain4j.agent.tool.Tool;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
 
@@ -118,8 +121,31 @@ public class AppointmentTool {
             }
             sb.append("\n");
         }
+        // 周末 0 时段是"不排班"而非"约满"，必须显式告知，避免模型对用户误报"已约满"
+        String weekend = weekendNotice(resolvedDate);
+        if (weekend != null) {
+            sb.append(weekend);
+        }
         remember(BookingSlots.builder().campus(resolvedCampus).category("teacher").date(resolvedDate).build());
         return sb.toString().trim();
+    }
+
+    /** 周末排班提示：教师咨询固定仅工作日排班，周末所有教师 0 时段属于"不排班" */
+    private static String weekendNotice(String date) {
+        if (date == null || date.isBlank()) {
+            return null;
+        }
+        try {
+            DayOfWeek dow = LocalDate.parse(date).getDayOfWeek();
+            if (dow == DayOfWeek.SATURDAY || dow == DayOfWeek.SUNDAY) {
+                String cn = dow == DayOfWeek.SATURDAY ? "星期六" : "星期日";
+                return "注意：" + date + " 是" + cn + "，教师咨询仅工作日（周一至周五）排班，"
+                        + "周末不排班，因此所有人当天可约时段均为 0（不是已约满），请建议用户改约工作日。";
+            }
+        } catch (DateTimeParseException ignored) {
+            // 日期格式异常时不附加提示
+        }
+        return null;
     }
 
     @Tool("查询某位咨询师在指定日期的可预约时段，返回时段ID，预约咨询时需要使用该ID。")
@@ -139,6 +165,10 @@ public class AppointmentTool {
         }
         List<CasTimeSlot> slots = result.getData();
         if (slots == null || slots.isEmpty()) {
+            String weekend = weekendNotice(resolvedDate);
+            if (weekend != null) {
+                return "该咨询师在 " + resolvedDate + " 没有可预约时段。" + weekend;
+            }
             return "该咨询师在 " + resolvedDate + " 没有可预约时段，换个日期或换一位咨询师试试。";
         }
         StringBuilder sb = new StringBuilder("咨询师 " + consultantId + " 在 " + resolvedDate + " 的可预约时段：\n");

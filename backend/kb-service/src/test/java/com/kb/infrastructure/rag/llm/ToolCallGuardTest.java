@@ -121,4 +121,38 @@ class ToolCallGuardTest {
         assertThat(ToolCallGuard.forcedRetryInstruction()).contains("立即调用", "工具");
         assertThat(ToolCallGuard.retryExhaustedMessage()).contains("稍后");
     }
+
+    @Test
+    @DisplayName("预约缺参确定性反问：按校区→日期→时段逐项引导")
+    void slotClarificationByMissingOrder() {
+        // 只有类型，没有校区 → 先问校区
+        assertThat(ToolCallGuard.slotClarification("帮我预约姚老师的", "类型：教师咨询"))
+                .contains("校区");
+        // 有校区有类型，缺日期 → 问日期
+        assertThat(ToolCallGuard.slotClarification("我要预约管老师", "校区：仓前校区；类型：教师咨询"))
+                .contains("哪一天");
+        // 有日期缺时段（教师咨询）→ 给出 4 个固定时段选项
+        String askTime = ToolCallGuard.slotClarification(
+                "我要预约管老师", "校区：仓前校区；类型：教师咨询；日期：2026-10-05");
+        assertThat(askTime).contains("09:00", "16:00");
+        // 槽位齐全 → 不反问，交给预约工具链
+        assertThat(ToolCallGuard.slotClarification(
+                "我要预约管老师", "校区：仓前校区；类型：教师咨询；日期：2026-10-05；时段：09:00-10:00"))
+                .isNull();
+        // 非预约意图（纯查询）不触发反问
+        assertThat(ToolCallGuard.slotClarification("我们有哪些老师？", "类型：教师咨询"))
+                .isNull();
+    }
+
+    @Test
+    @DisplayName("已明确向用户提问的计划旁白不拦截（球已交给用户）")
+    void clarifyingQuestionNotNarrative() {
+        // 2026-10-02 真实输出：含"我先帮您查"但结尾明确问用户选哪位老师
+        String text = "仓前校区2026-10-05（下周一）有5位咨询师可约，我需要确认具体时段。"
+                + "请问您想约哪位老师？我先帮您查一下各位老师当天09:00-10:00的时段情况。";
+        assertThat(ToolCallGuard.isIncompleteNarrative(text)).isFalse();
+        // 但只承诺不提问的旁白仍要拦截
+        assertThat(ToolCallGuard.isIncompleteNarrative(
+                "我先确认一下上午9:00-10:00的具体时段。")).isTrue();
+    }
 }
