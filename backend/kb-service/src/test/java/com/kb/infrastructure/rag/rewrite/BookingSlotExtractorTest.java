@@ -125,4 +125,19 @@ class BookingSlotExtractorTest {
         BookingSlots slots = BookingSlotExtractor.extract("介绍一下知识库的用法");
         assertEquals(new BookingSlots(), slots);
     }
+
+    @Test
+    @DisplayName("同句含星期词与完整日期时，日期不得被误判为时段（20:26-10:00 故障）")
+    void shouldNotParseDateAsTimeWhenWeekdayAlsoPresent() {
+        LocalDate today = LocalDate.of(2026, 10, 2);
+        BookingSlots slots = BookingSlotExtractor.extract("这周五2026-10-02上午9点到10点", today);
+        assertEquals("2026-10-02", slots.getDate());
+        assertEquals("09:00", slots.getStartTime());
+        assertEquals("10:00", slots.getEndTime());
+
+        BookingSlots slots2 = BookingSlotExtractor.extract("2026-10-02星期五的教师咨询", today);
+        assertEquals("2026-10-02", slots2.getDate());
+        assertNull(slots2.getStartTime(), "日期片段残留被误判成时段起点 20:26");
+        assertNull(slots2.getEndTime());
+    }
 }

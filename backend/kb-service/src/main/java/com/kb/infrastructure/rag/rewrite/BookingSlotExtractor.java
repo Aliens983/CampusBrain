@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -114,14 +115,14 @@ public final class BookingSlotExtractor {
     // ==================== 日期 ====================
 
     /**
-     * 抽取日期，并把命中的日期片段从文本中剔除
+     * 选定日期并把所有日期形态片段从文本中剔除。
      *
      * @return [日期 yyyy-MM-dd（可为 null）, 剔除日期后的剩余文本]
      */
     private static String[] extractDateAndRest(String q, LocalDate today) {
-        String rest = q;
+        String date = null;
 
-        // 相对日期（顺序敏感："大后天"必须先于"后天"匹配）
+        // 1. 相对日期（顺序敏感："大后天"必须先于"后天"匹配）
         String[][] relatives = {
                 {"大后天", today.plusDays(3).toString()},
                 {"后天", today.plusDays(2).toString()},
@@ -132,58 +133,81 @@ public final class BookingSlotExtractor {
                 {"当天", today.toString()},
         };
         for (String[] kv : relatives) {
-            if (rest.contains(kv[0])) {
-                return new String[]{kv[1], rest.replace(kv[0], " ")};
+            if (q.contains(kv[0])) {
+                date = kv[1];
+                break;
             }
         }
 
-        Matcher weekday = WEEKDAY.matcher(rest);
-        if (weekday.find()) {
-            boolean nextWeek = "下".equals(weekday.group(1));
-            DayOfWeek target = toDayOfWeek(weekday.group(2));
-            if (target != null) {
-                LocalDate candidate = today.with(DayOfWeek.MONDAY).plusDays(target.getValue() - 1);
-                if (nextWeek || candidate.isBefore(today)) {
-                    candidate = candidate.plusWeeks(1);
+        // 2. 星期
+        if (date == null) {
+            Matcher weekday = WEEKDAY.matcher(q);
+            if (weekday.find()) {
+                boolean nextWeek = "下".equals(weekday.group(1));
+                DayOfWeek target = toDayOfWeek(weekday.group(2));
+                if (target != null) {
+                    LocalDate candidate = today.with(DayOfWeek.MONDAY).plusDays(target.getValue() - 1);
+                    if (nextWeek || candidate.isBefore(today)) {
+                        candidate = candidate.plusWeeks(1);
+                    }
+                    date = candidate.toString();
                 }
-                return new String[]{candidate.toString(), rest.replace(weekday.group(), " ")};
             }
         }
 
-        Matcher full = DATE_FULL.matcher(rest);
-        if (full.find()) {
-            String date = String.format("%s-%02d-%02d",
-                    full.group(1), Integer.parseInt(full.group(2)), Integer.parseInt(full.group(3)));
-            return new String[]{date, rest.replace(full.group(), " ")};
+        // 3. 完整日期
+        if (date == null) {
+            Matcher full = DATE_FULL.matcher(q);
+            if (full.find()) {
+                date = String.format("%s-%02d-%02d",
+                        full.group(1), Integer.parseInt(full.group(2)), Integer.parseInt(full.group(3)));
+            }
         }
 
-        Matcher shortDate = DATE_SHORT.matcher(rest);
-        if (shortDate.find()) {
-            int month = Integer.parseInt(shortDate.group(1));
-            int day = Integer.parseInt(shortDate.group(2));
-            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
-                LocalDate candidate = LocalDate.of(today.getYear(), month, day);
-                if (candidate.isBefore(today)) {
-                    candidate = candidate.plusYears(1);
+        // 4. 月/日
+        if (date == null) {
+            Matcher shortDate = DATE_SHORT.matcher(q);
+            if (shortDate.find()) {
+                int month = Integer.parseInt(shortDate.group(1));
+                int day = Integer.parseInt(shortDate.group(2));
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    LocalDate candidate = LocalDate.of(today.getYear(), month, day);
+                    if (candidate.isBefore(today)) {
+                        candidate = candidate.plusYears(1);
+                    }
+                    date = candidate.toString();
                 }
-                return new String[]{candidate.toString(), rest.replace(shortDate.group(), " ")};
             }
         }
 
-        // "26号"：没有月份，默认本月该日；该日已过则顺延到下月同一天。
-        // 此前不支持裸日期，槽位里没有日期、提示词里也没有当前日期，模型会把
-        // "26号"臆测成"2025-03-26"等错误日期（2026-09-26 真实故障）。
-        Matcher dayOnly = DATE_DAY_ONLY.matcher(rest);
-        if (dayOnly.find()) {
-            int day = Integer.parseInt(dayOnly.group(1));
-            if (day >= 1 && day <= 31) {
-                LocalDate candidate = resolveDayOnly(today, day);
+        // 5. 裸"N号/N日"：本月该日（含今天），已过或本月无此日顺延下月
+        if (date == null) {
+            Matcher dayOnly = DATE_DAY_ONLY.matcher(q);
+            if (dayOnly.find()) {
+                LocalDate candidate = resolveDayOnly(today, Integer.parseInt(dayOnly.group(1)));
                 if (candidate != null) {
-                    return new String[]{candidate.toString(), rest.replace(dayOnly.group(), " ")};
+                    date = candidate.toString();
                 }
             }
         }
-        return new String[]{null, rest};
+
+        // 关键：无论日期由哪一级确定，都把句中所有日期形态剔除干净。
+        // 真实故障（2026-10-02）：同句出现"星期五"+"2026-10-02"时，旧逻辑在星期分支
+        // 直接返回，完整日期残留，被时段正则误吃成 20:26-10:00（20+26 - 10）。
+        return new String[]{date, stripDateFragments(q)};
+    }
+
+    /** 剔除全部日期形态片段（相对词/星期/完整日期/月日/裸日），供时段抽取使用 */
+    private static String stripDateFragments(String q) {
+        String rest = q;
+        for (String word : List.of("大后天", "后天", "明天", "明日", "今天", "今日", "当天")) {
+            rest = rest.replace(word, " ");
+        }
+        rest = WEEKDAY.matcher(rest).replaceAll(" ");
+        rest = DATE_FULL.matcher(rest).replaceAll(" ");
+        rest = DATE_SHORT.matcher(rest).replaceAll(" ");
+        rest = DATE_DAY_ONLY.matcher(rest).replaceAll(" ");
+        return rest;
     }
 
     /** 裸"N号/N日"解析：本月有该日取本月（含今天），本月该日已过或本月无此日则取下月 */
