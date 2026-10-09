@@ -395,5 +395,9 @@ export function setupSpotlight(): void {
   window.addEventListener('scroll', onScroll, { passive: true, capture: true })
 
   // 鼠标流星拖尾（独立 Canvas 层，不影响上述卡片光效）
-  setupMeteorTrail()
+  // 【暂时停用】注释掉初始化调用：setupMeteorTrail 不再执行，
+  // 不会创建全屏 Canvas，也不绑定 pointermove 粒子监听。
+  // 恢复方式：把下面两行换回 setupMeteorTrail() 即可（函数本体完整保留）。
+  // setupMeteorTrail()
+  void setupMeteorTrail
 }
