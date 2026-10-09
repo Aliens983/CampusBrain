@@ -52,6 +52,24 @@ export function disablePastDate(date: Date) {
   return date.getTime() < today.getTime()
 }
 
+/**
+ * 咨询预约日期可选范围：与后端排班口径保持一致——
+ * TeacherScheduleGenerateTask 只生成「今天起 14 天内的工作日」固定时段，
+ * 故禁用过去日期、超出第 14 天的日期以及周末（选了也只会得到空排班）。
+ */
+export function disableConsultDate(date: Date) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const max = new Date()
+  max.setHours(0, 0, 0, 0)
+  max.setDate(max.getDate() + 13)
+  const day = date.getDay()
+  return date.getTime() < today.getTime()
+    || date.getTime() > max.getTime()
+    || day === 0
+    || day === 6
+}
+
 export const hourOptions = Array.from({ length: 14 }, (_, i) => `${String(8 + i).padStart(2, '0')}:00`)
 
 export function useServiceDetail() {
@@ -66,6 +84,8 @@ export function useServiceDetail() {
   const slots = ref<SlotLite[]>([])
   const bookingSlotId = ref<number | null>(null)
   const loadingSlots = ref(false)
+  // 咨询预约日期（默认今天；后端已按 date 生成未来 14 天工作日排班）
+  const consultDate = ref(localDate())
 
   // 设备借用态
   const equipmentMode = computed(() => Boolean(service.value && service.value.catKey === 'equipment'))
@@ -239,12 +259,20 @@ export function useServiceDetail() {
     void loadSlots(c.id)
   }
 
+  /** 切换预约日期：清空已选时段并按新日期重新拉取该咨询师的排班 */
+  function selectConsultDate(date: string) {
+    if (!date || date === consultDate.value) return
+    consultDate.value = date
+    bookingSlotId.value = null
+    slots.value = []
+    if (selected.value) void loadSlots(selected.value.id)
+  }
+
   async function loadSlots(consultantId: number) {
     loadingSlots.value = true
     try {
-      const today = localDate()
       const res = await request.get(`/app/consultations/${consultantId}/slots`, {
-        params: { date: today },
+        params: { date: consultDate.value },
       }) as SlotLite[] | unknown
       slots.value = (Array.isArray(res) ? res : []) as SlotLite[]
     } catch (error: unknown) {
@@ -297,6 +325,7 @@ export function useServiceDetail() {
     slots,
     bookingSlotId,
     loadingSlots,
+    consultDate,
     equipmentMode,
     equipment,
     selectedEquipment,
@@ -309,6 +338,7 @@ export function useServiceDetail() {
     borrowEnd,
     submitting,
     selectConsultant,
+    selectConsultDate,
     startConsultChat,
     submitConsultation,
     selectEquipment,

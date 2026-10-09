@@ -45,8 +45,22 @@
     v-if="selected"
     class="slot-panel"
   >
+    <div class="slot-panel__date">
+      <el-date-picker
+        :model-value="consultDate"
+        type="date"
+        value-format="YYYY-MM-DD"
+        format="YYYY-MM-DD"
+        :clearable="false"
+        :disabled-date="disableConsultDate"
+        :prefix-icon="Calendar"
+        placeholder="选择预约日期"
+        @update:model-value="onDateChange"
+      />
+      <span class="slot-panel__hint">可约未来 14 天内的工作日（以老师排班为准）</span>
+    </div>
     <div class="slot-panel__head">
-      <strong>「{{ selected.name }}」今日可约时段</strong>
+      <strong>「{{ selected.name }}」{{ consultDate }} 可约时段</strong>
       <el-icon
         v-if="loadingSlots"
         class="is-loading"
@@ -62,7 +76,9 @@
         v-for="s in slots"
         :key="s.slotId"
         class="slot-chip"
-        :class="{ 'is-active': bookingSlotId === s.slotId }"
+        :class="{ 'is-active': bookingSlotId === s.slotId, 'is-past': isSlotPast(s) }"
+        :disabled="isSlotPast(s)"
+        :title="isSlotPast(s) ? '该时段已开始或已结束' : ''"
         @click="bookingSlotId = s.slotId"
       >
         {{ s.startTime }} - {{ s.endTime }}
@@ -72,7 +88,7 @@
       v-else-if="!loadingSlots"
       class="muted"
     >
-      该咨询师今日暂无排班，可预约日期以老师排班为准。
+      该咨询师当日暂无排班，请换个日期或咨询师试试。
     </p>
     <el-button
       type="primary"
@@ -89,8 +105,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Loading } from '@element-plus/icons-vue'
-import type { ConsultantLite, SlotLite } from '../composables'
+import { Loading, Calendar } from '@element-plus/icons-vue'
+import { disableConsultDate, localDate, type ConsultantLite, type SlotLite } from '../composables'
 
 const props = defineProps<{
   consultants: ConsultantLite[]
@@ -99,12 +115,14 @@ const props = defineProps<{
   bookingSlotId: number | null
   loadingSlots: boolean
   submitting: boolean
+  consultDate: string
 }>()
 
 const emit = defineEmits<{
   (e: 'select', consultant: ConsultantLite): void
   (e: 'chat', consultant: ConsultantLite): void
   (e: 'update:bookingSlotId', slotId: number): void
+  (e: 'update:consultDate', date: string): void
   (e: 'submit'): void
 }>()
 
@@ -112,6 +130,18 @@ const bookingSlotId = computed({
   get: () => props.bookingSlotId,
   set: (slotId: number) => emit('update:bookingSlotId', slotId),
 })
+
+function onDateChange(date: string | null) {
+  if (date) emit('update:consultDate', date)
+}
+
+/** 今天已开始/已结束的时段不可选（未来日期不受限，与后端 BookingWindowPolicy 口径一致） */
+function isSlotPast(slot: SlotLite) {
+  if (props.consultDate !== localDate()) return false
+  const [h, m] = slot.startTime.split(':').map(Number)
+  const now = new Date()
+  return h * 60 + m <= now.getHours() * 60 + now.getMinutes()
+}
 </script>
 
 <style scoped lang="scss">
@@ -132,6 +162,8 @@ const bookingSlotId = computed({
 .consult-card__rating { color: #d97706; font-size: 13px; font-weight: 700; flex-shrink: 0; }
 
 .slot-panel { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: #F4FAFF; border: 1px solid var(--border-soft); }
+.slot-panel__date { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.slot-panel__hint { color: var(--text-tertiary); font-size: 12px; }
 .slot-panel__head { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .slot-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .slot-chip {
@@ -141,6 +173,8 @@ const bookingSlotId = computed({
 }
 .slot-chip:hover { border-color: #ADE2FF; color: #1E98F2; }
 .slot-chip.is-active { background: linear-gradient(135deg, #7BD0FF, #1E98F2); color: #fff; border-color: transparent; }
+.slot-chip.is-past,
+.slot-chip.is-past:hover { background: #F2F4F8; color: #A8B0BF; border-color: #E6E9EF; cursor: not-allowed; text-decoration: line-through; }
 .slot-submit { justify-self: start; margin-top: 4px; }
 
 @media (max-width: 700px) { .consult-grid { grid-template-columns: 1fr; } }

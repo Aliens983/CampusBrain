@@ -24,6 +24,7 @@
         <ConsultationPanel
           v-if="consultants.length"
           v-model:booking-slot-id="bookingSlotId"
+          :consult-date="consultDate"
           :consultants="consultants"
           :selected="selected"
           :slots="slots"
@@ -31,6 +32,7 @@
           :submitting="submitting"
           @select="selectConsultant"
           @chat="startConsultChat"
+          @update:consult-date="selectConsultDate"
           @submit="submitConsultation"
         />
 
@@ -94,6 +96,7 @@ const {
   slots,
   bookingSlotId,
   loadingSlots,
+  consultDate,
   equipmentMode,
   equipment,
   selectedEquipment,
@@ -106,6 +109,7 @@ const {
   borrowEnd,
   submitting,
   selectConsultant,
+  selectConsultDate,
   startConsultChat,
   submitConsultation,
   selectEquipment,
