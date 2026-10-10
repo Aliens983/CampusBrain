@@ -35,6 +35,7 @@ public class ConversationRepositoryImpl implements ConversationRepository {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Transactional
     public Long save(String sessionId, String role, String content, Long userId) {
         return saveWithReferences(sessionId, role, content, null, userId);
     }
