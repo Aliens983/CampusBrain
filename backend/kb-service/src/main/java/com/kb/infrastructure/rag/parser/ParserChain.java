@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * 解析器责任链 — 主解析器失败时自动 fallback 到下一个
@@ -84,6 +85,6 @@ public class ParserChain {
 
     private String extractExtension(String fileName) {
         if (fileName == null || !fileName.contains(".")) return "unknown";
-        return fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+        return fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase(Locale.ROOT);
     }
 }

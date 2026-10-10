@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
@@ -26,7 +27,7 @@ public class MarkdownParser implements DocumentParser, DocumentParserSpi {
 
     @Override
     public boolean supports(String fileType) {
-        String lower = fileType.toLowerCase();
+        String lower = fileType.toLowerCase(Locale.ROOT);
         return "md".equals(lower) || "markdown".equals(lower);
     }
 

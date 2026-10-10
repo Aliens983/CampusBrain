@@ -3,6 +3,7 @@ package com.kb.infrastructure.rag.parser;
 import com.kb.infrastructure.common.ParseException;
 import org.springframework.stereotype.Component;
 
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -37,7 +38,7 @@ public class ParserFactory {
      * @throws IllegalArgumentException 无支持的解析器
      */
     public DocumentParser getParser(String fileType) {
-        String ext = fileType != null ? fileType.toLowerCase() : "";
+        String ext = fileType != null ? fileType.toLowerCase(Locale.ROOT) : "";
         DocumentParserSpi spi = registry.getParser(ext)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Unsupported file type: " + fileType +
@@ -64,7 +65,7 @@ public class ParserFactory {
     }
 
     public boolean isSupported(String fileType) {
-        return fileType != null && registry.getParser(fileType.toLowerCase()).isPresent();
+        return fileType != null && registry.getParser(fileType.toLowerCase(Locale.ROOT)).isPresent();
     }
 
     public Set<String> getSupportedTypes() {

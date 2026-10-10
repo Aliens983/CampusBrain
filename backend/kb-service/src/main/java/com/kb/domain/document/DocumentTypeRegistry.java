@@ -1,5 +1,6 @@
 package com.kb.domain.document;
 
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -41,7 +42,7 @@ public interface DocumentTypeRegistry {
         if (fileName == null || !fileName.contains(".")) {
             return "unknown";
         }
-        String ext = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+        String ext = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase(Locale.ROOT);
         // 尾部点号（如 "file."）没有实际扩展名，同样返回 unknown
         return ext.isEmpty() ? "unknown" : ext;
     }

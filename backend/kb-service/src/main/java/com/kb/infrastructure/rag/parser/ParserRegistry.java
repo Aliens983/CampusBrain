@@ -37,9 +37,9 @@ public class ParserRegistry implements DocumentTypeRegistry {
     public void register(DocumentParserSpi parser) {
         allParsers.add(parser);
         for (String ext : parser.supportedExtensions()) {
-            registry.computeIfAbsent(ext.toLowerCase(), k -> new ArrayList<>()).add(parser);
+            registry.computeIfAbsent(ext.toLowerCase(Locale.ROOT), k -> new ArrayList<>()).add(parser);
             // 保持优先级排序
-            registry.get(ext.toLowerCase()).sort(Comparator.comparingInt(DocumentParserSpi::priority));
+            registry.get(ext.toLowerCase(Locale.ROOT)).sort(Comparator.comparingInt(DocumentParserSpi::priority));
         }
         log.info("Registered parser: {} for extensions: {} (priority={})",
                 parser.getName(), parser.supportedExtensions(), parser.priority());
@@ -50,7 +50,7 @@ public class ParserRegistry implements DocumentTypeRegistry {
      */
     public Optional<DocumentParserSpi> getParser(String extension) {
         if (extension == null) return Optional.empty();
-        List<DocumentParserSpi> parsers = registry.get(extension.toLowerCase());
+        List<DocumentParserSpi> parsers = registry.get(extension.toLowerCase(Locale.ROOT));
         if (parsers == null || parsers.isEmpty()) return Optional.empty();
         return Optional.of(parsers.get(0));
     }
@@ -60,7 +60,7 @@ public class ParserRegistry implements DocumentTypeRegistry {
      */
     public List<DocumentParserSpi> getParserChain(String extension) {
         if (extension == null) return List.of();
-        return registry.getOrDefault(extension.toLowerCase(), List.of());
+        return registry.getOrDefault(extension.toLowerCase(Locale.ROOT), List.of());
     }
 
     /**

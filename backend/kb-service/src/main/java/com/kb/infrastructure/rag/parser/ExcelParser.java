@@ -28,7 +28,7 @@ public class ExcelParser implements DocumentParserSpi {
     public ParsedDocument parse(InputStream inputStream, String fileName) throws ParseException {
         try {
             Workbook workbook;
-            if (fileName.toLowerCase().endsWith(".xlsx")) {
+            if (fileName.toLowerCase(Locale.ROOT).endsWith(".xlsx")) {
                 workbook = new XSSFWorkbook(inputStream);
             } else {
                 workbook = new HSSFWorkbook(inputStream);

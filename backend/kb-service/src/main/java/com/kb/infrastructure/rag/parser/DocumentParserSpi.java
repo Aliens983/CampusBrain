@@ -4,6 +4,7 @@ import com.kb.domain.rag.ParsedDocument;
 import com.kb.infrastructure.common.ParseException;
 
 import java.io.InputStream;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -55,7 +56,7 @@ public interface DocumentParserSpi {
      * 是否支持给定文件扩展名
      */
     default boolean supports(String extension) {
-        return supportedExtensions().contains(extension.toLowerCase());
+        return supportedExtensions().contains(extension.toLowerCase(Locale.ROOT));
     }
 
     /**

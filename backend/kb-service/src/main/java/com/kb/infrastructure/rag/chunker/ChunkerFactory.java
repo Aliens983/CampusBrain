@@ -4,6 +4,8 @@ import com.kb.domain.rag.ChunkStrategy;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.Locale;
+
 /**
  * Factory for selecting chunking strategies by name.
  *
@@ -25,7 +27,7 @@ public class ChunkerFactory {
      * @return the corresponding ChunkStrategy
      */
     public ChunkStrategy getStrategy(String name) {
-        return switch (name != null ? name.toLowerCase() : "") {
+        return switch (name != null ? name.toLowerCase(Locale.ROOT) : "") {
             case "fixed_size" -> fixedSizeChunker;
             case "sliding_window" -> slidingWindowChunker;
             default -> slidingWindowChunker;

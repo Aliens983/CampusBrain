@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 import static io.qdrant.client.ValueFactory.value;
 
@@ -140,7 +141,7 @@ public class QdrantSupport {
 
     private boolean alreadyExists(Throwable e) {
         for (Throwable t = e; t != null; t = t.getCause()) {
-            if (t.getMessage() != null && t.getMessage().toLowerCase().contains("already exists")) {
+            if (t.getMessage() != null && t.getMessage().toLowerCase(Locale.ROOT).contains("already exists")) {
                 return true;
             }
         }
