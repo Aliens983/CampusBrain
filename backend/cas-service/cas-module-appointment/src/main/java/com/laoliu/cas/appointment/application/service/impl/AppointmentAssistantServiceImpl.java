@@ -172,7 +172,6 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     @Override
     public List<AssistantRoomResponse> findRooms(String campus, String date, String startTime, String endTime) {
-        Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
         boolean withWindow = parsedDate != null && startTime != null && endTime != null
                 && !startTime.isBlank() && !endTime.isBlank() && startTime.compareTo(endTime) < 0;
@@ -398,7 +397,6 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         }
         ServiceCategory category = service.getCategoryId() == null
                 ? null : categoryIndex().get(service.getCategoryId());
-        String categoryCode = category == null ? null : category.getCode();
 
         String type = inferResourceType(request);
         return switch (type) {

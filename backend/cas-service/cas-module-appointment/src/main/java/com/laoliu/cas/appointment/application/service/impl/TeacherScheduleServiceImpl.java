@@ -119,7 +119,8 @@ public class TeacherScheduleServiceImpl implements TeacherScheduleService {
                 .filter(pending -> pending.getId().equals(requestId))
                 .orElseThrow(() -> new BusinessException(400, "该时段申请已处理或不存在"));
         if (request.getStatus() != PENDING) throw new BusinessException(400, "该申请已处理");
-        TimeSlot slot = timeSlotRepository.findByIdForUpdate(request.getSlotId())
+        // 悲观锁：加锁排他读该时段，确保后续状态判定与更新串行化（读到的实体本身无需使用）
+        timeSlotRepository.findByIdForUpdate(request.getSlotId())
                 .orElseThrow(() -> new BusinessException(400, "排班时段不存在"));
         if (timeSlotRepository.findAvailabilityForUpdate(request.getSlotId()).orElse(0) != AVAILABLE
                 || bookingRepository.countActiveConsultationBookingsBySlot(request.getSlotId()) > 0) {
