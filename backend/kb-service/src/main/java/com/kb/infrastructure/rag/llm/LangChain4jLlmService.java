@@ -489,9 +489,17 @@ public class LangChain4jLlmService implements LlmService {
         return llmFallback("tools-streaming", consumer, t);
     }
 
+    @SuppressWarnings("unused")
+    private String toolsUnavailable(String query, List<RetrievalResult> docs,
+                                    List<ChatMessage> history, Consumer<String> consumer,
+                                    String hint, Throwable t) {
+        return llmFallback("tools-sync", consumer, t);
+    }
+
     // ==================== 同步 Function Calling（保留给非流式/测试入口） ====================
 
     @Override
+    @CircuitBreaker(name = "llmService", fallbackMethod = "toolsUnavailable")
     public String generateAnswerWithTools(String query, List<RetrievalResult> retrievedDocs,
                                            List<ChatMessage> conversationHistory,
                                            Consumer<String> tokenConsumer, String contextHint) {
@@ -658,7 +666,7 @@ public class LangChain4jLlmService implements LlmService {
     /**
      * 熔断器 fallback 统一模板（A-07）。
      * <p>
-     * 四条 {@code @CircuitBreaker} 链路（RAG 同步/RAG 流式/工具流式/直连流式）此前各自
+     * 五条 {@code @CircuitBreaker} 链路（RAG 同步/RAG 流式/工具同步/工具流式/直连流式）此前各自
      * 维护一份近乎相同的兜底方法，日志里无法区分是哪条链路、因何原因降级。
      * 现统一收敛到本模板：
      * <ul>
@@ -667,7 +675,7 @@ public class LangChain4jLlmService implements LlmService {
      *   <li>面向用户仍只返回同一句通用文案，失败原因不外泄（对齐 B-02）。</li>
      * </ul>
      *
-     * @param scene         降级链路标识（rag-sync / rag-streaming / tools-streaming / direct-streaming）
+     * @param scene         降级链路标识（rag-sync / rag-streaming / tools-sync / tools-streaming / direct-streaming）
      * @param tokenConsumer 流式 token 消费者；同步链路为 null
      * @param t             触发降级的异常
      */
