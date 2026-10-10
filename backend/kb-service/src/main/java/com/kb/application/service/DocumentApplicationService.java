@@ -102,6 +102,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
      * @param file the uploaded multipart file
      * @return the created document ID
      */
+    @Override
     @Transactional
     public Long uploadDocument(MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
@@ -165,6 +166,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     /**
      * Get document by ID（仅本人可访问）
      */
+    @Override
     public Document getDocument(Long id) {
         return getOwnedDocument(id);
     }
@@ -177,6 +179,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
      * @param size 每页条数（1~100）
      * @return 当前用户有权查看的文档列表
      */
+    @Override
     public List<Document> listVisibleDocuments(int page, int size) {
         int normalizedPage = normalizePage(page);
         int normalizedSize = normalizeSize(size);
@@ -202,6 +205,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
      * @param size    每页条数（1~100）
      * @return 命中的文档列表
      */
+    @Override
     public List<Document> searchVisibleDocuments(String keyword, int page, int size) {
         int normalizedPage = normalizePage(page);
         int normalizedSize = normalizeSize(size);
@@ -233,6 +237,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
      * 外部调用不再参与数据库事务，杜绝"存储已清、DB 回滚"造成的孤儿文档；
      * 向量/索引删除带有限重试，最终失败记 ERROR 并计入文档失败指标，不再静默吞掉。
      */
+    @Override
     @Transactional
     public void deleteDocument(Long id) {
         Document doc = getOwnedOrAdminDocument(id);
@@ -255,6 +260,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     /**
      * Get document processing status.
      */
+    @Override
     public DocumentStatus getDocumentStatus(Long id) {
         return getOwnedDocument(id).getStatus();
     }

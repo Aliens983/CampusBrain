@@ -85,6 +85,7 @@ public class QaApplicationService implements IQaApplicationService {
      * @param onEvent     callback for structured assistant events (slots / confirm / action)
      * @return the complete answer text
      */
+    @Override
     public String askStreaming(String query, String sessionId,
                                 Consumer<String> onToken,
                                 Consumer<List<Conversation.CitationRef>> onCitations,
@@ -225,6 +226,7 @@ public class QaApplicationService implements IQaApplicationService {
     /**
      * Execute a Q&A request synchronously (non-streaming).
      */
+    @Override
     public String ask(String query, String sessionId) {
         long startTime = System.currentTimeMillis();
         String sid = ensureSessionId(sessionId);
@@ -294,6 +296,7 @@ public class QaApplicationService implements IQaApplicationService {
      * 归属校验：仅返回当前登录用户自己的消息；他人会话一律返回空，
      * 不暴露会话是否存在（4.1.13）。
      */
+    @Override
     public List<Conversation> getConversationHistory(String sessionId) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         return conversationRepository.findBySession(sessionId, userId);
@@ -312,6 +315,7 @@ public class QaApplicationService implements IQaApplicationService {
      * Record user feedback on an answer.
      * 归属校验：消息必须属于当前登录用户，否则按"不存在或无权操作"拒绝。
      */
+    @Override
     public void recordFeedback(Long messageId, String feedback) {
         Long userId = SecurityFrameworkUtils.getLoginUserId();
         boolean updated = conversationRepository.updateFeedback(messageId, feedback, userId);
@@ -327,6 +331,7 @@ public class QaApplicationService implements IQaApplicationService {
      * MySQL 中尚无消息的会话（owner 未知）也允许执行——Redis 侧会再次
      * 按归属防御，清空一个不存在的 key 是幂等操作。
      */
+    @Override
     public void resetSession(String sessionId) {
         if (sessionId == null || sessionId.isBlank()) {
             return;
