@@ -105,7 +105,7 @@ public class ExcelParser implements DocumentParserSpi {
                     yield cell.getLocalDateTimeCellValue().toString();
                 }
                 double val = cell.getNumericCellValue();
-                yield Double.compare(val, Math.floor(val)) == 0 && !Double.isInfinite(val)
+                yield Double.isFinite(val) && Double.compare(val, Math.floor(val)) == 0
                         ? String.valueOf((long) val) : String.valueOf(val);
             }
             case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
