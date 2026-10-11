@@ -14,7 +14,7 @@ import ServiceCreateDrawer from './components/ServiceCreateDrawer.vue'
  * 等逻辑全部收敛在 {@link useServiceManage} 中（原为 580 行单文件）。
  */
 const {
-  services, total, keyword, statusFilter, campusFilter, pageNo, pageSize, loading,
+  services, listTotal, total, keyword, statusFilter, campusFilter, pageNo, pageSize, loading,
   availableTotal, categories,
   createDrawer, selectedService, saving, editForm, createForm, serviceDrawerVisible,
   campusCount, onPageChange, onPageSizeChange, onSearch, onCampusChange,
@@ -51,7 +51,7 @@ function onUploadCreate(file: File) { void uploadImage(file, 'create') }
       <ServiceList
         :services="services"
         :loading="loading"
-        :total="total"
+        :total="listTotal"
         :page-no="pageNo"
         :page-size="pageSize"
         :asset-url="assetUrl"

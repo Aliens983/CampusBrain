@@ -22,7 +22,9 @@ export function useServiceManage() {
   // ===== 列表与筛选 =====
   /** 当前服务端返回的一页服务（不再前端过滤/切片） */
   const services = ref<ServiceCard[]>([])
-  /** 当前查询命中总数（分页用） */
+  /** 当前列表查询命中总数（仅分页组件使用，随名称/状态/校区筛选变化） */
+  const listTotal = ref(0)
+  /** 全量服务总数（统计卡口径，只由 loadCounts 写入，不随列表筛选变化） */
   const total = ref(0)
   const keyword = ref('')
   const statusFilter = ref('')
@@ -71,7 +73,7 @@ export function useServiceManage() {
         campus: campusFilter.value || undefined
       })
       services.value = page.records
-      total.value = page.total
+      listTotal.value = page.total
     } catch (error: unknown) {
       ElMessage.error((error as { message?: string }).message || '获取服务列表失败')
     } finally {
@@ -226,7 +228,7 @@ export function useServiceManage() {
   })
 
   return {
-    services, total, keyword, statusFilter, campusFilter, pageNo, pageSize, loading,
+    services, listTotal, total, keyword, statusFilter, campusFilter, pageNo, pageSize, loading,
     availableTotal, campusCounts, categories,
     createDrawer, selectedService, saving, editForm, createForm, serviceDrawerVisible,
     campusCount, onPageChange, onPageSizeChange, onSearch, onCampusChange,
