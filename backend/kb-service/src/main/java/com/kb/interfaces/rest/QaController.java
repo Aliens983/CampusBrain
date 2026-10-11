@@ -31,6 +31,7 @@ import reactor.core.scheduler.Schedulers;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * REST controller for Q&A with SSE streaming.
@@ -257,9 +258,15 @@ public class QaController {
     public ApiResponse<QaResponse> ask(@Valid @RequestBody QaRequest request) {
         long startTime = System.currentTimeMillis();
 
-        String answer = qaService.ask(request.getQuery(), request.getSessionId());
-        List<Conversation> history = qaService.getConversationHistory(
-                request.getSessionId());
+        // 首问未传 sessionId 时在入口预生成（与 service 内 ensureSessionId 同一规则）：
+        // 必须让"实际落库使用的 sid"回流到响应，否则调用方拿到 null 既无法多轮续接、
+        // 也无法用该 sid 拉回本轮历史（首问 citations 恒空）。service 对非空 sid 原样使用，
+        // 此处预生成不会产生第二个会话。
+        String sessionId = (request.getSessionId() != null && !request.getSessionId().isBlank())
+                ? request.getSessionId() : UUID.randomUUID().toString();
+
+        String answer = qaService.ask(request.getQuery(), sessionId);
+        List<Conversation> history = qaService.getConversationHistory(sessionId);
 
         // Extract citations from the last assistant message
         List<CitationRef> citations = List.of();
@@ -271,7 +278,7 @@ public class QaController {
         }
 
         QaResponse response = QaResponse.builder()
-                .sessionId(request.getSessionId())
+                .sessionId(sessionId)
                 .query(request.getQuery())
                 .answer(answer)
                 .citations(citations)
