@@ -8,6 +8,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -32,7 +34,7 @@ class SeedAccountPasswordInitializerTest {
     @Test
     void blankPassword_skipsEverything() {
         SeedAccountPasswordInitializer initializer =
-                new SeedAccountPasswordInitializer(userMapper, passwordEncoder, "  ");
+                new SeedAccountPasswordInitializer(userMapper, passwordEncoder, "  ", "");
 
         initializer.run(null);
 
@@ -43,7 +45,7 @@ class SeedAccountPasswordInitializerTest {
     @Test
     void nullPassword_skipsEverything() {
         SeedAccountPasswordInitializer initializer =
-                new SeedAccountPasswordInitializer(userMapper, passwordEncoder, null);
+                new SeedAccountPasswordInitializer(userMapper, passwordEncoder, null, "test");
 
         initializer.run(null);
 
@@ -52,11 +54,38 @@ class SeedAccountPasswordInitializerTest {
     }
 
     @Test
+    void productionProfileWithBlankPasswordAndSeedIntact_failsFast() {
+        // 生产 profile（docker）+ 未注入口令 + 首个种子账号仍是演示哈希 → 拒绝启动
+        when(userMapper.getEncodePasswordByEmail("admin@campus.com")).thenReturn(DEFAULT_HASH);
+
+        SeedAccountPasswordInitializer initializer =
+                new SeedAccountPasswordInitializer(userMapper, passwordEncoder, "  ", "docker");
+
+        assertThatThrownBy(() -> initializer.run(null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("123456");
+        verify(userMapper, never()).updatePasswordByEmail(anyString(), anyString());
+    }
+
+    @Test
+    void productionProfileWithBlankPasswordButAllChanged_startsNormally() {
+        // 生产 profile + 未注入口令，但种子账号均已改密 → 放行（兼容"生效后删除变量"约定）
+        when(userMapper.getEncodePasswordByEmail(anyString()))
+                .thenReturn(passwordEncoder.encode("owner-own-password"));
+
+        SeedAccountPasswordInitializer initializer =
+                new SeedAccountPasswordInitializer(userMapper, passwordEncoder, null, "prod");
+
+        assertThatCode(() -> initializer.run(null)).doesNotThrowAnyException();
+        verify(userMapper, never()).updatePasswordByEmail(anyString(), anyString());
+    }
+
+    @Test
     void accountStillOnSeedHash_isResetToEncodedNewPassword() {
         // 默认账号不存在，仅 admin 仍为种子哈希
         when(userMapper.getEncodePasswordByEmail("admin@campus.com")).thenReturn(DEFAULT_HASH);
 
-        new SeedAccountPasswordInitializer(userMapper, passwordEncoder, "New-Strong-Pwd-9")
+        new SeedAccountPasswordInitializer(userMapper, passwordEncoder, "New-Strong-Pwd-9", "test")
                 .run(null);
 
         verify(userMapper).updatePasswordByEmail(eq("admin@campus.com"),
@@ -72,7 +101,7 @@ class SeedAccountPasswordInitializerTest {
         when(userMapper.getEncodePasswordByEmail("user@campus.com")).thenReturn(userChangedHash);
         when(userMapper.getEncodePasswordByEmail("admin@campus.com")).thenReturn(DEFAULT_HASH);
 
-        new SeedAccountPasswordInitializer(userMapper, passwordEncoder, "New-Strong-Pwd-9")
+        new SeedAccountPasswordInitializer(userMapper, passwordEncoder, "New-Strong-Pwd-9", "test")
                 .run(null);
 
         verify(userMapper, never()).updatePasswordByEmail(eq("user@campus.com"), anyString());

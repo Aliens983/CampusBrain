@@ -98,6 +98,15 @@ jwt:
 auth:
   internal-sign-secret: ${INTERNAL_SIGN_SECRET}
 
+# 应用安全配置
+app:
+  security:
+    # 种子账号首启重置口令。必须在此显式映射同名环境变量：
+    # Spring Boot 的环境变量宽松绑定只会把 APP_SECURITY_SEED_ACCOUNT_PASSWORD
+    # 绑定到本属性，compose/.env 使用的 SEED_ACCOUNT_PASSWORD 不会自动生效，
+    # 缺失此映射会让部署侧的口令重置静默失效。
+    seed-account-password: ${SEED_ACCOUNT_PASSWORD:}
+
 # 预约模块业务参数
 booking:
   # 幂等去重窗口（秒）：同一用户对同一资源在该窗口内的待审核重复提交会被去重
