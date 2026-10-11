@@ -14,11 +14,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * FileServiceImpl#deleteByUrl 安全测试（2.11）。
+ * FileServiceImpl#deleteByUrl 安全测试.
  * <p>
  * 重点不是"能删文件"，而是删除路径必须被 canonical 目录包含校验约束在上传根内：
  * {@code /uploads/../../x} 式 URL 穿越绝不能删掉根目录之外的任何文件；
- * query/锚点尾巴要剥掉；删除整体 fail-open、对不存在文件幂等。
+ * query/锚点尾巴要剥掉；删除整体 fail-open、对不存在文件幂等.
  *
  * @author forever-king
  */

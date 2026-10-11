@@ -48,7 +48,7 @@ import static org.mockito.Mockito.when;
  * <ol>
  *   <li>用户答复"确认" → 真正调用 CAS 下单；</li>
  *   <li>用户答复"取消" → 丢弃草稿，绝不调下单接口；</li>
- *   <li>用户转移话题 → 丢弃旧草稿，避免后续误确认。</li>
+ *   <li>用户转移话题 → 丢弃旧草稿，避免后续误确认.</li>
  * </ol>
  *
  * @author forever-king
@@ -142,7 +142,7 @@ class QaBookingConfirmFlowTest {
                 .thenReturn(new ContextualQueryRewriter.RewriteResult("知识库怎么用", new BookingSlots(), false));
         when(graphRetriever.retrieve("知识库怎么用", null)).thenReturn(List.<RetrievalResult>of());
         when(rerankerService.rerank("知识库怎么用", List.of())).thenReturn(List.<RetrievalResult>of());
-        // 5.3（深度审查 P1）：生产走 4 参 generateAnswerDirectStreaming（含 CancellationToken），
+        // 生产走 4 参 generateAnswerDirectStreaming（含 CancellationToken），
         // 原 3 参打桩与生产不匹配返回 null，掩盖流式无召回兜底缺陷；现打 4 参桩并断言真实回答被落库
         when(llmService.generateAnswerDirectStreaming(anyString(), anyList(), any(), any()))
                 .thenReturn("这是知识库用法");

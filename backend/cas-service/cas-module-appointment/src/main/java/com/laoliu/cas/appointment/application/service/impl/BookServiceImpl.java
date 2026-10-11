@@ -53,9 +53,9 @@ public class BookServiceImpl implements BookService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    // booked_count 变了，services 缓存里的余量/容量快照立即失效。
+    // booked_count 变了，services 缓存里的余量/容量快照立即失效.
     // 否则助手侧最长 30 分钟内会拿过期快照判断"是否还有名额"，
-    // 出现"显示可约、确认却被拒"或"显示已满、实际可约"。
+    // 出现"显示可约、确认却被拒"或"显示已满、实际可约".
     @CacheEvict(value = "services", allEntries = true)
     public BookingSubmitResult bookService(Long userId, List<Long> serviceIds) {
         if (serviceIds == null || serviceIds.isEmpty()) {
@@ -75,18 +75,18 @@ public class BookServiceImpl implements BookService {
                 if (!service.isAvailable()) {
                     throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
                 }
-                // 通用下单 POST /app/bookings 只承载"容量型"预约（当前仅活动报名）。
+                // 通用下单 POST /app/bookings 只承载"容量型"预约（当前仅活动报名）.
                 // 资源/时段型服务没有专用端点所需的外键与日期时段参数：
                 //  - 设备：拿不到 equipmentId/时段/数量，绕开时段占用校验（会超借），
                 //    且让 booked_count 与 available_stock 两套库存口径分裂；
-                //  - 咨询/教室：会生成无资源外键的空壳单，扣了名额却不参与任何时段冲突检测。
+                //  - 咨询/教室：会生成无资源外键的空壳单，扣了名额却不参与任何时段冲突检测.
                 String categoryCode = service.getCategoryCode();
                 if (CategoryCode.EQUIPMENT.is(categoryCode)) {
                     throw new BusinessException(BookErrorCode.EQUIPMENT_REQUIRE_DEDICATED_API, sid);
                 }
-                // 白名单语义：通用下单只接受活动报名（容量型、免审直通）。
+                // 白名单语义：通用下单只接受活动报名（容量型、免审直通）.
                 // 教师咨询/教室空间走时段专用端点；未知/缺失分类 fail-closed 一并拒绝，
-                // 不允许生成无资源外键的空壳单。
+                // 不允许生成无资源外键的空壳单.
                 if (!CategoryCode.ACTIVITY.is(categoryCode)) {
                     throw new BusinessException(BookErrorCode.SLOT_BASED_REQUIRE_DEDICATED_API, sid);
                 }
@@ -97,9 +97,9 @@ public class BookServiceImpl implements BookService {
                 }
                 List<Long> created = bookingRepository.insertServices(userId, List.of(sid.intValue()));
                 if (created.isEmpty()) {
-                    // 重复预约被 SQL 幂等去重拦下：必须把刚才扣掉的名额还回去。
+                    // 重复预约被 SQL 幂等去重拦下：必须把刚才扣掉的名额还回去.
                     // 此前批量下单对"被去重的项"不做回补，booked_count 凭空 +1 却没有对应订单，
-                    // 名额只能靠后续某次取消的 GREATEST(x-1,0) 偶然抵消。
+                    // 名额只能靠后续某次取消的 GREATEST(x-1,0) 偶然抵消.
                     bookingRepository.releaseStock(sid);
                     log.info("预约去重：同用户同服务已存在生效预约，已回补库存: userId={}, serviceId={}",
                             userId, sid);
@@ -152,7 +152,7 @@ public class BookServiceImpl implements BookService {
         dto.setCampus(status.getCampus());
         dto.setStatus(status.getManageStatus());
         dto.setCreateTime(status.getCreateTime());
-        // 1.3：reason 必须取管理员填写的真实拒绝原因（item.reason 列），
+        // reason 必须取管理员填写的真实拒绝原因（item.reason 列），
         // 此前误取 statusDescription（仓储直出恒为 null），导致 /app/bookings 拒绝原因永远不可见
         dto.setReason(status.getReason());
         dto.setStatusDescription(getStatusDescription(status.getManageStatus()));
@@ -170,10 +170,10 @@ public class BookServiceImpl implements BookService {
     }
 
     /**
-     * 状态中文描述统一取自 {@link ManageStatus} 枚举（{@link ManageStatus#of(Integer)}）。
+     * 状态中文描述统一取自 {@link ManageStatus} 枚举（{@link ManageStatus#of(Integer)}）.
      * <p>
      * 此前这里与 {@code ServiceStatusServiceImpl#setStatusDescription} 各写一份 switch，
-     * 新增状态或改文案时极易只改一处，造成同一状态在列表页与详情页显示不一致。
+     * 新增状态或改文案时极易只改一处，造成同一状态在列表页与详情页显示不一致.
      */
     private String getStatusDescription(Integer status) {
         ManageStatus manageStatus = ManageStatus.of(status);
@@ -188,10 +188,10 @@ public class BookServiceImpl implements BookService {
         if (bookingIds == null || bookingIds.isEmpty()) {
             return false;
         }
-        // 锁定读查出真正满足取消条件（本人所有 + 待审核/已通过活动单）的订单（12-09 + 3.5.2）。
+        // 锁定读查出真正满足取消条件（本人所有 + 待审核/已通过活动单）的订单.
         // FOR UPDATE 让 SELECT 与 UPDATE 之间命中行状态不可能被并发改动，
         // 返回集合即 UPDATE 的实际命中集合；入参里不属于本人、已取消、已通过的非活动单
-        // 都不会进集合，不会给它们发 CANCELLED（虚假业务事件）。
+        // 都不会进集合，不会给它们发 CANCELLED（虚假业务事件）.
         List<BookingRef> cancellable = bookingRepository.findCancellableBookings(userId, bookingIds);
         if (cancellable.isEmpty()) {
             return false;
@@ -200,15 +200,15 @@ public class BookServiceImpl implements BookService {
                 .map(BookingRef::orderId)
                 .collect(Collectors.toList());
         // 多表 UPDATE 返回值是各表匹配行之和（取消 1 单通常为 2），只能 >0 判命中，
-        // 绝不能当"取消订单数"（3.5.2/看板第 7 节）；计数与事件一律以锁定集合为准。
+        // 绝不能当"取消订单数"（看板第 7 节）；计数与事件一律以锁定集合为准.
         int affected = bookingRepository.cancelByIds(userId, cancellableIds);
         if (affected <= 0) {
             return false;
         }
         bookingMetrics.recordCancelled(cancellable.size());
         // 库存回补与咨询时段释放已在一条多表 UPDATE 内原子完成：
-        // 只释放本次真正取消的通用单/咨询单，资源单不误扣、历史单不重复释放（7.3.6）。
-        // 事件按订单真实 serviceId 发布（3.5.1：此前错传 orderId，KB 侧暂只全量淘汰故被掩盖）。
+        // 只释放本次真正取消的通用单/咨询单，资源单不误扣、历史单不重复释放.
+        // 事件按订单真实 serviceId 发布（此前错传 orderId，KB 侧暂只全量淘汰故被掩盖）.
         for (BookingRef ref : cancellable) {
             bookingEventPublisher.publishChanged(ref.userId(), ref.serviceId(), "CANCELLED");
         }

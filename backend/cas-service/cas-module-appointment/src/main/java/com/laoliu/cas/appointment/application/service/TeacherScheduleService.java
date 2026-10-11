@@ -6,6 +6,11 @@ import com.laoliu.cas.appointment.application.dto.response.TeacherScheduleSlotRe
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * 教师排班与停诊申请应用服务.
+ *
+ * @author forever-king
+ */
 public interface TeacherScheduleService {
     List<TeacherScheduleSlotResponse> getMySchedule(Long teacherUserId, LocalDate from, LocalDate to);
     List<ScheduleCancelRequestResponse> getMyRequests(Long teacherUserId);

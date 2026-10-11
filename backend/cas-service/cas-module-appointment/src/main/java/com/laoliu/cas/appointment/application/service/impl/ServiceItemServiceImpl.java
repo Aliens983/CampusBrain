@@ -47,7 +47,7 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     @Cacheable(value = "services", key = "'available'")
     public List<ServiceItem> getAvailableServices() {
         // 必须返回可变的 ArrayList：JDK16 Stream.toList() 是不可变(final) List，
-        // 在 NON_FINAL 类型策略下顶层不带类型包装 → 缓存二次读 SerializationException(2026-09-08)。
+        // 在 NON_FINAL 类型策略下顶层不带类型包装 → 缓存二次读 SerializationException(2026-09-08).
         return new ArrayList<>(serviceRepository.findAll().stream()
                 .filter(ServiceItem::isAvailable)
                 .toList());
@@ -55,9 +55,9 @@ public class ServiceItemServiceImpl implements ServiceItemService {
 
     @Override
     // Spring 6 缓存抽象对 Optional 一等支持：入库前自动拆包，#result 拿到的是内容实体
-    // （Optional.empty() 对应 null），命中时再自动包回 Optional 返回。因此 unless 只能
-    // 判 null——写 #result.isPresent() 会在实体类型上找不到方法（EL1004E），导致详情 500。
-    // null 不缓存：disableCachingNullValues + unless 双保险，避免"服务不存在"缓存 30 分钟。
+    // （Optional.empty() 对应 null），命中时再自动包回 Optional 返回.因此 unless 只能
+    // 判 null——写 #result.isPresent() 会在实体类型上找不到方法（EL1004E），导致详情 500.
+    // null 不缓存：disableCachingNullValues + unless 双保险，避免"服务不存在"缓存 30 分钟.
     @Cacheable(value = "services", key = "#id", unless = "#result == null")
     public Optional<ServiceItem> getServiceById(Long id) {
         return serviceRepository.findById(id);
@@ -83,7 +83,7 @@ public class ServiceItemServiceImpl implements ServiceItemService {
                 .campus(normalizeCampus(request.getCampus()))
                 .capacity(request.getCapacity() == null ? -1 : request.getCapacity())
                 .imageUrl(request.getImageUrl())
-                // 通用/活动类服务的可预约截止日：定时任务据此把过期预约置为「已完成」。
+                // 通用/活动类服务的可预约截止日：定时任务据此把过期预约置为「已完成」.
                 // V6 已建列但此前无写入点，导致 end_date 恒为 NULL，无时段的预约永不完结
                 .endDate(request.getEndDate())
                 .build();

@@ -25,7 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * {@link QdrantSupport} 单元测试（Q-05 抽取的 Qdrant 公共样板）。
+ * {@link QdrantSupport} 单元测试（抽取的 Qdrant 公共样板）.
  *
  * @author forever-king
  */

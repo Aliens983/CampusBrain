@@ -35,10 +35,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 咨询沟通会话列表测试。
+ * 咨询沟通会话列表测试.
  * <p>
- * 重点锁定 4.7 的 N+1 收敛：listConversations 必须走 3 个批量仓储方法各一次，
- * 且映射/兜底语义（对端名、最后消息、未读数）与逐条版一致。
+ * 重点锁定 N+1 收敛：listConversations 必须走 3 个批量仓储方法各一次，
+ * 且映射/兜底语义（对端名、最后消息、未读数）与逐条版一致.
  *
  * @author forever-king
  */

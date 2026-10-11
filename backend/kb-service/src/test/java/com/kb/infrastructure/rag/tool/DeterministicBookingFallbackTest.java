@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * {@link DeterministicBookingFallback} 单元测试：
- * 模型两轮零工具后由服务端确定性接管教师咨询预约链路的各分支。
+ * 模型两轮零工具后由服务端确定性接管教师咨询预约链路的各分支.
  *
  * @author forever-king
  */

@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * 历史会话列表查询测试：验证以当前登录用户身份从仓储取会话摘要，
- * 顺序由 SQL 保证（最近活跃倒序），服务层只做身份透传。
+ * 顺序由 SQL 保证（最近活跃倒序），服务层只做身份透传.
  *
  * @author forever-king
  */

@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 用户个人通知偏好（用于个人中心「通知偏好」，也作为请求/响应载体）。
+ * 用户个人通知偏好（用于个人中心「通知偏好」，也作为请求/响应载体）.
  *
  * @author forever-king
  */

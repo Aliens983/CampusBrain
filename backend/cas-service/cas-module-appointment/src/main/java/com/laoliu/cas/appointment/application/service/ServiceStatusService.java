@@ -17,9 +17,9 @@ public interface ServiceStatusService {
     IPage<BookingQueryView> getServiceStatus(ServiceStatusPageRequest req);
 
     /**
-     * 分页查询用户的预约状态（含状态描述，支持筛选）。
-     * 1.9：原「含/不含描述」的成对重复方法已删除，非分页取数由调用方直接走
-     * BookingRepository，描述只在面向 HTTP 的分页查询处统一补充。
+     * 分页查询用户的预约状态（含状态描述，支持筛选）.
+     * 原「含/不含描述」的成对重复方法已删除，非分页取数由调用方直接走
+     * BookingRepository，描述只在面向 HTTP 的分页查询处统一补充.
      */
     IPage<BookingQueryView> getServiceStatusByUserIdWithDescription(Long userId, ServiceStatusPageRequest req);
 
@@ -34,7 +34,7 @@ public interface ServiceStatusService {
      *
      * @param orderId 订单ID
      * @param reason  审核备注（可选）
-     * @param source  审核人身份（管理员 / 咨询师），用于区分邮件措辞，3.1.8
+     * @param source  审核人身份（管理员 / 咨询师），用于区分邮件措辞
      */
     void auditPass(Long orderId, String reason, AuditSource source);
 
@@ -43,13 +43,13 @@ public interface ServiceStatusService {
      *
      * @param orderId 订单ID
      * @param reason  驳回原因（必填）
-     * @param source  审核人身份（管理员 / 咨询师），用于区分邮件措辞，3.1.8
+     * @param source  审核人身份（管理员 / 咨询师），用于区分邮件措辞
      */
     void auditReject(Long orderId, String reason, AuditSource source);
 
     /**
-     * 管理员强制取消（3.4 僵尸单兜底）：不校验归属与活动分类，
-     * 待审核/已通过的任意预约单置为已取消并释放占用（名额/时段）。
+     * 管理员强制取消（僵尸单兜底）：不校验归属与活动分类，
+     * 待审核/已通过的任意预约单置为已取消并释放占用（名额/时段）.
      *
      * @param orderId 订单ID
      * @param reason  处理备注（可选）
@@ -57,8 +57,8 @@ public interface ServiceStatusService {
     void adminForceCancel(Long orderId, String reason);
 
     /**
-     * 管理员强制完结（3.4 僵尸单兜底）：待审核/已通过单置为已完成，
-     * 容量型单同步回补 booked_count，清理无法自动完结的长期占用。
+     * 管理员强制完结（僵尸单兜底）：待审核/已通过单置为已完成，
+     * 容量型单同步回补 booked_count，清理无法自动完结的长期占用.
      *
      * @param orderId 订单ID
      * @param reason  处理备注（可选）

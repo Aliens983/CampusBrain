@@ -21,10 +21,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 /**
- * 5.5（深度审查 P1）HybridRetriever 检索超时降级测试。
+ * HybridRetriever 检索超时降级测试.
  * <p>
  * 关键词（ES）/ 向量（Qdrant）任一侧在 {@code kb.retrieval.timeout-seconds} 内未返回时，
- * 该侧按空结果降级、另一侧照常融合，问答链路不抛异常、不整体失败。
+ * 该侧按空结果降级、另一侧照常融合，问答链路不抛异常、不整体失败.
  * </p>
  *
  * @author forever-king

@@ -25,10 +25,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * CarouselServiceImpl 单元测试（1.5 / 2.10 / 2.11）。
+ * CarouselServiceImpl 单元测试.
  * <p>
  * 覆盖：数量上限可配置化（40030）、Servlet 解耦后的字节载体上传、
- * 删除时物理文件清理顺序与幂等、reorder 序号从 1 开始。
+ * 删除时物理文件清理顺序与幂等、reorder 序号从 1 开始.
  *
  * @author forever-king
  */

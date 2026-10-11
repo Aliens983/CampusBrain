@@ -7,11 +7,11 @@ import java.io.Serial;
 import java.io.Serializable;
 
 /**
- * 认证后的登录用户上下文（全服务唯一模型，Q-02 收敛 common-auth / cas / kb 三份副本）。
+ * 认证后的登录用户上下文（全服务唯一模型，收敛 common-auth / cas / kb 三份副本）.
  * <p>
  * 线上契约（JWT claim、网关内网头）固定为字段名 {@code id/name/role/email}，
  * 其中 {@link #role} 为数字角色 code（见 {@link RolePolicy}）；
- * 不再各服务自定义字段名（userId/username）或把角色在字符串/数字间反复转换。
+ * 不再各服务自定义字段名（userId/username）或把角色在字符串/数字间反复转换.
  *
  * @author forever-king
  */

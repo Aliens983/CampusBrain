@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * {@link CancellationToken} 协作式取消语义测试（12-07）。
+ * {@link CancellationToken} 协作式取消语义测试.
  *
  * @author forever-king
  */

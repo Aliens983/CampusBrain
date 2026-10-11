@@ -89,7 +89,7 @@ public class ConsultantRepositoryImpl implements ConsultantRepository {
     @Override
     public List<TimeSlotView> findTimeSlots(Long consultantId, String date) {
         // 该查询参数不经过请求 DTO 的 Bean Validation，非法日期必须在此兜底：
-        // 否则 DateTimeParseException 会穿透成 500（正确语义应为 400 参数错误）。
+        // 否则 DateTimeParseException 会穿透成 500（正确语义应为 400 参数错误）.
         LocalDate day;
         if (date == null || date.isBlank()) {
             day = LocalDate.now();

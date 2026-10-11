@@ -15,10 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * 管理端通知策略接口（系统设置 → 通知策略）。
+ * 管理端通知策略接口（系统设置 → 通知策略）.
  * <p>
- * 全局策略：邮件/站内/短信是否启用。邮件启用与否会真实控制审核结果邮件的发送；
- * 站内/短信为预留（消息中心/短信服务建设后生效）。
+ * 全局策略：邮件/站内/短信是否启用.邮件启用与否会真实控制审核结果邮件的发送；
+ * 站内/短信为预留（消息中心/短信服务建设后生效）.
  * </p>
  *
  * @author forever-king

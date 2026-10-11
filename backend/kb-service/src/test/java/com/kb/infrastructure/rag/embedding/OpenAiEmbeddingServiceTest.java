@@ -25,7 +25,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 /**
- * {@link OpenAiEmbeddingService} 分批并发向量化测试。
+ * {@link OpenAiEmbeddingService} 分批并发向量化测试.
  *
  * @author forever-king
  */

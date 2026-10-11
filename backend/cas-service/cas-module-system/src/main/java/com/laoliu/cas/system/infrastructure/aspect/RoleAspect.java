@@ -22,7 +22,7 @@ import java.util.Arrays;
  * 角色权限校验切面
  * <p>
  * 拦截方法级或类级标注 {@link RequireRole} 的端点（方法级优先），校验当前用户是否具备所需角色；
- * 权限不足时直接抛出异常，由 {@code GlobalExceptionHandler} 统一处理。
+ * 权限不足时直接抛出异常，由 {@code GlobalExceptionHandler} 统一处理.
  *
  * @author forever-king
  */
@@ -36,7 +36,7 @@ public class RoleAspect {
     private final UserMapper userMapper;
 
     /**
-     * 方法级注解（@annotation）或类级注解（@within）均触发；Spring AOP 代理只拦 public 方法（7.3.1）。
+     * 方法级注解（@annotation）或类级注解（@within）均触发；Spring AOP 代理只拦 public 方法.
      */
     @Pointcut("@annotation(com.laoliu.cas.common.annotation.RequireRole) "
             + "|| @within(com.laoliu.cas.common.annotation.RequireRole)")
@@ -46,7 +46,7 @@ public class RoleAspect {
     @Around("requireRolePointcut()")
     public Object aroundAdvice(ProceedingJoinPoint joinPoint) throws Throwable {
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
-        // 方法级标注优先；缺省时回退类级标注（7.3.1：类级 @RequireRole 此前因 @Target 不含 TYPE 且
+        // 方法级标注优先；缺省时回退类级标注（类级 @RequireRole 此前因 @Target 不含 TYPE 且
         // 切面只读方法注解而成为死代码，守护测试的 classLevelGuarded 分支永远为 false）
         RequireRole requireRole = signature.getMethod().getAnnotation(RequireRole.class);
         if (requireRole == null) {
@@ -68,7 +68,7 @@ public class RoleAspect {
         }
 
         // 角色列正常只会是数字编码；脏数据/手工改库可能写入非数字，
-        // 此前 parseInt 直接抛 NumberFormatException → 500。此处收敛为 403（7.3.6）。
+        // 此前 parseInt 直接抛 NumberFormatException → 500.此处收敛为 403.
         int currentRoleCode;
         try {
             currentRoleCode = Integer.parseInt(userRole);

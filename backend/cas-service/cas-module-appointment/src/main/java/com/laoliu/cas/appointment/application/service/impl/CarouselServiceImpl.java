@@ -30,8 +30,7 @@ public class CarouselServiceImpl implements CarouselService {
     private final FileService fileService;
 
     /**
-     * 轮播图数量上限（1.5：不再硬编码，与 V1 预置数据解耦，
-     * 默认 6 张保持现网行为，可由 carousel.max-count 调整）
+     * 轮播图数量上限（不再硬编码，与 V1 预置数据解耦，* 默认 6 张保持现网行为，可由 carousel.max-count 调整）
      */
     private final int maxCount;
 
@@ -81,7 +80,7 @@ public class CarouselServiceImpl implements CarouselService {
             // 幂等：重复删除不报错
             return;
         }
-        // 2.11：先删库再清物理文件——行未删掉就不应产生孤儿清理；
+        // 先删库再清物理文件——行未删掉就不应产生孤儿清理；
         // 文件删除 fail-open（FileService 内部仅告警），极端情况下残留文件可由运维清理
         carouselRepository.deleteById(id);
         fileService.deleteByUrl(carousel.getImageUrl());

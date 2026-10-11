@@ -27,16 +27,16 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * KB → CAS Feign 契约测试。
+ * KB → CAS Feign 契约测试.
  * <p>
  * 背景：CAS 的响应 DTO 与 KB 的 {@code Cas*} DTO 是两份手工维护的拷贝，
  * 编译期完全不共享类型；只要 CAS 侧把 JSON 字段改名（如 serviceDescribe、
- * availableSlotCount），KB 运行期静默收到 null，单测全绿、CI 无法发现。
+ * availableSlotCount），KB 运行期静默收到 null，单测全绿、CI 无法发现.
  * <p>
  * 本测试用 JDK 内置 HttpServer 扮演 CAS，返回按「CAS 当前真实出参格式」
  * 手写的 JSON，再用真实 Feign（SpringMvcContract + Jackson 解码）发起调用：
- * 字段名一旦漂移，解码结果即为 null，测试立即失败。不引入 WireMock 等新
- * 依赖（离线构建环境可用）。
+ * 字段名一旦漂移，解码结果即为 null，测试立即失败.不引入 WireMock 等新
+ * 依赖（离线构建环境可用）.
  *
  * @author forever-king
  */

@@ -28,8 +28,8 @@ public interface VectorStoreService {
 
     /**
      * Search for the most similar vectors to the query vector.
-     * 4.1（深度审查 P0）：按归属过滤——仅返回当前用户私有文档（owner_id=userId）
-     * 与全局共享文档（owner_id 缺失/空）的向量；跨用户私有泄露由此杜绝。
+     * 按归属过滤——仅返回当前用户私有文档（owner_id=userId）
+     * 与全局共享文档（owner_id 缺失/空）的向量；跨用户私有泄露由此杜绝.
      *
      * @param queryVector    the query embedding
      * @param limit          max number of results

@@ -15,7 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * </p>
  * <p>
  * 同时是文件类型判据的南向端口实现（{@link DocumentTypeRegistry}）：
- * 上传校验以这里为准，扩展名白名单只增不删，与 Q-03 的判据收敛保持一致。
+ * 上传校验以这里为准，扩展名白名单只增不删，与判据收敛保持一致.
  * </p>
  *
  * @author forever-king
@@ -64,7 +64,7 @@ public class ParserRegistry implements DocumentTypeRegistry {
     }
 
     /**
-     * 该文件类型是否注册了可用解析器（上传类型校验的判据唯一源）。
+     * 该文件类型是否注册了可用解析器（上传类型校验的判据唯一源）.
      */
     @Override
     public boolean supports(String fileType) {
@@ -72,8 +72,8 @@ public class ParserRegistry implements DocumentTypeRegistry {
     }
 
     /**
-     * 返回当前所有受支持（可解析）的扩展名集合（已排序副本）。
-     * 上传校验应以这里为准，避免"白名单允许、实际无解析器"的错位。
+     * 返回当前所有受支持（可解析）的扩展名集合（已排序副本）.
+     * 上传校验应以这里为准，避免"白名单允许、实际无解析器"的错位.
      */
     @Override
     public Set<String> supportedExtensions() {

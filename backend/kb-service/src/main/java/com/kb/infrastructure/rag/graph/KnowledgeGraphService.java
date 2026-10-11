@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * 知识图谱服务 — 管理实体索引和关系构建（12-10 整改版）
+ * 知识图谱服务 — 管理实体索引和关系构建（整改版）
  * <p>
  * 当前仍为<b>进程内内存态</b>（ConcurrentHashMap），不跨实例共享、重启丢失；
  * 中期方案是落 MySQL 边表/Neo4j，本轮先解决四个具体缺陷：
@@ -25,10 +25,10 @@ import java.util.concurrent.atomic.AtomicLong;
  *   <li><b>去重 O(n²)</b>：边以"有序实体名对"为键存 Map，判重/加权 O(1)，
  *       替代此前每对实体 stream 全表扫描（且旧实现按抽取器随机 UUID 配对，
  *       跨分块同名实体永远连不上边，去重实际失效）；</li>
- *   <li>抽取失败不拖垮文档入库：best-effort 由调用方（文档消费者）逐块 try/catch 兜底。</li>
+ *   <li>抽取失败不拖垮文档入库：best-effort 由调用方（文档消费者）逐块 try/catch 兜底.</li>
  * </ol>
  * 邻接表 {@code name → 邻居名集合} 随边的增删同步维护，供 {@link #expandQuery}
- * 做一跳邻居扩展。所有集合均为并发结构，消费端多线程（prefetch&gt;1）可并发写入。
+ * 做一跳邻居扩展.所有集合均为并发结构，消费端多线程（prefetch&gt;1）可并发写入.
  *
  * @author forever-king
  */
@@ -57,11 +57,11 @@ public class KnowledgeGraphService {
     private final int maxRelations;
 
     /**
-     * 图谱构建总开关（kb.graph.enabled，默认 false）。
+     * 图谱构建总开关（kb.graph.enabled，默认 false）.
      * 为什么默认关：图谱抽取对每个分块同步调用一次 LLM，大文档意味着数十~上百次串行付费调用，
-     * 且与在线问答共用同一个 LLM 熔断器，批量上传可能拖慢入库并污染在线问答熔断窗口。
+     * 且与在线问答共用同一个 LLM 熔断器，批量上传可能拖慢入库并污染在线问答熔断窗口.
      * 关闭时 ingestChunk 直接短路（不抽取、不建边）；检索侧 expandQuery 对空图返回空集，
-     * GraphAssistedRetriever 自然退化为普通混合检索，行为安全。
+     * GraphAssistedRetriever 自然退化为普通混合检索，行为安全.
      */
     private final boolean enabled;
 
@@ -80,9 +80,9 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 从文档分块中抽取实体并构建关系图。
+     * 从文档分块中抽取实体并构建关系图.
      * <p>
-     * 本方法只做内存计算、不抛受检异常；抽取/构建异常由调用方逐块吞掉（best-effort）。
+     * 本方法只做内存计算、不抛受检异常；抽取/构建异常由调用方逐块吞掉（best-effort）.
      */
     public void ingestChunk(String text, Long documentId, String chunkId) {
         // 开关关闭时不触发任何 LLM 抽取调用（默认关，原因见字段 javadoc）
@@ -180,12 +180,12 @@ public class KnowledgeGraphService {
     }
 
     /**
-     * 删除某文档在图谱中的全部归属（12-10）。
+     * 删除某文档在图谱中的全部归属.
      * <p>
      * 文档删除或强制重处理（消费者 Step0）时调用：实体/边的文档归属集合移除该文档，
-     * 归属变空才真正摘除节点与边，并同步清理邻接表。
+     * 归属变空才真正摘除节点与边，并同步清理邻接表.
      * 不变量：边的文档集合是其两个端点实体文档集合的子集（同一次 ingest 原子登记），
-     * 因此端点实体被摘除时，其关联边也必然已无归属，不会留下悬挂边。
+     * 因此端点实体被摘除时，其关联边也必然已无归属，不会留下悬挂边.
      *
      * @return 被摘除的（实体数, 边数），便于调用方记日志
      */

@@ -34,8 +34,8 @@ public interface TimeSlotRepository {
     List<TimeSlot> findAvailable(Long consultantId, LocalDate date);
 
     /**
-     * 批量统计某日各咨询师仍可预约时段数（4.7 N+1 收敛）。
-     * 当天无可用时段的咨询师不出现在返回 Map 中，调用方按 0 兜底。
+     * 批量统计某日各咨询师仍可预约时段数（N+1 收敛）.
+     * 当天无可用时段的咨询师不出现在返回 Map 中，调用方按 0 兜底.
      */
     Map<Long, Integer> countAvailableByConsultants(Collection<Long> consultantIds, LocalDate date);
 

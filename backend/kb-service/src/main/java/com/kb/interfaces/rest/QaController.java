@@ -108,7 +108,7 @@ public class QaController {
 
         // 在途幂等闸：EventSource 遇到传输错误会自动用同一 URL 重发，同一轮问答
         // （含同一 requestId）在途重复到达时直接 409，避免重复落库/重复计费/重复触发
-        // 待确认预约。Redis 故障 fail-open：旁路幂等设施不能挡住正常问答。
+        // 待确认预约.Redis 故障 fail-open：旁路幂等设施不能挡住正常问答.
         String inflightKey = acquireInflightSlot(userId, requestId);
 
         // 实例级 SSE 并发兜底：在响应头未提交前拒绝，直接返回 HTTP 503
@@ -121,7 +121,7 @@ public class QaController {
         }
 
         // 本轮请求的取消令牌：客户端断开（cancel）时触发，
-        // 贯穿到模型层中止供应商在途 SSE，而不是仅在本服务丢弃 token（12-07）
+        // 贯穿到模型层中止供应商在途 SSE，而不是仅在本服务丢弃 token
         CancellationToken cancellationToken = new CancellationToken();
 
         // 显式指定泛型：链式调用 subscribeOn 后编译器无法从目标类型反推 T
@@ -169,12 +169,12 @@ public class QaController {
                             }
                         }
                 );
-                // 显式发一个结束信号再关闭。
+                // 显式发一个结束信号再关闭.
                 // 此前直接 complete()：浏览器 EventSource 收到的是"连接被关闭"，
                 // 会触发 error 并准备自动重连，前端只能靠 onerror 里的 es.close() 兜底——
                 // 任何未 close 的错误路径都会把同一轮问答再跑一遍（重复落库用户消息、
-                // 重复调 LLM，甚至重复执行待确认预约）。前端的 [DONE] 分支也一直是死代码。
-                // 客户端已断开则 sink 操作都是静默空操作，直接结束即可。
+                // 重复调 LLM，甚至重复执行待确认预约）.前端的 [DONE] 分支也一直是死代码.
+                // 客户端已断开则 sink 操作都是静默空操作，直接结束即可.
                 if (!cancellationToken.isCancelled()) {
                     sink.next(ServerSentEvent.builder().data(DONE_SIGNAL).build());
                     sink.complete();
@@ -186,8 +186,8 @@ public class QaController {
                 } else {
                     // 不能 sink.error：那是传输层错误，浏览器 EventSource 会自动重连并
                     // 原样重发 GET，整轮问答重跑（重复落库、重复调 LLM、甚至重复执行
-                    // 待确认预约）。改为在 HTTP 200 的 SSE 流内发终止 error 事件 +
-                    // DONE 后正常 complete，前端据终态事件关闭连接、展示提示。
+                    // 待确认预约）.改为在 HTTP 200 的 SSE 流内发终止 error 事件 +
+                    // DONE 后正常 complete，前端据终态事件关闭连接、展示提示.
                     log.error("SSE streaming error", e);
                     try {
                         sink.next(ServerSentEvent.builder()
@@ -204,11 +204,11 @@ public class QaController {
             }
         })
         // 订阅到 boundedElastic：本服务是 Servlet 栈，Flux 默认在容器线程上订阅，
-        // 而 askStreaming 全程同步阻塞（检索 + LLM + Feign），会一直占住 Tomcat 工作线程。
-        // 并发问答数因此约等于可用线程数，LLM 变慢时少量请求即可打满、健康检查也挂。
+        // 而 askStreaming 全程同步阻塞（检索 + LLM + Feign），会一直占住 Tomcat 工作线程.
+        // 并发问答数因此约等于可用线程数，LLM 变慢时少量请求即可打满、健康检查也挂.
         .subscribeOn(Schedulers.boundedElastic())
-        // 无论正常结束、异常还是客户端断开（cancel），都归还并发名额并释放在途幂等槽。
-        // 许可在控制器方法体内、Flux 订阅前获取，doFinally 恰好触发一次，保证不漏不重。
+        // 无论正常结束、异常还是客户端断开（cancel），都归还并发名额并释放在途幂等槽.
+        // 许可在控制器方法体内、Flux 订阅前获取，doFinally 恰好触发一次，保证不漏不重.
         .doFinally(signal -> {
             sseConcurrencyLimiter.release();
             releaseInflightSlot(inflightKey);
@@ -216,9 +216,9 @@ public class QaController {
     }
 
     /**
-     * 在途幂等槽：同用户 + requestId 的问答仍在处理时占用 Redis NX 键。
+     * 在途幂等槽：同用户 + requestId 的问答仍在处理时占用 Redis NX 键.
      * 重复请求（典型来源：EventSource 传输错误后的自动重连）直接 409；
-     * 键带 3 分钟 TTL，即使在途实例崩溃也会自动过期。Redis 故障 fail-open。
+     * 键带 3 分钟 TTL，即使在途实例崩溃也会自动过期.Redis 故障 fail-open.
      */
     private String acquireInflightSlot(Long userId, String requestId) {
         if (requestId == null || requestId.isBlank()) {
@@ -260,8 +260,8 @@ public class QaController {
 
         // 首问未传 sessionId 时在入口预生成（与 service 内 ensureSessionId 同一规则）：
         // 必须让"实际落库使用的 sid"回流到响应，否则调用方拿到 null 既无法多轮续接、
-        // 也无法用该 sid 拉回本轮历史（首问 citations 恒空）。service 对非空 sid 原样使用，
-        // 此处预生成不会产生第二个会话。
+        // 也无法用该 sid 拉回本轮历史（首问 citations 恒空）.service 对非空 sid 原样使用，
+        // 此处预生成不会产生第二个会话.
         String sessionId = (request.getSessionId() != null && !request.getSessionId().isBlank())
                 ? request.getSessionId() : UUID.randomUUID().toString();
 

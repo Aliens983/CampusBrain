@@ -28,7 +28,7 @@ public interface IQaApplicationService {
 
     /**
      * 流式问答（可取消版）：{@code cancellationToken} 由 SSE 控制器在客户端断连时触发，
-     * 服务端据此中止供应商在途生成，避免空烧 token。
+     * 服务端据此中止供应商在途生成，避免空烧 token.
      */
     String askStreaming(String query, String sessionId, Long userId,
                         CancellationToken cancellationToken,

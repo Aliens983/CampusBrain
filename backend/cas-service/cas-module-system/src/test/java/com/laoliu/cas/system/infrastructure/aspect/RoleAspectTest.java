@@ -22,11 +22,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * RoleAspect 授权切面单元测试（7.3.1）。
+ * RoleAspect 授权切面单元测试.
  * <p>
  * 此前授权链路只有 cas-server 的纯反射守护测试（断言"注解存在"），注解写错或切面
- * 不生效时测试仍然全绿。此处用 {@link AspectJProxyFactory} 把 RoleAspect 真实织入
- * 代理，端到端验证 401/403/放行行为，不启动 Spring 上下文、不依赖中间件。
+ * 不生效时测试仍然全绿.此处用 {@link AspectJProxyFactory} 把 RoleAspect 真实织入
+ * 代理，端到端验证 401/403/放行行为，不启动 Spring 上下文、不依赖中间件.
  *
  * @author forever-king
  */

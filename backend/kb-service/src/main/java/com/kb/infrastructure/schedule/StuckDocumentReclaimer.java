@@ -15,16 +15,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * 卡死文档超时回收任务（12-03）。
+ * 卡死文档超时回收任务.
  * <p>
  * 背景：文档进入中间态（UPLOADED/PARSING/CHUNKING/EMBEDDING）后，若消费者宕机、
- * 消息丢失或重试耗尽进 DLQ，文档会永久停在"处理中"，用户只能手动重处理。
+ * 消息丢失或重试耗尽进 DLQ，文档会永久停在"处理中"，用户只能手动重处理.
  * <p>
  * 机制：周期性扫描 updated_at 早于阈值的中间态文档，经 Redis reclaim 锁去重后
- * 重新投递处理消息（多实例部署下只有一个实例会重投同一文档）。消费者侧的
- * processing 锁保证不会与仍存活的处理并发。
+ * 重新投递处理消息（多实例部署下只有一个实例会重投同一文档）.消费者侧的
+ * processing 锁保证不会与仍存活的处理并发.
  * <p>
- * 阈值必须显著大于正常处理时长（大文件解析 + embedding），避免误回收。
+ * 阈值必须显著大于正常处理时长（大文件解析 + embedding），避免误回收.
  *
  * @author forever-king
  */
@@ -56,7 +56,7 @@ public class StuckDocumentReclaimer {
     private long reclaimLockTtlSeconds;
 
     /**
-     * 每 5 分钟扫描一次（启动 2 分钟后开始，避开启动风暴）。
+     * 每 5 分钟扫描一次（启动 2 分钟后开始，避开启动风暴）.
      */
     @Scheduled(fixedDelayString = "${kb.document.reclaim.interval-ms:300000}",
             initialDelayString = "${kb.document.reclaim.initial-delay-ms:120000}")
@@ -77,9 +77,9 @@ public class StuckDocumentReclaimer {
         for (Document doc : stuck) {
             Long id = doc.getId();
             try {
-                // 3.10（深度审查 P1）：先探测 processing 锁——只要 Redis 处理锁仍存在，
-                // 说明消费者（本机或其他实例）仍在处理该文档（3.9 Watchdog 会续约慢任务），
-                // 本轮跳过，不再对"还在跑的大文档"反复重投制造无效消息与 WARN。
+                // 先探测 processing 锁——只要 Redis 处理锁仍存在，
+                // 说明消费者（本机或其他实例）仍在处理该文档（Watchdog 会续约慢任务），
+                // 本轮跳过，不再对"还在跑的大文档"反复重投制造无效消息与 WARN.
                 if (processingLock.isProcessing(id)) {
                     continue;
                 }

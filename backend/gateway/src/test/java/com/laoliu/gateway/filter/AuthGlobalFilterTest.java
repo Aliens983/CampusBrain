@@ -26,12 +26,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 网关统一鉴权过滤器单元测试（5.1.2）。
+ * 网关统一鉴权过滤器单元测试.
  * <p>
  * 网关是全局安全入口，但此前零测试：白名单 AntPathMatcher 规则、Header/query
  * 两种 token 提取、内网签名头透传任一处被改坏，CI 都无法发现，只能靠线上
- * 大面积 401 暴露。本类以 {@link MockServerWebExchange} 直接驱动过滤器，
- * 不启动 Spring 上下文，不依赖 Nacos/下游服务。
+ * 大面积 401 暴露.本类以 {@link MockServerWebExchange} 直接驱动过滤器，
+ * 不启动 Spring 上下文，不依赖 Nacos/下游服务.
  *
  * @author forever-king
  */

@@ -11,7 +11,7 @@ import java.util.Set;
  * 文档解析器 SPI（Service Provider Interface）
  * <p>
  * 新增文件格式支持只需实现此接口并注册到 {@link ParserRegistry}，
- * 无需修改任何现有代码。符合开闭原则（OCP）
+ * 无需修改任何现有代码.符合开闭原则（OCP）
  * </p>
  *
  * <h3>实现指南</h3>
@@ -45,7 +45,7 @@ public interface DocumentParserSpi {
     Set<String> supportedExtensions();
 
     /**
-     * 解析器优先级。数字越小优先级越高
+     * 解析器优先级.数字越小优先级越高
      * - 1-10: 专用解析器（PDFBox、POI 等）
      * - 11-50: 通用解析器（Tika 等）
      * - 51+: 兜底解析器

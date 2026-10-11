@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 
 /**
  * 滑动窗口限流器：Redis 正常时限流生效；Redis 故障时 fail-open 放行，
- * 不能让中间件抖动放大成全部接口不可用。
+ * 不能让中间件抖动放大成全部接口不可用.
  *
  * @author forever-king
  */

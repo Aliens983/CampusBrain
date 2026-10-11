@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
  * the async processing pipeline: Parse → Chunk → Embed → Store.
  * </p>
  * <p>
- * 2.5（深度审查 P2）：本类直接 implements {@link DocumentProcessingDispatcher}
- * （基础设施实现领域端口），已删除纯委托的 adapter 转发层。
+ * 本类直接 implements {@link DocumentProcessingDispatcher}
+ * （基础设施实现领域端口），已删除纯委托的 adapter 转发层.
  * </p>
  *
  * @author forever-king

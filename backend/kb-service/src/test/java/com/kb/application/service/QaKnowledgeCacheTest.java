@@ -38,10 +38,10 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 问答缓存读写策略测试。
+ * 问答缓存读写策略测试.
  * <p>
  * 规则：只有纯知识类问题（不命中预约意图、会话无预约槽位）才查写缓存；
- * 预约实时类问题必须完全绕开缓存，否则用户会看到过期余量。
+ * 预约实时类问题必须完全绕开缓存，否则用户会看到过期余量.
  *
  * @author forever-king
  */
@@ -66,7 +66,7 @@ class QaKnowledgeCacheTest {
 
     @BeforeEach
     void setUp() {
-        // 2.8：CacheGuard 依赖 IntentClassifier（真实关键词实现），AnswerPipeline 亦注入之
+        // CacheGuard 依赖 IntentClassifier（真实关键词实现），AnswerPipeline 亦注入之
         AnswerPipeline pipeline = new AnswerPipeline(searchService, rerankerService, llmService,
                 graphRetriever, conversationRepository, metrics, new KeywordIntentClassifier());
         CacheGuard cacheGuard = new CacheGuard(new KeywordIntentClassifier(), qaCacheService,
@@ -96,7 +96,7 @@ class QaKnowledgeCacheTest {
         stubRewrite(QUERY);
         List<Conversation.CitationRef> citations = List.of();
         when(qaCacheService.getCachedAnswer(QUERY, null))
-                // ownerId=null → 全局共享条目，任何用户都可命中（P1-02）
+                // ownerId=null → 全局共享条目，任何用户都可命中
                 .thenReturn(Optional.of(new QaCacheService.QaCacheEntry("缓存的答案", citations, 1L, null)));
         when(conversationRepository.saveWithReferences(
                 anyString(), anyString(), eq("缓存的答案"), any(), any())).thenReturn(99L);

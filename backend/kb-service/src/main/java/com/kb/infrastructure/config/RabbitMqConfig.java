@@ -36,7 +36,7 @@ public class RabbitMqConfig {
     /** 路由键 */
     public static final String ROUTING_KEY_DOCUMENT_PROCESSING = "kb.document.processing";
 
-    /** 死信交换机 / 死信队列 / 死信路由键（12-03）：
+    /** 死信交换机 / 死信队列 / 死信路由键：
      * 消费重试耗尽（且不 requeue）的消息进入 DLQ 留存待人工/补偿处理，而不是直接丢弃 */
     public static final String DLX_DOCUMENT = "kb.document.exchange.dlx";
     public static final String QUEUE_DOCUMENT_PROCESSING_DLQ = "kb.document.processing.queue.dlq";
@@ -54,10 +54,10 @@ public class RabbitMqConfig {
     }
 
     /**
-     * 文档处理主队列：绑定死信交换机。
+     * 文档处理主队列：绑定死信交换机.
      * <p>
      * 配合 listener retry（3 次指数退避）+ default-requeue-rejected=false：
-     * 可重试异常在本实例重试 3 次仍失败后，消息被拒绝并路由到 DLQ，不再静默丢弃。
+     * 可重试异常在本实例重试 3 次仍失败后，消息被拒绝并路由到 DLQ，不再静默丢弃.
      */
     @Bean
     public Queue documentProcessingQueue() {
@@ -109,13 +109,13 @@ public class RabbitMqConfig {
     }
 
     /**
-     * 监听容器工厂 — 让 @RabbitListener 也能用 JSON 转换器。
+     * 监听容器工厂 — 让 @RabbitListener 也能用 JSON 转换器.
      * <p>
      * 必须经 {@link SimpleRabbitListenerContainerFactoryConfigurer} 应用
      * {@code spring.rabbitmq.listener.simple.*} 配置：此前手工 new 工厂并顶掉了
      * Boot 自动配置的同名 bean，导致 yml 中的 concurrency/max-concurrency/prefetch/
-     * retry 退避全部静默失效（实际单消费者、首次失败直接进 DLQ）。
-     * 自定义项（JSON 转换器、requeue 策略）在 configure 之后设置，保证不被覆盖。
+     * retry 退避全部静默失效（实际单消费者、首次失败直接进 DLQ）.
+     * 自定义项（JSON 转换器、requeue 策略）在 configure 之后设置，保证不被覆盖.
      */
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(

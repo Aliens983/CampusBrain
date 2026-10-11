@@ -11,7 +11,7 @@ import java.util.List;
  * 预约草稿（对应 CAS 的 AssistantBookingDraft）
  * <p>
  * 草稿只是"待用户确认的预约意图"，CAS 侧不落预约表、只存 Redis 并设置 TTL；
- * 用户确认后才真正下单。
+ * 用户确认后才真正下单.
  *
  * @author forever-king
  */

@@ -19,15 +19,15 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 检索归属传播回归测试（P1-01）。
+ * 检索归属传播回归测试.
  * <p>
- * P1-01 的根因是：混合检索在 {@code retrievalExecutor} 池线程上执行，而归属用户
+ * 该缺陷的根因是：混合检索在 {@code retrievalExecutor} 池线程上执行，而归属用户
  * 原先靠在检索器内部读 SecurityContext（MODE_THREADLOCAL）获得 —— 池线程从未
- * set 过身份，ownerId 恒为 null，导致<b>用户私有文档永远无法被召回</b>。
+ * set 过身份，ownerId 恒为 null，导致<b>用户私有文档永远无法被召回</b>.
  * <p>
  * 该缺陷此前测不出来的原因是：原有用例用同步执行器（direct executor）作替身，
- * 任务在提交线程上跑，ThreadLocal 恰好可用。因此本测试<b>必须使用真实线程池</b>，
- * 才能复现跨线程场景。
+ * 任务在提交线程上跑，ThreadLocal 恰好可用.因此本测试<b>必须使用真实线程池</b>，
+ * 才能复现跨线程场景.
  *
  * @author forever-king
  */
@@ -69,8 +69,8 @@ class RetrievalOwnershipPropagationTest {
 
         newRetriever().hybridRetrieve("我的私有文档写了什么", alice);
 
-        // 关键断言：两个检索器收到的必须是 alice。
-        // 修复前这里拿到的是 null（池线程取不到 SecurityContext）。
+        // 关键断言：两个检索器收到的必须是 alice.
+        // 修复前这里拿到的是 null（池线程取不到 SecurityContext）.
         verify(keywordRetriever).retrieve(eq("我的私有文档写了什么"), eq(alice));
         verify(vectorRetriever).retrieve(eq("我的私有文档写了什么"), eq(alice));
     }

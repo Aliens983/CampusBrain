@@ -18,9 +18,9 @@ public interface CarouselService {
     List<String> listImages();
 
     /**
-     * 上传图片并新增一张轮播图（数量上限见 carousel.max-count 配置，默认 6 张）。
-     * <p>2.10：入参为应用层自有载体 {@link CarouselImage}，不依赖 Servlet MultipartFile，
-     * 定时任务/消息消费/单测可直接复用。
+     * 上传图片并新增一张轮播图（数量上限见 carousel.max-count 配置，默认 6 张）.
+     * <p>入参为应用层自有载体 {@link CarouselImage}，不依赖 Servlet MultipartFile，
+     * 定时任务/消息消费/单测可直接复用.
      *
      * @param image 图片文件名与字节
      * @return 新增的轮播图（含回填 id）

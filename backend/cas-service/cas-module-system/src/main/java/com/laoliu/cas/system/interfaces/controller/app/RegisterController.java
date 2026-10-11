@@ -28,7 +28,7 @@ public class RegisterController {
     @Operation(summary = "验证邮箱验证码并注册", description = "用户通过邮箱验证码完成注册流程，验证成功后自动创建用户并返回用户ID")
     @PostMapping("/register")
     public CommonResult<Long> verifyEmailCode(@Valid @RequestBody UserRegisterRequest request) {
-        // 入参 DTO 与应用层契约已统一为 UserRegisterRequest，无需逐字段拷贝（7.3.3）
+        // 入参 DTO 与应用层契约已统一为 UserRegisterRequest，无需逐字段拷贝
         Long userId = authService.register(request);
         return CommonResult.success(userId);
     }

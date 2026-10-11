@@ -31,14 +31,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 5.5（深度审查 P1）AnswerPipeline 同步/流式分支路由测试。
+ * AnswerPipeline 同步/流式分支路由测试.
  * <p>
- * 重点守护 3.2（P0）与 3.3（P0）的修后行为不回归：
+ * 重点守护同步/流式分支的修后行为不回归：
  * <ul>
  *   <li>同步链路<b>无召回</b>必须走 {@code generateAnswerDirect}（旧实现传 null 消费者走流式 → NPE）；</li>
  *   <li>同步链路召回命中"无法回答"标记词 → 切换 {@code generateAnswerDirect} 兜底；</li>
  *   <li>流式链路无召回 → 走 4 参 {@code generateAnswerDirectStreaming}（含 CancellationToken），
- *       绝不可退化成同步直答（会吞掉逐 token 推送语义）。</li>
+ *       绝不可退化成同步直答（会吞掉逐 token 推送语义）.</li>
  * </ul>
  *
  * @author forever-king
@@ -75,7 +75,7 @@ class AnswerPipelineRoutingTest {
                 emptySession(), null, CancellationToken.none());
 
         assertEquals("直接兜底答案", answer);
-        // 3.2 回归守护：同步无召回绝不能走流式（旧实现传 null 消费者 → NPE）
+        // 回归守护：同步无召回绝不能走流式（旧实现传 null 消费者 → NPE）
         verify(llmService).generateAnswerDirect("科普问题", List.of());
         verify(llmService, never()).generateAnswerStreaming(anyString(), anyList(), anyList(), any(), any());
     }
@@ -134,7 +134,7 @@ class AnswerPipelineRoutingTest {
                 emptySession(), t -> tokens.incrementAndGet(), CancellationToken.none());
 
         assertEquals("流式直答", answer);
-        // 5.3：必须是 4 参可取消版本（带 CancellationToken），3 参打桩在此不再匹配
+        // 必须是 4 参可取消版本（带 CancellationToken），3 参打桩在此不再匹配
         verify(llmService).generateAnswerDirectStreaming(eq("科普问题"), eq(List.of()), any(), any());
         // 同步直答绝不能在流式链路中被调用（会丢逐 token 推送）
         verify(llmService, never()).generateAnswerDirect(anyString(), anyList());

@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * 预约槽位抽取器测试
  * <p>
  * 重点验证：校区、业务分类、日期、时段四类条件的识别，
- * 以及"日期片段不会干扰时段识别"这一边界。
+ * 以及"日期片段不会干扰时段识别"这一边界.
  *
  * @author forever-king
  */

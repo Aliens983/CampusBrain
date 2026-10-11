@@ -6,6 +6,11 @@ import lombok.Value;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 教师停诊申请领域实体.
+ *
+ * @author forever-king
+ */
 @Value
 @Builder
 public class ScheduleCancelRequest {

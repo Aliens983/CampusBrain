@@ -12,15 +12,15 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * 下游服务 TraceId 过滤器（5.2.1）。
+ * 下游服务 TraceId 过滤器.
  * <p>
  * 与网关 {@code TraceIdGlobalFilter} 配套：网关为每个入站请求生成/校验
  * {@code X-Trace-Id} 并在转发头中透传，本过滤器读取该头写入 SLF4J MDC，
- * 使 CAS 全部日志可按 traceId 与网关、KB 三段对齐。
+ * 使 CAS 全部日志可按 traceId 与网关、KB 三段对齐.
  * </p>
  * <p>
  * 直连绕过网关的请求（本地调试/容器内网探测）没有该头时自行生成，
- * 保证 MDC 不为空；同时不信任任意脏值，仅接受受限字符集。
+ * 保证 MDC 不为空；同时不信任任意脏值，仅接受受限字符集.
  * </p>
  *
  * @author forever-king

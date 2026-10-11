@@ -11,10 +11,10 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 /**
- * 邮件发送服务。
+ * 邮件发送服务.
  * <p>
- * 业务指标（5.2.2）：{@code email_sent_total}（tag result=success/failed），
- * 用于统计通知邮件成功率。
+ * 业务指标：{@code email_sent_total}（tag result=success/failed），
+ * 用于统计通知邮件成功率.
  *
  * @author forever-king
  */
@@ -58,9 +58,9 @@ public class EmailServiceImpl implements EmailService {
             log.info("邮件发送成功，发件人：{}，收件人：{}，主题：{}", fromEmail, to, subject);
         } catch (Exception e) {
             failedCounter.increment();
-            // 1.5.1：本方法为 @Async 异步执行，调用方不会也无法捕获这里抛出的异常，
-            // 再抛 BusinessException 只会落到 AsyncUncaughtExceptionHandler，对业务毫无意义。
-            // 邮件属于"尽力通知"，失败仅记录日志，不影响主下单/审核事务。
+            // 本方法为 @Async 异步执行，调用方不会也无法捕获这里抛出的异常，
+            // 再抛 BusinessException 只会落到 AsyncUncaughtExceptionHandler，对业务毫无意义.
+            // 邮件属于"尽力通知"，失败仅记录日志，不影响主下单/审核事务.
             log.error("邮件发送失败，收件人：{}，主题：{}，错误信息：{}", to, subject, e.getMessage(), e);
         }
     }

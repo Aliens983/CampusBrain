@@ -14,11 +14,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * DbResetConfig 三道开关护栏单元测试（6.2/6.3）。
+ * DbResetConfig 三道开关护栏单元测试.
  * <p>
  * 不启动 Spring 上下文、不连真实 Redis/Flyway，直接驱动
  * {@link FlywayMigrationStrategy}：默认安全（只 migrate）、clean 与 flushDb
- * 必须各自被显式开关放行。
+ * 必须各自被显式开关放行.
  *
  * @author forever-king
  */

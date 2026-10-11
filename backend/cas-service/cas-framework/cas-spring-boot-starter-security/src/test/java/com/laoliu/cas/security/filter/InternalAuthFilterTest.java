@@ -23,11 +23,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 /**
- * InternalAuthFilter 单元测试（4.10）。
+ * InternalAuthFilter 单元测试.
  * <p>
  * 核心守护：无内网签名直连时，外部伪造的 X-User-Id/X-User-Role/X-Timestamp/
  * X-Internal-Sign 必须从下游视角完全消失——此前过滤器裸放原请求，绕过网关
- * 直连 18080 即可冒充任意身份。
+ * 直连 18080 即可冒充任意身份.
  *
  * @author forever-king
  */

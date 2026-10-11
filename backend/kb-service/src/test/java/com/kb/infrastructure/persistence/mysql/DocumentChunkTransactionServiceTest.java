@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 /**
- * {@link DocumentChunkTransactionService} 单事务边界守护测试（A-03）。
+ * {@link DocumentChunkTransactionService} 单事务边界守护测试.
  *
  * @author forever-king
  */

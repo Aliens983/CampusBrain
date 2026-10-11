@@ -10,17 +10,17 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 
 /**
- * 资源预约的时间窗准入策略（P1-06）。
+ * 资源预约的时间窗准入策略.
  * <p>
  * 此前三类资源（咨询/教室/设备）下单只校验"日期是否早于今天"，不校验
  * "今天的时段是否已经过去"—— 于是可以对昨天、以及今天上午已经结束的时段
  * 成功下单，产生大量"过去的预约"垃圾数据：它们会永久占用时段/库存，
- * 并污染基于时间字符串比较的冲突判定与统计。
+ * 并污染基于时间字符串比较的冲突判定与统计.
  * <p>
  * 校验规则：
  * <ol>
  *   <li>日期早于今天 → 拒绝；</li>
- *   <li>日期等于今天且开始时刻 &lt;= 当前时刻 → 拒绝（已开始/已结束的时段不可约）。</li>
+ *   <li>日期等于今天且开始时刻 &lt;= 当前时刻 → 拒绝（已开始/已结束的时段不可约）.</li>
  * </ol>
  *
  * @author forever-king
@@ -33,21 +33,21 @@ public final class BookingWindowPolicy {
     }
 
     /**
-     * 校验教室时段是否可预约。
+     * 校验教室时段是否可预约.
      */
     public static void assertRoomBookable(LocalDate date, String startTime) {
         assertFutureWindow(date, startTime, BookErrorCode.BOOK_TIME_INVALID);
     }
 
     /**
-     * 校验设备借用时段是否可预约。
+     * 校验设备借用时段是否可预约.
      */
     public static void assertEquipmentBorrowable(LocalDate date, String startTime) {
         assertFutureWindow(date, startTime, BookErrorCode.BORROW_TIME_INVALID);
     }
 
     /**
-     * 校验咨询时段是否可预约。
+     * 校验咨询时段是否可预约.
      */
     public static void assertConsultationBookable(LocalDate date, String startTime) {
         assertFutureWindow(date, startTime, BookErrorCode.BOOK_TIME_INVALID);

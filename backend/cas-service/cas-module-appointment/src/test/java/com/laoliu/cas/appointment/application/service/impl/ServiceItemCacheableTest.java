@@ -27,13 +27,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * getServiceById 缓存注解回归测试（真实 Spring 容器 + CacheInterceptor）。
+ * getServiceById 缓存注解回归测试（真实 Spring 容器 + CacheInterceptor）.
  * <p>
  * Spring 6 缓存抽象对 Optional 一等支持：@Cacheable 方法返回 Optional 时，入库前自动
  * 拆包，unless SpEL 中的 #result 是内容实体（empty 对应 null），命中时再自动包回
- * Optional 返回。旧表达式 "#result.isPresent()" 在实体类型上求值必抛
+ * Optional 返回.旧表达式 "#result.isPresent()" 在实体类型上求值必抛
  * SpelEvaluationException(EL1004E)，服务详情接口在缓存未命中时 100% 500；
- * 该问题在 Redis 有热点缓存时被命中路径掩盖，清空缓存后全部详情才暴露。
+ * 该问题在 Redis 有热点缓存时被命中路径掩盖，清空缓存后全部详情才暴露.
  *
  * @author forever-king
  */

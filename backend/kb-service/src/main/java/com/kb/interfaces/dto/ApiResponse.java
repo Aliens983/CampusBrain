@@ -20,8 +20,8 @@ public class ApiResponse<T> {
 
     /**
      * 业务状态码，统一为数值（与 CAS CommonResult 对齐）：
-     * 200 = 成功，其余见 {@link ErrorCode}。
-     * 曾为 Object（int/String 混用），导致前端无法做类型安全的分支判断。
+     * 200 = 成功，其余见 {@link ErrorCode}.
+     * 曾为 Object（int/String 混用），导致前端无法做类型安全的分支判断.
      */
     private Integer code;
 

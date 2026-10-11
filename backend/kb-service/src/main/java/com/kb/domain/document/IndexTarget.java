@@ -1,7 +1,7 @@
 package com.kb.domain.document;
 
 /**
- * 外部索引删除对账目标（A-04）。
+ * 外部索引删除对账目标.
  *
  * @author forever-king
  */

@@ -13,11 +13,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.when;
 
 /**
- * RedisUtil 计数器读取回归测试。
+ * RedisUtil 计数器读取回归测试.
  * <p>
  * 背景：登录失败计数由 Redis INCR 写入裸数字串，再经 Jackson2Json 反序列化，
- * 小数值会还原成 Integer。旧代码用泛型 {@code redisUtil.<Long>get(key)} 接收，
- * checkcast Long 直接抛 ClassCastException: Integer cannot be cast to Long。
+ * 小数值会还原成 Integer.旧代码用泛型 {@code redisUtil.<Long>get(key)} 接收，
+ * checkcast Long 直接抛 ClassCastException: Integer cannot be cast to Long.
  *
  * @author forever-king
  */

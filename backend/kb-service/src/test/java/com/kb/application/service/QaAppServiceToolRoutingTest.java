@@ -36,7 +36,7 @@ import static org.mockito.Mockito.*;
  * 验证：
  * 1. 预约类问题 → 走 {@code generateAnswerWithTools}（Function Calling 链路）；
  * 2. 非预约类问题 → 走 RAG / DeepSeek 兜底，不触发工具；
- * 3. {@code isAppointmentQuery} 关键词边界。
+ * 3. {@code isAppointmentQuery} 关键词边界.
  * </p>
  *
  * @author forever-king
@@ -63,7 +63,7 @@ class QaAppServiceToolRoutingTest {
 
     @BeforeEach
     void setUp() {
-        // 2.8：CacheGuard 依赖 IntentClassifier（真实关键词实现），AnswerPipeline 亦注入之
+        // CacheGuard 依赖 IntentClassifier（真实关键词实现），AnswerPipeline 亦注入之
         pipeline = new AnswerPipeline(searchService, rerankerService, llmService,
                 graphRetriever, conversationRepository, metrics, new KeywordIntentClassifier());
         CacheGuard cacheGuard = new CacheGuard(new KeywordIntentClassifier(), qaCacheService,

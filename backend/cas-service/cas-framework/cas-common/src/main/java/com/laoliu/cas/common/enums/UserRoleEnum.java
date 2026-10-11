@@ -5,11 +5,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 /**
- * CAS 用户角色枚举（展示与业务侧使用）。
+ * CAS 用户角色枚举（展示与业务侧使用）.
  * <p>
- * 2.4 收敛：数字 code 的唯一来源是 {@link RolePolicy}（common-auth，gateway/cas/kb 共用），
- * 本枚举不再自维护 0/1/2/3，只补充 CAS 侧的中文描述。类加载时静态校验两边条目与 code
- * 完全对齐——任何人只改其中一处都会快速失败。
+ * 收敛：数字 code 的唯一来源是 {@link RolePolicy}（common-auth，gateway/cas/kb 共用），
+ * 本枚举不再自维护 0/1/2/3，只补充 CAS 侧的中文描述.类加载时静态校验两边条目与 code
+ * 完全对齐——任何人只改其中一处都会快速失败.
  *
  * @author forever-king
  */
@@ -43,7 +43,7 @@ public enum UserRoleEnum {
 
     /**
      * 数字 code 解析；完全委托 {@link RolePolicy#of(Integer)}，
-     * null/非法 code 按最小权限原则降级为普通用户。
+     * null/非法 code 按最小权限原则降级为普通用户.
      */
     public static UserRoleEnum getByCode(int code) {
         return UserRoleEnum.valueOf(RolePolicy.of(code).name());

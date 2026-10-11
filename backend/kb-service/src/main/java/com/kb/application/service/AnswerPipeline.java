@@ -20,11 +20,11 @@ import java.util.List;
 import java.util.function.Consumer;
 
 /**
- * 回答管线协作类（Q-01 从 QaApplicationService 拆出）。
+ * 回答管线协作类（从 QaApplicationService 拆出）.
  * <p>
  * 职责：历史消息加载、检索 + 重排、意图路由 → LLM 生成（流式/同步共用）、
- * 引用快照构建。拆分为独立组件后 QaApplicationService 仅负责编排；
- * 所有行为的对外表现（SSE 协议、断连取消、兜底与工具路由）与原实现完全一致。
+ * 引用快照构建.拆分为独立组件后 QaApplicationService 仅负责编排；
+ * 所有行为的对外表现（SSE 协议、断连取消、兜底与工具路由）与原实现完全一致.
  * </p>
  *
  * @author forever-king
@@ -39,7 +39,7 @@ public class AnswerPipeline {
     private final GraphAssistedRetriever graphRetriever;
     private final ConversationRepository conversationRepository;
     private final BusinessMetrics metrics;
-    /** 2.8：预约意图粗筛收敛到独立分类器，三方（管线/缓存守卫/编排）各自注入 */
+    /** 预约意图粗筛收敛到独立分类器，三方（管线/缓存守卫/编排）各自注入 */
     private final IntentClassifier intentClassifier;
 
     /** 注入 LLM 的历史消息条数（对话表读取上限） */
@@ -52,14 +52,14 @@ public class AnswerPipeline {
 
     /**
      * 意图路由（Intent Routing）：判断用户问题是否可能涉及"实时预约数据"，委托
-     * {@link IntentClassifier}（2.8：实现已从本类迁出，此处保留方法签名兼容既有调用）。
+     * {@link IntentClassifier}（实现已从本类迁出，此处保留方法签名兼容既有调用）.
      */
     public boolean isAppointmentQuery(String q) {
         return intentClassifier.isAppointmentQuery(q);
     }
 
     /**
-     * 加载会话历史，转为 LLM 消息（过滤空白内容）。
+     * 加载会话历史，转为 LLM 消息（过滤空白内容）.
      */
     public List<LlmService.ChatMessage> loadHistory(String sessionId, Long userId) {
         List<Conversation> messages =
@@ -79,13 +79,13 @@ public class AnswerPipeline {
      * 检索 + 重排：
      * <ul>
      *   <li>SSE 链路（graphAssisted=true）走图谱增强检索 {@link GraphAssistedRetriever}；</li>
-     *   <li>同步链路（graphAssisted=false）走关键词检索 {@link SearchService}。</li>
+     *   <li>同步链路（graphAssisted=false）走关键词检索 {@link SearchService}.</li>
      * </ul>
-     * 行为与原 QaApplicationService 的 Step 2（含检索时延埋点）完全一致。
+     * 行为与原 QaApplicationService 的 Step 2（含检索时延埋点）完全一致.
      */
     /**
-     * @param userId 归属用户，显式透传到检索侧（P1-01）。检索在线程池执行，
-     *               SecurityContext 无法跨越，必须在此处（请求线程）解析后传下去。
+     * @param userId 归属用户，显式透传到检索侧.检索在线程池执行，
+     *               SecurityContext 无法跨越，必须在此处（请求线程）解析后传下去.
      */
     public List<RetrievalResult> retrieveAndRerank(String rewritten, boolean graphAssisted, Long userId) {
         long retrievalStart = System.currentTimeMillis();
@@ -101,7 +101,7 @@ public class AnswerPipeline {
      * <ul>
      *   <li>预约相关（含会话中已累积槽位）→ Function Calling 链路；</li>
      *   <li>本地资料有结果 → RAG；本地无法回答 → DeepSeek 兜底；</li>
-     *   <li>本地无召回 → 直接流式兜底。</li>
+     *   <li>本地无召回 → 直接流式兜底.</li>
      * </ul>
      */
     public String generate(String query, List<RetrievalResult> reranked,
@@ -133,19 +133,19 @@ public class AnswerPipeline {
         }
         if (reranked != null && !reranked.isEmpty()) {
             String ragAnswer = llmService.generateAnswer(query, reranked, history);
-            // Q-05：同步链路与流式前缀门控共用 NoAnswerMarkers 唯一词表，不做私有复制
+            // 同步链路与流式前缀门控共用 NoAnswerMarkers 唯一词表，不做私有复制
             if (NoAnswerMarkers.looksLikeNoAnswer(ragAnswer)) {
                 ragAnswer = llmService.generateAnswerDirect(query, history);
             }
             return ragAnswer;
         }
-        // 3.2（深度审查 P0）：同步链路无召回时走同步兜底，绝不能走流式分支传 null 消费者，
-        // 否则 LangChain4jLlmService 的 tokenConsumer.accept 会 NPE 并污染熔断统计。
+        // 同步链路无召回时走同步兜底，绝不能走流式分支传 null 消费者，
+        // 否则 LangChain4jLlmService 的 tokenConsumer.accept 会 NPE 并污染熔断统计.
         return llmService.generateAnswerDirect(query, history);
     }
 
     /**
-     * 检索结果 → 引用快照（snippet 截断长度可配置，默认 120）。
+     * 检索结果 → 引用快照（snippet 截断长度可配置，默认 120）.
      */
     public List<Conversation.CitationRef> buildCitations(List<RetrievalResult> results) {
         if (results == null || results.isEmpty()) {

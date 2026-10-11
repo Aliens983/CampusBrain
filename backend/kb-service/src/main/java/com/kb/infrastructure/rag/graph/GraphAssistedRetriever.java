@@ -34,7 +34,7 @@ public class GraphAssistedRetriever {
      * 图谱增强检索
      *
      * @param query  用户原始查询
-     * @param userId 归属用户（P1-01：显式传入，不在池线程取 SecurityContext）
+     * @param userId 归属用户（显式传入，不在池线程取 SecurityContext）
      * @return 融合后的检索结果
      */
     public List<RetrievalResult> retrieve(String query, Long userId) {

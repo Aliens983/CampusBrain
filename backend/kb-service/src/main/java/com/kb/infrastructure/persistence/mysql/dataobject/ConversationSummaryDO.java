@@ -5,7 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 会话摘要 DO：conversation 表按 session_id 聚合的结果行（非表映射）。
+ * 会话摘要 DO：conversation 表按 session_id 聚合的结果行（非表映射）.
  *
  * @author forever-king
  */

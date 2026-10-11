@@ -79,8 +79,8 @@ public class EsDocumentEntity {
     private String createdAt;
 
     /**
-     * 文档归属用户 ID（4.1 深度审查 P0）：null 视为全局共享知识，非 null 仅属主可见。
-     * 检索端据此过滤，杜绝跨用户私有文档泄露。
+     * 文档归属用户 ID：null 视为全局共享知识，非 null 仅属主可见.
+     * 检索端据此过滤，杜绝跨用户私有文档泄露.
      */
     private Long ownerId;
 }

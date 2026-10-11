@@ -63,7 +63,7 @@ import static org.mockito.Mockito.when;
  * 重点覆盖两类高风险逻辑：
  * <ol>
  *   <li>草稿校验分支——校验漏一项就会造成超卖 / 双占；</li>
- *   <li>确认下单的派发与二次校验——这是"两段式预约"真正落库的地方。</li>
+ *   <li>确认下单的派发与二次校验——这是"两段式预约"真正落库的地方.</li>
  * </ol>
  *
  * @author forever-king
@@ -209,7 +209,7 @@ class AppointmentAssistantServiceImplTest {
             ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
             verify(redisUtil).set(anyString(), jsonCaptor.capture(), anyLong(), any());
             when(redisUtil.get(anyString())).thenReturn(jsonCaptor.getValue());
-            // 3.3.1：下单服务返回真实回填 orderId 的提交结果（不再由助手事后猜测最新单）
+            // 下单服务返回真实回填 orderId 的提交结果（不再由助手事后猜测最新单）
             when(bookService.bookService(eq(7L), any()))
                     .thenReturn(new BookService.BookingSubmitResult(null, List.of(1001L)));
 

@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * ES bulk 部分分片失败必须上抛（消费端重试/DLQ），不得仅 warn 后把文档标 READY。
+ * ES bulk 部分分片失败必须上抛（消费端重试/DLQ），不得仅 warn 后把文档标 READY.
  *
  * @author forever-king
  */

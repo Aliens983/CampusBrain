@@ -31,9 +31,9 @@ public class AuthService {
     private static final String LOGIN_FAIL_KEY_PREFIX = "login:fail:";
 
     /**
-     * 重置密码验证码允许的最大连续试错次数（4.13）。
+     * 重置密码验证码允许的最大连续试错次数.
      * 验证码为 6 位数字、300 秒有效，无计数时 5 分钟可穷举 10^6 组合改掉他人密码，
-     * 因此校验侧必须与登录侧同款计数锁定，不能只靠发送侧 60 秒频控。
+     * 因此校验侧必须与登录侧同款计数锁定，不能只靠发送侧 60 秒频控.
      */
     private static final int MAX_RESET_CODE_FAIL = 5;
     /** 重置试错锁定时长（秒） */
@@ -48,10 +48,10 @@ public class AuthService {
     private final CaptchaService captchaService;
 
     /**
-     * 用户登录。
+     * 用户登录.
      * <p>
-     * 校验顺序：失败限频 → 图形验证码 → 账号密码。
-     * 图形验证码为一次性，密码错误也会作废当前验证码，需重新获取。
+     * 校验顺序：失败限频 → 图形验证码 → 账号密码.
+     * 图形验证码为一次性，密码错误也会作废当前验证码，需重新获取.
      */
     public String login(String email, String password, String captchaUuid, String captchaCode) {
         if (email == null || password == null) {
@@ -103,7 +103,7 @@ public class AuthService {
             throw new BusinessException(UserErrorCode.PASSWORD_EMPTY);
         }
 
-        // 4.13 试错锁定：6 位数字码有效期 5 分钟，无计数可在线穷举，必须先锁再验
+        // 试错锁定：6 位数字码有效期 5 分钟，无计数可在线穷举，必须先锁再验
         String failKey = RESET_FAIL_KEY_PREFIX + email;
         Long failCount = redisUtil.getCounter(failKey);
         if (failCount != null && failCount >= MAX_RESET_CODE_FAIL) {

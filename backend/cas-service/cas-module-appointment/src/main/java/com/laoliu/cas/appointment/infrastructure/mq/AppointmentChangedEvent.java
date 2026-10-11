@@ -10,11 +10,11 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * 预约变更事件（CAS 发布 → KB 消费）。
+ * 预约变更事件（CAS 发布 → KB 消费）.
  * <p>
  * 用 DTO + JSON 序列化替代此前手工拼接字符串的做法：
  * 手拼方式没有转义，一旦字段里出现引号/换行就会产出非法 JSON，
- * 且字段增减时消费端无法感知。
+ * 且字段增减时消费端无法感知.
  *
  * @author forever-king
  */

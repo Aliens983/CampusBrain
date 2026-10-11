@@ -46,7 +46,7 @@ public class ConsultChatServiceImpl implements ConsultChatService {
         if (conversations.isEmpty()) {
             return List.of();
         }
-        // 4.7 N+1 收敛：对端名称、最后消息、未读数各一条批量 SQL 取回，
+        // N+1 收敛：对端名称、最后消息、未读数各一条批量 SQL 取回，
         // 取代此前「每会话 3 次查询」（10 个会话从 30 次 SQL 降到 3 次）
         Set<Long> peerIds = conversations.stream()
                 .map(conv -> Objects.equals(conv.getStudentId(), userId)
@@ -195,8 +195,8 @@ public class ConsultChatServiceImpl implements ConsultChatService {
     }
 
     /**
-     * 批量版（4.7）：对端名称 / 最后消息 / 未读数由 listConversations 一次性预取，
-     * Map 中缺失即分别按空串 / null / 0 兜底，语义与逐条版完全一致。
+     * 批量版：对端名称 / 最后消息 / 未读数由 listConversations 一次性预取，
+     * Map 中缺失即分别按空串 / null / 0 兜底，语义与逐条版完全一致.
      */
     private ConversationResponse toConversationVO(ConsultChatConversation conversation, Long viewerId,
                                                   Map<Long, String> peerNames,

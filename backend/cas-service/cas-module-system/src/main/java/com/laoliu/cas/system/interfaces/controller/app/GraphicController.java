@@ -25,7 +25,7 @@ import java.util.concurrent.TimeUnit;
  * 图形验证码接口（扁平路径，供前端直接调用）
  * <p>
  * {uuid} 与图片均存 Redis（内存态）：GET /captcha 生成并返回图片取回地址，
- * GET /captcha/image/{uuid} 动态返回 PNG 字节；生成接口带 IP 级简单频控。
+ * GET /captcha/image/{uuid} 动态返回 PNG 字节；生成接口带 IP 级简单频控.
  *
  * @author forever-king
  */
@@ -54,7 +54,7 @@ public class GraphicController {
     @GetMapping
     public CommonResult<CaptchaResponse> getGraphicCaptcha(HttpServletRequest request) {
         checkRateLimit(resolveClientIp(request));
-        // CaptchaService 已直接返回 CaptchaResponse，无需在 Controller 二次拼装（7.3.3）
+        // CaptchaService 已直接返回 CaptchaResponse，无需在 Controller 二次拼装
         return CommonResult.success(captchaService.generateCaptcha());
     }
 

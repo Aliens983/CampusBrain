@@ -12,11 +12,11 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
  * 演示模式数据库重建开关（仅服务器开启）
  * <p>
  * 服务器当作"纯演示/可再生"环境时，每次启动先 {@code flyway.clean()} 清空整个 knowledge_base，
- * 再按当前迁移重建——消除老库漂移/checksum 不一致问题（AI 会话、上传文档等不保留）。
+ * 再按当前迁移重建——消除老库漂移/checksum 不一致问题（AI 会话、上传文档等不保留）.
  * </p>
  * <ul>
  *   <li>开启：部署侧 compose 注入环境变量 {@code APP_DB_RESET_ON_STARTUP=true}；
- *   <li>关闭（默认）：本地开发不动数据，仅 migrate。
+ *   <li>关闭（默认）：本地开发不动数据，仅 migrate.
  * </ul>
  *
  * @author forever-king
@@ -30,8 +30,8 @@ public class DbResetConfig {
             @Value("${spring.flyway.clean-disabled:true}") boolean cleanDisabled,
             RedisConnectionFactory connectionFactory) {
         // 双开关矛盾时 fail-fast：否则要等到 Flyway 回调才抛底层的
-        // "Clean is disabled" 英文异常，排查者很难联想到两个开关的配套关系。
-        // 与 cas-server 的 DbResetConfig 保持同一行为。
+        // "Clean is disabled" 英文异常，排查者很难联想到两个开关的配套关系.
+        // 与 cas-server 的 DbResetConfig 保持同一行为.
         if (resetOnStartup && cleanDisabled) {
             throw new IllegalStateException(
                     "APP_DB_RESET_ON_STARTUP=true 必须同时设置 FLYWAY_CLEAN_DISABLED=false，"

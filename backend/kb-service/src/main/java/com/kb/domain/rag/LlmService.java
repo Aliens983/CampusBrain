@@ -25,7 +25,7 @@ public interface LlmService {
 
     /**
      * Generate an answer with streaming (token-by-token via callback).
-     * 5.3（深度审查 P1）：3 参版零业务调用，改 default 委托 4 参可取消版，避免“未实现即掩盖签名漂移”。
+     * 3 参版零业务调用，改 default 委托 4 参可取消版，避免“未实现即掩盖签名漂移”.
      *
      * @param query               the user's question
      * @param retrievedDocs       relevant document chunks from retrieval
@@ -41,7 +41,7 @@ public interface LlmService {
     }
 
     /**
-     * 流式生成（可取消版）：客户端断连时应尽快中止供应商侧的在途生成，避免空烧 token。
+     * 流式生成（可取消版）：客户端断连时应尽快中止供应商侧的在途生成，避免空烧 token.
      */
     String generateAnswerStreaming(String query, List<RetrievalResult> retrievedDocs,
                                    List<ChatMessage> conversationHistory,
@@ -78,7 +78,7 @@ public interface LlmService {
                                    Consumer<String> tokenConsumer, String contextHint);
 
     /**
-     * 预约工具链路的真流式版（Function Calling 期间也逐 token 推送），支持断连取消。
+     * 预约工具链路的真流式版（Function Calling 期间也逐 token 推送），支持断连取消.
      */
     String generateAnswerWithToolsStreaming(String query, List<RetrievalResult> retrievedDocs,
                                             List<ChatMessage> conversationHistory,
@@ -96,8 +96,8 @@ public interface LlmService {
     String generateAnswerDirect(String query, List<ChatMessage> conversationHistory);
 
     /**
-     * 本地资料库未检索到相关内容时的兜底回答（流式版，SSE 逐 token 推送）。
-     * 5.3（深度审查 P1）：3 参版零业务调用，改 default 委托 4 参可取消版。
+     * 本地资料库未检索到相关内容时的兜底回答（流式版，SSE 逐 token 推送）.
+     * 3 参版零业务调用，改 default 委托 4 参可取消版.
      */
     default String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
                                                  Consumer<String> tokenConsumer) {
@@ -106,7 +106,7 @@ public interface LlmService {
     }
 
     /**
-     * 本地资料库未检索到相关内容时的兜底回答（流式可取消版）。
+     * 本地资料库未检索到相关内容时的兜底回答（流式可取消版）.
      */
     String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
                                          Consumer<String> tokenConsumer,

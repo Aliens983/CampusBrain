@@ -49,8 +49,8 @@ public class WebAutoConfiguration {
     }
 
     /**
-     * 全链路 traceId 过滤器（5.2.1）：最高优先级注册，
-     * 读取网关注入的 X-Trace-Id 写入 MDC 并回写响应头。
+     * 全链路 traceId 过滤器：最高优先级注册，
+     * 读取网关注入的 X-Trace-Id 写入 MDC 并回写响应头.
      */
     @Bean
     public FilterRegistrationBean<TraceIdFilter> traceIdFilterRegistration() {
@@ -61,22 +61,22 @@ public class WebAutoConfiguration {
         return registration;
     }
 
-    // 注：CORS 已统一收口到网关 globalcors（4.1.8），本服务不再注册 CorsFilter。
-    // 预检 OPTIONS 在网关直接应答，业务流量只来自网关内网转发。
+    // 注：CORS 已统一收口到网关 globalcors，本服务不再注册 CorsFilter.
+    // 预检 OPTIONS 在网关直接应答，业务流量只来自网关内网转发.
 
     // ========== 异常处理 ==========
     //
     // 本服务另有一个专职的 GlobalExceptionHandler（cas.web.exception 包），
     // 已覆盖：BusinessException(400) / UnauthorizedException(401) / ForbiddenException(403) /
     // ResourceNotFoundException(404) / MethodArgumentNotValidException(400) /
-    // NoResourceFoundException(404) / RuntimeException(500) / Exception(500)。
+    // NoResourceFoundException(404) / RuntimeException(500) / Exception(500).
     //
-    // 因此本类只保留下面这一个它未覆盖的类型。同一异常若被两个 @RestControllerAdvice
-    // 同时声明，最终生效哪个取决于注册顺序，行为不确定——这是必须避免的。
+    // 因此本类只保留下面这一个它未覆盖的类型.同一异常若被两个 @RestControllerAdvice
+    // 同时声明，最终生效哪个取决于注册顺序，行为不确定——这是必须避免的.
 
     /**
-     * 非法参数 → 400（客户端错误）。
-     * 若不在此声明，会落到 GlobalExceptionHandler 的 RuntimeException 分支而返回 500，语义偏重。
+     * 非法参数 → 400（客户端错误）.
+     * 若不在此声明，会落到 GlobalExceptionHandler 的 RuntimeException 分支而返回 500，语义偏重.
      */
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)

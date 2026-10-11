@@ -16,9 +16,9 @@ import java.util.List;
 public interface ConversationMapper extends BaseMapper<ConversationDO> {
 
     /**
-     * 取某用户会话最近 N 条消息，按时间<b>正序</b>返回（便于直接拼成对话历史）。
-     * 内层先按倒序取最近 N 条，外层再翻转回正序。
-     * 归属过滤：只返回 user_id 匹配的消息（4.1.13）。
+     * 取某用户会话最近 N 条消息，按时间<b>正序</b>返回（便于直接拼成对话历史）.
+     * 内层先按倒序取最近 N 条，外层再翻转回正序.
+     * 归属过滤：只返回 user_id 匹配的消息.
      */
     @Select("SELECT * FROM (SELECT * FROM conversation WHERE session_id = #{sessionId} " +
             "AND user_id = #{userId} ORDER BY created_at DESC LIMIT #{limit}) t " +
@@ -28,7 +28,7 @@ public interface ConversationMapper extends BaseMapper<ConversationDO> {
                                                   @Param("limit") int limit);
 
     /**
-     * 查询某用户在指定会话中的全部消息（按时间正序）。
+     * 查询某用户在指定会话中的全部消息（按时间正序）.
      */
     @Select("SELECT * FROM conversation WHERE session_id = #{sessionId} " +
             "AND user_id = #{userId} ORDER BY created_at ASC")
@@ -36,15 +36,15 @@ public interface ConversationMapper extends BaseMapper<ConversationDO> {
                                             @Param("userId") Long userId);
 
     /**
-     * 查询会话归属人：同一 session 的所有消息 user_id 一致，取最早一条即可。
-     * 返回 null 表示该会话尚无消息或存在无主（V2 之前的存量）数据。
+     * 查询会话归属人：同一 session 的所有消息 user_id 一致，取最早一条即可.
+     * 返回 null 表示该会话尚无消息或存在无主（V2 之前的存量）数据.
      */
     @Select("SELECT user_id FROM conversation WHERE session_id = #{sessionId} " +
             "ORDER BY id ASC LIMIT 1")
     Long selectOwnerUserIdBySessionId(@Param("sessionId") String sessionId);
 
     /**
-     * 首写者认领无主存量消息：把该会话下 user_id 为空的消息绑定到当前用户。
+     * 首写者认领无主存量消息：把该会话下 user_id 为空的消息绑定到当前用户.
      */
     @Update("UPDATE conversation SET user_id = #{userId} " +
             "WHERE session_id = #{sessionId} AND user_id IS NULL")
@@ -52,7 +52,7 @@ public interface ConversationMapper extends BaseMapper<ConversationDO> {
                               @Param("userId") Long userId);
 
     /**
-     * 反馈更新带归属条件，返回影响行数（0 表示消息不存在或不属于当前用户）。
+     * 反馈更新带归属条件，返回影响行数（0 表示消息不存在或不属于当前用户）.
      */
     @Update("UPDATE conversation SET feedback = #{feedback} " +
             "WHERE id = #{id} AND user_id = #{userId}")
@@ -67,8 +67,8 @@ public interface ConversationMapper extends BaseMapper<ConversationDO> {
     /**
      * 聚合查询某用户的会话摘要列表（历史侧边栏数据源）：
      * title 取该会话第一条用户消息（相关子查询按 id 正序取 1 行），
-     * updatedAt 取会话内最后一条消息时间，按最近活跃倒序。
-     * 仅统计归属当前用户的消息（4.1.13）。
+     * updatedAt 取会话内最后一条消息时间，按最近活跃倒序.
+     * 仅统计归属当前用户的消息.
      */
     @Select("SELECT c.session_id AS sessionId, " +
             "(SELECT c2.content FROM conversation c2 WHERE c2.session_id = c.session_id " +

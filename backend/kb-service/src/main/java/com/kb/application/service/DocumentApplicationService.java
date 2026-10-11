@@ -55,16 +55,16 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     /** 清理重试退避（毫秒），随尝试次数倍增 */
     private static final long CLEANUP_BACKOFF_MS = 200L;
 
-    /** 4.16：业务侧单文件上限（50MB，与容器/网关限制对齐） */
+    /** 业务侧单文件上限（50MB，与容器/网关限制对齐） */
     private static final long MAX_UPLOAD_BYTES = 50L * 1024 * 1024;
 
-    /** 4.16：展示标题长度上限 */
+    /** 展示标题长度上限 */
     private static final int TITLE_MAX_LENGTH = 200;
 
     /** 文档仓库接口 */
     private final DocumentRepository documentRepository;
 
-    /** 消息队列生产者，触发异步文档处理（南向端口，A-01） */
+    /** 消息队列生产者，触发异步文档处理（南向端口） */
     private final DocumentProcessingDispatcher documentDispatcher;
 
     /** 向量存储服务，用于删除文档时清理向量 */
@@ -79,13 +79,13 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     /** 文件类型解析器注册表端口（上传校验判据唯一源） */
     private final DocumentTypeRegistry documentTypeRegistry;
 
-    /** 知识变更后联动淘汰问答缓存端口（12-04） */
+    /** 知识变更后联动淘汰问答缓存端口 */
     private final KnowledgeCacheInvalidator cacheInvalidator;
 
-    /** 内存知识图谱：删除/重处理文档时摘除实体与边归属（12-10） */
+    /** 内存知识图谱：删除/重处理文档时摘除实体与边归属 */
     private final KnowledgeGraphService knowledgeGraphService;
 
-    /** 外部索引删除失败对账仓储：最终失败落库，由补偿任务重试（A-04） */
+    /** 外部索引删除失败对账仓储：最终失败落库，由补偿任务重试 */
     private final IndexDeleteFailureRepository indexDeleteFailureRepository;
 
     /** 本地文件存储目录 */
@@ -95,9 +95,9 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     /**
      * Upload a document and trigger async processing.
      * <p>
-     * 顺序：先落盘 → 再写 DB（事务）→ 事务提交后才发 MQ。
+     * 顺序：先落盘 → 再写 DB（事务）→ 事务提交后才发 MQ.
      * 落盘之后任一步失败都补偿删除本地文件，避免无主文件；
-     * MQ 在提交后发送，避免消费者在旧事务未提交时查不到文档行。
+     * MQ 在提交后发送，避免消费者在旧事务未提交时查不到文档行.
      *
      * @param file the uploaded multipart file
      * @return the created document ID
@@ -106,14 +106,14 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     @Transactional
     public Long uploadDocument(MultipartFile file) {
         String originalFilename = file.getOriginalFilename();
-        // 4.16：原始文件名仅用于展示标题前脱敏（去 HTML 标签/控制字符/截断），
-        // 防止 XSS/显示注入；扩展名解析与安全性校验用端口唯一实现（Q-03）
+        // 原始文件名仅用于展示标题前脱敏（去 HTML 标签/控制字符/截断），
+        // 防止 XSS/显示注入；扩展名解析与安全性校验用端口唯一实现
         String title = sanitizeTitle(originalFilename);
-        // 扩展名提取收敛到端口唯一实现（Q-03），应用层不再各持一份副本
+        // 扩展名提取收敛到端口唯一实现，应用层不再各持一份副本
         String fileType = documentTypeRegistry.extractFileType(originalFilename);
 
         // 1. 文件类型校验：以解析器注册表（南向端口）为准（有解析器才能处理），
-        //    避免"上传时白名单放行、异步处理时才报不支持"的错位。
+        //    避免"上传时白名单放行、异步处理时才报不支持"的错位.
         if (!documentTypeRegistry.supports(fileType)) {
             String supported = String.join(" / ", documentTypeRegistry.supportedExtensions());
             throw new BusinessException.DocumentException(
@@ -121,7 +121,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                     fileType + "（当前支持：" + supported + "）");
         }
 
-        // 4.16：业务侧二次大小校验（与容器/网关限制对齐，兜底绕过直连场景）
+        // 业务侧二次大小校验（与容器/网关限制对齐，兜底绕过直连场景）
         if (file.getSize() > MAX_UPLOAD_BYTES) {
             throw new BusinessException.DocumentException(
                     ErrorCode.DOCUMENT_TOO_LARGE,
@@ -172,8 +172,8 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * 列出当前登录用户可见的文档：普通用户只看自己的，ADMIN 看全量（违规内容治理）。
-     * 分页下推 SQL，不再无界加载。
+     * 列出当前登录用户可见的文档：普通用户只看自己的，ADMIN 看全量（违规内容治理）.
+     * 分页下推 SQL，不再无界加载.
      *
      * @param page 0 基页码
      * @param size 每页条数（1~100）
@@ -195,10 +195,10 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * 按标题关键词搜索当前用户可见的文档。
+     * 按标题关键词搜索当前用户可见的文档.
      * <p>
      * 普通用户与管理员的模糊条件均下推到 SQL（{@code title LIKE}），
-     * 不再把整表（含 filePath 等大字段）加载进 JVM 过滤；带分页与空标题保护。
+     * 不再把整表（含 filePath 等大字段）加载进 JVM 过滤；带分页与空标题保护.
      *
      * @param keyword 标题关键词
      * @param page    0 基页码
@@ -223,19 +223,19 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                 userId, keyword, normalizedPage, normalizedSize);
     }
 
-    /** 当前登录用户是否为管理员（角色判定统一走 common-auth RolePolicy，Q-02） */
+    /** 当前登录用户是否为管理员（角色判定统一走 common-auth RolePolicy） */
     private boolean isAdmin() {
         var loginUser = SecurityFrameworkUtils.getLoginUser();
         return loginUser != null && loginUser.isAdmin();
     }
 
     /**
-     * 删除文档及所有关联数据（MySQL + Qdrant 向量 + ES 索引 + 本地文件）。
-     * 权限：文档 owner 本人，或 ADMIN（违规内容治理）。
+     * 删除文档及所有关联数据（MySQL + Qdrant 向量 + ES 索引 + 本地文件）.
+     * 权限：文档 owner 本人，或 ADMIN（违规内容治理）.
      * <p>
      * 顺序为"先删 DB（事务提交）→ 再清外部存储"：
      * 外部调用不再参与数据库事务，杜绝"存储已清、DB 回滚"造成的孤儿文档；
-     * 向量/索引删除带有限重试，最终失败记 ERROR 并计入文档失败指标，不再静默吞掉。
+     * 向量/索引删除带有限重试，最终失败记 ERROR 并计入文档失败指标，不再静默吞掉.
      */
     @Override
     @Transactional
@@ -250,7 +250,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
         afterCommit(() -> {
             cleanupExternalStores(id, filePath);
             // 文档内容已从知识库移除：淘汰两级问答缓存，
-            // 否则精确 1h / 语义 24h 内仍会返回引用该文档的旧答案（12-04）
+            // 否则精确 1h / 语义 24h 内仍会返回引用该文档的旧答案
             cacheInvalidator.evictAllQaCaches("文档删除 documentId=" + id);
         });
 
@@ -268,8 +268,8 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     // ==================== 内部辅助 ====================
 
     /**
-     * 4.16：文件名用于展示前的脱敏——去 HTML 标签与控制字符、去首尾空白、限长。
-     * 防止把原始文件名中的脚本/超长内容直接落库并在前端渲染。
+     * 文件名用于展示前的脱敏——去 HTML 标签与控制字符、去首尾空白、限长.
+     * 防止把原始文件名中的脚本/超长内容直接落库并在前端渲染.
      */
     private String sanitizeTitle(String name) {
         if (name == null || name.isBlank()) {
@@ -287,7 +287,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * 事务提交后执行；若当前没有活动事务（如纯单测/非事务调用方），则立即执行。
+     * 事务提交后执行；若当前没有活动事务（如纯单测/非事务调用方），则立即执行.
      */
     private void afterCommit(Runnable action) {
         if (TransactionSynchronizationManager.isSynchronizationActive()) {
@@ -303,16 +303,16 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * 清理文档的外部存储数据：向量索引 → ES 索引 → 本地文件。
+     * 清理文档的外部存储数据：向量索引 → ES 索引 → 本地文件.
      * 每项独立、带有限重试；单项最终失败不阻断其余清理，
-     * 但必须以 ERROR 日志 + 失败指标暴露，供运维对账，绝不静默吞异常。
+     * 但必须以 ERROR 日志 + 失败指标暴露，供运维对账，绝不静默吞异常.
      */
     private void cleanupExternalStores(Long id, String filePath) {
         boolean vectorOk = runWithRetry("Qdrant 向量删除", IndexTarget.QDRANT, id,
                 () -> vectorStore.deleteByDocumentId(String.valueOf(id)));
         boolean esOk = runWithRetry("ES 索引删除", IndexTarget.ELASTICSEARCH, id,
                 () -> indexCleaner.deleteByDocumentId(String.valueOf(id)));
-        // 内存知识图谱摘除：纯内存操作、无外部故障面，best-effort 即可（12-10）
+        // 内存知识图谱摘除：纯内存操作、无外部故障面，best-effort 即可
         try {
             knowledgeGraphService.deleteByDocument(id);
         } catch (Exception e) {
@@ -333,7 +333,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
 
     /**
      * 有限次重试执行外部清理动作，异常退避后重试；达到上限返回 false（不抛出，
-     * 因为事务已经提交，抛出无法改变结果，调用方负责记录与告警）。
+     * 因为事务已经提交，抛出无法改变结果，调用方负责记录与告警）.
      */
     private boolean runWithRetry(String actionName, IndexTarget target, Long documentId, Runnable action) {
         for (int attempt = 1; attempt <= CLEANUP_MAX_ATTEMPTS; attempt++) {
@@ -344,9 +344,9 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                 if (attempt >= CLEANUP_MAX_ATTEMPTS) {
                     log.error("{}在 {} 次尝试后仍失败: documentId={}",
                             actionName, CLEANUP_MAX_ATTEMPTS, documentId, e);
-                    // A-04：外部索引（Qdrant/ES）最终失败必须落对账表并计失败指标，
-                    // 由 IndexDeleteFailureReclaimer 定时补偿，杜绝孤儿向量/索引长期残留。
-                    // target 为 null 表示本地文件等非索引项，无对账表，仅走日志与失败指标。
+                    // 外部索引（Qdrant/ES）最终失败必须落对账表并计失败指标，
+                    // 由 IndexDeleteFailureReclaimer 定时补偿，杜绝孤儿向量/索引长期残留.
+                    // target 为 null 表示本地文件等非索引项，无对账表，仅走日志与失败指标.
                     if (target != null) {
                         String reason = e.getClass().getSimpleName() + ": " + e.getMessage();
                         indexDeleteFailureRepository.recordOrIncrement(documentId, target, reason);
@@ -370,7 +370,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
 
     /**
      * 事务提交后投递文档处理消息，带有限重试；最终失败计入失败指标
-     * （文档停留在 UPLOADED 状态，可由运维/对账任务重新投递）。
+     * （文档停留在 UPLOADED 状态，可由运维/对账任务重新投递）.
      */
     private void sendProcessingMessageWithRetry(Long documentId) {
         boolean sent = runWithRetry("文档处理 MQ 投递", null, documentId,
@@ -406,8 +406,8 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * 删除场景的归属校验：文档 owner 本人或 ADMIN 可访问，否则视为不存在。
-     * 非属主统一抛 NOT_FOUND 而非 FORBIDDEN，避免文档存在性被枚举。
+     * 删除场景的归属校验：文档 owner 本人或 ADMIN 可访问，否则视为不存在.
+     * 非属主统一抛 NOT_FOUND 而非 FORBIDDEN，避免文档存在性被枚举.
      */
     private Document getOwnedOrAdminDocument(Long id) {
         Document doc = documentRepository.findById(id)

@@ -35,16 +35,16 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     /**
-     * 无需网关身份头的公开路径。
+     * 无需网关身份头的公开路径.
      * <p>使用 {@link HttpServletRequest#getServletPath()}（context-path 之后的相对路径）匹配，
-     * 因此这里不包含 {@code server.servlet.context-path=/api/v1/kb} 前缀。
+     * 因此这里不包含 {@code server.servlet.context-path=/api/v1/kb} 前缀.
      */
     private static final List<String> PUBLIC_PATHS = List.of(
             "/health",
             "/auth/**",
             // 只读监控端点：仅由独立管理端口（默认 9102，容器内网、不发布宿主机）上的
-            // Actuator 实际提供；业务 8081 与网关均不存在这些映射，外部不可达。
-            // 不过滤器放行会导致 Prometheus 抓取与容器探活被「内网签名」校验拒绝。
+            // Actuator 实际提供；业务 8081 与网关均不存在这些映射，外部不可达.
+            // 不过滤器放行会导致 Prometheus 抓取与容器探活被「内网签名」校验拒绝.
             "/actuator/health",
             "/actuator/health/**",
             "/actuator/info",
@@ -75,9 +75,9 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
             return;
         }
 
-        // Q-02：统一使用 common-auth 模型，数字角色头直接落入 role code；
+        // 统一使用 common-auth 模型，数字角色头直接落入 role code；
         // 粗粒度 ADMIN/USER 语义由 RolePolicy（1/2 管理员，其余普通用户）统一给出，
-        // 不再在 KB 本地硬编码 "1"/"2" -> "ADMIN" 的反向还原。
+        // 不再在 KB 本地硬编码 "1"/"2" -> "ADMIN" 的反向还原.
         LoginUser loginUser = new LoginUser();
         loginUser.setId(Long.parseLong(userId));
         loginUser.setRole(RolePolicy.ofHeader(role).getCode());
@@ -93,7 +93,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     private void writeUnauthorized(HttpServletResponse response, String message) throws IOException {
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-        // Q-07：与网关/全局异常处理统一错误体（AuthErrorResponses），不再手写拼接
+        // 与网关/全局异常处理统一错误体（AuthErrorResponses），不再手写拼接
         response.setContentType(AuthErrorResponses.JSON_CONTENT_TYPE);
         response.getWriter().write(AuthErrorResponses.unauthorized(message));
     }

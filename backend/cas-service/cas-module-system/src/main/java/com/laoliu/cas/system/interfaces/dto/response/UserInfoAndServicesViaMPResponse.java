@@ -14,7 +14,7 @@ import java.util.List;
 public class UserInfoAndServicesViaMPResponse implements Serializable {
 
     // 安全：对外响应只承载 UserResponse 投影（无密码哈希），
-    // 不得直接持有领域实体 User——其 password 字段会被 Jackson 原样序列化外泄。
+    // 不得直接持有领域实体 User——其 password 字段会被 Jackson 原样序列化外泄.
     @Schema(description = "用户基本信息")
     private UserResponse user;
 

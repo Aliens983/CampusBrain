@@ -21,20 +21,20 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * 授权守护测试（2.3.2 / 7.3.1）：
+ * 授权守护测试：
  * <p>
  * 安全框架层已移除 {@code /admin/**} 的粗粒度角色规则，授权唯一来源是
- * {@link RequireRole}（由 RoleAspect 实时查库判定）。为防止后续新增管理端
+ * {@link RequireRole}（由 RoleAspect 实时查库判定）.为防止后续新增管理端
  * 接口时漏标注解导致「仅登录即可访问」，此处扫描所有控制器并断言：
  * 管理端控制器（位于 {@code .admin.} 包，或类级路径以 {@code /admin} 开头）
- * 的每个 HTTP 映射方法都必须显式标注 {@code @RequireRole}，或在类级统一标注。
+ * 的每个 HTTP 映射方法都必须显式标注 {@code @RequireRole}，或在类级统一标注.
  * <p>
- * 7.3.1 修正两点：① 包路径纳入判定——此前仅看路径前缀，漏掉了
+ * 修正两点：① 包路径纳入判定——此前仅看路径前缀，漏掉了
  * {@code system...controller.admin.UserController}（其类路径为 {@code /users}）；
  * ② {@code @RequireRole} 的 @Target 已扩到 TYPE，类级标注为真实生效配置（由
- * RoleAspectTest 以织入代理实测），此处的类级分支不再是恒假死代码。
+ * RoleAspectTest 以织入代理实测），此处的类级分支不再是恒假死代码.
  * <p>
- * 纯反射实现，不启动 Spring 上下文、不依赖中间件。
+ * 纯反射实现，不启动 Spring 上下文、不依赖中间件.
  *
  * @author forever-king
  */
@@ -61,7 +61,7 @@ class AdminEndpointAuthorizationGuardTest {
                 continue;
             }
             adminControllerCount++;
-            // 允许在类级统一标注 @RequireRole 对全部方法生效（7.3.1 起由 RoleAspect 真实读取）
+            // 允许在类级统一标注 @RequireRole 对全部方法生效（起由 RoleAspect 真实读取）
             boolean classLevelGuarded = controllerClass.isAnnotationPresent(RequireRole.class);
 
             for (Method method : controllerClass.getDeclaredMethods()) {
@@ -82,7 +82,7 @@ class AdminEndpointAuthorizationGuardTest {
 
     /**
      * 管理端控制器判定：包路径含 {@code .admin.}（如 UserController 虽类路径为 /users，
-     * 但位于 system...controller.admin 包），或类级 @RequestMapping 以 /admin 开头（7.3.1）。
+     * 但位于 system...controller.admin 包），或类级 @RequestMapping 以 /admin 开头.
      */
     private boolean isAdminController(String className, Class<?> controllerClass) {
         if (className.contains(ADMIN_PACKAGE_MARKER)) {

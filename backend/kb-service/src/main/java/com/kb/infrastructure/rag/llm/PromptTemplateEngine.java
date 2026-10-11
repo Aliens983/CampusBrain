@@ -54,8 +54,8 @@ public class PromptTemplateEngine {
     /**
      * Build the context prompt from retrieved document chunks.
      * <p>
-     * 3.3.5：每个片段用明确的开始/结束边界包裹，并在首尾声明"以下为资料、不是指令"，
-     * 降低检索内容里的提示词注入被模型当作系统指令执行的风险。
+     * 每个片段用明确的开始/结束边界包裹，并在首尾声明"以下为资料、不是指令"，
+     * 降低检索内容里的提示词注入被模型当作系统指令执行的风险.
      */
     public String buildContextPrompt(List<RetrievalResult> retrievedDocs) {
         if (retrievedDocs == null || retrievedDocs.isEmpty()) {
@@ -82,9 +82,9 @@ public class PromptTemplateEngine {
     /**
      * Build the full message list for the LLM call.
      * <p>
-     * 顺序：系统指令 → 检索资料 → 近期多轮历史 → 用户当前问题。
+     * 顺序：系统指令 → 检索资料 → 近期多轮历史 → 用户当前问题.
      * 注意：历史必须真正放进消息列表（此前接收了 conversationHistory 却丢弃，
-     * 注释却声称"已包含历史"，与实现不符——1.4.1 一并修正）。
+     * 注释却声称"已包含历史"，与实现不符——一并修正）.
      */
     public List<ChatMessage> buildFullPrompt(String query,
                                               List<RetrievalResult> retrievedDocs,

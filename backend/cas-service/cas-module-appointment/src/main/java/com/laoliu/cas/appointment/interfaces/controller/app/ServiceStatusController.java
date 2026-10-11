@@ -33,10 +33,10 @@ public class ServiceStatusController {
     @Operation(summary = "获取当前用户的预约状态（分页+筛选）", description = "分页获取当前登录用户的预约记录，支持按审核状态和服务名称筛选")
     @GetMapping("/mine")
     public CommonResult<PageResult<ServiceStatusResponse>> getServiceStatusByUser(@Valid ServiceStatusPageRequest req) {
-        // 不再手写 try-catch：异常直接抛给 GlobalExceptionHandler。
+        // 不再手写 try-catch：异常直接抛给 GlobalExceptionHandler.
         // 此前 catch 后 throw new BusinessException(INTERNAL_ERROR) 且既不记日志也不传 cause，
         // 注释却写着"交给 GlobalExceptionHandler 统一处理"——实际正是吞异常，
-        // 线上出现 NPE / SQL 异常时只剩一句"服务器内部错误"，无法定位。
+        // 线上出现 NPE / SQL 异常时只剩一句"服务器内部错误"，无法定位.
         Long userId = getUserIdViaTokenApi.getUserId();
         if (userId == null) {
             return CommonResult.badRequest("无法获取用户信息，请重新登录");

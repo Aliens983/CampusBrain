@@ -13,12 +13,12 @@ public interface ChatSessionRepository {
     Optional<ChatSession> find(String sessionId);
 
     /**
-     * 按归属用户读取会话上下文（4.1.13）：
+     * 按归属用户读取会话上下文：
      * <ul>
      *   <li>上下文不存在 → 以该用户身份新建内存会话；</li>
      *   <li>上下文存在且归属一致 → 返回；</li>
      *   <li>上下文存在但归属他人（sessionId 泄露/冒用）→ 返回<b>隔离的空会话</b>，
-     *       调用方无法读到他人的槽位与草稿；该空会话不会覆盖 Redis 中的他人数据。</li>
+     *       调用方无法读到他人的槽位与草稿；该空会话不会覆盖 Redis 中的他人数据.</li>
      * </ul>
      */
     ChatSession loadForUser(String sessionId, Long userId);

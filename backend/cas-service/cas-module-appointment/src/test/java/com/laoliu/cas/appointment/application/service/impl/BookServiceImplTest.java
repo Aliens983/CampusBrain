@@ -99,7 +99,7 @@ class BookServiceImplTest {
             assertNotNull(result);
             assertNotNull(result.userInfo());
             assertEquals("测试用户", result.userInfo().getName());
-            // 3.3.1：返回真实回填的订单号
+            // 返回真实回填的订单号
             assertEquals(List.of(ORDER_ID), result.orderIds());
             verify(bookingRepository).insertServices(eq(USER_ID), anyList());
             verify(userInfoApi).getUserById(USER_ID);
@@ -209,7 +209,7 @@ class BookServiceImplTest {
         @DisplayName("并发预约同一服务时超出容量上限的请求被拒绝")
         void shouldRejectOverCapacityUnderConcurrentBooking() throws Exception {
             // Given：模拟 DB 原子条件 UPDATE（decrementStock）——容量充足才 +1，
-            // 并发下只有前 capacity 个请求成功，其余触发行=0 抛 BOOKING_CAPACITY_FULL。
+            // 并发下只有前 capacity 个请求成功，其余触发行=0 抛 BOOKING_CAPACITY_FULL.
             int capacity = 3;
             int threads = 10;
             AtomicInteger bookedAttempts = new AtomicInteger();
@@ -293,7 +293,7 @@ class BookServiceImplTest {
             // When
             boolean result = bookService.cancelBookings(USER_ID, bookingIds);
 
-            // Then：事件第二参是 serviceId；service 层不单独回补（多表 UPDATE 内原子完成，7.3.6）
+            // Then：事件第二参是 serviceId；service 层不单独回补（多表 UPDATE 内原子完成）
             assertTrue(result);
             verify(bookingEventPublisher).publishChanged(USER_ID, SERVICE_ID, "CANCELLED");
             verify(bookingEventPublisher, never()).publishChanged(USER_ID, ORDER_ID, "CANCELLED");

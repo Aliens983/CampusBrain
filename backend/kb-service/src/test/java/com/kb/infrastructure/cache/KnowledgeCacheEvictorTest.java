@@ -15,12 +15,12 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 /**
- * 5.5（深度审查 P1）KnowledgeCacheEvictor 单测。
+ * KnowledgeCacheEvictor 单测.
  * <p>
- * 守护 3.7（P1）：<ul>
+ * 守护：<ul>
  *   <li>READY 与 FAILED 的文档处理事件都必须触发缓存淘汰（FAILED 时旧索引已被删，旧缓存答案必须失效）；</li>
  *   <li>合并窗口把 N 个文档事件合并为一次全量淘汰，避免 N 次 SCAN/delete 风暴；</li>
- *   <li>任一侧缓存淘汰抛异常都不能影响另一侧、更不能抛出给事件发布方。</li>
+ *   <li>任一侧缓存淘汰抛异常都不能影响另一侧、更不能抛出给事件发布方.</li>
  * </ul>
  *
  * @author forever-king

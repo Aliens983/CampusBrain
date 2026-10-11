@@ -13,7 +13,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * 全链路 TraceId 入口过滤器（5.2.1）。
+ * 全链路 TraceId 入口过滤器.
  * <p>
  * 职责：
  * <ol>
@@ -22,9 +22,9 @@ import java.util.regex.Pattern;
  *   <li>把 traceId 注入转发请求头，供 CAS/KB 下游 Filter 读入各自 MDC；</li>
  *   <li>回写响应头，方便前端/调用方报障时提供追踪 ID；</li>
  *   <li>网关自身日志在同步路由阶段可通过 MDC 打印 traceId
- *       （响应式线程切换后的异步日志不保证携带，跨服务追踪以请求头为准）。</li>
+ *       （响应式线程切换后的异步日志不保证携带，跨服务追踪以请求头为准）.</li>
  * </ol>
- * 顺序高于 {@link AuthGlobalFilter}，确保鉴权失败的请求也有 traceId 可查。
+ * 顺序高于 {@link AuthGlobalFilter}，确保鉴权失败的请求也有 traceId 可查.
  *
  * @author forever-king
  */

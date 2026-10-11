@@ -3,9 +3,9 @@ package com.kb.domain.document;
 import java.time.LocalDateTime;
 
 /**
- * 外部索引删除失败对账记录（A-04）。
+ * 外部索引删除失败对账记录.
  * <p>
- * 同一 (documentId, target) 在表中只保留一行（唯一键），重复失败走重试次数累加。
+ * 同一 (documentId, target) 在表中只保留一行（唯一键），重复失败走重试次数累加.
  *
  * @author forever-king
  */

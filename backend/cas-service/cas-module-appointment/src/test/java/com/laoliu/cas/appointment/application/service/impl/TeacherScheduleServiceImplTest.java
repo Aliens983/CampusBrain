@@ -24,6 +24,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.mockito.Mockito.lenient;
 
+/**
+ * TeacherScheduleServiceImpl 单元测试.
+ *
+ * @author forever-king
+ */
 @ExtendWith(MockitoExtension.class)
 class TeacherScheduleServiceImplTest {
 

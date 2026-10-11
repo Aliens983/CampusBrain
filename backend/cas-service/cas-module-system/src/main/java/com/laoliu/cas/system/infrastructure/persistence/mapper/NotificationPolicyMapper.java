@@ -6,8 +6,8 @@ import org.apache.ibatis.annotations.Select;
 import org.apache.ibatis.annotations.Update;
 
 /**
- * 全局通知策略表（单行 id=1）Mapper。
- * <p>对应 DDL：cas-service/sql/02_user.sql 中的 notification_policy 表。</p>
+ * 全局通知策略表（单行 id=1）Mapper.
+ * <p>对应 DDL：cas-service/sql/02_user.sql 中的 notification_policy 表.</p>
  *
  * @author forever-king
  */

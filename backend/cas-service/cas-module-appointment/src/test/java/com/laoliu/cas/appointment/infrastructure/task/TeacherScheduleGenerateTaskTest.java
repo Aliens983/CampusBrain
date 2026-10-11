@@ -15,6 +15,11 @@ import java.util.List;
 
 import static org.mockito.Mockito.*;
 
+/**
+ * TeacherScheduleGenerateTask 单元测试.
+ *
+ * @author forever-king
+ */
 @ExtendWith(MockitoExtension.class)
 class TeacherScheduleGenerateTaskTest {
 

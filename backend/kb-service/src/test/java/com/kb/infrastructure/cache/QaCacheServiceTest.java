@@ -29,7 +29,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * QaCacheService 两级缓存语义测试（A-05：L1 退化为短 TTL 读缓存，写路径以 L2 Redis 为准）。
+ * QaCacheService 两级缓存语义测试（L1 退化为短 TTL 读缓存，写路径以 L2 Redis 为准）.
  *
  * @author forever-king
  */
@@ -134,7 +134,7 @@ class QaCacheServiceTest {
         // 本人可见
         assertThat(qaCacheService.getCachedAnswer("q", 100L)).isPresent();
         // 他人不可见：此时 L1 已被上一次回填，必须同样被归属过滤挡下，
-        // 否则修复 P1-01（私有文档可被召回）后，私有答案会经 L1 泄给其他用户。
+        // 否则修复（私有文档可被召回）后，私有答案会经 L1 泄给其他用户.
         assertThat(qaCacheService.getCachedAnswer("q", 200L)).isEmpty();
     }
 
@@ -156,7 +156,7 @@ class QaCacheServiceTest {
                 new org.springframework.data.redis.RedisConnectionFailureException("redis down"));
 
         // 修复前：只 catch JsonProcessingException，此处异常会穿透到问答兜底文案，
-        // 检索与 LLM 根本不会执行。
+        // 检索与 LLM 根本不会执行.
         assertThat(qaCacheService.getCachedAnswer("q", 100L)).isEmpty();
     }
 }

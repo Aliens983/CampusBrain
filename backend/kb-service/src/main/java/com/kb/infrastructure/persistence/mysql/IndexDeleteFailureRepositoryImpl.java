@@ -10,7 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 /**
- * {@link IndexDeleteFailureRepository} 的 MySQL 实现（A-04）。
+ * {@link IndexDeleteFailureRepository} 的 MySQL 实现.
  *
  * @author forever-king
  */
@@ -18,7 +18,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class IndexDeleteFailureRepositoryImpl implements IndexDeleteFailureRepository {
 
-    /** 失败原因列长度 V3 迁移为 1000，落库前截断，避免过长堆栈导致写入失败。 */
+    /** 失败原因列长度 V3 迁移为 1000，落库前截断，避免过长堆栈导致写入失败. */
     private static final int MAX_REASON_LENGTH = 1000;
 
     private final IndexDeleteFailureMapper mapper;

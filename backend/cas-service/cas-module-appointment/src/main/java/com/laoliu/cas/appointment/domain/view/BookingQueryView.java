@@ -6,12 +6,12 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
- * 预约订单查询视图（领域读模型，2.1）。
+ * 预约订单查询视图（领域读模型）.
  * <p>
- * 仓储/应用层在领域边界内传递的只读投影，字段由 Mapper 的联表查询直接填充。
+ * 仓储/应用层在领域边界内传递的只读投影，字段由 Mapper 的联表查询直接填充.
  * 不携带任何 Web/Swagger 注解；对外 HTTP 响应由 interfaces 层的
  * {@code BookingViewConverter} 转换为 {@code ServiceStatusResponse}，
- * 保证 domain 不再 compile-time 依赖 interfaces 的 DTO。
+ * 保证 domain 不再 compile-time 依赖 interfaces 的 DTO.
  *
  * @author forever-king
  */
@@ -21,7 +21,7 @@ public class BookingQueryView {
     /** 订单ID */
     private Long orderId;
 
-    /** 所属服务ID（3.5：取消/完结事件需要按真实 serviceId 发布） */
+    /** 所属服务ID（取消/完结事件需要按真实 serviceId 发布） */
     private Long serviceId;
 
     /** 用户ID */

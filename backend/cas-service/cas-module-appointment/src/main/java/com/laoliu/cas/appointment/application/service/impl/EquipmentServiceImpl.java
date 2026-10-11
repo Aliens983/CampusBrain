@@ -72,7 +72,7 @@ public class EquipmentServiceImpl implements EquipmentService {
      * <p>
      * 并发安全：事务内先对设备行加锁（SELECT ... FOR UPDATE），
      * 再校验"该设备该日该时段已占用台数 + 本次数量 ≤ available_stock"，
-     * 满足才幂等落单；任何校验失败整体回滚，不会超借。
+     * 满足才幂等落单；任何校验失败整体回滚，不会超借.
      *
      * @param equipmentId 设备ID
      * @param req         数量 + 日期 + 起止时间（HH:mm，单日窗口）
@@ -94,7 +94,7 @@ public class EquipmentServiceImpl implements EquipmentService {
         } catch (Exception e) {
             throw new BusinessException(BookErrorCode.BORROW_TIME_INVALID);
         }
-        // P1-06：同教室预约——拒绝过去日期与今天已开始/已结束的时段
+        // 同教室预约——拒绝过去日期与今天已开始/已结束的时段
         BookingWindowPolicy.assertEquipmentBorrowable(date, req.getStartTime());
 
         // 行锁读取设备，串行化同一设备的借用判定，防并发超借
@@ -121,7 +121,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     /**
-     * 校验服务处于上架状态（理由同 {@code RoomServiceImpl#assertServiceAvailable}）。
+     * 校验服务处于上架状态（理由同 {@code RoomServiceImpl#assertServiceAvailable}）.
      */
     private void assertServiceAvailable(Long serviceId) {
         if (serviceId == null) {
@@ -135,7 +135,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     private List<Long> getEquipmentServiceIds() {
         return serviceRepository.findAll().stream()
                 .filter(ServiceItem::isAvailable)
-                // 3.1.6：此前返回了所有上架服务，导致非设备类服务下查不到设备尚可接受，
+                // 此前返回了所有上架服务，导致非设备类服务下查不到设备尚可接受，
                 // 但口径应与"设备借用"分类一致；现按业务分类编码 equipment 过滤
                 .filter(s -> CategoryCode.EQUIPMENT.is(s.getCategoryCode()))
                 .map(ServiceItem::getServiceId)

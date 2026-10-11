@@ -15,11 +15,11 @@ import java.util.Locale;
 import static io.qdrant.client.ValueFactory.value;
 
 /**
- * Qdrant gRPC 公共样板（Q-05 收敛）。
+ * Qdrant gRPC 公共样板（收敛）.
  * <p>
  * 此前 {@link QdrantVectorStore} 与 {@code SemanticCacheService} 各自维护
  * payload 值转换、{@code float[] → List<Float>}、collection 幂等创建的同构实现，
- * 口径漂移风险高。现统一在此。
+ * 口径漂移风险高.现统一在此.
  *
  * @author forever-king
  */
@@ -31,12 +31,12 @@ public class QdrantSupport {
     private final QdrantClient qdrantClient;
 
     /**
-     * 幂等创建 collection：已存在则跳过。
+     * 幂等创建 collection：已存在则跳过.
      * <p>
-     * 1.7（深度审查 P2）：修正注释与实现不符——当前两个调用方
+     * 修正注释与实现不符——当前两个调用方
      * （文档向量库 {@code QdrantVectorStore}、语义缓存 {@code SemanticCacheService}）
      * <b>均显式使用 Cosine</b>（语义相似度 0.95 阈值按余弦语义）；{@code nonCosineFallback}
-     * 仅在调用方传入非 "Cosine" 度量名时生效，属预留扩展位而非既有行为。
+     * 仅在调用方传入非 "Cosine" 度量名时生效，属预留扩展位而非既有行为.
      *
      * @param failFast true：创建失败抛 IllegalStateException（语义缓存启动即必须可用）；
      *                 false：仅记日志（向量库保持历史容错语义，由后续调用重试暴露）
@@ -81,9 +81,9 @@ public class QdrantSupport {
     }
 
     /**
-     * Java 值 → Qdrant payload Value。
+     * Java 值 → Qdrant payload Value.
      * Qdrant 的 setStringValue(null) 会抛 NPE，null 统一存为空字符串；
-     * 复杂对象退化为 toString。
+     * 复杂对象退化为 toString.
      */
     public Value toValue(Object obj) {
         if (obj == null) {

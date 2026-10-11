@@ -31,9 +31,9 @@ public class RedisCacheAutoConfiguration {
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory connectionFactory) {
         // 与 RedisAutoConfiguration.redisTemplate 保持同一套序列化：ObjectMapper 开 default typing(WRAPPER_ARRAY)，
-        // 顶层 List/Optional/POJO 都带类型包装（["java.util.ArrayList", [...]]），写/读对称。
+        // 顶层 List/Optional/POJO 都带类型包装（["java.util.ArrayList", [...]]），写/读对称.
         // 注：此前用 GenericJackson2JsonRedisSerializer(As.PROPERTY @class)，顶层"裸容器"写时不带类型包装、
-        //      读时又要类型 id → 服务器 SerializationException：expected VALUE_STRING ... type id（2026-09-08）。
+        //      读时又要类型 id → 服务器 SerializationException：expected VALUE_STRING ... type id（2026-09-08）.
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
         objectMapper.activateDefaultTyping(objectMapper.getPolymorphicTypeValidator(),
@@ -41,7 +41,7 @@ public class RedisCacheAutoConfiguration {
         objectMapper.registerModule(new JavaTimeModule());
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         // 缓存的是实体时，读回会碰到"派生 getter 写出的属性无 setter"（如 Service.isAvailable() → "available"）：
-        // 关闭未知字段报错，读侧忽略这类属性(2026-09-08 Unrecognized field "available")。
+        // 关闭未知字段报错，读侧忽略这类属性(2026-09-08 Unrecognized field "available").
         objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()

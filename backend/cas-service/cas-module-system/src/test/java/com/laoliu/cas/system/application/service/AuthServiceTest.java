@@ -217,7 +217,7 @@ class AuthServiceTest {
             verify(userRepository).getUserIdByEmail(EMAIL);
             verify(userRepository).updatePasswordByEmail(EMAIL, ENCODED_PASSWORD);
             verify(redisUtil).removeVerificationCode(redisKey);
-            // 4.13：重置成功后清掉历史试错计数
+            // 重置成功后清掉历史试错计数
             verify(redisUtil).delete(RESET_FAIL_KEY);
             verify(jwtUtils).generateToken(any(LoginUser.class));
         }

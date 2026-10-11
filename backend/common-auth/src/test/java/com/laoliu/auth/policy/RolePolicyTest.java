@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link RolePolicy} 角色收敛策略单元测试。
+ * {@link RolePolicy} 角色收敛策略单元测试.
  *
  * @author forever-king
  */

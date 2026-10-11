@@ -38,23 +38,23 @@ import static io.qdrant.client.VectorsFactory.vectors;
 import static io.qdrant.client.WithPayloadSelectorFactory.enable;
 
 /**
- * 语义缓存服务 — 基于 Qdrant 向量检索的问答缓存。
+ * 语义缓存服务 — 基于 Qdrant 向量检索的问答缓存.
  * <p>
  * 与精确匹配缓存（{@link QaCacheService}）互补：问题字面不同但语义高度相似时，
- * 通过向量余弦相似度（阈值可配，默认 0.95）命中缓存。
+ * 通过向量余弦相似度（阈值可配，默认 0.95）命中缓存.
  * </p>
- * <h3>12-02/12-05 重构说明</h3>
+ * <h3>重构说明</h3>
  * 旧实现把向量以字符串存进 Redis，每次未命中都要 SCAN 全量键 + 逐条 2 次 GET
- * 在应用层算余弦（O(N) 次 Redis 往返），且键用 32 位 {@code hashCode()} 存在碰撞错答。
+ * 在应用层算余弦（O(N) 次 Redis 往返），且键用 32 位 {@code hashCode()} 存在碰撞错答.
  * 现改为：
  * <ul>
  *   <li>独立 Qdrant collection，HNSW top1 检索，一次 gRPC 往返完成相似度匹配；</li>
- *   <li>点位 ID 由问题经 SHA-256 预哈希后派生（1.7：底层的 {@code UUID.nameUUIDFromBytes}
+ *   <li>点位 ID 由问题经 SHA-256 预哈希后派生（底层的 {@code UUID.nameUUIDFromBytes}
  *       实为 <b>MD5（128 位）</b>），同问题幂等覆盖、碰撞概率可忽略；</li>
  *   <li>答案与引用快照一起存 payload，语义命中也能带引用（与精确缓存行为一致）；</li>
- *   <li>payload 带 cached_at，检索过滤 + 应用层双重 TTL 判定，过期点懒删除。</li>
+ *   <li>payload 带 cached_at，检索过滤 + 应用层双重 TTL 判定，过期点懒删除.</li>
  * </ul>
- * 与精确缓存共用 {@code kb.cache.enabled} 开关；关闭时所有方法短路。
+ * 与精确缓存共用 {@code kb.cache.enabled} 开关；关闭时所有方法短路.
  *
  * @author forever-king
  */
@@ -72,10 +72,10 @@ public class SemanticCacheService {
     private static final String FIELD_QUESTION = "question";
 
     /**
-     * 3.8（深度审查 P1）归属维度：记录生成该条缓存的用户。
+     * 归属维度：记录生成该条缓存的用户.
      * <ul>
      *   <li>有归属（owner_id 存在）→ 仅该用户可见（其答案可能引用了私有文档）；</li>
-     *   <li>无归属（字段缺失，未登录/服务内生成）→ 全量共享，与 4.1"无 owner=全局共享"口径一致。</li>
+     *   <li>无归属（字段缺失，未登录/服务内生成）→ 全量共享，与"无 owner=全局共享"口径一致.</li>
      * </ul>
      */
     private static final String FIELD_OWNER_ID = "owner_id";
@@ -85,7 +85,7 @@ public class SemanticCacheService {
     private final QdrantClient qdrantClient;
     private final EmbeddingService embeddingService;
     private final ObjectMapper objectMapper;
-    /** Qdrant gRPC 公共样板（collection 创建/向量转换，Q-05） */
+    /** Qdrant gRPC 公共样板（collection 创建/向量转换） */
     private final QdrantSupport qdrantSupport;
 
     @Value("${kb.cache.enabled:true}")
@@ -108,15 +108,15 @@ public class SemanticCacheService {
     private int vectorSize;
 
     /**
-     * 语义缓存命中结果：答案 + 引用快照。
+     * 语义缓存命中结果：答案 + 引用快照.
      */
     public record SemanticCacheHit(String answer, List<Conversation.CitationRef> citations) {
     }
 
     @PostConstruct
     void ensureCollection() {
-        // Q-05：collection 幂等创建收敛到 QdrantSupport。
-        // 启动期 Qdrant 不可用不能阻止应用启动：缓存是可降级旁路（failFast=false），运行期各方法自带异常保护。
+        // collection 幂等创建收敛到 QdrantSupport.
+        // 启动期 Qdrant 不可用不能阻止应用启动：缓存是可降级旁路（failFast=false），运行期各方法自带异常保护.
         boolean ready = qdrantSupport.ensureCollection(collectionName, vectorSize, "Cosine",
                 Distance.Dot, false);
         if (ready) {
@@ -126,10 +126,10 @@ public class SemanticCacheService {
     }
 
     /**
-     * 查找语义缓存。
+     * 查找语义缓存.
      *
      * @param question 改写后的用户问题
-     * @param userId   当前登录用户（3.8 归属过滤；null=未登录，仅可见全局共享条目）
+     * @param userId   当前登录用户（归属过滤；null=未登录，仅可见全局共享条目）
      * @return top1 相似度 ≥ 阈值、未过期且对当前用户可见的缓存；未命中/任何异常均返回 null（降级走正常 RAG）
      */
     public SemanticCacheHit lookup(String question, Long userId) {
@@ -190,17 +190,17 @@ public class SemanticCacheService {
     }
 
     /**
-     * 写入语义缓存（同问题幂等覆盖）。
+     * 写入语义缓存（同问题幂等覆盖）.
      *
-     * @param ownerId 生成者用户 ID（3.8）；null=未登录/服务内生成 → 不落 owner_id，视为全局共享
+     * @param ownerId 生成者用户 ID；null=未登录/服务内生成 → 不落 owner_id，视为全局共享
      */
     public void store(String question, String answer, List<Conversation.CitationRef> citations, Long ownerId) {
         if (!cacheEnabled || question == null || question.isBlank()
                 || answer == null || answer.isBlank()) {
             return;
         }
-        // 4.19（深度审查 P2）："无法回答/拒绝回答/注入套话"类内容不写入全局语义缓存，
-        // 避免一次 prompt 注入的响应被固化放大为 TTL 内全体用户共享的答案。
+        // "无法回答/拒绝回答/注入套话"类内容不写入全局语义缓存，
+        // 避免一次 prompt 注入的响应被固化放大为 TTL 内全体用户共享的答案.
         if (NoAnswerMarkers.looksLikeNoAnswer(answer)) {
             log.debug("跳过语义缓存写入（无法回答/拒绝回答类内容）: [{}]", question);
             return;
@@ -237,9 +237,9 @@ public class SemanticCacheService {
     }
 
     /**
-     * 清空全部语义缓存（按 cache_type 过滤删除，不影响同库其他 collection）。
+     * 清空全部语义缓存（按 cache_type 过滤删除，不影响同库其他 collection）.
      * <p>
-     * 预约变更与文档增删改后联动调用。
+     * 预约变更与文档增删改后联动调用.
      */
     public void evictAll() {
         if (!cacheEnabled) {
@@ -271,8 +271,8 @@ public class SemanticCacheService {
     }
 
     /**
-     * 3.8（深度审查 P1）归属可见性条件：owner_id == 当前用户 或 owner_id 缺失（全局共享）。
-     * 未登录（userId==null）仅放行全局共享条目。
+     * 归属可见性条件：owner_id == 当前用户 或 owner_id 缺失（全局共享）.
+     * 未登录（userId==null）仅放行全局共享条目.
      */
     private Condition ownerVisibilityCondition(Long userId) {
         if (userId == null) {
@@ -294,9 +294,9 @@ public class SemanticCacheService {
     }
 
     /**
-     * 3.8（深度审查 P1）过期点清理任务：查找阶段只做"懒过滤"（cached_at >= cutoff），
-     * 过期点永不被删除，collection 只增不减。本任务按固定延迟删除已过 TTL（外加 1h 余量）
-     * 的缓存点，与懒过滤互补。
+     * 过期点清理任务：查找阶段只做"懒过滤"（cached_at >= cutoff），
+     * 过期点永不被删除，collection 只增不减.本任务按固定延迟删除已过 TTL（外加 1h 余量）
+     * 的缓存点，与懒过滤互补.
      */
     @Scheduled(fixedDelayString = "${kb.cache.semantic-cleanup-interval-ms:21600000}",
             initialDelayString = "${kb.cache.semantic-cleanup-init-delay-ms:600000}")
@@ -337,11 +337,11 @@ public class SemanticCacheService {
     // ==================== helpers ====================
 
     /**
-     * 由问题内容确定性生成点位 ID。
+     * 由问题内容确定性生成点位 ID.
      * <p>
-     * 1.7（深度审查 P2）：修正注释——{@code UUID.nameUUIDFromBytes} 内部为 <b>MD5（128 位）</b>
-     * 而非 SHA-256（SHA-256 仅用于把问题字节预哈希进 MD5 输入，最终空间仍是 128 位）。
-     * 同一问题恒映射同一 ID（幂等覆盖），不同问题碰撞概率约 2⁻⁶⁴，可忽略。
+     * 修正注释——{@code UUID.nameUUIDFromBytes} 内部为 <b>MD5（128 位）</b>
+     * 而非 SHA-256（仅用于把问题字节预哈希进 MD5 输入，最终空间仍是 128 位）.
+     * 同一问题恒映射同一 ID（幂等覆盖），不同问题碰撞概率约 2⁻⁶⁴，可忽略.
      */
     private UUID deterministicPointId(String question) {
         try {

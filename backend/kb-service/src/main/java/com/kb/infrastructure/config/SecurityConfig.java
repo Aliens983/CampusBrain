@@ -20,8 +20,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
  * 无状态 API 认证 + 双 Token 过滤器 + RBAC 权限控制
  * </p>
  * <p>
- * CORS 统一在网关 globalcors 处理（4.1.8），本服务不配置 CORS；
- * 预检 OPTIONS 由网关直接应答，不会到达此处。
+ * CORS 统一在网关 globalcors 处理，本服务不配置 CORS；
+ * 预检 OPTIONS 由网关直接应答，不会到达此处.
  * </p>
  *
  * @author forever-king
@@ -33,11 +33,11 @@ public class SecurityConfig {
 
     private final TokenAuthenticationFilter tokenFilter;
 
-    // 4.2（深度审查 P0）：不再使用 MODE_INHERITABLETHREADLOCAL。
+    // 不再使用 MODE_INHERITABLETHREADLOCAL.
     // 继承模式会让线程池里复用的线程（boundedElastic/OkHttp 回调）继承创建它的
-    // 那一次请求的身份并永久残留 —— 后续请求的 Feign 调用会以他人身份执行（串号）。
+    // 那一次请求的身份并永久残留 —— 后续请求的 Feign 调用会以他人身份执行（串号）.
     // 恢复默认 MODE_THREADLOCAL：池化线程拿不到身份时，Feign 回退 ChatContextHolder
-    // 请求级上下文，再取不到则用服务身份，杜绝跨用户串号。
+    // 请求级上下文，再取不到则用服务身份，杜绝跨用户串号.
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -59,7 +59,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         // 文档上传仅限管理员；删除允许「owner 本人或管理员」，
-                        // 具体归属判定由 DocumentApplicationService 完成（4.1.12）
+                        // 具体归属判定由 DocumentApplicationService 完成
                         .requestMatchers(HttpMethod.POST, "/documents/upload")
                             .hasRole("ADMIN")
                         .anyRequest().authenticated()

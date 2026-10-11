@@ -65,7 +65,7 @@ public class EquipmentAppController {
             @Parameter(description = "设备ID", required = true) @PathVariable Long equipmentId,
             @Valid @RequestBody EquipmentBookRequest request) {
         Long userId = getUserIdViaTokenApi.getUserId();
-        // 未取到身份时明确返回 400，避免 null 传入 service 触发 NPE 500（7.3.6）
+        // 未取到身份时明确返回 400，避免 null 传入 service 触发 NPE 500
         if (userId == null) {
             return CommonResult.badRequest("无法获取用户信息，请重新登录");
         }

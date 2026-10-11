@@ -20,7 +20,7 @@ import java.util.List;
  *   <li>查询类方法全部只读，支持按校区 / 分类 / 关键词 / 日期时段过滤，供 AI 做信息检索；</li>
  *   <li>预约动作采用<b>两段式</b>：先 {@link #createDraft} 生成待确认草稿（只校验不落库），
  *       用户明确确认后再 {@link #confirmDraft} 真正下单，避免 AI 擅自替用户预约；</li>
- *   <li>草稿存 Redis 并设 TTL，确认时二次校验（容量/时段/库存可能已变），防越权与过期重放。</li>
+ *   <li>草稿存 Redis 并设 TTL，确认时二次校验（容量/时段/库存可能已变），防越权与过期重放.</li>
  * </ol>
  *
  * @author forever-king

@@ -6,10 +6,10 @@ import org.junit.jupiter.api.Test;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 工具调用守卫判定测试。
+ * 工具调用守卫判定测试.
  * <p>
  * 覆盖 2026-09-26 真实故障中模型连续输出的各类"空承诺"文本（中文短句、整句英文、
- * 空白），同时确保带真实数据的长回答与正常寒暄不会被误判而触发无意义的强制重试。
+ * 空白），同时确保带真实数据的长回答与正常寒暄不会被误判而触发无意义的强制重试.
  *
  * @author forever-king
  */

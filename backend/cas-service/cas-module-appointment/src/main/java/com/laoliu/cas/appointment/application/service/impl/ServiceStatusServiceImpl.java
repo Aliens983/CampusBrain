@@ -65,10 +65,10 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     /**
-     * 审核通过：改状态 + （必要时）发通知。
+     * 审核通过：改状态 + （必要时）发通知.
      * <p>
      * 加事务是因为一次审核可能伴随多步写操作（状态、库存回补、时段释放），
-     * 任一步失败都必须整体回滚，否则会留下"名额退了但时段仍被占"的不一致。
+     * 任一步失败都必须整体回滚，否则会留下"名额退了但时段仍被占"的不一致.
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -94,7 +94,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         bookingEventPublisher.publishChanged(
                 serviceInfo.getUserId(), serviceInfo.getServiceId(), "APPROVED");
 
-        // 3.1.8：邮件措辞区分审核人（咨询师本人 vs 管理员）
+        // 邮件措辞区分审核人（咨询师本人 vs 管理员）
         String emailContent = "您好！您的预约已通过" + source.reviewerLabel() + "审核。\n预约服务："
                 + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
@@ -107,7 +107,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     /**
-     * 审核拒绝：改状态 + 释放库存 + 释放咨询时段 + 发通知，四步必须同成功同失败。
+     * 审核拒绝：改状态 + 释放库存 + 释放咨询时段 + 发通知，四步必须同成功同失败.
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -124,9 +124,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
             throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
         }
 
-        // 3.1.5：拒绝允许待审核单与已通过单（已通过单可被修正）。
+        // 拒绝允许待审核单与已通过单（已通过单可被修正）.
         // 下方的释放库存/时段对两种来源都幂等安全：待审核单释放其占用，
-        // 已通过单同样曾占用库存/时段，拒绝时一并回收。
+        // 已通过单同样曾占用库存/时段，拒绝时一并回收.
         boolean success = bookingRepository.auditService(
                 orderId, ManageStatus.REJECTED.getCode(), reason,
                 List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED));
@@ -135,7 +135,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         }
         bookingMetrics.recordAudit(false, source, System.nanoTime() - startNanos);
 
-        // 审核拒绝：仅当该订单是通用类预约时回补库存（资源类预约下单从未扣减 booked_count，7.3.6）
+        // 审核拒绝：仅当该订单是通用类预约时回补库存（资源类预约下单从未扣减 booked_count）
         bookingRepository.releaseStockByOrderId(orderId);
         // 咨询时段预约：同时释放占用的老师时段
         bookingRepository.releaseSlotByOrderId(orderId);
@@ -145,7 +145,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         bookingEventPublisher.publishChanged(
                 serviceInfo.getUserId(), serviceInfo.getServiceId(), "REJECTED");
 
-        // 3.1.8：邮件措辞区分审核人（咨询师本人 vs 管理员）
+        // 邮件措辞区分审核人（咨询师本人 vs 管理员）
         String emailContent = "您好！您的预约未通过" + source.reviewerLabel() + "审核。\n预约服务："
                 + serviceInfo.getServiceName()
                 + "\n服务描述：" + serviceInfo.getServiceDescribe()
@@ -158,9 +158,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     /**
-     * 管理员强制取消（3.4 僵尸单兜底）：用户侧只能取消待审核单或已通过的活动单，
+     * 管理员强制取消（僵尸单兜底）：用户侧只能取消待审核单或已通过的活动单，
      * 已通过的通用/咨询/教室/设备单若无人处理会永久占用名额/时段，
-     * 由管理员端点无条件（限角色）回收。状态变更与资源释放在同一条多表 UPDATE 内原子完成。
+     * 由管理员端点无条件（限角色）回收.状态变更与资源释放在同一条多表 UPDATE 内原子完成.
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -174,7 +174,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
             throw new BusinessException(BookErrorCode.AUDIT_FAILED);
         }
 
-        // 3.4/3.5：管理员强制取消同样改变预约状态与余量，KB 问答缓存须收到事件
+        // 管理员强制取消同样改变预约状态与余量，KB 问答缓存须收到事件
         // （发布器在事务 afterCommit 发送，回滚不发；serviceId 取订单真实归属）
         bookingEventPublisher.publishChanged(
                 serviceInfo.getUserId(), serviceInfo.getServiceId(), "CANCELLED");
@@ -189,9 +189,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     /**
-     * 管理员强制完结（3.4 僵尸单兜底）：对 end_time 与 services.end_date 均为空、
+     * 管理员强制完结（僵尸单兜底）：对 end_time 与 services.end_date 均为空、
      * 定时任务无法自动完结的长期有效通用单，由管理员人工置为已完成并回补名额，
-     * 避免 booked_count 只增不减把服务容量永久锁死。
+     * 避免 booked_count 只增不减把服务容量永久锁死.
      */
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -203,7 +203,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
             throw new BusinessException(BookErrorCode.AUDIT_FAILED);
         }
 
-        // 3.4/3.5：管理员完结同样发布事件（KB 消费端不区分类型，统一触发缓存失效）
+        // 管理员完结同样发布事件（KB 消费端不区分类型，统一触发缓存失效）
         bookingEventPublisher.publishChanged(
                 serviceInfo.getUserId(), serviceInfo.getServiceId(), "COMPLETED");
 
@@ -249,7 +249,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
 
     /**
      * 状态中文描述统一经 {@link ManageStatus#of(Integer)} 取自枚举，
-     * 与 {@code BookServiceImpl#getStatusDescription} 同源，消除重复的 switch 0..4。
+     * 与 {@code BookServiceImpl#getStatusDescription} 同源，消除重复的 switch 0..4.
      */
     private void setStatusDescription(BookingQueryView response) {
         ManageStatus status = ManageStatus.of(response.getManageStatus());

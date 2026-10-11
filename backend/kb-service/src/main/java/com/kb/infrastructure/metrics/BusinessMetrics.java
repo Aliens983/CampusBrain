@@ -81,7 +81,7 @@ public class BusinessMetrics {
                 .tag("direction", "output")
                 .register(registry);
 
-        // 3.12：客户端断连导致流式问答中止的次数（区别于正常完成与错误）
+        // 客户端断连导致流式问答中止的次数（区别于正常完成与错误）
         this.qaStreamCancelledCounter = Counter.builder("kb.qa.stream.cancelled")
                 .description("Q&A stream cancelled by client")
                 .register(registry);
@@ -113,7 +113,7 @@ public class BusinessMetrics {
         qaLatencyTimer.record(durationMs, TimeUnit.MILLISECONDS);
     }
 
-    /** 3.12：客户端断连导致流式问答中止（区别于错误与正常完成） */
+    /** 客户端断连导致流式问答中止（区别于错误与正常完成） */
     public void recordStreamCancelled() {
         qaStreamCancelledCounter.increment();
     }
@@ -128,7 +128,7 @@ public class BusinessMetrics {
         documentFailureCounter.increment();
     }
 
-    // ---- 外部索引删除对账指标（A-04）----
+    // ---- 外部索引删除对账指标----
 
     /** 删除外部索引最终失败，已落库 index_delete_failure 等待补偿 */
     public void recordIndexCleanupFailure(String target) {

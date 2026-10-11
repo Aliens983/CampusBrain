@@ -23,6 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * 教师排班与停诊申请接口.
+ *
+ * @author forever-king
+ */
 @Tag(name = "教师排班")
 @RestController
 @RequestMapping("/teacher/schedule")

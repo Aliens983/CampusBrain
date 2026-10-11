@@ -12,12 +12,12 @@ import java.time.LocalDate;
 import java.util.Date;
 
 /**
- * 预约订单 DO。
+ * 预约订单 DO.
  * <p>
  * 既是 item 表的映射，也作为四类下单 insert（普通服务/咨询/设备/教室）的统一入参载体：
- * insert 成功后 orderId 由 useGeneratedKeys 回填，业务层据此拿到真实订单号。
+ * insert 成功后 orderId 由 useGeneratedKeys 回填，业务层据此拿到真实订单号.
  * 预约要素字段（consultantId/slotId/slotDate/startTime/endTime/equipmentId/quantity/roomId）
- * 对不需要的下单场景保持 null，由对应 SQL 仅写入相关列。
+ * 对不需要的下单场景保持 null，由对应 SQL 仅写入相关列.
  *
  * @author forever-king
  */

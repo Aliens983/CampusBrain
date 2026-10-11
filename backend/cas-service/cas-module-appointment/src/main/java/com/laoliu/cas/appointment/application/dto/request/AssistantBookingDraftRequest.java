@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
  *   <li>{@code equipmentId} → 设备借用</li>
  *   <li>仅 {@code serviceId} → 通用 / 活动报名</li>
  * </ul>
- * 生成草稿只做校验与预览，不写预约表；确认后才真正下单。
+ * 生成草稿只做校验与预览，不写预约表；确认后才真正下单.
  *
  * @author forever-king
  */

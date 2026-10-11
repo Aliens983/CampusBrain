@@ -17,7 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * {@link SeedAccountPasswordInitializer} 单元测试。
+ * {@link SeedAccountPasswordInitializer} 单元测试.
  *
  * @author forever-king
  */

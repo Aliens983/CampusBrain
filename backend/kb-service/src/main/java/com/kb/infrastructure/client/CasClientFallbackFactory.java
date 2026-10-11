@@ -15,21 +15,21 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * CAS Feign 客户端统一降级工厂。
+ * CAS Feign 客户端统一降级工厂.
  * <p>
  * CAS 慢、FullGC、线程池耗尽或 Nacos 下线瞬间，Feign 调用会在超时/连接失败时
  * 进入这里，而不是把异常抛给问答链路：此前 7 个 Function Calling 工具各自
  * try-catch，且发生在 SSE 链路中，少量挂起即可占满问答线程；且漏网的异常
- * 会打断整轮流式输出。
+ * 会打断整轮流式输出.
  * <p>
  * 降级策略（结构化、可区分）：
  * <ul>
  *   <li>所有方法返回 {@code code=503} 的 {@link CasResult}，data 为 null，
  *       message 为统一的用户可读提示，调用方按普通业务失败分支处理；</li>
  *   <li>真实异常原因在工厂入口记录 warn 日志，保留排障线索，不在用户回答中
- *       暴露内部主机/堆栈信息。</li>
+ *       暴露内部主机/堆栈信息.</li>
  * </ul>
- * 注意：本类生效依赖 {@code spring.cloud.openfeign.circuitbreaker.enabled=true}。
+ * 注意：本类生效依赖 {@code spring.cloud.openfeign.circuitbreaker.enabled=true}.
  *
  * @author forever-king
  */

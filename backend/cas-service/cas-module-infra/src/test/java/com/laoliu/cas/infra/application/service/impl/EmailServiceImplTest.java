@@ -74,8 +74,8 @@ class EmailServiceImplTest {
                     .when(javaMailSender).send(any(SimpleMailMessage.class));
 
             // When & Then
-            // 1.5.1：邮件是 @Async 旁路通知，发送失败仅记录日志，绝不能把异常抛回
-            // 调用方（否则会让"审核通过"等主事务因邮件故障而回滚）。
+            // 邮件是 @Async 旁路通知，发送失败仅记录日志，绝不能把异常抛回
+            // 调用方（否则会让"审核通过"等主事务因邮件故障而回滚）.
             assertDoesNotThrow(() -> emailService.sendEmail(TO, SUBJECT, CONTENT));
             verify(javaMailSender).send(any(SimpleMailMessage.class));
         }

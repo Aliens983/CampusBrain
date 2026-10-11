@@ -18,9 +18,9 @@ public class FileUploadRequest {
     private MultipartFile file;
 
     /**
-     * 子目录只允许单层、字母数字下划线短横，最长 32 字符。
-     * 从入口层杜绝 {@code ../} 路径穿越（service 层另有纵深校验，4.1.14）。
-     * 不传（null）时落在 uploads 根目录。
+     * 子目录只允许单层、字母数字下划线短横，最长 32 字符.
+     * 从入口层杜绝 {@code ../} 路径穿越（service 层另有纵深校验）.
+     * 不传（null）时落在 uploads 根目录.
      */
     @Pattern(regexp = "[a-zA-Z0-9_-]{1,32}", message = "subDir 只能包含字母、数字、下划线、短横，长度 1-32")
     @Schema(description = "存放子目录（如 carousel），不传则落在 uploads 根目录")

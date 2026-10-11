@@ -26,7 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * 网关统一鉴权过滤器（5.1.2 建立，4.12/4.14 加固）
+ * 网关统一鉴权过滤器（建立，加固）
  *
  * <p>核心职责：
  * <ol>
@@ -34,16 +34,18 @@ import java.util.List;
  *   <li>其余请求解析 JWT，并向下游透传身份头（{@code X-User-Id}、{@code X-User-Role}）
  *       及内网签名头（{@code X-Internal-Sign}、{@code X-Timestamp}），
  *       下游 CAS 服务通过签名头信任网关转发的身份；</li>
- *   <li>非法/过期 token 返回 401。</li>
+ *   <li>非法/过期 token 返回 401.</li>
  * </ol>
  *
- * <p><b>4.12</b>：query 参数 {@code token} 仅用于 EventSource 无法设置请求头的
- * SSE 场景。此前对白名单外所有路径生效，导致 token 经 URL 泄漏（访问日志、
- * 浏览器历史、Referer、代理缓存），现限定为 SSE 流式路径（见 SSE_QUERY_TOKEN_PATHS）。
+ * <p>query 参数 {@code token} 仅用于 EventSource 无法设置请求头的
+ * SSE 场景.此前对白名单外所有路径生效，导致 token 经 URL 泄漏（访问日志、
+ * 浏览器历史、Referer、代理缓存），现限定为 SSE 流式路径（见 SSE_QUERY_TOKEN_PATHS）.
  *
- * <p><b>4.14</b>：Swagger/Knife4j 文档默认不再放行，由
+ * <p>Swagger/Knife4j 文档默认不再放行，由
  * {@code gateway.security.swagger-enabled}（默认 false）显式开启，
- * 避免接口结构在生产环境裸奔。
+ * 避免接口结构在生产环境裸奔.
+ *
+ * @author forever-king
  */
 @Slf4j
 @Component
@@ -51,7 +53,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    /** query 参数方式携带 token 仅允许的 SSE 路径（4.12：kb 流式问答唯一端点） */
+    /** query 参数方式携带 token 仅允许的 SSE 路径（kb 流式问答唯一端点） */
     private static final List<String> SSE_QUERY_TOKEN_PATHS = List.of("/api/v1/kb/**/stream");
 
     /** 与鉴权无关的公开路径（精确/通配） */
@@ -61,9 +63,9 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             "/api/v1/auth/register",
             "/api/v1/auth/verification-code",
             "/api/v1/auth/reset",
-            // 图形验证码：生成接口 /captcha 与取图接口 /captcha/image/{uuid} 都必须匿名可达。
+            // 图形验证码：生成接口 /captcha 与取图接口 /captcha/image/{uuid} 都必须匿名可达.
             // 此前只放行精确 /api/v1/captcha，取图子路径不匹配 → 登录页图片 401，
-            // 而登录提交又强制校验验证码，整条登录链路事实上不可用（P1-04）。
+            // 而登录提交又强制校验验证码，整条登录链路事实上不可用.
             "/api/v1/captcha/**",
             // KB 健康探针
             "/api/v1/kb/health",
@@ -71,7 +73,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             "/api/v1/uploads/**"
     );
 
-    /** Swagger/Knife4j 文档路径（4.14：仅在显式开启时放行） */
+    /** Swagger/Knife4j 文档路径（仅在显式开启时放行） */
     private static final List<String> SWAGGER_WHITELIST = List.of(
             "/doc.html",
             "/swagger-ui/**",
@@ -81,7 +83,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
     private final JWTUtils jwtUtils;
     private final InternalSigner internalSigner;
-    /** 4.14：生产默认关闭接口文档白名单，开启需显式配置 gateway.security.swagger-enabled=true */
+    /** 生产默认关闭接口文档白名单，开启需显式配置 gateway.security.swagger-enabled=true */
     private final List<String> whitelist;
 
     public AuthGlobalFilter(JWTUtils jwtUtils, InternalSigner internalSigner) {
@@ -135,7 +137,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         String timestamp = String.valueOf(System.currentTimeMillis());
         String sign = internalSigner.sign(userId, role, timestamp);
 
-        // 4.9 纵深防御：先移除外部请求可能自带的伪造身份头，再写入网关背书的头，
+        // 纵深防御：先移除外部请求可能自带的伪造身份头，再写入网关背书的头，
         // 避免 HttpHeaders 追加语义导致下游读到多值（第一个值为伪造值）
         ServerHttpRequest mutated = request.mutate()
                 .headers(headers -> {
@@ -173,8 +175,8 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
 
     /**
      * 提取认证令牌：优先 Authorization Bearer 头；
-     * query 参数 {@code token} 仅限 SSE 路径（4.12：EventSource 无法设置请求头），
-     * 其他路径忽略 query token，避免令牌经 URL 泄漏。
+     * query 参数 {@code token} 仅限 SSE 路径（EventSource 无法设置请求头），
+     * 其他路径忽略 query token，避免令牌经 URL 泄漏.
      */
     private String extractToken(ServerHttpRequest request, String path) {
         String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
@@ -190,7 +192,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
-        // Q-07：错误体统一走 common-auth AuthErrorResponses（code/message/timestamp），
+        // 错误体统一走 common-auth AuthErrorResponses（code/message/timestamp），
         // 与 kb ApiResponse / cas CommonResult 同口径
         response.getHeaders().set(HttpHeaders.CONTENT_TYPE, AuthErrorResponses.JSON_CONTENT_TYPE);
         byte[] bytes = AuthErrorResponses.unauthorized(message)

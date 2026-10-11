@@ -17,20 +17,20 @@ import java.time.LocalDateTime;
  * 预约变更事件发布器，向 RabbitMQ 发布事件，供 KB 服务消费以更新索引/缓存
  * <p>
  * 拓扑由 {@link RabbitMqConfig} 显式声明（DirectExchange + Binding），
- * 不再依赖默认 exchange 的隐式绑定；消息体走 JSON 序列化并声明 content-type。
+ * 不再依赖默认 exchange 的隐式绑定；消息体走 JSON 序列化并声明 content-type.
  * <p>
- * <b>发送时机（12-08）</b>：调用方均在 {@code @Transactional} 业务方法内。
+ * <b>发送时机</b>：调用方均在 {@code @Transactional} 业务方法内.
  * 此前在事务提交前同步直发，存在两类问题：
  * <ol>
  *   <li>业务事务最终回滚，但"已预约/已取消"事件已经发出，KB 侧按从未发生的变更淘汰缓存
  *       （且未来若有消费方据此写投影，会产生脏数据）；</li>
  *   <li>Broker 故障（连接拒绝/超时）抛 AmqpException 会直接导致下单/取消事务回滚，
- *       旁路基础设施故障拖垮核心业务。</li>
+ *       旁路基础设施故障拖垮核心业务.</li>
  * </ol>
  * 现统一为：存在活动事务时注册 {@link TransactionSynchronization#afterCommit()}，
- * 仅在事务成功提交后发送；无事务上下文（如测试/手工调用）时立即发送。
+ * 仅在事务成功提交后发送；无事务上下文（如测试/手工调用）时立即发送.
  * 发送异常（含 Broker 不可用）只记日志不外抛——事件旁路不得影响主流程，
- * 缓存淘汰的最终兜底由问答缓存各层 TTL 承担。
+ * 缓存淘汰的最终兜底由问答缓存各层 TTL 承担.
  *
  * @author forever-king
  */
@@ -52,10 +52,10 @@ public class BookingEventPublisher {
     private final ObjectMapper objectMapper;
 
     /**
-     * 发布预约变更事件。
+     * 发布预约变更事件.
      * <p>
      * 序列化失败只记日志、不抛异常：事件发布属于旁路逻辑，
-     * 不应因为序列化问题让预约主流程失败。
+     * 不应因为序列化问题让预约主流程失败.
      */
     public void publishChanged(Long userId, Long serviceId, String eventType) {
         AppointmentChangedEvent event = AppointmentChangedEvent.builder()
@@ -88,8 +88,8 @@ public class BookingEventPublisher {
     }
 
     /**
-     * 实际发送。Broker 故障只记日志：afterCommit 阶段事务已无法回滚，
-     * 即使在无事务场景下，事件旁路也不应拖垮预约主流程。
+     * 实际发送.Broker 故障只记日志：afterCommit 阶段事务已无法回滚，
+     * 即使在无事务场景下，事件旁路也不应拖垮预约主流程.
      */
     private void send(String payload, String eventType, Long userId, Long serviceId) {
         try {

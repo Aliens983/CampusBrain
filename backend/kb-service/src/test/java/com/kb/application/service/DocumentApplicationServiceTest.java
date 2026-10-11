@@ -42,7 +42,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
- * 文档应用服务测试：管理员搜索下推、删除"先 DB 后外部存储"、上传失败补偿。
+ * 文档应用服务测试：管理员搜索下推、删除"先 DB 后外部存储"、上传失败补偿.
  *
  * @author forever-king
  */
@@ -82,7 +82,7 @@ class DocumentApplicationServiceTest {
     }
 
     private void login(Long userId, String role) {
-        // Q-02：统一模型使用数字角色 code（ADMIN=1，其余按普通用户 0）
+        // 统一模型使用数字角色 code（ADMIN=1，其余按普通用户 0）
         LoginUser loginUser = new LoginUser();
         loginUser.setId(userId);
         loginUser.setName("u" + userId);
@@ -188,7 +188,7 @@ class DocumentApplicationServiceTest {
         verify(vectorStore, times(3)).deleteByDocumentId("9");
         verify(indexCleaner).deleteByDocumentId("9");
         verify(metrics).recordDocumentFailure();
-        // A-04：Qdrant 最终失败必须落对账表等待补偿，并打 index.cleanup 失败指标
+        // Qdrant 最终失败必须落对账表等待补偿，并打 index.cleanup 失败指标
         verify(indexDeleteFailureRepository)
                 .recordOrIncrement(eq(9L), eq(IndexTarget.QDRANT), anyString());
         verify(metrics).recordIndexCleanupFailure("QDRANT");

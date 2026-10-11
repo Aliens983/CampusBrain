@@ -16,11 +16,11 @@ import org.apache.ibatis.annotations.Param;
 
 
 /**
- * 预约订单 Mapper。
+ * 预约订单 Mapper.
  * <p>
  * 约定：所有状态码都以 {@code xxxCode} 显式入参（由应用/仓储层用
  * {@link com.laoliu.cas.common.enums.ManageStatus} 枚举传入），SQL 中不写死 0/1/3/4；
- * 幂等窗口统一为 {@code dedupeSeconds}（来自 booking.dedupe-seconds 配置）。
+ * 幂等窗口统一为 {@code dedupeSeconds}（来自 booking.dedupe-seconds 配置）.
  *
  * @author forever-king
  */
@@ -28,8 +28,8 @@ import org.apache.ibatis.annotations.Param;
 public interface ItemMapper extends BaseMapper<ItemDO> {
 
     /**
-     * 幂等插入单个普通服务预约：同用户同服务仍有生效单（待审核/已通过）则不插入。
-     * 成功时 orderId 通过 useGeneratedKeys 回填到入参 {@code item}。
+     * 幂等插入单个普通服务预约：同用户同服务仍有生效单（待审核/已通过）则不插入.
+     * 成功时 orderId 通过 useGeneratedKeys 回填到入参 {@code item}.
      *
      * @return 实际插入行数（0=重复提交）
      */
@@ -38,7 +38,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                             @Param("approvedCode") int approvedCode);
 
     /**
-     * 幂等插入咨询时段预约。成功时 orderId 回填到 {@code item}。
+     * 幂等插入咨询时段预约.成功时 orderId 回填到 {@code item}.
      *
      * @return 实际插入行数（0=重复提交）
      */
@@ -47,10 +47,10 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                   @Param("dedupeSeconds") int dedupeSeconds);
 
     /**
-     * 筛出当前用户给定订单中可取消（待审核单、或已通过的活动单）的订单引用（12-09 + 3.5）。
+     * 筛出当前用户给定订单中可取消（待审核单、或已通过的活动单）的订单引用.
      * WHERE 与 {@link #cancelByIdsAndRelease} 完全一致；SQL 为 {@code FOR UPDATE} 锁定读，
      * 必须在事务内调用：返回集合同步携带 orderId/userId/serviceId，
-     * 既作为后续 UPDATE 的精确入参，也作为 CANCELLED 事件的真实 serviceId 来源。
+     * 既作为后续 UPDATE 的精确入参，也作为 CANCELLED 事件的真实 serviceId 来源.
      */
     List<BookingRef> selectCancellableBookingRefs(@Param("userId") Long userId,
                                                   @Param("orderIds") List<Long> orderIds,
@@ -58,8 +58,8 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                                   @Param("approvedCode") int approvedCode);
 
     /**
-     * 取消并释放资源（7.3.6）：一条多表 UPDATE 原子完成「状态置取消 + 通用单回补库存 +
-     * 咨询单释放时段」，仅待审核单、或已通过的活动单命中。
+     * 取消并释放资源：一条多表 UPDATE 原子完成「状态置取消 + 通用单回补库存 +
+     * 咨询单释放时段」，仅待审核单、或已通过的活动单命中.
      *
      * @return 实际取消的订单行数
      */
@@ -70,9 +70,9 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                               @Param("cancelledCode") int cancelledCode);
 
     /**
-     * 管理员强制取消（3.4 僵尸单兜底）：不校验订单归属与活动分类，待审核/已通过单均可命中；
+     * 管理员强制取消（僵尸单兜底）：不校验订单归属与活动分类，待审核/已通过单均可命中；
      * 资源释放规则与 {@link #cancelByIdsAndRelease} 完全一致
-     * （容量型回补 booked_count、咨询单释放时段）。重复调用幂等：终态单 0 行。
+     * （容量型回补 booked_count、咨询单释放时段）.重复调用幂等：终态单 0 行.
      *
      * @return 实际命中行数（多表 UPDATE 为各表匹配行之和；0=不存在或已终态）
      */
@@ -83,10 +83,10 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                               @Param("cancelledCode") int cancelledCode);
 
     /**
-     * 管理员强制完结（3.4 僵尸单兜底）：待审核/已通过单置为已完成；
+     * 管理员强制完结（僵尸单兜底）：待审核/已通过单置为已完成；
      * 仅容量型预约（consultant/slot/room/equipment 外键全空，下单时真实扣过 booked_count）
-     * 回补名额，解锁被僵尸单长期占满的容量；时段型单完结不释放时段（服务已结束）。
-     * 重复调用幂等：终态单 0 行。
+     * 回补名额，解锁被僵尸单长期占满的容量；时段型单完结不释放时段（服务已结束）.
+     * 重复调用幂等：终态单 0 行.
      *
      * @return 实际命中行数（多表 UPDATE 为各表匹配行之和；0=不存在或已终态）
      */
@@ -113,7 +113,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
             @Param("serviceName") String serviceName);
 
     /**
-     * 审核状态流转：仅当订单当前状态属于 {@code fromStatuses} 时才更新（状态机白名单）。
+     * 审核状态流转：仅当订单当前状态属于 {@code fromStatuses} 时才更新（状态机白名单）.
      *
      * @param status       目标状态码
      * @param fromStatuses 允许的来源状态码（由业务状态机决定）
@@ -164,7 +164,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
     /** 释放库存：通用下单去重回滚时 -1（最低到 0） */
     int releaseStock(@Param("serviceId") Long serviceId);
 
-    /** 审核拒绝：按订单释放库存，仅通用类预约命中（资源类预约从未扣减，7.3.6） */
+    /** 审核拒绝：按订单释放库存，仅通用类预约命中（资源类预约从未扣减） */
     int releaseStockByOrderId(@Param("orderId") Long orderId);
 
     /** 释放单个预约单占用的咨询时段（审核拒绝时调用，非咨询预约自动跳过） */
@@ -175,7 +175,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                                @Param("approvedCode") int approvedCode);
 
     /**
-     * 幂等插入设备借用。成功时 orderId 回填到 {@code item}。
+     * 幂等插入设备借用.成功时 orderId 回填到 {@code item}.
      *
      * @return 实际插入行数（0=重复提交）
      */
@@ -192,7 +192,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                             @Param("approvedCode") int approvedCode);
 
     /**
-     * 到点自动完结：已通过的时段单按结束时间、无时段的活动/通用单按 services.end_date 置为已完成。
+     * 到点自动完结：已通过的时段单按结束时间、无时段的活动/通用单按 services.end_date 置为已完成.
      *
      * @return 实际完结条数
      */
@@ -200,7 +200,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                             @Param("completedCode") int completedCode);
 
     /**
-     * P1-06：超时未审核的待审单自动拒绝，并释放其占用的咨询时段与容量型名额。
+     * 超时未审核的待审单自动拒绝，并释放其占用的咨询时段与容量型名额.
      *
      * @param pendingCode  待审核状态码
      * @param rejectedCode 拒绝状态码
@@ -214,7 +214,7 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                @Param("staleHours") int staleHours);
 
     /**
-     * 幂等插入教室时段预约。成功时 orderId 回填到 {@code item}。
+     * 幂等插入教室时段预约.成功时 orderId 回填到 {@code item}.
      *
      * @return 实际插入行数（0=重复提交）
      */
@@ -231,9 +231,9 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                          @Param("approvedCode") int approvedCode);
 
     /**
-     * 批量统计多间教室某日某时段各自的占用条数（4.7 N+1 收敛）：
-     * 助手「查教室列表」此前对每间教室各发一次 countRoomOverlap，现一条 GROUP BY 取回。
-     * 窗口内无占用的教室不在结果集中，调用方按 0 兜底。
+     * 批量统计多间教室某日某时段各自的占用条数（N+1 收敛）：
+     * 助手「查教室列表」此前对每间教室各发一次 countRoomOverlap，现一条 GROUP BY 取回.
+     * 窗口内无占用的教室不在结果集中，调用方按 0 兜底.
      */
     List<ResourceOverlapRow> countRoomOverlapBatch(@Param("roomIds") Collection<Long> roomIds,
                                                    @Param("date") LocalDate date,
@@ -243,8 +243,8 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                                    @Param("approvedCode") int approvedCode);
 
     /**
-     * 批量统计多台设备某日某时段各自被占用台数之和（4.7 N+1 收敛），
-     * 语义与 {@link #sumEquipmentOverlap} 逐条一致。窗口内无占用的设备按 0 兜底。
+     * 批量统计多台设备某日某时段各自被占用台数之和（N+1 收敛），
+     * 语义与 {@link #sumEquipmentOverlap} 逐条一致.窗口内无占用的设备按 0 兜底.
      */
     List<ResourceOverlapRow> sumEquipmentOverlapBatch(@Param("equipmentIds") Collection<Long> equipmentIds,
                                                       @Param("date") LocalDate date,

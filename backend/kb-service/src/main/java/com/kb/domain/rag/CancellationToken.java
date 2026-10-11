@@ -4,11 +4,11 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * 流式生成的协作式取消令牌。
+ * 流式生成的协作式取消令牌.
  * <p>
- * 由调用方（SSE 控制器）在每次请求时创建，客户端断连时调用 {@link #cancel()}。
+ * 由调用方（SSE 控制器）在每次请求时创建，客户端断连时调用 {@link #cancel()}.
  * 下游模型层通过 {@link #onAbort(Runnable)} 注册"真正中断在途 HTTP 调用"的动作，
- * 保证用户断开后供应商侧的 token 生成也被尽快中止，而不是只在本服务丢弃 token。
+ * 保证用户断开后供应商侧的 token 生成也被尽快中止，而不是只在本服务丢弃 token.
  * </p>
  *
  * @author forever-king
@@ -17,9 +17,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class CancellationToken {
 
     /**
-     * 永不取消的共享令牌：cancel/onAbort 均为空操作。
+     * 永不取消的共享令牌：cancel/onAbort 均为空操作.
      * 必须免疫取消——它是跨请求共享单例，任何一处误调 {@link #cancel()}
-     * 都不能污染其他同步链路的调用方。
+     * 都不能污染其他同步链路的调用方.
      */
     private static final CancellationToken NONE = new CancellationToken() {
         @Override
@@ -38,7 +38,7 @@ public class CancellationToken {
     private final List<Runnable> abortActions = new CopyOnWriteArrayList<>();
 
     /**
-     * 请求取消。幂等：只生效一次；在注册动作之前取消时，新注册的动作会立即执行。
+     * 请求取消.幂等：只生效一次；在注册动作之前取消时，新注册的动作会立即执行.
      */
     public void cancel() {
         if (cancelled) {
@@ -55,7 +55,7 @@ public class CancellationToken {
     }
 
     /**
-     * 注册取消时的中止动作；若令牌已取消，动作立即执行（避免注册晚于取消而漏中止）。
+     * 注册取消时的中止动作；若令牌已取消，动作立即执行（避免注册晚于取消而漏中止）.
      */
     public void onAbort(Runnable action) {
         if (action == null) {

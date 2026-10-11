@@ -10,10 +10,10 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 /**
- * 预约业务指标（5.2.2）。
+ * 预约业务指标.
  * <p>
  * 承载全部预约写操作的 CAS 此前没有任何业务指标，无法回答
- * 「待审核积压多少」「超卖拦截几次」「审核平均时长」「邮件成功率」。
+ * 「待审核积压多少」「超卖拦截几次」「审核平均时长」「邮件成功率」.
  * 本类统一收口预约生命周期指标，经 /actuator/prometheus 暴露：
  * </p>
  * <ul>
@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
  *   <li>{@code booking_audit_total} — 审核终态数量（tag: result/source）；</li>
  *   <li>{@code booking_cancelled_total} — 用户取消数量；</li>
  *   <li>{@code booking_conflict_blocked_total} — 容量满/时段冲突拦截次数（tag: reason）；</li>
- *   <li>{@code booking_audit_duration_seconds} — 审核耗时分布（tag: result/source）。</li>
+ *   <li>{@code booking_audit_duration_seconds} — 审核耗时分布（tag: result/source）.</li>
  * </ul>
  *
  * @author forever-king
@@ -45,7 +45,7 @@ public class BookingMetrics {
     private final Counter createdCounter;
     private final Counter cancelledCounter;
 
-    /** 1.10：审核计数/耗时按 result×source 全组合构造期预建，热点路径不再 builder+register 查找 */
+    /** 审核计数/耗时按 result×source 全组合构造期预建，热点路径不再 builder+register 查找 */
     private final Map<AuditKey, Counter> auditCounters;
     private final Map<AuditKey, Timer> auditTimers;
 
@@ -116,7 +116,7 @@ public class BookingMetrics {
     }
 
     /**
-     * 记录一次审核终态：计数 + 耗时。
+     * 记录一次审核终态：计数 + 耗时.
      *
      * @param approved       是否通过
      * @param source         审核发起方（管理员/教师）

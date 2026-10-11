@@ -188,7 +188,7 @@ class ServiceStatusServiceImplTest {
             // When
             assertDoesNotThrow(() -> serviceStatusService.auditReject(VALID_ORDER_ID, reason, AuditSource.ADMIN));
 
-            // Then：按订单维度释放（是否真扣减由 SQL 中资源外键 IS NULL 判定，7.3.6），并释放咨询时段
+            // Then：按订单维度释放（是否真扣减由 SQL 中资源外键 IS NULL 判定），并释放咨询时段
             verify(bookingRepository).releaseStockByOrderId(VALID_ORDER_ID);
             verify(bookingRepository).releaseSlotByOrderId(VALID_ORDER_ID);
             verify(bookingRepository, never()).releaseStock(anyLong());
@@ -236,7 +236,7 @@ class ServiceStatusServiceImplTest {
         }
     }
 
-    // ======================== 管理员强制取消/完结（3.4 僵尸单兜底） ========================
+    // ======================== 管理员强制取消/完结（僵尸单兜底） ========================
 
     @Nested
     @DisplayName("管理员强制取消 - adminForceCancel")
@@ -256,7 +256,7 @@ class ServiceStatusServiceImplTest {
             // Then
             verify(bookingRepository).adminCancelAndRelease(VALID_ORDER_ID, null);
             verify(emailService).sendEmail(eq("test@example.com"), contains("取消"), anyString());
-            // 3.5：强制取消按订单真实归属发布 CANCELLED 事件
+            // 强制取消按订单真实归属发布 CANCELLED 事件
             verify(bookingEventPublisher)
                     .publishChanged(BOOKING_USER_ID, BOOKING_SERVICE_ID, "CANCELLED");
         }
@@ -303,7 +303,7 @@ class ServiceStatusServiceImplTest {
 
             verify(bookingRepository).adminCompleteAndRelease(VALID_ORDER_ID, null);
             verify(emailService).sendEmail(eq("test@example.com"), contains("完结"), anyString());
-            // 3.5：强制完结发布 COMPLETED 事件（KB 侧统一按变更失效缓存）
+            // 强制完结发布 COMPLETED 事件（KB 侧统一按变更失效缓存）
             verify(bookingEventPublisher)
                     .publishChanged(BOOKING_USER_ID, BOOKING_SERVICE_ID, "COMPLETED");
         }

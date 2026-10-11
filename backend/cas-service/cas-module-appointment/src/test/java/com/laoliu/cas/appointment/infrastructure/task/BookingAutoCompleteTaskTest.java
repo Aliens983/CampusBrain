@@ -16,8 +16,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 到点自动完结任务的缓存失效测试（4.8）：
- * 回补名额后必须清 services 缓存，空跑不得打扰缓存。
+ * 到点自动完结任务的缓存失效测试：
+ * 回补名额后必须清 services 缓存，空跑不得打扰缓存.
  *
  * @author forever-king
  */

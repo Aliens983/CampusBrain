@@ -14,7 +14,7 @@ import java.io.Serializable;
  * 除持久化的消息历史外，额外维护两类状态：
  * <ol>
  *   <li>{@link BookingSlots} —— 累积的预约条件（校区/分类/日期/时段/资源），用于追问时的指代消解；</li>
- *   <li>{@link PendingBooking} —— 待用户确认的预约草稿，用于"先确认再下单"的闭环。</li>
+ *   <li>{@link PendingBooking} —— 待用户确认的预约草稿，用于"先确认再下单"的闭环.</li>
  * </ol>
  *
  * @author forever-king

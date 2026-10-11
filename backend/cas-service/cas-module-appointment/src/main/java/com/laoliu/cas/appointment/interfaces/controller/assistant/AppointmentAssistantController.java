@@ -37,11 +37,11 @@ import java.util.List;
  *   <li>查询接口支持按「校区 / 分类 / 日期时段」组合过滤，并把校区、余量、是否空闲
  *       一并回填，减少 AI 二次推理；</li>
  *   <li>预约动作拆成「草稿 → 确认」两段，草稿只校验不落库，
- *       必须由用户明确确认后才真正下单。</li>
+ *       必须由用户明确确认后才真正下单.</li>
  * </ol>
  *
  * <p>身份来源：优先 JWT 登录用户；无 JWT 时（KB 内网签名场景，该头已经过
- * {@code InternalAuthFilter} 签名校验绑定）才信任 {@code X-User-Id}。
+ * {@code InternalAuthFilter} 签名校验绑定）才信任 {@code X-User-Id}.
  *
  * @author forever-king
  */

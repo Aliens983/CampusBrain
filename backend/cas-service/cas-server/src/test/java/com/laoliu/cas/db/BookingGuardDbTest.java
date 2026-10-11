@@ -36,7 +36,7 @@ import java.util.stream.Collectors;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 预约防重/防超卖唯一约束的真实 MySQL 集成验证（深度审查报告 3.1 / 5.1 / 5.2，D-A1）。
+ * 预约防重/防超卖唯一约束的真实 MySQL 集成验证.
  *
  * <p>ItemMapper.xml 的 SQL 不在 Mockito 单测中执行，本类用 Testcontainers MySQL 8.0
  * （或 IT_MYSQL_URL 指定的外部库）验证：
@@ -44,12 +44,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>Flyway 冒烟：开发期全量基线 V1（含生成列与 uk_item_active_general）迁移成功，
  *       不存在历史增量脚本版本；</li>
  *   <li>终态共存 / 资源类单共存场景在真实 SQL 上回归；</li>
- *   <li>多线程并发验证：通用下单 DB 层收敛 1 行、容量不超卖、时段占用单赢家。</li>
+ *   <li>多线程并发验证：通用下单 DB 层收敛 1 行、容量不超卖、时段占用单赢家.</li>
  * </ol>
  *
  * <p>不启动 Spring 上下文（避免 Redis/RabbitMQ 依赖），手工装配
  * MyBatis-Plus 的 SqlSessionFactory（BaseMapper 支持）+ Hikari 连接池，
- * 隔离级别保持 MySQL 默认 REPEATABLE READ，真实复现快照读并发窗口。
+ * 隔离级别保持 MySQL 默认 REPEATABLE READ，真实复现快照读并发窗口.
+ *
+ * @author forever-king
  */
 @Testcontainers(disabledWithoutDocker = true)
 @TestMethodOrder(MethodOrderer.DisplayName.class)
@@ -68,9 +70,9 @@ class BookingGuardDbTest {
 
     /**
      * 外部 MySQL 开关：设置 IT_MYSQL_URL（如 jdbc:mysql://127.0.0.1:3399/cas_it）后，
-     * 不再启动 Testcontainers，直连该库（每轮先 Flyway clean 保证可重复执行）。
+     * 不再启动 Testcontainers，直连该库（每轮先 Flyway clean 保证可重复执行）.
      * 用于 Docker 端口转发异常（容器内正常但宿主机访问发布端口失败）的环境；
-     * 默认缺省仍走 Testcontainers MySQL 8.0。
+     * 默认缺省仍走 Testcontainers MySQL 8.0.
      */
     private static final String EXTERNAL_JDBC_URL = System.getenv("IT_MYSQL_URL");
     private static final String EXTERNAL_USER =
@@ -99,8 +101,8 @@ class BookingGuardDbTest {
         }
         dataSource.setMaximumPoolSize(20);
 
-        // 5.1 冒烟本身：全量基线 V1 一次迁移完成，任一 SQL 有误会在此抛出。
-        // 外部库可能残留上一轮对象，clean 后重放；全新容器库 clean 为空操作。
+        // 冒烟本身：全量基线 V1 一次迁移完成，任一 SQL 有误会在此抛出.
+        // 外部库可能残留上一轮对象，clean 后重放；全新容器库 clean 为空操作.
         Flyway flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .locations("classpath:db/migration")
@@ -130,7 +132,7 @@ class BookingGuardDbTest {
         }
     }
 
-    // ==================== 5.1 Flyway 冒烟 ====================
+    // ==================== Flyway 冒烟 ====================
 
     @Test
     @DisplayName("5.1 冒烟：全量基线 V1 就位（生成列+新唯一约束），历史增量版本不存在")
@@ -187,9 +189,9 @@ class BookingGuardDbTest {
         seedUser(userId);
         seedService(serviceId, 5);
 
-        // 每个阶段独立事务提交，再用新连接核对状态（贴近生产每请求一事务）。
+        // 每个阶段独立事务提交，再用新连接核对状态（贴近生产每请求一事务）.
         // 注意 cancelByIdsAndRelease 是 item JOIN services 的多表 UPDATE，
-        // 其返回行数为各表匹配行之和，不能当作"取消订单数"断言。
+        // 其返回行数为各表匹配行之和，不能当作"取消订单数"断言.
         Long first;
         Long second;
         Long third;
@@ -300,7 +302,7 @@ class BookingGuardDbTest {
         assertThat(active).isEqualTo(1);
     }
 
-    // ==================== 5.2 并发场景 ====================
+    // ==================== 并发场景 ====================
 
     @Test
     @DisplayName("5.2 并发通用下单：10 线程同刻点击，最终恰好一笔有效单（死锁方整体回滚，绝不产生重复）")
@@ -333,9 +335,9 @@ class BookingGuardDbTest {
                         }
                     } catch (Exception e) {
                         // REPEATABLE READ 下 INSERT...SELECT 的间隙锁会让同时起跑的并发事务
-                        // 互相死锁（1213）：InnoDB 回滚落败方整个事务。它不会产生重复行，
+                        // 互相死锁（1213）：InnoDB 回滚落败方整个事务.它不会产生重复行，
                         // 落败方语义上等同于"未抢到"，仅 UX 上表现为需重试（已在看板第 7 节
-                        // 登记：是否加应用层有限重试/改 RC 由用户裁定，不在 DB 约束范围内）。
+                        // 登记：是否加应用层有限重试/改 RC 由用户裁定，不在 DB 约束范围内）.
                         if (isDeadlock(e)) {
                             deadlocked.incrementAndGet();
                         } else {
@@ -454,7 +456,7 @@ class BookingGuardDbTest {
         assertThat(available).isZero();
     }
 
-    // ==================== 3.4 管理员强制取消/完结（僵尸单兜底） ====================
+    // ==================== 管理员强制取消/完结（僵尸单兜底） ====================
 
     @Test
     @DisplayName("3.4 已通过的咨询单用户无法取消，管理员强制取消后状态置 3 且时段释放")
@@ -477,7 +479,7 @@ class BookingGuardDbTest {
         jdbc.update("UPDATE item SET manage_status = 1 WHERE order_id = ?", orderId);
         jdbc.update("UPDATE time_slot SET available = 0 WHERE id = 9301");
 
-        // 用户侧取消：已通过的非活动单 0 行（3.4 僵尸成因之一）
+        // 用户侧取消：已通过的非活动单 0 行（僵尸成因之一）
         try (SqlSession session = factory.openSession()) {
             int rows = session.getMapper(ItemMapper.class).cancelByIdsAndRelease(
                     9301L, List.of(orderId), PENDING, APPROVED, CANCELLED);
@@ -565,7 +567,7 @@ class BookingGuardDbTest {
                 "SELECT booked_count FROM services WHERE service_id = 9303", Integer.class)).isEqualTo(1);
     }
 
-    // ==================== 3.5 取消事件：锁定读引用 + 真实 serviceId ====================
+    // ==================== 取消事件：锁定读引用 + 真实 serviceId ====================
 
     @Test
     @DisplayName("3.5 selectCancellableBookingRefs FOR UPDATE 锁定读返回真实引用，取消后终态单不再命中")
@@ -604,7 +606,7 @@ class BookingGuardDbTest {
         }
     }
 
-    // ==================== 3.6 autoCompleteExpired 回补条件与取消链路一致（补 slot_id） ====================
+    // ==================== autoCompleteExpired 回补条件与取消链路一致（补 slot_id） ====================
 
     @Test
     @DisplayName("3.6 自动完结：仅 slot_id 非空（其余三外键空）的单不回补名额；四项全空容量单正常回补")
@@ -652,7 +654,7 @@ class BookingGuardDbTest {
                 "SELECT booked_count FROM services WHERE service_id = 9306", Integer.class)).isZero();
     }
 
-    // ==================== 4.7 批量聚合 SQL（N+1 收敛）真实 MySQL 验证 ====================
+    // ==================== 批量聚合 SQL（N+1 收敛）真实 MySQL 验证 ====================
 
     @Test
     @DisplayName("4.7 教室/设备/咨询师批量聚合：GROUP BY 计数与逐条版语义一致，无占用者缺省")

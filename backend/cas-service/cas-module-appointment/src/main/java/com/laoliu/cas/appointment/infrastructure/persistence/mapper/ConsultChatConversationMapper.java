@@ -27,9 +27,9 @@ public interface ConsultChatConversationMapper extends BaseMapper<ConsultChatCon
     long countTeacherConsultant(@Param("teacherUserId") Long teacherUserId);
 
     /**
-     * 该学生是否咨询过该教师（教师对学生发起会话时校验：存在该教师名下咨询档期的预约）。
+     * 该学生是否咨询过该教师（教师对学生发起会话时校验：存在该教师名下咨询档期的预约）.
      * 仅统计活动单（0 待审核 / 1 已通过）；已拒绝/已取消/已完成等终态废单不得作为
-     * 发起会话的凭据，与服务层 openByBooking 的状态白名单同口径。
+     * 发起会话的凭据，与服务层 openByBooking 的状态白名单同口径.
      */
     @Select("""
             SELECT COUNT(*) FROM item i
@@ -45,8 +45,8 @@ public interface ConsultChatConversationMapper extends BaseMapper<ConsultChatCon
     String selectUserName(@Param("userId") Long userId);
 
     /**
-     * 批量取用户显示名（4.7 N+1 收敛：会话列表此前每会话发一次 selectUserName）。
-     * 调用方须保证 userIds 非空；库中无此用户或 name 为空时不在结果集中。
+     * 批量取用户显示名（N+1 收敛：会话列表此前每会话发一次 selectUserName）.
+     * 调用方须保证 userIds 非空；库中无此用户或 name 为空时不在结果集中.
      */
     @Select("""
             <script>

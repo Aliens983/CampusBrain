@@ -37,8 +37,8 @@ public interface ConsultChatMessageMapper extends BaseMapper<ConsultChatMessageD
     ConsultChatMessageDO selectLastMessage(@Param("conversationId") Long conversationId);
 
     /**
-     * 批量取多个会话各自的最后一条消息（4.7 N+1 收敛：会话列表此前每会话发一次 selectLastMessage）。
-     * 以 conversationId 为 key；无消息的会话不在 Map 中。调用方须保证 conversationIds 非空。
+     * 批量取多个会话各自的最后一条消息（N+1 收敛：会话列表此前每会话发一次 selectLastMessage）.
+     * 以 conversationId 为 key；无消息的会话不在 Map 中.调用方须保证 conversationIds 非空.
      */
     @Select("""
             <script>
@@ -61,8 +61,8 @@ public interface ConsultChatMessageMapper extends BaseMapper<ConsultChatMessageD
     long countUnread(@Param("conversationId") Long conversationId, @Param("viewerId") Long viewerId);
 
     /**
-     * 批量统计多个会话发给 viewer 的未读数（4.7 N+1 收敛），GROUP BY 一次取回；
-     * 未读数为 0 的会话不在结果集中，调用方按 0 兜底。调用方须保证 conversationIds 非空。
+     * 批量统计多个会话发给 viewer 的未读数（N+1 收敛），GROUP BY 一次取回；
+     * 未读数为 0 的会话不在结果集中，调用方按 0 兜底.调用方须保证 conversationIds 非空.
      */
     @Select("""
             <script>

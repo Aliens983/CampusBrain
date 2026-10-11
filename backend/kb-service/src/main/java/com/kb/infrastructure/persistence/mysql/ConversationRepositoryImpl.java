@@ -57,11 +57,11 @@ public class ConversationRepositoryImpl implements ConversationRepository {
     }
 
     /**
-     * 会话归属闸门（4.1.13）：
+     * 会话归属闸门：
      * <ul>
      *   <li>会话已有 owner 且不是当前用户 → 拒绝写入（sessionId 泄露不能冒用他人会话）；</li>
      *   <li>会话存在但消息均无主（V2 前的存量数据）→ 首写者认领；</li>
-     *   <li>会话无任何消息 → 本次写入自然完成绑定。</li>
+     *   <li>会话无任何消息 → 本次写入自然完成绑定.</li>
      * </ul>
      */
     private void ensureSessionOwnership(String sessionId, Long userId) {

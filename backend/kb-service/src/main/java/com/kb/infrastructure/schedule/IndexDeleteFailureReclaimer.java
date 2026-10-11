@@ -16,17 +16,17 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * 外部索引删除失败补偿对账任务（A-04）。
+ * 外部索引删除失败补偿对账任务.
  * <p>
  * 文档删除走"先提交 DB、后清外部存储"，Qdrant/ES 当时不可用会在
- * {@code index_delete_failure} 留 PENDING 记录。本任务周期性重试删除：
+ * {@code index_delete_failure} 留 PENDING 记录.本任务周期性重试删除：
  * <ul>
  *   <li>重试成功 → RESOLVED + recovered 指标，孤儿记录清除；</li>
  *   <li>仍失败 → retry_count +1，下轮再试；</li>
- *   <li>达到上限 → GIVE_UP + give_up 指标（配置告警），等待人工核查。</li>
+ *   <li>达到上限 → GIVE_UP + give_up 指标（配置告警），等待人工核查.</li>
  * </ul>
  * 单轮内每条记录只尝试一次，配合 fixedDelay 天然形成退避，避免外部存储
- * 长时间故障时被重试打满。
+ * 长时间故障时被重试打满.
  *
  * @author forever-king
  */

@@ -32,10 +32,10 @@ public class KeywordRetriever {
      * @param query   检索词
      * @param ownerId 归属用户（null = 仅共享文档，fail-closed）
      *                <p>
-     *                P1-01：原先在方法内取 {@code SecurityFrameworkUtils.getLoginUserId()}，
+     *                原先在方法内取 {@code SecurityFrameworkUtils.getLoginUserId()}，
      *                但混合检索是在 {@code retrievalExecutor} 池线程上执行的，而 SecurityContext
      *                是 MODE_THREADLOCAL（池线程从未 set 过身份）→ ownerId 恒为 null →
-     *                <b>用户私有文档永远无法被召回</b>。改为由调用方在请求线程解析后显式传入。
+     *                <b>用户私有文档永远无法被召回</b>.改为由调用方在请求线程解析后显式传入.
      */
     public List<RetrievalResult> retrieve(String query, Long ownerId) {
         return esDocumentRepository.keywordSearch(query, topK, ownerId);

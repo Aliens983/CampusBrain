@@ -8,7 +8,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 /**
- * 外部索引删除失败对账 DO，映射 {@code index_delete_failure} 表（A-04）。
+ * 外部索引删除失败对账 DO，映射 {@code index_delete_failure} 表.
  *
  * @author forever-king
  */

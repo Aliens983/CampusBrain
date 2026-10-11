@@ -11,13 +11,13 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * SSE 流式问答的全局并发上限。
+ * SSE 流式问答的全局并发上限.
  * <p>
  * 每路流式问答在 boundedElastic 线程上同步执行"检索 + LLM + Feign"，
- * 单轮耗时可达数十秒。{@code @RateLimit} 限制的是单用户请求频次，
+ * 单轮耗时可达数十秒.{@code @RateLimit} 限制的是单用户请求频次，
  * 不限制同时挂起的连接总数——用户规模放大后，慢 LLM 会让大量长连接
- * 同时占住线程与下游配额。这里用公平信号量给实例级在途 SSE 数量兜底：
- * 拿不到许可的请求直接返回 503，由前端提示稍后重试，避免级联拖垮。
+ * 同时占住线程与下游配额.这里用公平信号量给实例级在途 SSE 数量兜底：
+ * 拿不到许可的请求直接返回 503，由前端提示稍后重试，避免级联拖垮.
  *
  * @author forever-king
  */
@@ -58,7 +58,7 @@ public class SseConcurrencyLimiter {
     }
 
     /**
-     * 尝试占用一个在途名额。
+     * 尝试占用一个在途名额.
      *
      * @return true 表示获得名额，调用方最终必须调用一次 {@link #release()}；
      *         false 表示并发已满，应快速失败，禁止调用 release

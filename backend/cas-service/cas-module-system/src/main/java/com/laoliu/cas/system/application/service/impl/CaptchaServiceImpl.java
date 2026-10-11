@@ -20,7 +20,7 @@ import java.util.UUID;
  * 图形验证码服务
  * <p>
  * 答案与图片均存 Redis（内存态），不再落盘到 uploads/captcha，避免磁盘持续堆积；
- * 图片通过 GET /captcha/image/{uuid} 动态取回，前端无需感知变化。
+ * 图片通过 GET /captcha/image/{uuid} 动态取回，前端无需感知变化.
  *
  * @author forever-king
  */

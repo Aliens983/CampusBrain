@@ -39,11 +39,11 @@ import java.util.*;
  * </ol>
  * </p>
  * <p>
- * <b>失败语义（12-03）</b>：
+ * <b>失败语义</b>：
  * <ul>
  *   <li>永久性失败（文件丢失、解析不支持/文件损坏）→ 置 FAILED 并 ACK，不做无意义重试；</li>
  *   <li>可重试失败（embedding/Qdrant/ES/DB 抖动）→ 向外抛出，由 Spring retry 退避重试 3 次，
- *       仍失败则经死信交换机进入 DLQ 留存，文档保留中间态由超时回收任务重新投递。</li>
+ *       仍失败则经死信交换机进入 DLQ 留存，文档保留中间态由超时回收任务重新投递.</li>
  * </ul>
  *
  * @author forever-king
@@ -83,16 +83,16 @@ public class DocumentProcessingConsumer {
     /** 处理中/回收重投的 Redis 短锁：防止重试与超时重投造成并发处理同一文档 */
     private final DocumentProcessingLock processingLock;
 
-    /** 分块批量写入的单事务边界（A-03） */
+    /** 分块批量写入的单事务边界 */
     private final com.kb.infrastructure.persistence.mysql.DocumentChunkTransactionService chunkTransactionService;
 
-    /** 文档分块策略（5.7：与 application.yml chunking.strategy 对齐，缺默认值时兜底为滑动窗口） */
+    /** 文档分块策略（与 application.yml chunking.strategy 对齐，缺默认值时兜底为滑动窗口） */
     @Value("${chunking.strategy:sliding_window}")
     private String chunkStrategy;
 
     /**
-     * 永久性处理失败：重试无意义（文件丢失/损坏/不支持的格式）。
-     * 捕获后置 FAILED 并正常 ACK，消息不进 DLQ。
+     * 永久性处理失败：重试无意义（文件丢失/损坏/不支持的格式）.
+     * 捕获后置 FAILED 并正常 ACK，消息不进 DLQ.
      */
     public static class PermanentProcessingException extends RuntimeException {
         public PermanentProcessingException(String message, Throwable cause) {
@@ -124,9 +124,9 @@ public class DocumentProcessingConsumer {
             return;
         }
 
-        // 并发保护：enterProcessing 通过"Redis token + 本机在途登记表"双重判据（3.9）识别
+        // 并发保护：enterProcessing 通过"Redis token + 本机在途登记表"双重判据识别
         // "本地重试 / TTL 内回到本实例的重投递"（放行）与"重复消息/其他实例正在处理"（ACK 跳过），
-        // 杜绝两个消费者并发执行"删旧数据→写新数据"。
+        // 杜绝两个消费者并发执行"删旧数据→写新数据".
         if (!processingLock.enterProcessing(documentId)) {
             log.info("文档正在被其他消费者处理，本次消息直接确认跳过: id={}", documentId);
             return;
@@ -139,7 +139,7 @@ public class DocumentProcessingConsumer {
                 vectorStore.deleteByDocumentId(docIdStr);
                 esRepository.deleteByDocumentId(docIdStr);
                 documentRepository.deleteChunksByDocumentId(documentId);
-                // 内存知识图谱同步摘除旧归属，避免重处理后旧实体/旧边残留（12-10）
+                // 内存知识图谱同步摘除旧归属，避免重处理后旧实体/旧边残留
                 kgService.deleteByDocument(documentId);
             } catch (Exception e) {
                 log.warn("清理旧数据失败（继续处理）: id={}", documentId, e);
@@ -165,8 +165,8 @@ public class DocumentProcessingConsumer {
             updateStatus(doc, DocumentStatus.EMBEDDING);
             List<float[]> embeddings = embed(chunks);
 
-            // === Step 3.5: Build knowledge graph（best-effort：
-            // 图谱是检索增强能力，抽取失败不能拖垮文档入库主链路，详见 12-10。
+            // === Build knowledge graph（best-effort：
+            // 图谱是检索增强能力，抽取失败不能拖垮文档入库主链路.
             // 受 kb.graph.enabled 开关控制（默认关）：关闭时 ingestChunk 直接短路，
             // 不产生逐分块 LLM 调用；开启时每个分块同步抽取一次实体 ===
             for (DocumentChunk chunk : chunks) {
@@ -181,11 +181,11 @@ public class DocumentProcessingConsumer {
             }
 
             // === Step 4: Save chunks to MySQL first（让 chunk 拿到 documentId）===
-            // A-03：整批分块在单个事务内写入，中途失败整体回滚，不留半成品分块
+            // 整批分块在单个事务内写入，中途失败整体回滚，不留半成品分块
             chunkTransactionService.saveChunksAtomically(chunks, documentId);
 
             // === Step 5: Store (Qdrant + ES) — 用正确的 documentId（失败可重试）===
-            // 4.1（深度审查 P0）：写入归属用户 ownerId，检索端据此过滤
+            // 写入归属用户 ownerId，检索端据此过滤
             store(chunks, embeddings, documentId, doc.getOwnerId());
 
             // === Step 6: Mark READY ===
@@ -212,10 +212,10 @@ public class DocumentProcessingConsumer {
         } catch (Exception retryable) {
             // 可重试失败：保持当前中间态向外抛出 ——
             // Spring retry 在本实例退避重试 max-attempts 次；
-            // 仍失败则被拒绝并路由到 DLQ（default-requeue-rejected=false + 队列 DLX 参数）。
-            // 不在这里把文档改成 FAILED：中间态 + updated_at 时间戳让超时回收任务能发现并重新投递。
+            // 仍失败则被拒绝并路由到 DLQ（default-requeue-rejected=false + 队列 DLX 参数）.
+            // 不在这里把文档改成 FAILED：中间态 + updated_at 时间戳让超时回收任务能发现并重新投递.
             // 同时不释放 Redis 处理锁：TTL 窗口内重投的消息（含回到本实例）虽可被 owner 识别，
-            // 但跨实例重复消费仍被锁挡住，给下游（embedding/Qdrant）留出恢复窗口。
+            // 但跨实例重复消费仍被锁挡住，给下游（embedding/Qdrant）留出恢复窗口.
             log.error("Document processing failed (retryable), will retry/DLQ: id={}",
                     documentId, retryable);
             if (retryable instanceof RuntimeException re) {
@@ -223,7 +223,7 @@ public class DocumentProcessingConsumer {
             }
             throw new RuntimeException("文档处理失败（可重试）: id=" + documentId, retryable);
         } finally {
-            // 3.9：注销本机在途登记（终态路径 exitProcessing 已移除，幂等）；
+            // 注销本机在途登记（终态路径 exitProcessing 已移除，幂等）；
             // 可重试路径在此取消"在途"标记，Spring retry 下一轮（token 仍在 Redis）可重新入场
             processingLock.markTaskFinished(documentId);
         }
@@ -236,7 +236,7 @@ public class DocumentProcessingConsumer {
             // Use ParserChain: tries primary parser first, auto-fallbacks on failure
             return parserChain.parseAuto(fileStream, doc.getTitle());
         } catch (FileNotFoundException fnf) {
-            // 4.17（深度审查 P2）：错误信息不得携带服务器绝对路径——
+            // 错误信息不得携带服务器绝对路径——
             // 该 message 会写入 error_msg 并经 DocumentStatusNotifier 推送到前端
             throw new PermanentProcessingException(
                     "原始文件不存在，可能已被外部清理（文件 ID=" + doc.getId() + "）", fnf);
@@ -284,7 +284,7 @@ public class DocumentProcessingConsumer {
             payload.put("content", chunk.getContent());
             payload.put("section_title", chunk.getMetadata() != null
                     ? chunk.getMetadata().getOrDefault("sectionTitle", "") : "");
-            // 4.1（深度审查 P0）：写入归属用户，检索端据此过滤跨用户私有泄露；null 视为全局共享
+            // 写入归属用户，检索端据此过滤跨用户私有泄露；null 视为全局共享
             if (ownerId != null) {
                 payload.put("owner_id", String.valueOf(ownerId));
             }

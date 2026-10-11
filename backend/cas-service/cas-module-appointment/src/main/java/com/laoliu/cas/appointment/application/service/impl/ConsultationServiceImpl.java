@@ -76,10 +76,10 @@ public class ConsultationServiceImpl implements ConsultationService {
 
     /**
      * 咨询时段预约：用户选定某咨询师的某个时段后，
-     * 事务内原子占用时段 + 幂等落单；任一失败整体回滚（时段自动释放）。
+     * 事务内原子占用时段 + 幂等落单；任一失败整体回滚（时段自动释放）.
      * <p>
      * 并发安全：占用使用条件 UPDATE（available=1 → 0），同一时段只会有一个请求成功，
-     * 其余拿到 {@code SLOT_UNAVAILABLE}。
+     * 其余拿到 {@code SLOT_UNAVAILABLE}.
      *
      * @param slotId 由 /slots 接口返回的时段 ID
      * @return 新预约单 orderId
@@ -102,8 +102,8 @@ public class ConsultationServiceImpl implements ConsultationService {
             bookingMetrics.recordConflictBlocked(BookingMetrics.REASON_SLOT_UNAVAILABLE);
             throw new BusinessException(BookErrorCode.SLOT_UNAVAILABLE);
         }
-        // P1-06：时段可用不代表还没到点——拒绝已过去或已开始的时段，
-        // 否则会生成"昨天的咨询预约"并把 available 永久锁 0。
+        // 时段可用不代表还没到点——拒绝已过去或已开始的时段，
+        // 否则会生成"昨天的咨询预约"并把 available 永久锁 0.
         BookingWindowPolicy.assertConsultationBookable(slot.getSlotDate(), slot.getStartTime());
 
         // 原子占用：仅 available=1 时置 0；失败=刚被抢走
@@ -112,7 +112,7 @@ public class ConsultationServiceImpl implements ConsultationService {
             throw new BusinessException(BookErrorCode.SLOT_UNAVAILABLE);
         }
 
-        // 幂等插入（同咨询师同时段配置窗口内同用户去重）；null → 重复提交，回滚释放时段。
+        // 幂等插入（同咨询师同时段配置窗口内同用户去重）；null → 重复提交，回滚释放时段.
         // orderId 由 insert 回填，直接返回真实订单号（助手确认预约不再靠"查最新一单"猜测）
         Long orderId = bookingRepository.insertConsultationBooking(
                 userId, consultant.getServiceId(), consultantId, slotId,
@@ -128,7 +128,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     private List<Long> getConsultationServiceIds() {
         return serviceRepository.findAll().stream()
                 .filter(ServiceItem::isAvailable)
-                // 3.1.6：按业务分类编码判定，而非在服务名里匹配"咨询/辅导"等关键词
+                // 按业务分类编码判定，而非在服务名里匹配"咨询/辅导"等关键词
                 .filter(s -> CategoryCode.TEACHER.is(s.getCategoryCode()))
                 .map(ServiceItem::getServiceId)
                 .collect(Collectors.toList());
@@ -150,7 +150,7 @@ public class ConsultationServiceImpl implements ConsultationService {
     }
 
     /**
-     * 校验服务处于上架状态（理由同 {@code RoomServiceImpl#assertServiceAvailable}）。
+     * 校验服务处于上架状态（理由同 {@code RoomServiceImpl#assertServiceAvailable}）.
      */
     private void assertServiceAvailable(Long serviceId) {
         if (serviceId == null) {

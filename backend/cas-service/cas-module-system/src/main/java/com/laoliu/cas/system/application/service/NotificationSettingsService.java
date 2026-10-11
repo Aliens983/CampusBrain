@@ -7,17 +7,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * 通知设置服务（管理端全局策略 + 用户个人偏好，MySQL 存储）。
+ * 通知设置服务（管理端全局策略 + 用户个人偏好，MySQL 存储）.
  *
  * <p>里程碑 A：让「管理端系统设置→通知策略」与「用户端个人中心→通知偏好」
- * 共用同一套开关/存储，并让审核结果邮件的发送真正受这两个开关控制。</p>
+ * 共用同一套开关/存储，并让审核结果邮件的发送真正受这两个开关控制.</p>
  *
  * <p>存储约定（见 cas-service/sql/02_user.sql）：
  * <ul>
  *   <li>管理端全局策略：notification_policy 单行表（id=1）的 email_enabled / sms_enabled</li>
  *   <li>用户个人偏好：user 表的 email_notify 列</li>
  * </ul>
- * 实际发送 = 管理端策略启用 且 用户偏好开启。站内消息未实现，无对应通道。</p>
+ * 实际发送 = 管理端策略启用 且 用户偏好开启.站内消息未实现，无对应通道.</p>
  *
  * @author forever-king
  */
@@ -62,7 +62,7 @@ public class NotificationSettingsService implements NotificationSettingsApi {
 
     /**
      * 是否允许给该用户发送邮件通知：
-     * 管理端全局策略「邮件」启用 且 该用户个人偏好「邮件」开启。
+     * 管理端全局策略「邮件」启用 且 该用户个人偏好「邮件」开启.
      */
     @Override
     public boolean isEmailAllowed(Long userId) {

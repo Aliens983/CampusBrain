@@ -20,8 +20,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * 管理员建用户提权防护：超级管理员(2) 不能经接口创建；0/1/3 放行。
- * 判据与「管理员改角色」共用 RolePolicy#isAssignableUserRole。
+ * 管理员建用户提权防护：超级管理员(2) 不能经接口创建；0/1/3 放行.
+ * 判据与「管理员改角色」共用 RolePolicy#isAssignableUserRole.
  *
  * @author forever-king
  */

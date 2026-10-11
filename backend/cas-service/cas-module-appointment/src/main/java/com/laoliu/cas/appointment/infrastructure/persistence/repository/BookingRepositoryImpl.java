@@ -21,10 +21,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 预约仓储实现。
+ * 预约仓储实现.
  * <p>
  * 这里是「领域语义」与「SQL 字面量」的唯一翻译层：状态码统一取自 {@link ManageStatus}，
- * 幂等窗口取自 {@link BookingProperties}，Mapper 与 XML 不出现魔法数字。
+ * 幂等窗口取自 {@link BookingProperties}，Mapper 与 XML 不出现魔法数字.
  *
  * @author forever-king
  */
@@ -44,7 +44,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public List<Long> insertServices(Long userId, List<Integer> serviceIds) {
         List<Long> createdOrderIds = new ArrayList<>();
-        // 逐个幂等插入：调用方已在同事务内扣减库存；此处拿到回填的真实 orderId。
+        // 逐个幂等插入：调用方已在同事务内扣减库存；此处拿到回填的真实 orderId.
         for (Integer serviceId : serviceIds) {
             ItemDO item = ItemDO.builder().userId(userId).serviceId(serviceId).build();
             int rows = itemMapper.insertSingleService(item, PENDING, APPROVED);
@@ -190,7 +190,7 @@ public class BookingRepositoryImpl implements BookingRepository {
     @Override
     public boolean adminCancelAndRelease(Long orderId, String reason) {
         // 多表 UPDATE 行数为各表匹配行之和（item + services，咨询单还有 time_slot），
-        // 只能以 >0 判定命中；终态/不存在单 WHERE 不匹配，返回 0（3.4，见看板第 7 节）
+        // 只能以 >0 判定命中；终态/不存在单 WHERE 不匹配，返回 0（见看板第 7 节）
         return itemMapper.adminCancelAndRelease(orderId, reason, PENDING, APPROVED, CANCELLED) > 0;
     }
 

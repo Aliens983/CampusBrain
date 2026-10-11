@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * 用户敏感信息外泄守护测试：
- * 对外 DTO 的 JSON 不得包含 password；实体/DO 的 toString 不得带出密码哈希。
+ * 对外 DTO 的 JSON 不得包含 password；实体/DO 的 toString 不得带出密码哈希.
  *
  * @author forever-king
  */

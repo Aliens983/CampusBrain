@@ -3,14 +3,14 @@ package com.kb.infrastructure.common;
 import lombok.Getter;
 
 /**
- * 统一业务错误码枚举。
+ * 统一业务错误码枚举.
  * <p>
  * <b>契约（2026-09-12 统一）</b>：{@code code} 一律为 {@code Integer}，成功恒为 <b>200</b>，
- * 与 CAS 的 {@code CommonResult.code} 及前端 {@code request.ts} 的判断保持一致。
+ * 与 CAS 的 {@code CommonResult.code} 及前端 {@code request.ts} 的判断保持一致.
  * </p>
  * <p>
  * 数值区间：{@code 400/404/500} 沿用 HTTP 语义；其余按业务分类分段，
- * 末位与原字母码序号对应（A001 → 1001，U002 → 2002 …）。
+ * 末位与原字母码序号对应（A001 → 1001，U002 → 2002 …）.
  * <ul>
  *   <li>1xxx — 认证/授权 (Auth)</li>
  *   <li>2xxx — 用户 (User)</li>

@@ -14,6 +14,11 @@ import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.List;
 
+/**
+ * 教师固定时段排班生成任务.启动时与每日零点触发，为在岗教师按工作日生成 14 天内的固定时段.
+ *
+ * @author forever-king
+ */
 @Slf4j
 @Component
 @RequiredArgsConstructor

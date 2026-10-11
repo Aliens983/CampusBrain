@@ -6,7 +6,7 @@ import java.util.List;
  * 实体抽取器接口 — 从文本中提取命名实体
  * <p>
  * 支持不同实现：LLM-based（精确但慢）、Regex-based（快速但覆盖窄）、
- * NLP pipeline（专业但重）。SPI 机制允许运行时切换
+ * NLP pipeline（专业但重）.SPI 机制允许运行时切换
  * </p>
  *
  * @author forever-king

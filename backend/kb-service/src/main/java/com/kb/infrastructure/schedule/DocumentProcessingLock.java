@@ -13,31 +13,31 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 文档处理相关的 Redis 短锁（12-03）。
+ * 文档处理相关的 Redis 短锁.
  * <p>
  * 两类锁，均基于 SET NX EX，宕机时靠 TTL 自动释放：
  * <ul>
- *   <li><b>processing 锁</b>：消费者开始处理时占用。同一文档的重复消息（本地重试、
+ *   <li><b>processing 锁</b>：消费者开始处理时占用.同一文档的重复消息（本地重试、
  *       超时回收重投、手工重放）只有一个真正执行者，避免两个消费者并发
- *       "删旧向量 → 写新向量"互相踩踏。锁值为本 JVM 生成的 owner token，
+ *       "删旧向量 → 写新向量"互相踩踏.锁值为本 JVM 生成的 owner token，
  *       因此同一条消息在本 JVM 内的 Spring retry 重试、以及 TTL 窗口内重新投递回本 JVM，
  *       都能被识别为"持有者本人"而放行；TTL 过期后 token 对不上（或键已不存在）则不再放行；</li>
  *   <li><b>reclaim 锁</b>：超时回收任务重投前占用，保证多实例部署下只有一个实例
- *       对同一文档执行重投，避免每轮扫描重复发消息。</li>
+ *       对同一文档执行重投，避免每轮扫描重复发消息.</li>
  * </ul>
  * <p>
- * 3.9（深度审查 P1）加固：
+ * 加固：
  * <ul>
- *   <li><b>双判据</b>：除 Redis token 外，本 JVM 维护"在途任务登记表"（{@link #inFlightTasks}）。
+ *   <li><b>双判据</b>：除 Redis token 外，本 JVM 维护"在途任务登记表"（{@link #inFlightTasks}）.
  *       token 匹配且本机已有该文档的在途处理 → 判定为"TTL 窗口内重投递回本实例的重复消息"，
  *       直接确认跳过，杜绝与首次处理并发执行"删旧→写新"；token 匹配但在途表无登记
- *       → 本地 Spring retry 重试，放行并重新登记。</li>
+ *       → 本地 Spring retry 重试，放行并重新登记.</li>
  *   <li><b>锁续约（watchdog）</b>：定时刷新本机在途文档的 Redis 锁 TTL，
- *       正常处理超过锁 TTL 不再中途失锁，跨实例并发窗口被彻底关闭。</li>
+ *       正常处理超过锁 TTL 不再中途失锁，跨实例并发窗口被彻底关闭.</li>
  *   <li><b>登记表清理</b>：终态/可重试退出后注销在途登记；定时剪除长期无活动条目，
- *       防止 token 与登记项随文档状态悬停只增不减。</li>
+ *       防止 token 与登记项随文档状态悬停只增不减.</li>
  * </ul>
- * Redis 不可用时采取保守策略：获取失败视为"已被占用"（宁可本轮不处理，也不并发）。
+ * Redis 不可用时采取保守策略：获取失败视为"已被占用"（宁可本轮不处理，也不并发）.
  *
  * @author forever-king
  */
@@ -66,17 +66,17 @@ public class DocumentProcessingLock {
     /** 本 JVM 对每个文档持有的 owner token，识别"本地重试 / TTL 内回到本实例的重投递" */
     private final Map<Long, String> processingTokens = new ConcurrentHashMap<>();
 
-    /** 3.9 本 JVM 在途任务登记表：documentId → 最近活动时间（毫秒），用于识别"重复消息与首次处理并发" */
+    /** 本 JVM 在途任务登记表：documentId → 最近活动时间（毫秒），用于识别"重复消息与首次处理并发" */
     private final Map<Long, Long> inFlightTasks = new ConcurrentHashMap<>();
 
     /**
-     * 进入文档处理：尝试占用处理锁。
+     * 进入文档处理：尝试占用处理锁.
      * <ul>
      *   <li>Redis 锁抢占成功 → 登记本机在途，放行；</li>
      *   <li>锁被本机持有（token 匹配）：在途表中已有登记 → 判定重复消息，拒绝（跳过）；
      *       无登记（本地 Spring retry）→ 放行并重新登记；</li>
      *   <li>锁被其他实例持有 → 拒绝（ACK 跳过）；</li>
-     *   <li>Redis 故障 → 保守拒绝。</li>
+     *   <li>Redis 故障 → 保守拒绝.</li>
      * </ul>
      *
      * @return true 表示当前调用可以执行处理；false 表示应 ACK 跳过
@@ -99,8 +99,8 @@ public class DocumentProcessingLock {
                 return false;
             }
             if (inFlightTasks.containsKey(documentId)) {
-                // 3.9 双判据：本机已有在途任务，本次是"TTL 窗口内重投递回本实例"的重复消息，
-                // 若放行会与首次处理并发"删旧→写新"产生重复分块/向量交错，直接跳过。
+                // 双判据：本机已有在途任务，本次是"TTL 窗口内重投递回本实例"的重复消息，
+                // 若放行会与首次处理并发"删旧→写新"产生重复分块/向量交错，直接跳过.
                 log.info("文档在本实例仍有在途处理，重复消息跳过: id={}", documentId);
                 return false;
             }
@@ -116,7 +116,7 @@ public class DocumentProcessingLock {
     }
 
     /**
-     * 终态退出（READY/永久 FAILED）：仅当锁仍属于本 JVM 时删除，并清理本地 token 与在途登记。
+     * 终态退出（READY/永久 FAILED）：仅当锁仍属于本 JVM 时删除，并清理本地 token 与在途登记.
      */
     public void exitProcessing(Long documentId) {
         // 先取 token 再移除，Redis 侧按"锁仍属于本 JVM"才删除，防止误删他人接管的锁
@@ -137,17 +137,17 @@ public class DocumentProcessingLock {
     }
 
     /**
-     * 在途登记注销（3.9）：可重试失败向 Spring retry 抛出的 finally 中调用，
-     * 使下一次重试能重新入场（token 仍在 Redis，只是取消"在途"标记）。
-     * 幂等；对终态路径（已调用 {@link #exitProcessing}）无害。
+     * 在途登记注销：可重试失败向 Spring retry 抛出的 finally 中调用，
+     * 使下一次重试能重新入场（token 仍在 Redis，只是取消"在途"标记）.
+     * 幂等；对终态路径（已调用 {@link #exitProcessing}）无害.
      */
     public void markTaskFinished(Long documentId) {
         inFlightTasks.remove(documentId);
     }
 
     /**
-     * 是否有其他（或本机）进程正在处理该文档：Redis 处理锁存在即视为处理中。
-     * 供超时回收任务在重投前探测（3.10），避免对仍在处理的文档反复重投。
+     * 是否有其他（或本机）进程正在处理该文档：Redis 处理锁存在即视为处理中.
+     * 供超时回收任务在重投前探测，避免对仍在处理的文档反复重投.
      */
     public boolean isProcessing(Long documentId) {
         try {
@@ -161,7 +161,7 @@ public class DocumentProcessingLock {
     }
 
     /**
-     * 尝试占用"回收重投"锁。
+     * 尝试占用"回收重投"锁.
      *
      * @return true 表示本实例获得本轮重投权
      */
@@ -177,8 +177,8 @@ public class DocumentProcessingLock {
     }
 
     /**
-     * 3.9 锁续约 Watchdog：对"本机在途"的文档定期刷新 Redis 锁 TTL，
-     * 使正常处理超过锁 TTL 也不失锁；同时更新在途登记的活动时间。
+     * 锁续约 Watchdog：对"本机在途"的文档定期刷新 Redis 锁 TTL，
+     * 使正常处理超过锁 TTL 也不失锁；同时更新在途登记的活动时间.
      */
     @Scheduled(fixedDelayString = "${kb.document.processing-lock-renew-ms:300000}")
     public void renewProcessingLocks() {
@@ -213,8 +213,8 @@ public class DocumentProcessingLock {
     }
 
     /**
-     * 3.9 登记表剪枝：清理长期无活动的本机 token 与在途登记（文档悬停/进程异常退出后的残留），
-     * 防止内存只增不减。
+     * 登记表剪枝：清理长期无活动的本机 token 与在途登记（文档悬停/进程异常退出后的残留），
+     * 防止内存只增不减.
      */
     @Scheduled(fixedDelayString = "${kb.document.processing-lock-prune-after-ms:3600000}",
             initialDelayString = "${kb.document.processing-lock-prune-after-ms:3600000}")

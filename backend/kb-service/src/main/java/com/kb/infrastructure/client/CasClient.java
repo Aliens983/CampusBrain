@@ -21,15 +21,15 @@ import java.util.List;
 /**
  * CAS 服务接口客户端（Feign + Nacos 服务发现）
  * <p>
- * 通过内网签名头调用 CAS，用于 AI 助手实时查询预约数据并代办预约。
- * 直连 CAS（不走网关），依赖 {@link CasFeignConfig} 注入 X-Internal-Sign 签名。
+ * 通过内网签名头调用 CAS，用于 AI 助手实时查询预约数据并代办预约.
+ * 直连 CAS（不走网关），依赖 {@link CasFeignConfig} 注入 X-Internal-Sign 签名.
  * </p>
  * <p>
  * 两类接口：
  * <ol>
  *   <li>{@code /appointments/availability}、{@code /appointments/mine} —— 原有精简只读接口；</li>
  *   <li>{@code /appointments/assistant/**} —— 预约助手专用：按校区/分类/时段过滤的查询，
- *       以及「草稿 → 确认」两段式预约。</li>
+ *       以及「草稿 → 确认」两段式预约.</li>
  * </ol>
  *
  * @author forever-king

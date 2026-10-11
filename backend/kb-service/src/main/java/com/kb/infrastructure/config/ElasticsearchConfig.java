@@ -28,8 +28,8 @@ public class ElasticsearchConfig {
 
     @Bean
     public ElasticsearchClient elasticsearchClient() {
-        // 4.18（深度审查 P2）：补齐 connect/socket 超时与连接池上限，
-        // 防止 ES 挂起时问答检索线程被拖死（检索侧还有 30s 总预算兜底）。
+        // 补齐 connect/socket 超时与连接池上限，
+        // 防止 ES 挂起时问答检索线程被拖死（检索侧还有 30s 总预算兜底）.
         RestClient restClient = RestClient.builder(
                 new HttpHost(host, port, "http")
         ).setRequestConfigCallback(cb -> cb

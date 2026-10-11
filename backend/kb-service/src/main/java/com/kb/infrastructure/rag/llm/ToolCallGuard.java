@@ -4,16 +4,16 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * 预约工具链路的"空承诺"判定（Function Calling 守卫）。
+ * 预约工具链路的"空承诺"判定（Function Calling 守卫）.
  * <p>
  * 真实故障（2026-09-26）：用户在多轮对话中催促查询教师余量时，模型连续 6 轮只输出
  * "我这就为您查询…""I'll query the teacher consultation availability…"之类的承诺
- * 就结束了本轮输出，<b>始终没有发起工具调用</b>，用户反复追问才在某一轮碰巧查到。
+ * 就结束了本轮输出，<b>始终没有发起工具调用</b>，用户反复追问才在某一轮碰巧查到.
  * </p>
  * <p>
  * 本类用于流式工具链路结束后识别这类回答：整轮零工具执行且输出是"承诺/过程性空话"
- * （或为空），编排层据此丢弃该输出并强制带"必须调工具"的指令重试一次。
- * 带真实数据的长回答（咨询师列表、余量数字）与正常寒暄不会被误判。
+ * （或为空），编排层据此丢弃该输出并强制带"必须调工具"的指令重试一次.
+ * 带真实数据的长回答（咨询师列表、余量数字）与正常寒暄不会被误判.
  * </p>
  *
  * @author forever-king
@@ -37,9 +37,9 @@ final class ToolCallGuard {
             "接下来我", "这就看看", "这就去看", "继续查", "我进一步", "再帮您确认",
             "我先查", "我先看", "我先确认", "我先帮", "帮您查一下", "去看一下");
 
-    /** 去空白/标点后匹配的承诺标记（含历史故障中出现的英文搪塞句）。
+    /** 去空白/标点后匹配的承诺标记（含历史故障中出现的英文搪塞句）.
      *  注意：不放"帮您查/帮你查"这类裸词——能力介绍"我可以帮你查询可预约服务"也会命中，
-     *  只保留带明确"即将去做但还没做"时态的词。 */
+     *  只保留带明确"即将去做但还没做"时态的词. */
     private static final List<String> PROMISE_MARKERS = List.of(
             "我这就", "我来帮", "我来查", "我来给", "我去查", "马上为", "马上帮", "马上查",
             "马上就", "稍等", "这就为", "这就帮", "这就去", "正在查", "正在为", "正在帮",
@@ -48,9 +48,9 @@ final class ToolCallGuard {
 
     /**
      * 英文"即将去查"句式（2026-09-29 复发：用户夹杂英文催促时模型整轮回英文承诺，
-     * 如 "I'll look up the available consultants for you."，旧标记只覆盖 query 漏掉了 look up）。
+     * 如 "I'll look up the available consultants for you."，旧标记只覆盖 query 漏掉了 look up）.
      * 在保留单词边界的规范化原文（小写、弯引号转正、压空白）上匹配，
-     * 避免 "ill" 命中 still/will 等普通词。
+     * 避免 "ill" 命中 still/will 等普通词.
      */
     private static final Pattern ENGLISH_INTENT = Pattern.compile(
             "(?is)\\b(i'll|i will|let me|i'm going to|i am going to|going to|gonna)\\b"
@@ -93,7 +93,7 @@ final class ToolCallGuard {
     /**
      * 工具已经执行过、但最终回答仍停在"我再去看看/让我确认一下"的计划式旁白，
      * 没有给出基于工具数据的最终结论（2026-09-26 端到端实测出现：
-     * searchConsultants 返回后模型说"让我看看两位老师的详细时间"就结束）。
+     * searchConsultants 返回后模型说"让我看看两位老师的详细时间"就结束）.
      *
      * @return true 表示需要带"立即给出最终结论"的指令补救一次
      */
@@ -140,7 +140,7 @@ final class ToolCallGuard {
 
     /**
      * 预约意图下零工具承诺时的强制指令：槽位已基本齐全，要求本轮把工具链一路走完
-     * （searchConsultants → searchConsultantTimeSlots → prepareBooking），不要停在查询计划上。
+     * （searchConsultants → searchConsultantTimeSlots → prepareBooking），不要停在查询计划上.
      */
     static String forcedBookingRetryInstruction() {
         return """
@@ -157,7 +157,7 @@ final class ToolCallGuard {
 
     /**
      * 预约意图 + 槽位不全时的<b>确定性中文反问</b>（不依赖模型，防止模型连续输出
-     * 英文承诺、重试也无效时给用户错误的"查询失败"兜底）。
+     * 英文承诺、重试也无效时给用户错误的"查询失败"兜底）.
      *
      * @param query       用户原话（用于判断是否预约意图）
      * @param contextHint 会话槽位的人类可读描述（BookingSlots.describe()）

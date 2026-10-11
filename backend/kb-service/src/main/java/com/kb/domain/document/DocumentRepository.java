@@ -34,7 +34,7 @@ public interface DocumentRepository {
     List<Document> findByStatus(DocumentStatus status);
 
     /**
-     * 查找长时间停留在给定中间态、updated_at 早于阈值的文档（超时回收用，12-03）。
+     * 查找长时间停留在给定中间态、updated_at 早于阈值的文档（超时回收用）.
      *
      * @param statuses  中间态集合（UPLOADED/PARSING/CHUNKING/EMBEDDING）
      * @param threshold updated_at 上界（早于该时间才算卡死）
@@ -44,7 +44,7 @@ public interface DocumentRepository {
                                          LocalDateTime threshold, int limit);
 
     /**
-     * 按归属用户分页查询，按创建时间倒序。
+     * 按归属用户分页查询，按创建时间倒序.
      *
      * @param ownerId 归属用户ID
      * @param page    0 基页码
@@ -53,7 +53,7 @@ public interface DocumentRepository {
     List<Document> findByOwnerId(Long ownerId, int page, int size);
 
     /**
-     * 按归属用户 + 标题关键词分页查询（下推 SQL，避免全表内存过滤）。
+     * 按归属用户 + 标题关键词分页查询（下推 SQL，避免全表内存过滤）.
      *
      * @param ownerId 归属用户ID
      * @param keyword 标题关键词
@@ -63,7 +63,7 @@ public interface DocumentRepository {
     List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword, int page, int size);
 
     /**
-     * 管理员视角：全量标题关键词分页查询（无 owner 条件，下推 SQL）。
+     * 管理员视角：全量标题关键词分页查询（无 owner 条件，下推 SQL）.
      *
      * @param keyword 标题关键词
      * @param page    0 基页码

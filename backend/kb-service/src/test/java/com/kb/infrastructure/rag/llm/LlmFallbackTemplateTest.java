@@ -13,11 +13,11 @@ import java.util.function.Consumer;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * A-07：熔断 fallback 统一模板 {@code llmFallback(scene, consumer, t)} 行为测试。
+ * 熔断 fallback 统一模板 {@code llmFallback(scene, consumer, t)} 行为测试.
  * <p>
  * 四条 @CircuitBreaker 链路的 fallback 方法全部收敛到该模板，这里直接验证模板：
  * 同步链路（consumer=null）只返回文案；流式链路还必须把兜底文案推给消费者；
- * 失败原因（异常类型+消息）由日志携带，面向用户的文案不含任何内部细节。
+ * 失败原因（异常类型+消息）由日志携带，面向用户的文案不含任何内部细节.
  *
  * @author forever-king
  */

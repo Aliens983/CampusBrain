@@ -17,10 +17,10 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * {@link TokenAuthenticationFilter} 公开路径单测。
+ * {@link TokenAuthenticationFilter} 公开路径单测.
  * <p>
  * 重点守护：独立管理端口上的只读 Actuator 路径（health/prometheus）必须免内网签名，
- * 否则 Prometheus 抓取与容器探活会被 401 拒绝；其余路径在无签名头时必须被拦截。
+ * 否则 Prometheus 抓取与容器探活会被 401 拒绝；其余路径在无签名头时必须被拦截.
  *
  * @author forever-king
  */

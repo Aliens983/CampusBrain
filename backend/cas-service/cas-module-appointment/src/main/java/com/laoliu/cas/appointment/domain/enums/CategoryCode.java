@@ -3,10 +3,10 @@ package com.laoliu.cas.appointment.domain.enums;
 import lombok.Getter;
 
 /**
- * 服务业务分类编码（与 service_category 表 V4 种子、services.category_id 对应）。
+ * 服务业务分类编码（与 service_category 表 V4 种子、services.category_id 对应）.
  * <p>
- * 此前业务侧靠在服务名里匹配"咨询/辅导/设备"等关键词来猜分类（3.1.6），
- * 一旦运营改个名字就会路由错下单链路；现统一以 categoryCode 显式判断。
+ * 此前业务侧靠在服务名里匹配"咨询/辅导/设备"等关键词来猜分类，
+ * 一旦运营改个名字就会路由错下单链路；现统一以 categoryCode 显式判断.
  *
  * @author forever-king
  */

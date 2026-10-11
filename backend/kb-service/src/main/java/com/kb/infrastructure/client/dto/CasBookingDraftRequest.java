@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
  * 生成预约草稿请求（对应 CAS 的 AssistantBookingDraftRequest）
  * <p>
  * 资源类型由传入的资源 ID 组合推断：consultantId+slotId → 咨询；roomId → 教室；
- * equipmentId → 设备；仅 serviceId → 通用/活动。
+ * equipmentId → 设备；仅 serviceId → 通用/活动.
  *
  * @author forever-king
  */

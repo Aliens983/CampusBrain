@@ -24,7 +24,7 @@ import java.util.concurrent.Future;
  * <p>
  * Uses text-embedding-3-small (default) or text-embedding-3-large.
  * 文本按可配置批次切分后，在 embeddingExecutor 上并发调用模型 API，
- * 各批次结果按提交顺序回填，保证返回向量与输入文本严格对齐。
+ * 各批次结果按提交顺序回填，保证返回向量与输入文本严格对齐.
  * </p>
  *
  * @author forever-king
@@ -42,8 +42,8 @@ public class OpenAiEmbeddingService implements EmbeddingService {
     private String modelName;
 
     /**
-     * 单次 API 请求携带的文本条数上限，可配置。
-     * 切得越大单请求越慢、超限重试代价越高；32 条是吞吐与单请求延迟的平衡点。
+     * 单次 API 请求携带的文本条数上限，可配置.
+     * 切得越大单请求越慢、超限重试代价越高；32 条是吞吐与单请求延迟的平衡点.
      */
     @Value("${kb.embedding.batch-size:32}")
     private int batchSize;
@@ -73,7 +73,7 @@ public class OpenAiEmbeddingService implements EmbeddingService {
 
     /**
      * 熔断打开时不能伪造向量返回（会污染向量库/语义缓存）：直接抛出，
-     * 文档入库由 MQ 重试/DLQ 兜底，语义缓存调用方自行降级为"未命中"。
+     * 文档入库由 MQ 重试/DLQ 兜底，语义缓存调用方自行降级为"未命中".
      */
     @SuppressWarnings("unused")
     private float[] embedUnavailable(String text, Throwable t) {
@@ -137,7 +137,7 @@ public class OpenAiEmbeddingService implements EmbeddingService {
     }
 
     /**
-     * 调用模型嵌入单批文本，返回与入参等长、同序的向量列表。
+     * 调用模型嵌入单批文本，返回与入参等长、同序的向量列表.
      */
     private List<float[]> embedOneBatch(List<String> batch) {
         Response<List<Embedding>> response = embeddingModel.embedAll(

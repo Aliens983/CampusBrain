@@ -41,8 +41,7 @@ public class SecurityFrameworkUtils {
     }
 
     /**
-     * 将 LoginUser 设置到 Spring Security 上下文（Q-02 后为 common-auth 统一模型，
-     * 数字角色 code → ROLE_* 权限的映射统一走 {@link RolePolicy}）
+     * 将 LoginUser 设置到 Spring Security 上下文（后为 common-auth 统一模型，* 数字角色 code → ROLE_* 权限的映射统一走 {@link RolePolicy}）
      */
     public static void setLoginUser(LoginUser loginUser) {
         UsernamePasswordAuthenticationToken authentication =

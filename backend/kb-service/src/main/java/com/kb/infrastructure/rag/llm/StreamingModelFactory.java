@@ -12,7 +12,7 @@ import java.time.Duration;
 /**
  * 流式模型工厂：单例持有 {@link OpenAiClient}（内含 OkHttp 连接池/线程池），
  * 每次流式问答新建一个轻量的 {@link CancellableOpenAiStreamingChatModel} 绑定本次
- * 请求的 {@link CancellationToken}。
+ * 请求的 {@link CancellationToken}.
  *
  * @author forever-king
  */
@@ -55,7 +55,7 @@ public class StreamingModelFactory {
     }
 
     /**
-     * 创建绑定本次请求取消令牌的流式模型。
+     * 创建绑定本次请求取消令牌的流式模型.
      */
     public CancellableOpenAiStreamingChatModel create(CancellationToken token) {
         return new CancellableOpenAiStreamingChatModel(

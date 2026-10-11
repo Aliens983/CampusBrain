@@ -33,10 +33,10 @@ public class CasFeignConfig {
     @Bean
     public RequestInterceptor casInternalAuthInterceptor() {
         return template -> {
-            // 4.2（深度审查 P0）：身份来源顺序 = SecurityContext（业务线程）→
-            // ChatContextHolder（请求级会话上下文，供 @Tool 回调线程兜底）→ 服务身份。
+            // 身份来源顺序 = SecurityContext（业务线程）→
+            // ChatContextHolder（请求级会话上下文，供 @Tool 回调线程兜底）→ 服务身份.
             // 弃用 MODE_INHERITABLETHREADLOCAL 后，池化线程不会再继承残留身份，
-            // 从根上避免"以他人身份执行我的预约/真实下单"的串号。
+            // 从根上避免"以他人身份执行我的预约/真实下单"的串号.
             Long currentUserId = SecurityFrameworkUtils.getLoginUserId();
             if (currentUserId == null) {
                 ChatContextHolder.ChatContext ctx = ChatContextHolder.get();

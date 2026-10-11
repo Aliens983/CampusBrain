@@ -31,7 +31,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * SSE 问答：终态错误发流内 error 事件（不触发 EventSource 自动重连）与 requestId 在途幂等。
+ * SSE 问答：终态错误发流内 error 事件（不触发 EventSource 自动重连）与 requestId 在途幂等.
  *
  * @author forever-king
  */

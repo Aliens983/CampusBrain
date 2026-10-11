@@ -77,9 +77,9 @@ public class BookAppController {
         return CommonResult.success(booking);
     }
 
-    // 注：原 /room、/equipment、/consultation 三个「专项预约」端点已移除。
+    // 注：原 /room、/equipment、/consultation 三个「专项预约」端点已移除.
     // 它们把 roomId / equipmentId / consultantId 误当作 serviceId 直接传入 bookService，
-    // 且丢弃 date / startTime / endTime / purpose 等预约要素，语义错误且是误用陷阱。
+    // 且丢弃 date / startTime / endTime / purpose 等预约要素，语义错误且是误用陷阱.
     // 资源类预约请改用各自的正确端点：
     //   · 教室 → RoomAppController         POST /app/rooms/{roomId}/book
     //   · 设备 → EquipmentAppController    POST /app/equipment/{equipmentId}/book

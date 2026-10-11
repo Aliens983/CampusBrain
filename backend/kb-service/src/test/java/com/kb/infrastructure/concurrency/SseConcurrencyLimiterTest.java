@@ -8,7 +8,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
- * {@link SseConcurrencyLimiter} 单元测试：许可上限、释放复用、非法配置。
+ * {@link SseConcurrencyLimiter} 单元测试：许可上限、释放复用、非法配置.
  *
  * @author forever-king
  */

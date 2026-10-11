@@ -62,11 +62,11 @@ public class RedisUtil {
     }
 
     /**
-     * 读取 INCR 计数器并统一转为 Long。
+     * 读取 INCR 计数器并统一转为 Long.
      * <p>
      * INCR 在 Redis 中写入的是裸数字串，而 value 走 Jackson2Json 反序列化，
      * 小数值会被还原成 Integer（大数值才是 Long）；直接用泛型 {@code get} 接收为 Long
-     * 会在 checkcast 处抛 ClassCastException。计数器场景一律走本方法。
+     * 会在 checkcast 处抛 ClassCastException.计数器场景一律走本方法.
      *
      * @return key 不存在时返回 null
      */

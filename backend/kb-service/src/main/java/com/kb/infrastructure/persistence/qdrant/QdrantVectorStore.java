@@ -31,13 +31,13 @@ import static io.qdrant.client.WithPayloadSelectorFactory.enable;
 @RequiredArgsConstructor
 public class QdrantVectorStore implements VectorStoreService {
 
-    /** 4.18（深度审查 P2）：Qdrant gRPC 调用等待上限（秒），防止外部客户端挂起堵线程 */
+    /** Qdrant gRPC 调用等待上限（秒），防止外部客户端挂起堵线程 */
     private static final int QDRANT_TIMEOUT_SECONDS = 30;
 
     /** Qdrant客户端实例，用于与Qdrant向量数据库通信 */
     private final QdrantClient qdrantClient;
 
-    /** Qdrant gRPC 公共样板（collection 创建/payload 转换，Q-05） */
+    /** Qdrant gRPC 公共样板（collection 创建/payload 转换） */
     private final QdrantSupport qdrantSupport;
 
     /** Qdrant集合名称 */
@@ -55,7 +55,7 @@ public class QdrantVectorStore implements VectorStoreService {
     @Override
     @PostConstruct
     public void ensureCollection() {
-        // Q-05：collection 幂等创建收敛到 QdrantSupport；保持历史容错语义（failFast=false）
+        // collection 幂等创建收敛到 QdrantSupport；保持历史容错语义（failFast=false）
         qdrantSupport.ensureCollection(collectionName, vectorSize, distanceType,
                 Distance.Euclid, false);
     }
@@ -106,7 +106,7 @@ public class QdrantVectorStore implements VectorStoreService {
                     .setScoreThreshold((float) scoreThreshold)
                     .setWithPayload(enable(true));
 
-            // 4.1（深度审查 P0）：归属过滤——可见 = 全局共享（owner_id 缺失/空）OR 当前用户私有
+            // 归属过滤——可见 = 全局共享（owner_id 缺失/空）OR 当前用户私有
             Filter.Builder filterBuilder = Filter.newBuilder();
             Condition.Builder ownerMatches = Condition.newBuilder().setField(
                     FieldCondition.newBuilder().setKey("owner_id").setMatch(
@@ -197,14 +197,14 @@ public class QdrantVectorStore implements VectorStoreService {
             ).get(QDRANT_TIMEOUT_SECONDS, TimeUnit.SECONDS);
             log.debug("Deleted vectors for document {} from Qdrant", documentId);
         } catch (InterruptedException e) {
-            // A-04：恢复中断标志并向上抛出，让上层重试/对账链路感知失败，
+            // 恢复中断标志并向上抛出，让上层重试/对账链路感知失败，
             // 不能静默吞掉导致 Qdrant 孤儿向量永久残留
             Thread.currentThread().interrupt();
             log.error("Qdrant deleteByDocumentId interrupted: documentId={}", documentId, e);
             throw new IllegalStateException(
                     "Qdrant 删除文档向量被中断: documentId=" + documentId, e);
         } catch (ExecutionException | TimeoutException e) {
-            // 4.18：超时同样按失败上抛，由 IndexDeleteFailure 对账链路补偿
+            // 超时同样按失败上抛，由 IndexDeleteFailure 对账链路补偿
             log.error("Qdrant deleteByDocumentId failed: documentId={}", documentId, e);
             throw new IllegalStateException(
                     "Qdrant 删除文档向量失败: documentId=" + documentId, e);

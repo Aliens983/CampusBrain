@@ -46,8 +46,8 @@ public class RoomServiceImpl implements RoomService {
     }
 
     /**
-     * 教室时段预约：一个教室同一时间段只允许一人。
-     * 并发安全：事务内对教室行加锁，再校验"该教室该时段无其它活跃预约"，才幂等落单。
+     * 教室时段预约：一个教室同一时间段只允许一人.
+     * 并发安全：事务内对教室行加锁，再校验"该教室该时段无其它活跃预约"，才幂等落单.
      *
      * @return 新预约单 orderId
      */
@@ -64,8 +64,8 @@ public class RoomServiceImpl implements RoomService {
         } catch (Exception e) {
             throw new BusinessException(BookErrorCode.BOOK_TIME_INVALID);
         }
-        // P1-06：此前只拒绝"早于今天"，导致可以对昨天、以及今天已开始的时段下单。
-        // 统一交给时间窗策略：过去日期 + 今天已开始/已结束的时段一律拒绝。
+        // 此前只拒绝"早于今天"，导致可以对昨天、以及今天已开始的时段下单.
+        // 统一交给时间窗策略：过去日期 + 今天已开始/已结束的时段一律拒绝.
         BookingWindowPolicy.assertRoomBookable(date, req.getStartTime());
 
         Room room = roomRepository.findByIdForUpdate(roomId)
@@ -90,11 +90,11 @@ public class RoomServiceImpl implements RoomService {
     }
 
     /**
-     * 校验服务处于上架状态。
+     * 校验服务处于上架状态.
      * <p>
      * 通用下单（{@code /app/bookings}）会校验 isAvailable，但教室/设备/咨询三条资源专用
-     * 端点此前都不校验——管理员下架服务后用户照样能约，且这些预约会照常出现在列表里。
-     * 这里统一补齐，与通用下单口径一致。
+     * 端点此前都不校验——管理员下架服务后用户照样能约，且这些预约会照常出现在列表里.
+     * 这里统一补齐，与通用下单口径一致.
      */
     private void assertServiceAvailable(Long serviceId) {
         if (serviceId == null) {

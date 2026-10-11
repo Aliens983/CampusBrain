@@ -15,8 +15,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
- * {@link KnowledgeGraphService} 12-10 整改测试：
- * 跨分块共现加权、文档归属精确摘除、容量上限、一跳邻居扩展。
+ * {@link KnowledgeGraphService} 整改测试：
+ * 跨分块共现加权、文档归属精确摘除、容量上限、一跳邻居扩展.
  *
  * @author forever-king
  */

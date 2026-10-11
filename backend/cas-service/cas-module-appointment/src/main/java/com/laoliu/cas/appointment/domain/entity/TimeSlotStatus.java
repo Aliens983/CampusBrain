@@ -1,6 +1,10 @@
 package com.laoliu.cas.appointment.domain.entity;
 
-/** Persisted time-slot state. The booking flow continues to use its existing boolean contract. */
+/**
+ * Persisted time-slot state. The booking flow continues to use its existing boolean contract.
+ *
+ * @author forever-king
+ */
 public enum TimeSlotStatus {
     SCHEDULED(1),
     OCCUPIED(0),

@@ -26,7 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * SSE 问答接口的全局限流行为测试。
+ * SSE 问答接口的全局限流行为测试.
  *
  * @author forever-king
  */

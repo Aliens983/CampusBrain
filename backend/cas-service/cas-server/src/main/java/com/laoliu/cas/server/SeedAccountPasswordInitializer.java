@@ -16,11 +16,11 @@ import java.util.Set;
  * 种子账号口令首启重置（默认不启用）
  * <p>
  * Flyway V2/V3 播种的 11 个账号（管理员、普通用户、9 名教师）统一使用演示口令
- * 123456 的固定 BCrypt 哈希。部署环境通过环境变量 {@code SEED_ACCOUNT_PASSWORD}
+ * 123456 的固定 BCrypt 哈希.部署环境通过环境变量 {@code SEED_ACCOUNT_PASSWORD}
  * （→ {@code app.security.seed-account-password}）注入新口令后，本组件在启动阶段
- * 仅把「仍保持原始种子哈希」的账号重置为新口令；已经自行改过密码的账号不受影响。
+ * 仅把「仍保持原始种子哈希」的账号重置为新口令；已经自行改过密码的账号不受影响.
  * </p>
- * <p>未设置环境变量时完全跳过，本地开发与存量环境行为不变。</p>
+ * <p>未设置环境变量时完全跳过，本地开发与存量环境行为不变.</p>
  *
  * @author forever-king
  */
@@ -73,8 +73,8 @@ public class SeedAccountPasswordInitializer implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         if (seedAccountPassword == null || seedAccountPassword.isBlank()) {
             // 生产 profile 下留空不能无条件放行：必须确认种子账号都已改过密码，
-            // 否则带着公开演示口令 123456 的实例一旦暴露到网络即被接管。
-            // 已全部改密后允许留空（兼容部署文档"生效后删除该变量"的约定）。
+            // 否则带着公开演示口令 123456 的实例一旦暴露到网络即被接管.
+            // 已全部改密后允许留空（兼容部署文档"生效后删除该变量"的约定）.
             if (productionProfile) {
                 enforceSeedPasswordsChanged();
             }
@@ -96,11 +96,11 @@ public class SeedAccountPasswordInitializer implements ApplicationRunner {
     }
 
     /**
-     * 生产部署的弱口令闸门：仍有种子账号保持公开演示哈希时拒绝启动。
+     * 生产部署的弱口令闸门：仍有种子账号保持公开演示哈希时拒绝启动.
      * <p>
      * 处置方式二选一：① 注入 SEED_ACCOUNT_PASSWORD 后重启（首启自动重置）；
-     * ② 手工修改全部种子账号口令后再重启。全部改密后本检查自然放行，
-     * 此后可永久移除该环境变量。
+     * ② 手工修改全部种子账号口令后再重启.全部改密后本检查自然放行，
+     * 此后可永久移除该环境变量.
      * </p>
      */
     private void enforceSeedPasswordsChanged() {

@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * 用户信息跨模块 API 实现（2.3：契约在 cas-module-system-api，实体映射留在本模块内部）
+ * 用户信息跨模块 API 实现（契约在 cas-module-system-api，实体映射留在本模块内部）
  *
  * @author forever-king
  */

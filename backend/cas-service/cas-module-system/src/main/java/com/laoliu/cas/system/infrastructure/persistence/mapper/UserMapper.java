@@ -52,7 +52,7 @@ public interface UserMapper extends BaseMapper<UserDO> {
     List<UserDO> getAllUsers();
 
     /**
-     * 分页查询所有用户。MyBatis-Plus 自动拦截 Page 参数添加 LIMIT/OFFSET
+     * 分页查询所有用户.MyBatis-Plus 自动拦截 Page 参数添加 LIMIT/OFFSET
      */
     @Select("SELECT * FROM user ORDER BY id DESC")
     IPage<UserDO> getAllUsersWithPage(Page<UserDO> page);

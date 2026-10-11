@@ -69,7 +69,7 @@ public class ParserFactory {
     }
 
     public Set<String> getSupportedTypes() {
-        // Q-03：白名单收敛——不再硬编码，以解析器注册表的实际注册扩展名为唯一源
+        // 白名单收敛——不再硬编码，以解析器注册表的实际注册扩展名为唯一源
         return registry.supportedExtensions();
     }
 }

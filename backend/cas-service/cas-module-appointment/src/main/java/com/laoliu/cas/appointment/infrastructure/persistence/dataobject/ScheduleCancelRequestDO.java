@@ -6,6 +6,11 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+/**
+ * 停诊申请持久化对象.
+ *
+ * @author forever-king
+ */
 @Data
 public class ScheduleCancelRequestDO {
     private Long id;

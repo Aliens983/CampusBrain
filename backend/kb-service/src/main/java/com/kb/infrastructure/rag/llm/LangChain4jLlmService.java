@@ -40,13 +40,13 @@ import java.util.function.Consumer;
 /**
  * LLM service implementation using LangChain4j.
  * <p>
- * 支持同步与流式（SSE）两种回答生成方式。流式链路（RAG / Function Calling / 兜底）
- * 均通过 {@link StreamingModelFactory} 创建可取消模型：客户端断连时中止供应商在途请求。
+ * 支持同步与流式（SSE）两种回答生成方式.流式链路（RAG / Function Calling / 兜底）
+ * 均通过 {@link StreamingModelFactory} 创建可取消模型：客户端断连时中止供应商在途请求.
  * </p>
  * <p>
- * <b>熔断语义（12-01）</b>：供应商异常不再在方法内部吞成普通字符串，
+ * <b>熔断语义</b>：供应商异常不再在方法内部吞成普通字符串，
  * 主备两次尝试均失败后抛出 {@link LlmUnavailableException}，由 Resilience4j
- * 统计真实失败率；熔断打开时由 fallbackMethod 返回统一兜底文案。
+ * 统计真实失败率；熔断打开时由 fallbackMethod 返回统一兜底文案.
  * </p>
  *
  * @author forever-king
@@ -71,9 +71,9 @@ public class LangChain4jLlmService implements LlmService {
     @Value("${llm.provider:deepseek}")
     private String llmProvider;
 
-    // ========== 跨供应商兜底密钥（Q-06：统一走 Spring 配置注入，不再 System.getenv 直取） ==========
+    // ========== 跨供应商兜底密钥（统一走 Spring 配置注入，不再 System.getenv 直取） ==========
     // 与主模型密钥（StreamingModelFactory 的 @Value）同一配置入口，缺失时为空串而非 NPE；
-    // 可用 application.yml / 环境变量 / 配置中心任一渠道覆盖。
+    // 可用 application.yml / 环境变量 / 配置中心任一渠道覆盖.
 
     @Value("${llm.fallback.deepseek-api-key:${DEEPSEEK_API_KEY:}}")
     private String fallbackDeepseekApiKey;
@@ -85,41 +85,40 @@ public class LangChain4jLlmService implements LlmService {
     private String fallbackOpenaiApiKey;
 
     /**
-     * 硅基流动兜底聊天密钥。优先独立配置 {@code llm.fallback.siliconflow-api-key} /
+     * 硅基流动兜底聊天密钥.优先独立配置 {@code llm.fallback.siliconflow-api-key} /
      * 环境变量 {@code SILICONFLOW_API_KEY}；历史实现直接复用 {@code EMBEDDING_API_KEY}
      * （本部署 embedding 亦托管在硅基流动、同一账号 key 可用于 chat），保留该回退仅为向后兼容，
-     * 新部署应配置独立聊天 key（见 application.yml 注释"chat/embedding key 分开"）。
+     * 新部署应配置独立聊天 key（见 application.yml 注释"chat/embedding key 分开"）.
      */
     @Value("${llm.fallback.siliconflow-api-key:${SILICONFLOW_API_KEY:${EMBEDDING_API_KEY:}}}")
     private String fallbackSiliconflowApiKey;
 
     /**
-     * 注入 LLM 的历史消息上限（1.6：与 AnswerPipeline 的 {@code kb.qa.history-limit}
-     * 统一为单一配置项，此前常量 6 与配置 8 双口径冲突，实际生效被二次截断为 6）。
+     * 注入 LLM 的历史消息上限（与 AnswerPipeline 的 {@code kb.qa.history-limit}，* 统一为单一配置项，此前常量 6 与配置 8 双口径冲突，实际生效被二次截断为 6）.
      */
     @Value("${kb.qa.history-limit:8}")
     private int maxHistoryMessages;
 
     /**
-     * 流式生成的最长等待时间（秒）。
+     * 流式生成的最长等待时间（秒）.
      * <p>
      * 需大于 LLM 自身的超时，正常回答不会被截断；但一旦供应商连接挂起导致
-     * onComplete/onError 都不回调，join() 必须有上限，否则 Tomcat 线程永久泄漏。
+     * onComplete/onError 都不回调，join() 必须有上限，否则 Tomcat 线程永久泄漏.
      */
     private static final int LLM_STREAM_TIMEOUT_SECONDS = 90;
 
     /**
-     * RAG 流式"无法回答"判定的缓冲前缀长度。
+     * RAG 流式"无法回答"判定的缓冲前缀长度.
      * 标记词最长 4 个字（如"没有足够的""文档中未"），缓冲 16 字足以覆盖
      * "抱歉，我无法回答……"这类礼貌前缀；前缀内一旦出现标记词即中止 RAG 流并
-     * 切换直接兜底，避免把"无法回答"推给用户后又拼一段兜底答案。
+     * 切换直接兜底，避免把"无法回答"推给用户后又拼一段兜底答案.
      */
     private static final int NO_ANSWER_GATE_CHARS = 16;
 
-    /** 熔断打开/主备耗尽时面向用户的统一兜底文案（A-07；不含任何内部失败细节） */
+    /** 熔断打开/主备耗尽时面向用户的统一兜底文案（不含任何内部失败细节） */
     private static final String LLM_FALLBACK_MESSAGE = "AI 服务暂时不可用，请稍后重试。";
 
-    /** 3.2（深度审查 P0）：流式入口 token 消费者判空兜底（no-op），避免同步链路传 null 导致 NPE */
+    /** 流式入口 token 消费者判空兜底（no-op），避免同步链路传 null 导致 NPE */
     private static final java.util.function.Consumer<String> NOOP_CONSUMER = token -> {
     };
 
@@ -187,7 +186,7 @@ public class LangChain4jLlmService implements LlmService {
                                            List<ChatMessage> conversationHistory,
                                            Consumer<String> tokenConsumer,
                                            CancellationToken cancellationToken) {
-        // 3.2（深度审查 P0）：同步无召回等入口可能传 null，归一化为 no-op 防止下游 accept NPE
+        // 同步无召回等入口可能传 null，归一化为 no-op 防止下游 accept NPE
         Consumer<String> sink = tokenConsumer == null ? NOOP_CONSUMER : tokenConsumer;
         List<dev.langchain4j.data.message.ChatMessage> messages = toLangChainMessages(
                 promptEngine.buildFullPrompt(query, retrievedDocs, conversationHistory));
@@ -207,7 +206,7 @@ public class LangChain4jLlmService implements LlmService {
      * <ol>
      *   <li>先缓冲前 {@link #NO_ANSWER_GATE_CHARS} 字不下发，期间出现"无法回答"类标记词，
      *       立即中止本次请求，改走不带 RAG 上下文的直接流式兜底；</li>
-     *   <li>前缀安全则一次性放出缓冲，后续 token 直通，打字机效果对 RAG 回答同样生效。</li>
+     *   <li>前缀安全则一次性放出缓冲，后续 token 直通，打字机效果对 RAG 回答同样生效.</li>
      * </ol>
      */
     private String streamRagWithGate(String query,
@@ -298,14 +297,14 @@ public class LangChain4jLlmService implements LlmService {
                                                     Consumer<String> tokenConsumer,
                                                     String contextHint,
                                                     CancellationToken cancellationToken) {
-        // 3.2（深度审查 P0）：null 消费者归一化，防止 onNext/fallback accept 时 NPE
+        // null 消费者归一化，防止 onNext/fallback accept 时 NPE
         Consumer<String> sink = tokenConsumer == null ? NOOP_CONSUMER : tokenConsumer;
         String userMessage = buildToolUserMessage(query, retrievedDocs, conversationHistory, contextHint);
 
         try {
-            // 第一轮：门控缓冲——工具真正开始执行前不把模型输出下发。
+            // 第一轮：门控缓冲——工具真正开始执行前不把模型输出下发.
             // 防止模型只说"我这就为您查询…"就结束本轮（零工具空承诺，2026-09-26 真实故障），
-            // 承诺句被直接推给前端且整轮结束、用户只能反复催促。
+            // 承诺句被直接推给前端且整轮结束、用户只能反复催促.
             ToolTurnTracker tracker = new ToolTurnTracker();
             TurnResult turn = runToolTurn(userMessage, tracker, sink, cancellationToken);
             if (cancellationToken.isCancelled()) {
@@ -417,10 +416,10 @@ public class LangChain4jLlmService implements LlmService {
      *   <li>第一个 @Tool 开始执行前，模型输出只缓冲不下发（工具启动瞬间一次性 flush）；</li>
      *   <li>工具一旦开始，门打开，后续 token（工具结果返回后的最终回答）直通，
      *       保留打字机效果；</li>
-     *   <li>整轮零工具时缓冲不下发，交由上层判定（正常回答放行 / 空承诺重试）。</li>
+     *   <li>整轮零工具时缓冲不下发，交由上层判定（正常回答放行 / 空承诺重试）.</li>
      * </ul>
      * 说明：DeepSeek 决定发起 function call 时首轮 content 通常为空，
-     * 因此正常路径下缓冲基本为空，不影响首字延迟。
+     * 因此正常路径下缓冲基本为空，不影响首字延迟.
      */
     private TurnResult runToolTurn(String userMessage, ToolTurnTracker tracker,
                                    Consumer<String> sink, CancellationToken cancellationToken) {
@@ -545,7 +544,7 @@ public class LangChain4jLlmService implements LlmService {
     public String generateAnswerDirectStreaming(String query, List<ChatMessage> conversationHistory,
                                                 Consumer<String> tokenConsumer,
                                                 CancellationToken cancellationToken) {
-        // 3.2（深度审查 P0）：null 消费者归一化，防止 onNext/fallback accept 时 NPE
+        // null 消费者归一化，防止 onNext/fallback accept 时 NPE
         Consumer<String> sink = tokenConsumer == null ? NOOP_CONSUMER : tokenConsumer;
         List<dev.langchain4j.data.message.ChatMessage> messages = buildDirectMessages(query, conversationHistory);
         StringBuilder full = new StringBuilder();
@@ -594,8 +593,8 @@ public class LangChain4jLlmService implements LlmService {
     // ==================== 跨供应商兜底 ====================
 
     /**
-     * Fallback: 使用备选 Provider 同步重试一次。两次尝试都失败时抛
-     * {@link LlmUnavailableException}，让熔断器统计失败而非永久返回假成功。
+     * Fallback: 使用备选 Provider 同步重试一次.两次尝试都失败时抛
+     * {@link LlmUnavailableException}，让熔断器统计失败而非永久返回假成功.
      */
     private String tryFallback(List<dev.langchain4j.data.message.ChatMessage> messages) {
         ModelProvider primary = ModelProvider.fromName(llmProvider);
@@ -634,7 +633,7 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * 按兜底供应商解析聊天密钥（Q-06：唯一出口，配置注入）。
+     * 按兜底供应商解析聊天密钥（唯一出口，配置注入）.
      */
     private String resolveFallbackApiKey(ModelProvider provider) {
         return switch (provider) {
@@ -647,8 +646,8 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * 流式场景的跨供应商兜底：同步调用备选模型后一次性下发。
-     * 客户端已取消则不再请求、不下发。
+     * 流式场景的跨供应商兜底：同步调用备选模型后一次性下发.
+     * 客户端已取消则不再请求、不下发.
      */
     private String tryFallbackStreaming(List<dev.langchain4j.data.message.ChatMessage> messages,
                                         Consumer<String> tokenConsumer,
@@ -664,15 +663,15 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * 熔断器 fallback 统一模板（A-07）。
+     * 熔断器 fallback 统一模板.
      * <p>
      * 五条 {@code @CircuitBreaker} 链路（RAG 同步/RAG 流式/工具同步/工具流式/直连流式）此前各自
-     * 维护一份近乎相同的兜底方法，日志里无法区分是哪条链路、因何原因降级。
+     * 维护一份近乎相同的兜底方法，日志里无法区分是哪条链路、因何原因降级.
      * 现统一收敛到本模板：
      * <ul>
      *   <li>{@code scene} 标识降级链路，日志结构化输出场景与失败原因（异常类型+消息），
      *       熔断打开（CallNotPermittedException）与主备耗尽（LlmUnavailableException）可区分；</li>
-     *   <li>面向用户仍只返回同一句通用文案，失败原因不外泄（对齐 B-02）。</li>
+     *   <li>面向用户仍只返回同一句通用文案，失败原因不外泄.</li>
      * </ul>
      *
      * @param scene         降级链路标识（rag-sync / rag-streaming / tools-sync / tools-streaming / direct-streaming）
@@ -693,12 +692,12 @@ public class LangChain4jLlmService implements LlmService {
 
     /**
      * 等待流式完成：服务端 90s 硬超时会中止在途请求；客户端取消会抛
-     * {@link StreamCancelledException}，上层不推错误文案。
+     * {@link StreamCancelledException}，上层不推错误文案.
      * <p>
-     * 3.12（深度审查 P2）：取消时<b>提前结束等待</b>——在令牌上注册
+     * 取消时<b>提前结束等待</b>——在令牌上注册
      * {@code future.cancel(false)}，join 立即以 CancellationException 返回并转为
      * StreamCancelledException；真正中止供应商在途 SSE 由模型层
-     * {@code CancellableOpenAiStreamingChatModel} 的 onAbort → ResponseHandle.cancel() 完成。
+     * {@code CancellableOpenAiStreamingChatModel} 的 onAbort → ResponseHandle.cancel() 完成.
      * </p>
      */
     private void awaitStream(CompletableFuture<Void> future, CancellationToken cancellationToken) {
@@ -723,7 +722,7 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     private String awaitFuture(CompletableFuture<String> future, CancellationToken cancellationToken) {
-        // 3.12：取消时提前结束等待，不等供应商剩余超时
+        // 取消时提前结束等待，不等供应商剩余超时
         cancellationToken.onAbort(() -> future.cancel(false));
         try {
             return future.orTimeout(LLM_STREAM_TIMEOUT_SECONDS, TimeUnit.SECONDS).join();
@@ -740,14 +739,14 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * 一轮工具流式对话的结果：完整回答文本 + 本轮 @Tool 实际执行次数。
+     * 一轮工具流式对话的结果：完整回答文本 + 本轮 @Tool 实际执行次数.
      */
     private record TurnResult(String text, int toolCount) {
     }
 
     /**
      * 单轮工具执行追踪器：统计 @Tool 实际被调用的次数，并在第一个工具开始时回调
-     * （用于打开流式门控、把承诺缓冲提前放行）。
+     * （用于打开流式门控、把承诺缓冲提前放行）.
      */
     static final class ToolTurnTracker {
         private final AtomicInteger count = new AtomicInteger(0);
@@ -769,10 +768,10 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * 为 AppointmentTool 的每个 @Tool 方法构建带"执行计数 + 结构化日志"的执行器。
+     * 为 AppointmentTool 的每个 @Tool 方法构建带"执行计数 + 结构化日志"的执行器.
      * <p>
      * 此前工具调用对日志完全不可见（只有启动时一行初始化日志），模型"光说不调"时
-     * 无法从服务端判断到底有没有发起查询；包装后每个工具的开始/耗时/失败均有 INFO/WARN。
+     * 无法从服务端判断到底有没有发起查询；包装后每个工具的开始/耗时/失败均有 INFO/WARN.
      * </p>
      */
     private Map<ToolSpecification, ToolExecutor> trackedToolExecutors(ToolTurnTracker tracker) {
@@ -814,7 +813,7 @@ public class LangChain4jLlmService implements LlmService {
 
     /**
      * 创建与客户端取消令牌联动的内部令牌：客户端取消会传播到内部令牌，
-     * 但内部令牌（服务端超时/门控切换）取消不影响客户端令牌语义。
+     * 但内部令牌（服务端超时/门控切换）取消不影响客户端令牌语义.
      */
     private CancellationToken linkedToken(CancellationToken clientToken) {
         CancellationToken internal = new CancellationToken();
@@ -855,8 +854,8 @@ public class LangChain4jLlmService implements LlmService {
     }
 
     /**
-     * 追加最近若干条历史消息。条数取 {@code kb.qa.history-limit}
-     * （与 AnswerPipeline 同一配置，1.6 统一口径），避免串题与 token 浪费。
+     * 追加最近若干条历史消息.条数取 {@code kb.qa.history-limit}
+     * （与 AnswerPipeline 同一配置，统一口径），避免串题与 token 浪费.
      */
     private void appendRecentHistory(List<dev.langchain4j.data.message.ChatMessage> messages,
                                      List<ChatMessage> conversationHistory) {

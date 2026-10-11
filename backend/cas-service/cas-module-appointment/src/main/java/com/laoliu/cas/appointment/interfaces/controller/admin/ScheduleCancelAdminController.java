@@ -20,6 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+/**
+ * 管理员停诊申请审批接口.
+ *
+ * @author forever-king
+ */
 @Tag(name = "停诊审批")
 @RestController
 @RequestMapping("/admin/schedule-cancellations")

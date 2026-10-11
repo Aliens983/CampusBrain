@@ -14,7 +14,7 @@ import java.util.List;
  * 预约助手：预约草稿（待确认）
  * <p>
  * 草稿只是"待用户确认的预约意图"，不落预约表；
- * 存 Redis 并设置 TTL，确认时二次校验后走既有下单逻辑。
+ * 存 Redis 并设置 TTL，确认时二次校验后走既有下单逻辑.
  *
  * @author forever-king
  */

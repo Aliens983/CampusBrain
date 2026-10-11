@@ -28,10 +28,10 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
     long countByStatus(@Param("status") String status);
 
     /**
-     * 查询长时间停留在中间态的文档（12-03 超时回收）。
+     * 查询长时间停留在中间态的文档（超时回收）.
      * <p>
      * 文档表 updated_at 为 ON UPDATE CURRENT_TIMESTAMP，每次状态流转都会刷新；
-     * updated_at 早于阈值说明处理链路中断（消费者宕机、消息丢失、重试耗尽进 DLQ）。
+     * updated_at 早于阈值说明处理链路中断（消费者宕机、消息丢失、重试耗尽进 DLQ）.
      */
     @Select({
             "<script>",
@@ -46,7 +46,7 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
                                              @Param("limit") int limit);
 
     /**
-     * 按归属用户分页查询。
+     * 按归属用户分页查询.
      */
     @Select("SELECT * FROM document WHERE owner_id = #{ownerId} " +
             "ORDER BY created_at DESC LIMIT #{offset}, #{size}")
@@ -55,13 +55,13 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
                                          @Param("size") int size);
 
     /**
-     * 全量分页查询（管理员列表）。
+     * 全量分页查询（管理员列表）.
      */
     @Select("SELECT * FROM document ORDER BY created_at DESC LIMIT #{offset}, #{size}")
     List<DocumentDO> selectPageAll(@Param("offset") long offset, @Param("size") int size);
 
     /**
-     * 归属 + 标题关键词分页搜索。
+     * 归属 + 标题关键词分页搜索.
      */
     @Select("SELECT * FROM document WHERE owner_id = #{ownerId} " +
             "AND LOWER(title) LIKE CONCAT('%', LOWER(#{keyword}), '%') " +
@@ -72,7 +72,7 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
                                                  @Param("size") int size);
 
     /**
-     * 全量标题关键词分页搜索（管理员）。
+     * 全量标题关键词分页搜索（管理员）.
      */
     @Select("SELECT * FROM document WHERE LOWER(title) LIKE CONCAT('%', LOWER(#{keyword}), '%') " +
             "ORDER BY created_at DESC LIMIT #{offset}, #{size}")

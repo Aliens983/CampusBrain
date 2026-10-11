@@ -28,11 +28,11 @@ import java.util.TreeSet;
  * 内网签名校验过滤器
  *
  * <p>当请求携带 {@code X-Internal-Sign} 时，校验签名与时间戳新鲜度，
- * 防止绕过网关伪造身份或重放签名头。若未携带签名头（例如本地直连），
- * 则剥离所有身份头后交由 {@link JWTFilter} 处理 JWT。
+ * 防止绕过网关伪造身份或重放签名头.若未携带签名头（例如本地直连），
+ * 则剥离所有身份头后交由 {@link JWTFilter} 处理 JWT.
  *
- * <p>4.10：无签名时不再裸放原请求——外部可直连 18080 伪造
- * {@code X-User-Id}/{@code X-User-Role}，必须用 wrapper 统一剥除。
+ * <p>无签名时不再裸放原请求——外部可直连 18080 伪造
+ * {@code X-User-Id}/{@code X-User-Role}，必须用 wrapper 统一剥除.
  *
  * @author forever-king
  */
@@ -66,7 +66,7 @@ public class InternalAuthFilter extends OncePerRequestFilter {
         String sign = request.getHeader(AuthConstants.HEADER_INTERNAL_SIGN);
 
         // 未携带内网签名（直连场景）：身份头一律不可信，剥除后交给 JWTFilter，
-        // 防止绕过网关直连 18080 用伪造 X-User-Id/X-User-Role 冒充任意身份（4.10）
+        // 防止绕过网关直连 18080 用伪造 X-User-Id/X-User-Role 冒充任意身份
         if (sign == null) {
             chain.doFilter(new IdentityHeaderStrippingRequestWrapper(request), response);
             return;
@@ -77,7 +77,7 @@ public class InternalAuthFilter extends OncePerRequestFilter {
                 || !internalSigner.verifyWithTimestamp(sign, MAX_AGE_SECONDS, userId, role, timestamp)) {
             log.warn("内网签名校验失败: path={}", request.getRequestURI());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-            // Q-07：统一错误体（AuthErrorResponses）
+            // 统一错误体（AuthErrorResponses）
             response.setContentType(AuthErrorResponses.JSON_CONTENT_TYPE);
             response.getWriter().write(AuthErrorResponses.unauthorized("无效的内网身份签名"));
             return;
@@ -97,10 +97,10 @@ public class InternalAuthFilter extends OncePerRequestFilter {
     }
 
     /**
-     * 剥除内网身份头的请求包装器（4.10）。
+     * 剥除内网身份头的请求包装器.
      * <p>无签名直连时，外部伪造的 X-User-Id/X-User-Role 等必须在下游（解析器、
      * 其他过滤器、Controller）看来完全不存在，而不只是覆盖为空字符串——
-     * 因此 getHeader/getHeaders/getHeaderNames 三个入口都要过滤。
+     * 因此 getHeader/getHeaders/getHeaderNames 三个入口都要过滤.
      */
     static class IdentityHeaderStrippingRequestWrapper extends jakarta.servlet.http.HttpServletRequestWrapper {
 

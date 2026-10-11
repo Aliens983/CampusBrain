@@ -23,6 +23,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 教师排班与停诊申请应用服务实现.
+ *
+ * @author forever-king
+ */
 @Service
 @RequiredArgsConstructor
 public class TeacherScheduleServiceImpl implements TeacherScheduleService {

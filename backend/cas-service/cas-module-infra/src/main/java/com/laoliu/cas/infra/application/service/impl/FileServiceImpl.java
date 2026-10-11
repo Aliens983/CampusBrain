@@ -17,14 +17,14 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * 本地文件存储。
+ * 本地文件存储.
  * <p>
- * 安全约束（4.1.14）：
+ * 安全约束：
  * <ul>
  *   <li>扩展名白名单：仅常见图片与办公文档，<b>不含 svg/html 等可承载脚本的类型</b>；</li>
  *   <li>存储名固定为 32 位 UUID + 校验过的小写扩展名，天然杜绝双扩展名/可执行文件；</li>
  *   <li>subDir 仅允许单层安全字符，落盘前再做 normalize + 目录包含校验，防御路径穿越；</li>
- *   <li>大小双重限制：Spring multipart 配置 + service 内显式校验。</li>
+ *   <li>大小双重限制：Spring multipart 配置 + service 内显式校验.</li>
  * </ul>
  *
  * @author forever-king
@@ -33,7 +33,7 @@ import java.util.regex.Pattern;
 @Service
 public class FileServiceImpl implements FileService {
 
-    /** 允许上传的扩展名（小写、带点）。svg 可内嵌脚本故不开放。 */
+    /** 允许上传的扩展名（小写、带点）.svg 可内嵌脚本故不开放. */
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
             ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp",
             ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
@@ -171,7 +171,7 @@ public class FileServiceImpl implements FileService {
 
     /**
      * 校验并提取扩展名：必须存在、在白名单内；统一转小写，
-     * 避免 {@code .PNG} 与 {@code .png.png} 之类的混淆。
+     * 避免 {@code .PNG} 与 {@code .png.png} 之类的混淆.
      */
     private String resolveAllowedExtension(String originalFilename) {
         if (originalFilename == null) {
@@ -194,7 +194,7 @@ public class FileServiceImpl implements FileService {
     }
 
     /**
-     * 准备目标文件：校验 subDir、创建目录、normalize 后确认结果仍在上传根目录内。
+     * 准备目标文件：校验 subDir、创建目录、normalize 后确认结果仍在上传根目录内.
      */
     private File prepareDestination(String extension, String subDir) {
         File baseDir = new File(uploadDir).getAbsoluteFile();
@@ -207,11 +207,11 @@ public class FileServiceImpl implements FileService {
             }
             dir = new File(baseDir, subDir);
         }
-        // 规范化后做目录包含校验，杜绝任何形式的 ../ 穿越。
+        // 规范化后做目录包含校验，杜绝任何形式的 ../ 穿越.
         // 必须用 getCanonicalFile()：getAbsoluteFile() 只补全相对路径，
         // 不解析 .. 也不解析符号链接，起不到"规范化"的作用（此前变量名
-        // 叫 canonicalDir 却用的是 getAbsoluteFile，属于纸糊的防御）。
-        // getCanonicalFile 会抛 IOException，失败时按拒绝处理（fail-closed）。
+        // 叫 canonicalDir 却用的是 getAbsoluteFile，属于纸糊的防御）.
+        // getCanonicalFile 会抛 IOException，失败时按拒绝处理（fail-closed）.
         File canonicalDir;
         try {
             canonicalDir = dir.getCanonicalFile();

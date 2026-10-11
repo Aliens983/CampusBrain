@@ -11,7 +11,7 @@ import org.apache.ibatis.annotations.Update;
 import java.util.List;
 
 /**
- * 外部索引删除失败对账 Mapper（A-04）。
+ * 外部索引删除失败对账 Mapper.
  *
  * @author forever-king
  */
@@ -19,8 +19,8 @@ import java.util.List;
 public interface IndexDeleteFailureMapper extends BaseMapper<IndexDeleteFailureDO> {
 
     /**
-     * 记录失败：PENDING 已存在则刷新原因并累加重试次数；RESOLVED/GIVE_UP 行不复活。
-     * 唯一键 (document_id, target) 保证并发下只产生一行。
+     * 记录失败：PENDING 已存在则刷新原因并累加重试次数；RESOLVED/GIVE_UP 行不复活.
+     * 唯一键 (document_id, target) 保证并发下只产生一行.
      */
     @Insert("""
             INSERT INTO index_delete_failure (document_id, target, fail_reason, retry_count, status)

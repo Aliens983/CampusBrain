@@ -50,7 +50,7 @@ public class CarouselAdminController {
     @PostMapping
     @RequireRole({UserRoleEnum.ADMIN, UserRoleEnum.SUPER_ADMIN})
     public CommonResult<Void> add(@Parameter(description = "图片文件") @RequestParam("file") MultipartFile file) {
-        // 2.10：Servlet 类型只在 interfaces 层解包，应用层只接收纯数据载体
+        // Servlet 类型只在 interfaces 层解包，应用层只接收纯数据载体
         byte[] content;
         try {
             content = file.getBytes();

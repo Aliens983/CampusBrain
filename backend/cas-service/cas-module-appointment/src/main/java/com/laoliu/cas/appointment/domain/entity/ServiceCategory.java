@@ -11,8 +11,8 @@ import java.io.Serializable;
 /**
  * 服务业务分类（固定 4 类，代码级外键目标）
  * <p>
- * teacher 教师咨询 · equipment 设备借用 · space 教室空间 · activity 活动报名。
- * 由 Flyway V4 种子维护，当前不开放管理端增删改。
+ * teacher 教师咨询 · equipment 设备借用 · space 教室空间 · activity 活动报名.
+ * 由 Flyway V4 种子维护，当前不开放管理端增删改.
  *
  * @author forever-king
  */

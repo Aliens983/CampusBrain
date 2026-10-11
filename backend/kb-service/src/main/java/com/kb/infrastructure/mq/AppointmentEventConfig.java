@@ -19,10 +19,10 @@ import java.nio.charset.StandardCharsets;
 /**
  * 预约变更事件消费端（来自 CAS）
  * <p>
- * CAS 在预约创建/取消时发布事件，KB 消费后可用于更新知识索引或缓存。
+ * CAS 在预约创建/取消时发布事件，KB 消费后可用于更新知识索引或缓存.
  * <p>
  * 拓扑与 CAS 侧显式对齐（同名 DirectExchange + routingKey），
- * 不再依赖默认 exchange 的隐式绑定。
+ * 不再依赖默认 exchange 的隐式绑定.
  *
  * @author forever-king
  */
@@ -59,11 +59,11 @@ public class AppointmentEventConfig {
     }
 
     /**
-     * 消费预约变更事件。
+     * 消费预约变更事件.
      * <p>
      * 接收原始 {@link Message} 再自行解析，而不是直接声明 DTO 入参：
      * 既能兼容历史遗留的 text/plain 消息，也能保证单条脏数据只记日志丢弃，
-     * 不会因反序列化异常导致消息反复重投、卡住队列。
+     * 不会因反序列化异常导致消息反复重投、卡住队列.
      */
     @RabbitListener(queues = QUEUE)
     public void onAppointmentChanged(Message message) {
@@ -72,9 +72,9 @@ public class AppointmentEventConfig {
             AppointmentChangedEvent event = objectMapper.readValue(body, AppointmentChangedEvent.class);
             log.info("KB 收到预约变更事件: eventType={}, userId={}, serviceId={}, occurredAt={}",
                     event.getEventType(), event.getUserId(), event.getServiceId(), event.getOccurredAt());
-            // 3.1.1：预约创建/取消会改变实时余量、可约状态与"我的预约"，
-            // 失效精确 + 语义两层问答缓存，避免把过期答案继续返回给用户。
-            // 失效失败只记日志：缓存是可重建的派生数据，不应让消费异常反复重投卡住队列。
+            // 预约创建/取消会改变实时余量、可约状态与"我的预约"，
+            // 失效精确 + 语义两层问答缓存，避免把过期答案继续返回给用户.
+            // 失效失败只记日志：缓存是可重建的派生数据，不应让消费异常反复重投卡住队列.
             try {
                 qaCacheService.evictAll();
                 semanticCacheService.evictAll();

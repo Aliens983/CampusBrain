@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
  * 预约助手应用服务实现
  * <p>
  * 只做「读」与「两段式预约」：草稿阶段纯校验预览，确认阶段复用既有下单服务，
- * 保证与用户端走完全相同的防冲突 / 防超卖 / 幂等逻辑，不另起一套。
+ * 保证与用户端走完全相同的防冲突 / 防超卖 / 幂等逻辑，不另起一套.
  *
  * @author forever-king
  */
@@ -117,8 +117,8 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
         Map<Long, ServiceItem> serviceIndex = serviceIndex();
         LocalDate parsedDate = parseDateOrNull(date);
 
-        // 第一遍：校区/关键词过滤。先收集命中咨询师，再一条 GROUP BY 批量取当日可预约时段数
-        // （4.7：此前每命中一位咨询师就发一次 findAvailable，N 位咨询师 N 次 SQL）
+        // 第一遍：校区/关键词过滤.先收集命中咨询师，再一条 GROUP BY 批量取当日可预约时段数
+        // （此前每命中一位咨询师就发一次 findAvailable，N 位咨询师 N 次 SQL）
         List<Consultant> matched = new ArrayList<>();
         Map<Long, ServiceItem> matchedService = new LinkedHashMap<>();
         for (Consultant c : consultantRepository.findAll()) {
@@ -181,7 +181,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 .collect(Collectors.groupingBy(Room::getServiceId, LinkedHashMap::new, Collectors.toList()));
 
         // 先收集本校区全部待展示（教室, 所属服务），再一条 GROUP BY 批量取窗口占用
-        // （4.7：此前每间教室各发一次 countRoomOverlap，N 间教室 N 次 SQL）
+        // （此前每间教室各发一次 countRoomOverlap，N 间教室 N 次 SQL）
         List<Room> candidateRooms = new ArrayList<>();
         Map<Long, ServiceItem> roomService = new LinkedHashMap<>();
         for (ServiceItem s : serviceItemService.getAvailableServices()) {
@@ -227,7 +227,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 && !startTime.isBlank() && !endTime.isBlank() && startTime.compareTo(endTime) < 0;
 
         // 第一遍：校区/关键词过滤，收集命中设备，再一条 GROUP BY 批量取窗口占用
-        // （4.7：此前每台设备各发一次 sumEquipmentOverlap，N 台设备 N 次 SQL）
+        // （此前每台设备各发一次 sumEquipmentOverlap，N 台设备 N 次 SQL）
         List<Equipment> matched = new ArrayList<>();
         Map<Long, ServiceItem> matchedService = new LinkedHashMap<>();
         for (Equipment e : equipmentRepository.findAll()) {
@@ -298,7 +298,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     @Override
     public AssistantBookingDraft createDraft(Long userId, AssistantBookingDraftRequest request) {
         AssistantBookingDraft draft = resolveAndValidate(request);
-        // 校验不通过：不分配草稿ID、不写 Redis。
+        // 校验不通过：不分配草稿ID、不写 Redis.
         // 无效草稿本就无法被确认，给它一个 ID 只会误导调用方，并留下永不清理的键
         if (Boolean.FALSE.equals(draft.getValid())) {
             log.info("预约草稿校验不通过: userId={}, reason={}", userId, draft.getInvalidReason());
@@ -380,9 +380,9 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     // ==================== 草稿解析与校验 ====================
 
     /**
-     * 解析请求 → 推断资源类型 → 逐项校验，返回草稿（未分配 draftId）。
+     * 解析请求 → 推断资源类型 → 逐项校验，返回草稿（未分配 draftId）.
      * 校验不通过时 {@code valid=false} 并给出 {@code invalidReason}，不抛异常，
-     * 便于 AI 把原因直接转述给用户。
+     * 便于 AI 把原因直接转述给用户.
      */
     private AssistantBookingDraft resolveAndValidate(AssistantBookingDraftRequest request) {
         if (request == null || request.getServiceId() == null) {
@@ -530,9 +530,8 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     // ==================== 下单执行 ====================
 
     /**
-     * 按资源类型派发到既有下单服务，与用户端共用同一套防冲突 / 防超卖逻辑。
-     * 返回各下单服务回填的真实 orderId（3.3.1：不再用"查用户最新一单"猜测，
-     * 避免并发下拿到他人/他单订单号）。
+     * 按资源类型派发到既有下单服务，与用户端共用同一套防冲突 / 防超卖逻辑.
+     * 返回各下单服务回填的真实 orderId（不再用"查用户最新一单"猜测，* 避免并发下拿到他人/他单订单号）.
      */
     private Long executeBooking(Long userId, AssistantBookingDraft draft) {
         switch (draft.getResourceType()) {
@@ -540,8 +539,8 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
                 ConsultationBookRequest req = new ConsultationBookRequest();
                 req.setSlotId(resolveSlotId(draft));
                 // 第二个参数是 consultantId 而非 serviceId：草稿的 resourceId 对咨询类型就是咨询师ID
-                // （见 validateConsultation 的 valid(...) 入参）。此前误传 serviceId，
-                // 会导致查出错误咨询师或直接 CONSULTANT_NOT_FOUND。
+                // （见 validateConsultation 的 valid(...) 入参）.此前误传 serviceId，
+                // 会导致查出错误咨询师或直接 CONSULTANT_NOT_FOUND.
                 return consultationService.bookConsultation(userId, draft.getResourceId(), req.getSlotId());
             }
             case AssistantBookingDraft.TYPE_ROOM -> {
@@ -569,9 +568,9 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     /** 咨询预约下单只需要 slotId；草稿里存的是咨询师ID，这里反查其可用时段中的同一时段 */
     private Long resolveSlotId(AssistantBookingDraft draft) {
-        // 草稿里保存的就是生成草稿时校验通过的时段ID，直接用，无需再反查。
+        // 草稿里保存的就是生成草稿时校验通过的时段ID，直接用，无需再反查.
         // 反查仅用于兼容历史草稿（slotId 为空），它依赖日期解析与起止时间字符串精确匹配，
-        // 一旦时段被占用或时间格式有出入就会误判为"时段不可用"，因此只作兜底。
+        // 一旦时段被占用或时间格式有出入就会误判为"时段不可用"，因此只作兜底.
         if (draft.getSlotId() != null) {
             return draft.getSlotId();
         }

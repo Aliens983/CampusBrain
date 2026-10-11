@@ -43,13 +43,13 @@ import java.util.function.Consumer;
  * </p>
  * <p>
  * <b>预约采用两段式</b>：工具只生成草稿，本服务检测用户"确认/取消"后
- * 才真正调用 CAS 下单，保证 AI 不会擅自替用户预约。
+ * 才真正调用 CAS 下单，保证 AI 不会擅自替用户预约.
  * </p>
  * <p>
- * <b>Q-01 拆分</b>：本服务只做编排。回答生成路由委托 {@link AnswerPipeline}，
+ * <b>拆分</b>：本服务只做编排.回答生成路由委托 {@link AnswerPipeline}，
  * 问答缓存读写委托 {@link CacheGuard}，待确认预约动作（确认/取消/丢弃）委托
  * {@link PendingBookingExecutor}，行为与拆分前完全一致（SSE 协议、断连取消、
- * 缓存判定、两段式预约均不变）。
+ * 缓存判定、两段式预约均不变）.
  * </p>
  *
  * @author forever-king
@@ -68,7 +68,7 @@ public class QaApplicationService implements IQaApplicationService {
     private final CacheGuard cacheGuard;
     private final PendingBookingExecutor pendingExecutor;
 
-    /** 每日请求计数 key 的 TTL（小时），默认 25（覆盖次日零点），B-04 配置化 */
+    /** 每日请求计数 key 的 TTL（小时），默认 25（覆盖次日零点），配置化 */
     @Value("${kb.qa.daily-counter-ttl-hours:25}")
     private int dailyCounterTtlHours;
 
@@ -100,8 +100,8 @@ public class QaApplicationService implements IQaApplicationService {
                                 Consumer<List<Conversation.CitationRef>> onCitations,
                                 Consumer<Long> onMessageId,
                                 Consumer<AssistantEvent> onEvent) {
-        // 3.12（深度审查 P2）：本重载不带 CancellationToken，调用方拿不到断连取消能力
-        // （走它仅用于无取消需求的场景/测试；生产 SSE 入口 QaController 直用 8 参含 token 版）。
+        // 本重载不带 CancellationToken，调用方拿不到断连取消能力
+        // （走它仅用于无取消需求的场景/测试；生产 SSE 入口 QaController 直用 8 参含 token 版）.
         return askStreaming(query, sessionId, currentUserId, CancellationToken.none(),
                 onToken, onCitations, onMessageId, onEvent);
     }
@@ -118,7 +118,7 @@ public class QaApplicationService implements IQaApplicationService {
         Long userId = currentUserId != null ? currentUserId : SecurityFrameworkUtils.getLoginUserId();
 
         // 累积本次已生成的回答：客户端中途断连时用于尽力落库已生成部分，
-        // 同时所有下游回调统一走 tokenCollector（回调本身可感知 sink 已取消）。
+        // 同时所有下游回调统一走 tokenCollector（回调本身可感知 sink 已取消）.
         StringBuilder partialAnswer = new StringBuilder();
         Consumer<String> tokenCollector = token -> {
             partialAnswer.append(token);
@@ -129,7 +129,7 @@ public class QaApplicationService implements IQaApplicationService {
 
         // 会话载入纳入 try：此前 loadForUser 在 try 之外，Redis 故障会直接抛出
         // （SSE 控制器只能 sink.error → 浏览器自动重连重发）；现统一走错误分支，
-        // 落通用错误回答并由控制器发终止事件，不触发重连。
+        // 落通用错误回答并由控制器发终止事件，不触发重连.
         ChatSession session;
         try {
             session = chatSessionRepository.loadForUser(sid, userId);
@@ -154,7 +154,7 @@ public class QaApplicationService implements IQaApplicationService {
 
             // ---- Step 1.5: 纯知识类问题先查问答缓存 ----
             // 预约实时类（命中预约意图或会话已带槽位）一律不查不写，避免余量/档期过期；
-            // 精确缓存未命中再查语义缓存（相似度阈值 0.95）。
+            // 精确缓存未命中再查语义缓存（相似度阈值 0.95）.
             String cached = tryServeFromCache(query, rewritten, sid, userId, session,
                     tokenCollector, onCitations, onMessageId, startTime);
             if (cached != null) {
@@ -184,15 +184,15 @@ public class QaApplicationService implements IQaApplicationService {
 
         } catch (StreamCancelledException cancelled) {
             // 客户端主动断开：不是错误，不推错误文案、不落错误消息；
-            // 已生成的非空部分尽力落库（刷新页面后历史不缺这一轮）。
+            // 已生成的非空部分尽力落库（刷新页面后历史不缺这一轮）.
             log.info("客户端断开，问答已中止: sid={}, 已生成 {} 字",
                     sid, partialAnswer.length());
-            // 3.12：单独计数"客户端断连中止"，区别于错误与正常完成
+            // 单独计数"客户端断连中止"，区别于错误与正常完成
             metrics.recordStreamCancelled();
             return finishAfterCancel(sid, userId, partialAnswer.toString(), startTime);
         } catch (Exception e) {
             log.error("Q&A failed for query: {}", query, e);
-            // B-02：不向用户下发底层异常原文，改通用文案；完整堆栈已进日志
+            // 不向用户下发底层异常原文，改通用文案；完整堆栈已进日志
             String errorAnswer = "抱歉，处理您的问题时遇到了错误，请稍后再试。";
             try {
                 conversationRepository.save(sid, "assistant", errorAnswer, userId);
@@ -211,7 +211,7 @@ public class QaApplicationService implements IQaApplicationService {
     }
 
     /**
-     * 保留旧签名以便既有调用方平滑迁移：不带结构化事件回调。
+     * 保留旧签名以便既有调用方平滑迁移：不带结构化事件回调.
      */
     @Override
     public String askStreaming(String query, String sessionId,
@@ -275,7 +275,7 @@ public class QaApplicationService implements IQaApplicationService {
 
     /**
      * 客户端断连后的安静收尾：已生成的非空回答尽力落库（不带前端回调），
-     * 空白回答不落库；任何落库异常都不能再抛出。
+     * 空白回答不落库；任何落库异常都不能再抛出.
      */
     private String finishAfterCancel(String sid, Long userId, String partialAnswer, long startTime) {
         if (partialAnswer != null && !partialAnswer.isBlank()) {
@@ -294,7 +294,7 @@ public class QaApplicationService implements IQaApplicationService {
     /**
      * Get conversation history for a session.
      * 归属校验：仅返回当前登录用户自己的消息；他人会话一律返回空，
-     * 不暴露会话是否存在（4.1.13）。
+     * 不暴露会话是否存在.
      */
     @Override
     public List<Conversation> getConversationHistory(String sessionId) {
@@ -313,7 +313,7 @@ public class QaApplicationService implements IQaApplicationService {
 
     /**
      * Record user feedback on an answer.
-     * 归属校验：消息必须属于当前登录用户，否则按"不存在或无权操作"拒绝。
+     * 归属校验：消息必须属于当前登录用户，否则按"不存在或无权操作"拒绝.
      */
     @Override
     public void recordFeedback(Long messageId, String feedback) {
@@ -326,10 +326,10 @@ public class QaApplicationService implements IQaApplicationService {
     }
 
     /**
-     * 清空会话上下文（槽位与待确认草稿），消息历史不受影响。
-     * 归属校验：仅允许操作当前登录用户自己的会话（4.1.13）。
+     * 清空会话上下文（槽位与待确认草稿），消息历史不受影响.
+     * 归属校验：仅允许操作当前登录用户自己的会话.
      * MySQL 中尚无消息的会话（owner 未知）也允许执行——Redis 侧会再次
-     * 按归属防御，清空一个不存在的 key 是幂等操作。
+     * 按归属防御，清空一个不存在的 key 是幂等操作.
      */
     @Override
     public void resetSession(String sessionId) {
@@ -347,16 +347,16 @@ public class QaApplicationService implements IQaApplicationService {
         chatSessionRepository.clear(sessionId, userId);
     }
 
-    // ========== 编排模板（ask / askStreaming 共用，第14轮 D-B5 收敛重复） ==========
+    // ========== 编排模板（ask / askStreaming 共用，收敛重复） ==========
 
-    /** 改写结果：改写后的问题 + 会话历史（生成回答仍需历史，故随结果一并返回）。 */
+    /** 改写结果：改写后的问题 + 会话历史（生成回答仍需历史，故随结果一并返回）. */
     private record RewriteOutcome(String query, List<LlmService.ChatMessage> history) {
     }
 
     /**
-     * Step 0：处理上一轮遗留的"待确认预约动作"。
+     * Step 0：处理上一轮遗留的"待确认预约动作".
      * 返回非 null 表示已代为处理完成（确认/取消已执行），调用方直接返回该结果；
-     * null 表示继续主线（草稿已过期则清掉，转移话题则丢弃旧草稿）。
+     * null 表示继续主线（草稿已过期则清掉，转移话题则丢弃旧草稿）.
      */
     private String handlePendingBookingAction(String query, String sid, Long userId, ChatSession session,
                                               Consumer<String> tokenCollector,
@@ -388,7 +388,7 @@ public class QaApplicationService implements IQaApplicationService {
     }
 
     /**
-     * Step 1：上下文感知改写（追问补全 + 槽位继承），并透传会话槽位给 @Tool 回退使用。
+     * Step 1：上下文感知改写（追问补全 + 槽位继承），并透传会话槽位给 @Tool 回退使用.
      */
     private RewriteOutcome rewriteWithContext(String query, String sid, Long userId, ChatSession session) {
         List<LlmService.ChatMessage> history = pipeline.loadHistory(sid, userId);
@@ -404,9 +404,9 @@ public class QaApplicationService implements IQaApplicationService {
     }
 
     /**
-     * Step 1.5：纯知识类问题先查问答缓存（精确 + 语义）。
-     * 命中返回缓存答案；未命中返回 null 并记录 miss 指标。预约实时类由
-     * isKnowledgeOnlyQuery 排除（命中预约意图或会话已带槽位一律不查不写）。
+     * Step 1.5：纯知识类问题先查问答缓存（精确 + 语义）.
+     * 命中返回缓存答案；未命中返回 null 并记录 miss 指标.预约实时类由
+     * isKnowledgeOnlyQuery 排除（命中预约意图或会话已带槽位一律不查不写）.
      */
     private String tryServeFromCache(String query, String rewritten, String sid, Long userId, ChatSession session,
                                      Consumer<String> tokenCollector,
@@ -426,7 +426,7 @@ public class QaApplicationService implements IQaApplicationService {
     }
 
     /**
-     * 本地资料命中的知识类回答写缓存（精确 + 语义），预约/兜底类不写。
+     * 本地资料命中的知识类回答写缓存（精确 + 语义），预约/兜底类不写.
      */
     private void populateKnowledgeCacheIfApplicable(String rewritten, ChatSession session,
                                                     List<RetrievalResult> reranked, String answer,
@@ -438,7 +438,7 @@ public class QaApplicationService implements IQaApplicationService {
     }
 
     /**
-     * Step 5：回读会话（工具可能更新了槽位与待确认草稿）、引用落库、前端回调与指标收尾。
+     * Step 5：回读会话（工具可能更新了槽位与待确认草稿）、引用落库、前端回调与指标收尾.
      */
     private String persistAndNotify(String sid, Long userId, String fullAnswer,
                                     List<RetrievalResult> reranked, ChatSession session,
@@ -477,8 +477,8 @@ public class QaApplicationService implements IQaApplicationService {
     // ========== Private Helpers ==========
 
     /**
-     * 每日请求计数：按自然日累计，TTL 25 小时保证次日零点后自动过期。
-     * 过期时间可配置（B-04：{@code kb.qa.daily-counter-ttl-hours}，默认 25）。
+     * 每日请求计数：按自然日累计，TTL 25 小时保证次日零点后自动过期.
+     * 过期时间可配置（{@code kb.qa.daily-counter-ttl-hours}，默认 25）.
      */
     private void incrementDailyCounter() {
         try {

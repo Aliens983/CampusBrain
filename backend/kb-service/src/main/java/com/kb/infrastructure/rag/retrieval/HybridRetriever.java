@@ -75,12 +75,12 @@ public class HybridRetriever implements com.kb.domain.rag.SearchService {
 
     /**
      * Execute dual-recall + RRF fusion.
-     * @param userId 由请求线程解析后显式传入（P1-01），池线程不再依赖 SecurityContext
+     * @param userId 由请求线程解析后显式传入，池线程不再依赖 SecurityContext
      */
     public List<RetrievalResult> hybridRetrieve(String query, Long userId) {
         // 1. Parallel dual-recall
         // userId 是调用方在请求线程解析好的局部变量，被 lambda 捕获后带到池线程，
-        // 不依赖任何 ThreadLocal 传播（P1-01）。
+        // 不依赖任何 ThreadLocal 传播.
         CompletableFuture<List<RetrievalResult>> keywordFuture =
                 CompletableFuture.supplyAsync(
                         () -> keywordRetriever.retrieve(query, userId), executor);
@@ -91,9 +91,9 @@ public class HybridRetriever implements com.kb.domain.rag.SearchService {
         List<RetrievalResult> keywordResults;
         List<RetrievalResult> vectorResults;
 
-        // 1.7（深度审查 P2）：修正"降级"名不副实——Future 若<b>异常完成</b>（检索抛错），
-        // 旧实现的 getNow() 会抛 CompletionException 让异常穿透，注释却称"按空结果降级"。
-        // 现区分三种情形：超时未完成→取 now 或空；异常完成→按空结果降级并记日志；正常→用结果。
+        // 修正"降级"名不副实——Future 若<b>异常完成</b>（检索抛错），
+        // 旧实现的 getNow() 会抛 CompletionException 让异常穿透，注释却称"按空结果降级".
+        // 现区分三种情形：超时未完成→取 now 或空；异常完成→按空结果降级并记日志；正常→用结果.
         keywordResults = awaitResult("关键词检索", keywordFuture);
         vectorResults = awaitResult("向量检索", vectorFuture);
 
@@ -108,11 +108,11 @@ public class HybridRetriever implements com.kb.domain.rag.SearchService {
     }
 
     /**
-     * 等待单侧检索结果并按空结果降级（1.7）：
+     * 等待单侧检索结果并按空结果降级：
      * <ul>
      *   <li>超时未完成 → 尽力取已完成值，未完成则空列表；</li>
      *   <li>异常完成（检索侧抛错）→ 空列表，另一侧照常参与融合；</li>
-     *   <li>正常返回 → 结果。</li>
+     *   <li>正常返回 → 结果.</li>
      * </ul>
      */
     private List<RetrievalResult> awaitResult(String label,

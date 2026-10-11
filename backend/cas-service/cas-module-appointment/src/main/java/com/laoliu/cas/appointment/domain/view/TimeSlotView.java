@@ -6,10 +6,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 咨询师可用时段查询视图（领域读模型，2.1）。
+ * 咨询师可用时段查询视图（领域读模型）.
  * <p>
  * 仓储联表查询的只读投影；对外 HTTP 响应由 interfaces 层转换为
- * {@code TimeSlotResponse}，避免 domain 反向依赖 interfaces DTO。
+ * {@code TimeSlotResponse}，避免 domain 反向依赖 interfaces DTO.
  *
  * @author forever-king
  */

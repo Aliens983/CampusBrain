@@ -25,7 +25,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * {@link IndexDeleteFailureReclaimer} 补偿对账逻辑测试（A-04）。
+ * {@link IndexDeleteFailureReclaimer} 补偿对账逻辑测试.
  *
  * @author forever-king
  */

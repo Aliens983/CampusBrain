@@ -12,7 +12,7 @@ import java.io.Serializable;
  * 会话中等待用户确认的预约草稿
  * <p>
  * 助手生成草稿后不会直接下单，而是把草稿挂到会话上；
- * 用户下一轮回复"确认"才真正提交，回复"取消"则丢弃。
+ * 用户下一轮回复"确认"才真正提交，回复"取消"则丢弃.
  *
  * @author forever-king
  */
@@ -30,10 +30,10 @@ public class PendingBooking implements Serializable {
     public static final String ACTION_CANCEL = "CANCEL";
 
     /**
-     * 待确认意向有效期：与 CAS 侧预约草稿 TTL（10 分钟）对齐。
+     * 待确认意向有效期：与 CAS 侧预约草稿 TTL（10 分钟）对齐.
      * BOOK 动作直接透传 CAS 草稿的 expiresAt（以 CAS 为准）；
      * CANCEL 动作没有 CAS 草稿，用本窗口兜底，避免取消意向永久挂起、
-     * 用户隔轮甚至跨天说「确认」仍真实执行取消。
+     * 用户隔轮甚至跨天说「确认」仍真实执行取消.
      */
     public static final long CONFIRM_TTL_MILLIS = java.time.Duration.ofMinutes(10).toMillis();
 

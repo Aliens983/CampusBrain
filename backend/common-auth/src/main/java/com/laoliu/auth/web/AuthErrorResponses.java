@@ -1,17 +1,17 @@
 package com.laoliu.auth.web;
 
 /**
- * 过滤器层未认证错误体的统一序列化工具（Q-07）。
+ * 过滤器层未认证错误体的统一序列化工具.
  * <p>
  * 此前网关 {@code AuthGlobalFilter}、KB {@code TokenAuthenticationFilter}、
  * CAS {@code InternalAuthFilter} 各自手写 401 JSON 字符串，字段口径与
  * 业务侧统一响应体（kb {@code ApiResponse} / cas {@code CommonResult}）漂移，
- * 且直接字符串拼接未转义。过滤器早于 Spring MVC 异常体系执行，
+ * 且直接字符串拼接未转义.过滤器早于 Spring MVC 异常体系执行，
  * 无法复用 {@code @RestControllerAdvice}，故在此提供不依赖 Jackson 的
- * 公共序列化（消息体均为固定文案，仍做标准 JSON 转义）。
+ * 公共序列化（消息体均为固定文案，仍做标准 JSON 转义）.
  * <p>
  * 统一字段：{@code code}（数值）、{@code message}、{@code timestamp}（毫秒），
- * 与 kb {@code ApiResponse}（NON_NULL 序列化为 code/message/timestamp）一致。
+ * 与 kb {@code ApiResponse}（NON_NULL 序列化为 code/message/timestamp）一致.
  *
  * @author forever-king
  */

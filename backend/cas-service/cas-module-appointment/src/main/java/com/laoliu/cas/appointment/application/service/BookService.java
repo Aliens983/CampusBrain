@@ -14,8 +14,8 @@ import java.util.List;
 public interface BookService {
 
     /**
-     * 下单结果：除用户信息外，携带本次实际新建的订单号列表（幂等去重掉的重复单不包含）。
-     * 供调用方（含预约助手）拿到真实 orderId，而不是再去查"用户最新一单"。
+     * 下单结果：除用户信息外，携带本次实际新建的订单号列表（幂等去重掉的重复单不包含）.
+     * 供调用方（含预约助手）拿到真实 orderId，而不是再去查"用户最新一单".
      */
     record BookingSubmitResult(UserInfoDTO userInfo, List<Long> orderIds) {
     }

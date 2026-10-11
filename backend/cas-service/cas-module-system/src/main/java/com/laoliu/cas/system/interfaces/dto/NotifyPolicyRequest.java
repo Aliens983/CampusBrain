@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 管理端全局通知策略（用于系统设置「通知策略」）。
+ * 管理端全局通知策略（用于系统设置「通知策略」）.
  *
  * @author forever-king
  */

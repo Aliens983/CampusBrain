@@ -27,7 +27,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 /**
- * {@link BookingEventPublisher} 事务提交后发送语义测试（12-08）。
+ * {@link BookingEventPublisher} 事务提交后发送语义测试.
  *
  * @author forever-king
  */
