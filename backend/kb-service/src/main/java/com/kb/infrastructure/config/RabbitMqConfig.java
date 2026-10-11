@@ -8,9 +8,9 @@ import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.boot.autoconfigure.amqp.SimpleRabbitListenerContainerFactoryConfigurer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,10 +26,6 @@ import java.util.Map;
  */
 @Configuration
 public class RabbitMqConfig {
-
-    /** 监听容器是否自动启动（测试环境可关闭，避免连接真实 RabbitMQ） */
-    @Value("${spring.rabbitmq.listener.simple.auto-startup:true}")
-    private boolean listenerAutoStartup;
 
     /** 交换机名称 */
     public static final String EXCHANGE_DOCUMENT = "kb.document.exchange";
@@ -113,18 +109,26 @@ public class RabbitMqConfig {
     }
 
     /**
-     * 监听容器工厂 — 让 @RabbitListener 也能用 JSON 转换器
+     * 监听容器工厂 — 让 @RabbitListener 也能用 JSON 转换器。
+     * <p>
+     * 必须经 {@link SimpleRabbitListenerContainerFactoryConfigurer} 应用
+     * {@code spring.rabbitmq.listener.simple.*} 配置：此前手工 new 工厂并顶掉了
+     * Boot 自动配置的同名 bean，导致 yml 中的 concurrency/max-concurrency/prefetch/
+     * retry 退避全部静默失效（实际单消费者、首次失败直接进 DLQ）。
+     * 自定义项（JSON 转换器、requeue 策略）在 configure 之后设置，保证不被覆盖。
      */
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
+            SimpleRabbitListenerContainerFactoryConfigurer configurer,
             MessageConverter messageConverter) {
         SimpleRabbitListenerContainerFactory factory =
                 new SimpleRabbitListenerContainerFactory();
-        factory.setConnectionFactory(connectionFactory);
+        // 应用 yml：并发 3~5、prefetch 2、retry 3 次指数退避、测试环境 auto-startup=false 等
+        configurer.configure(factory, connectionFactory);
         factory.setMessageConverter(messageConverter);
+        // 本地重试耗尽后不 requeue（毒消息不再无限循环），拒绝后由队列 DLX 路由进 DLQ
         factory.setDefaultRequeueRejected(false);
-        factory.setAutoStartup(listenerAutoStartup);
         return factory;
     }
 }
