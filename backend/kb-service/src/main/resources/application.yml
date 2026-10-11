@@ -312,8 +312,12 @@ kb:
     max-retries: ${KB_INDEX_CLEANUP_MAX_RETRIES:24}
     interval-ms: ${KB_INDEX_CLEANUP_INTERVAL_MS:300000}
     initial-delay-ms: ${KB_INDEX_CLEANUP_INITIAL_DELAY_MS:180000}
-  # 内存知识图谱容量护栏（12-10；中期落图存储后移除）
+  # 内存知识图谱（12-10；中期落图存储后移除）
   graph:
+    # 构建总开关，默认关闭：开启后文档入库会对每个分块同步调用一次 LLM 做实体抽取，
+    # 大文档意味着数十~上百次串行付费调用，且与在线问答共用 llmService 熔断器。
+    # 关闭时检索退化为普通混合检索（图谱为空，expandQuery 返回空集）。
+    enabled: ${KB_GRAPH_ENABLED:false}
     max-entities: ${KB_GRAPH_MAX_ENTITIES:50000}
     max-relations: ${KB_GRAPH_MAX_RELATIONS:200000}
   sse:

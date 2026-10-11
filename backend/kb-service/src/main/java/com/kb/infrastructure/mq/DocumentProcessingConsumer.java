@@ -166,7 +166,9 @@ public class DocumentProcessingConsumer {
             List<float[]> embeddings = embed(chunks);
 
             // === Step 3.5: Build knowledge graph（best-effort：
-            // 图谱是检索增强能力，抽取失败不能拖垮文档入库主链路，详见 12-10）===
+            // 图谱是检索增强能力，抽取失败不能拖垮文档入库主链路，详见 12-10。
+            // 受 kb.graph.enabled 开关控制（默认关）：关闭时 ingestChunk 直接短路，
+            // 不产生逐分块 LLM 调用；开启时每个分块同步抽取一次实体 ===
             for (DocumentChunk chunk : chunks) {
                 if (chunk.getContent() != null && !chunk.getContent().isBlank()) {
                     try {

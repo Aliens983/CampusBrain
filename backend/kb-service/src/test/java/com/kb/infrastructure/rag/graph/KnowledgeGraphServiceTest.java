@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -34,7 +35,7 @@ class KnowledgeGraphServiceTest {
     @Test
     @DisplayName("同一实体对跨分块重复共现：边去重且权重累加（O(1) Map 判重）")
     void coOccurrenceDedupAndIncrementWeight() {
-        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, 50000, 200000);
+        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, true, 50000, 200000);
         when(entityExtractor.extract(org.mockito.ArgumentMatchers.anyString(),
                         org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(List.of(entity("u1", "向量检索", 0.9), entity("u2", "RAG", 0.8)));
@@ -51,7 +52,7 @@ class KnowledgeGraphServiceTest {
     @Test
     @DisplayName("边方向无关：A-B 与 B-A 视为同一条边")
     void edgeDirectionAgnostic() {
-        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, 50000, 200000);
+        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, true, 50000, 200000);
         when(entityExtractor.extract(org.mockito.ArgumentMatchers.anyString(),
                         org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(List.of(entity("u1", "A", 0.9), entity("u2", "B", 0.8)))
@@ -67,7 +68,7 @@ class KnowledgeGraphServiceTest {
     @Test
     @DisplayName("删除文档归属：独占实体/边摘除；跨文档共享的保留")
     void deleteByDocumentRemovesOnlyExclusiveStructures() {
-        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, 50000, 200000);
+        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, true, 50000, 200000);
         // 文档1：A-B；文档2：B-C
         when(entityExtractor.extract(org.mockito.ArgumentMatchers.anyString(),
                         org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
@@ -97,7 +98,7 @@ class KnowledgeGraphServiceTest {
     @Test
     @DisplayName("重处理同一文档：先删后灌不会让旧实体残留")
     void reprocessSameDocumentDoesNotAccumulate() {
-        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, 50000, 200000);
+        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, true, 50000, 200000);
         when(entityExtractor.extract(org.mockito.ArgumentMatchers.anyString(),
                         org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(List.of(entity("old", "旧概念", 0.9)))
@@ -112,9 +113,22 @@ class KnowledgeGraphServiceTest {
     }
 
     @Test
+    @DisplayName("开关关闭（kb.graph.enabled=false）：不调用 LLM 抽取，图谱保持空")
+    void disabledSwitchSkipsExtraction() {
+        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, false, 50000, 200000);
+
+        kg.ingestChunk("任意文本", 1L, "c1");
+
+        assertThat(kg.stats().get("entityCount")).isEqualTo(0);
+        assertThat(kg.stats().get("relationCount")).isEqualTo(0);
+        // 关键：一次 LLM 抽取调用都不应发生（入库成本/熔断隔离的保障）
+        verifyNoInteractions(entityExtractor);
+    }
+
+    @Test
     @DisplayName("容量上限：触顶后新实体与新边不再写入，既有结构保留")
     void capacityCapStopsNewStructures() {
-        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, 1, 1);
+        KnowledgeGraphService kg = new KnowledgeGraphService(entityExtractor, true, 1, 1);
         when(entityExtractor.extract(org.mockito.ArgumentMatchers.anyString(),
                         org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
                 // 第一次：X 被索引（cap=1），端点 Y 被跳过 → 无边

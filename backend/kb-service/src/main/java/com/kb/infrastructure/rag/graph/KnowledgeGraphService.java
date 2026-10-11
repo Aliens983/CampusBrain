@@ -56,14 +56,25 @@ public class KnowledgeGraphService {
     private final int maxEntities;
     private final int maxRelations;
 
+    /**
+     * 图谱构建总开关（kb.graph.enabled，默认 false）。
+     * 为什么默认关：图谱抽取对每个分块同步调用一次 LLM，大文档意味着数十~上百次串行付费调用，
+     * 且与在线问答共用同一个 LLM 熔断器，批量上传可能拖慢入库并污染在线问答熔断窗口。
+     * 关闭时 ingestChunk 直接短路（不抽取、不建边）；检索侧 expandQuery 对空图返回空集，
+     * GraphAssistedRetriever 自然退化为普通混合检索，行为安全。
+     */
+    private final boolean enabled;
+
     /** 触顶丢弃计数，用于限频告警（每 100 次打一条 warn，避免刷爆日志） */
     private final AtomicLong entityCapSkips = new AtomicLong();
     private final AtomicLong relationCapSkips = new AtomicLong();
 
     public KnowledgeGraphService(EntityExtractor entityExtractor,
+                                 @Value("${kb.graph.enabled:false}") boolean enabled,
                                  @Value("${kb.graph.max-entities:50000}") int maxEntities,
                                  @Value("${kb.graph.max-relations:200000}") int maxRelations) {
         this.entityExtractor = entityExtractor;
+        this.enabled = enabled;
         this.maxEntities = maxEntities;
         this.maxRelations = maxRelations;
     }
@@ -74,6 +85,10 @@ public class KnowledgeGraphService {
      * 本方法只做内存计算、不抛受检异常；抽取/构建异常由调用方逐块吞掉（best-effort）。
      */
     public void ingestChunk(String text, Long documentId, String chunkId) {
+        // 开关关闭时不触发任何 LLM 抽取调用（默认关，原因见字段 javadoc）
+        if (!enabled) {
+            return;
+        }
         List<KnowledgeEntity> entities = entityExtractor.extract(text, documentId, chunkId);
         if (entities == null || entities.isEmpty()) {
             return;
