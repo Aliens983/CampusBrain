@@ -75,11 +75,20 @@ public class BookServiceImpl implements BookService {
                 if (!service.isAvailable()) {
                     throw new BusinessException(ServiceErrorCode.SERVICE_DISABLED, sid);
                 }
-                // 设备借用必须走专用端点 /app/equipment/{equipmentId}/book。
-                // 通用下单拿不到 equipmentId/时段/数量：既无法参与设备时段占用校验（会超借），
-                // 又会让 services.booked_count 与 equipment.available_stock 两套口径分裂。
-                if (CategoryCode.EQUIPMENT.is(service.getCategoryCode())) {
+                // 通用下单 POST /app/bookings 只承载"容量型"预约（当前仅活动报名）。
+                // 资源/时段型服务没有专用端点所需的外键与日期时段参数：
+                //  - 设备：拿不到 equipmentId/时段/数量，绕开时段占用校验（会超借），
+                //    且让 booked_count 与 available_stock 两套库存口径分裂；
+                //  - 咨询/教室：会生成无资源外键的空壳单，扣了名额却不参与任何时段冲突检测。
+                String categoryCode = service.getCategoryCode();
+                if (CategoryCode.EQUIPMENT.is(categoryCode)) {
                     throw new BusinessException(BookErrorCode.EQUIPMENT_REQUIRE_DEDICATED_API, sid);
+                }
+                // 白名单语义：通用下单只接受活动报名（容量型、免审直通）。
+                // 教师咨询/教室空间走时段专用端点；未知/缺失分类 fail-closed 一并拒绝，
+                // 不允许生成无资源外键的空壳单。
+                if (!CategoryCode.ACTIVITY.is(categoryCode)) {
+                    throw new BusinessException(BookErrorCode.SLOT_BASED_REQUIRE_DEDICATED_API, sid);
                 }
                 // 乐观锁扣减库存（同事务）：容量充足才 +1，满则抛异常，事务回滚
                 if (bookingRepository.decrementStock(sid) == 0) {

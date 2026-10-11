@@ -47,6 +47,14 @@ public interface BookErrorCode {
      */
     ErrorCode EQUIPMENT_REQUIRE_DEDICATED_API = new ErrorCode(40020, "设备借用请使用设备专用接口：POST /app/equipment/{equipmentId}/book");
 
+    /**
+     * 时段类预约（教师咨询 / 教室空间）同样必须走各自专用端点。
+     * 通用下单只传 serviceId，生成的订单没有资源外键与日期时段，会绕开
+     * 时段冲突检测，形成"下单成功但实际未占用任何资源"的空壳单。
+     */
+    ErrorCode SLOT_BASED_REQUIRE_DEDICATED_API = new ErrorCode(40021,
+            "该服务为时段预约，请使用对应专用接口（咨询 POST /app/consultations/{consultantId}/book，教室 POST /app/rooms/{roomId}/book）");
+
     // ========== 教室时段预约 ==========
 
     ErrorCode BOOK_TIME_INVALID = new ErrorCode(40017, "预约时间段不合法，请检查日期与起止时间");

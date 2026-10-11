@@ -150,6 +150,30 @@ class BookServiceImplTest {
         }
 
         @Test
+        @DisplayName("教师咨询/教室空间走通用下单应被拒绝（引导专用端点），不扣库存不插单")
+        void shouldRejectSlotBasedServiceOnGenericBookingApi() {
+            // Given：两类时段型服务
+            for (String slotCategory : List.of("teacher", "space")) {
+                ServiceItem slotService = ServiceItem.builder()
+                        .serviceId(SERVICE_ID)
+                        .serviceName("时段服务")
+                        .categoryCode(slotCategory)
+                        .serviceState(1)
+                        .build();
+                when(serviceRepository.findById(SERVICE_ID)).thenReturn(Optional.of(slotService));
+
+                // When & Then
+                BusinessException exception = assertThrows(BusinessException.class,
+                        () -> bookService.bookService(USER_ID, List.of(SERVICE_ID)));
+                assertEquals(BookErrorCode.SLOT_BASED_REQUIRE_DEDICATED_API.getCode(),
+                        exception.getCode());
+            }
+            // 拒绝发生在任何库存动作之前
+            verify(bookingRepository, never()).decrementStock(anyLong());
+            verify(bookingRepository, never()).insertServices(anyLong(), anyList());
+        }
+
+        @Test
         @DisplayName("容量已满时应当抛出 BOOKING_CAPACITY_FULL 且不插入预约")
         void shouldThrowWhenCapacityFull() {
             // Given：decrementStock 返回 0（乐观锁扣减失败 = 容量满）
@@ -394,8 +418,10 @@ class BookServiceImplTest {
     private ServiceItem buildAvailableService(Long id) {
         return ServiceItem.builder()
                 .serviceId(id)
-                .serviceName("自习室预约")
-                .serviceDescribe("图书馆自习室")
+                .serviceName("活动报名")
+                .serviceDescribe("图书馆读书分享会")
+                // 通用下单仅接受活动报名类（容量型）；时段/资源类必须走专用端点
+                .categoryCode("activity")
                 .serviceState(1)
                 .build();
     }
