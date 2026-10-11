@@ -64,20 +64,22 @@ groups:
   # ---------------- RabbitMQ 队列积压 ----------------
   - name: campusbrain-queue
     rules:
-      # rabbitmq_prometheus 插件指标（:15692/metrics）。
+      # rabbitmq_prometheus 内置插件指标（:15692/metrics）。
+      # 注意：内置插件的队列标签名是 queue（社区版 rabbitmq_exporter 才用 queue_name），
+      # 此前写 queue_name 导致表达式恒为空集、告警永不触发。
       # 预约变更事件积压会导致问答余量缓存过期不被淘汰；
       # 文档处理队列积压意味着上传后长时间无法就绪。
       - alert: RabbitMqQueueBacklog
         expr: |
-          max by (queue_name) (
-            rabbitmq_queue_messages_ready{queue_name=~"appointment.changed|kb.document.processing.queue"}
+          max by (queue) (
+          rabbitmq_queue_messages_ready{queue=~"appointment.changed|kb.document.processing.queue"}
           ) > 50
         for: 5m
         labels:
           severity: warning
         annotations:
-          summary: "RabbitMQ 队列积压：{{ $labels.queue_name }}"
-          description: "队列 {{ $labels.queue_name }} ready 消息数 {{ $value }}（>50）已持续 5 分钟，消费端可能卡住或处理变慢。"
+          summary: "RabbitMQ 队列积压：{{ $labels.queue }}"
+          description: "队列 {{ $labels.queue }} ready 消息数 {{ $value }}（>50）已持续 5 分钟，消费端可能卡住或处理变慢。"
 
   # ---------------- 抓取目标存活 ----------------
   - name: campusbrain-targets
