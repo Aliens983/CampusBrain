@@ -68,7 +68,9 @@ public class QaApplicationService implements IQaApplicationService {
     private final CacheGuard cacheGuard;
     private final PendingBookingExecutor pendingExecutor;
 
-    /** 每日请求计数 key 的 TTL（小时），默认 25（覆盖次日零点），配置化 */
+    /**
+     * 每日请求计数 key 的 TTL（小时），默认 25（覆盖次日零点），配置化
+     */
     @Value("${kb.qa.daily-counter-ttl-hours:25}")
     private int dailyCounterTtlHours;
 

@@ -4,6 +4,9 @@
 -- 开发期约定：当前无线上存量数据，所有表结构一律直接维护在本文件，
 -- 不以 ALTER 增量脚本演进；确需改表就直接改这里（全新库重建生效）。
 -- 将来上线、存在不可丢弃的存量数据后，再恢复「新增 Vn 只追加不改旧文件」规范。
+--
+-- 删除语义：文档/分块/会话均为物理删除，表结构不设逻辑删除列；
+-- 文档删除时由外键 ON DELETE CASCADE 级联清理分块。
 -- ============================================================
 
 -- Document table: stores uploaded document metadata
@@ -19,7 +22,6 @@ CREATE TABLE IF NOT EXISTS document
     chunk_count INT           DEFAULT 0 COMMENT 'Number of chunks',
     metadata    JSON COMMENT 'Custom metadata (author, pages, tags, etc.)',
     error_msg   TEXT COMMENT 'Error message if processing failed',
-    deleted     TINYINT       DEFAULT 0 COMMENT 'Logical delete flag',
     owner_id    BIGINT COMMENT 'Document owner user ID',
     created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -43,7 +45,6 @@ CREATE TABLE IF NOT EXISTS document_chunk
     token_count INT           DEFAULT 0 COMMENT 'Estimated token count',
     metadata    JSON COMMENT 'Chunk metadata (page_number, section_title, etc.)',
     qdrant_id   VARCHAR(100) COMMENT 'Corresponding point ID in Qdrant',
-    deleted     TINYINT       DEFAULT 0 COMMENT 'Logical delete flag',
     created_at  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_document_id (document_id),
     INDEX idx_qdrant_id (qdrant_id),
@@ -65,7 +66,6 @@ CREATE TABLE IF NOT EXISTS conversation
     content         LONGTEXT     NOT NULL COMMENT 'Message content',
     references_json JSON COMMENT 'Citation references in JSON format',
     feedback        VARCHAR(10) COMMENT 'User feedback: like/dislike',
-    deleted         TINYINT      DEFAULT 0 COMMENT 'Logical delete flag',
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_session_id (session_id),
     INDEX idx_user_session (user_id, session_id),

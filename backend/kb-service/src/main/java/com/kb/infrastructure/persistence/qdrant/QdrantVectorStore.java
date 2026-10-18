@@ -62,7 +62,9 @@ public class QdrantVectorStore implements VectorStoreService {
 
     @Override
     public void upsert(List<VectorPoint> points) {
-        if (points == null || points.isEmpty()) return;
+        if (points == null || points.isEmpty()) {
+            return;
+        }
 
         List<PointStruct> qdrantPoints = new ArrayList<>();
         for (VectorPoint p : points) {

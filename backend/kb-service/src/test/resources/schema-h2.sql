@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS document
     chunk_count INT           DEFAULT 0,
     metadata    TEXT,
     error_msg   TEXT,
-    deleted     TINYINT       DEFAULT 0,
     owner_id    BIGINT        DEFAULT NULL,
     created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -32,7 +31,6 @@ CREATE TABLE IF NOT EXISTS document_chunk
     metadata    TEXT,
     qdrant_id   VARCHAR(100),
     created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted     TINYINT       DEFAULT 0,
     CONSTRAINT fk_chunk_document FOREIGN KEY (document_id)
         REFERENCES document (id) ON DELETE CASCADE
 );
@@ -46,7 +44,6 @@ CREATE TABLE IF NOT EXISTS conversation
     content         CLOB         NOT NULL,
     references_json TEXT,
     feedback        VARCHAR(10),
-    deleted         TINYINT      DEFAULT 0,
     created_at      TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 

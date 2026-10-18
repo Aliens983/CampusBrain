@@ -82,8 +82,6 @@ public class AnswerPipeline {
      *   <li>同步链路（graphAssisted=false）走关键词检索 {@link SearchService}.</li>
      * </ul>
      * 行为与原 QaApplicationService 的 Step 2（含检索时延埋点）完全一致.
-     */
-    /**
      * @param userId 归属用户，显式透传到检索侧.检索在线程池执行，
      *               SecurityContext 无法跨越，必须在此处（请求线程）解析后传下去.
      */

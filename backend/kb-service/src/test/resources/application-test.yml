@@ -61,9 +61,6 @@ mybatis-plus:
   global-config:
     db-config:
       id-type: auto
-      logic-delete-field: deleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
 
 # 关闭不是测试需要的外部服务
 # 注意：application.yml 被 gitignore（CI checkout 后不存在），
