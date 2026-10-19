@@ -158,7 +158,7 @@ public class DocumentProcessingConsumer {
 
             // === Step 2: Chunk ===
             updateStatus(doc, DocumentStatus.CHUNKING);
-            List<DocumentChunk> chunks = chunk(parsed);
+            List<DocumentChunk> chunks = chunk(parsed, doc.getTitle());
             log.info("Chunked document: id={}, chunks={}", documentId, chunks.size());
 
             // === Step 3: Embed（失败可重试：模型限流/超时）===
@@ -243,10 +243,24 @@ public class DocumentProcessingConsumer {
         }
     }
 
-    private List<DocumentChunk> chunk(ParsedDocument parsed) {
+    /**
+     * 分块并注入文档标题元数据.
+     * <p>
+     * documentTitle 必须在这里显式注入：解析器的 metadata 只带 author/pageCount
+     * 等统计信息，而 ES/Qdrant 的 document_title 字段、引用展示、RAG 提示词的
+     * "来源"行都按 documentTitle 读取——缺了它引用永远显示"未知文档"，
+     * 提示词还被指示引用标题，数据与指令脱节.优先取库中文档名（与文档列表
+     * 一致），解析器抽出标题作兜底.
+     */
+    private List<DocumentChunk> chunk(ParsedDocument parsed, String documentTitle) {
         ChunkStrategy chunker = chunkerFactory.getStrategy(chunkStrategy);
         Map<String, Object> chunkMeta = new HashMap<>();
         chunkMeta.put("fileType", parsed.getFileType());
+        String title = (documentTitle == null || documentTitle.isBlank())
+                ? parsed.getTitle() : documentTitle;
+        if (title != null && !title.isBlank()) {
+            chunkMeta.put("documentTitle", title);
+        }
         if (parsed.getMetadata() != null) {
             chunkMeta.putAll(parsed.getMetadata());
         }
