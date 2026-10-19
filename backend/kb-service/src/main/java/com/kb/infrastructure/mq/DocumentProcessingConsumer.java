@@ -185,6 +185,15 @@ public class DocumentProcessingConsumer {
             chunkTransactionService.saveChunksAtomically(chunks, documentId);
 
             // === Step 5: Store (Qdrant + ES) — 用正确的 documentId（失败可重试）===
+            // 删除与在途处理竞态防护：删除接口是"硬删 DB 行 + afterCommit 清外部存储"，
+            // 若删除恰在本步之前提交，此刻写出的向量/ES 没有任何路径再清理，
+            // 已删文档的内容会继续被检索召回。写入前复查文档行存在性，
+            // 已删除则直接收尾跳过（分块行有 FK CASCADE 不会成孤儿）
+            if (documentRepository.findById(documentId).isEmpty()) {
+                log.warn("文档在处理过程中被删除，跳过向量/索引写入: id={}", documentId);
+                processingLock.exitProcessing(documentId);
+                return;
+            }
             // 写入归属用户 ownerId，检索端据此过滤
             store(chunks, embeddings, documentId, doc.getOwnerId());
 

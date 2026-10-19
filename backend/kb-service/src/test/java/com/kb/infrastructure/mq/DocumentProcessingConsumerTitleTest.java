@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -153,5 +154,32 @@ class DocumentProcessingConsumerTitleTest {
         for (EsDocumentEntity entity : esCaptor.getValue()) {
             assertEquals("解析器标题", entity.getDocumentTitle());
         }
+    }
+
+    @Test
+    @DisplayName("文档在处理过程中被删除 → 跳过向量/ES 写入，不产生孤儿数据")
+    void shouldSkipStoreWhenDocumentDeletedMidProcessing() throws IOException {
+        Path file = Files.createFile(tempDir.resolve("deleted.md"));
+        Files.writeString(file, "第一段内容。\n\n第二段内容。");
+        Document doc = Document.builder()
+                .id(44L).title("将被删除的文档").fileType("md")
+                .filePath(file.toString()).status(DocumentStatus.PARSING).ownerId(7L)
+                .build();
+        // 首次 findById（入口存在性检查）返回文档，写入前复查时已被删除
+        when(documentRepository.findById(44L)).thenReturn(Optional.of(doc), Optional.empty());
+        when(processingLock.enterProcessing(44L)).thenReturn(true);
+        when(parserChain.parseAuto(any(), any())).thenReturn(ParsedDocument.builder()
+                .title("标题").content("第一段内容。\n\n第二段内容。")
+                .fileType("md").build());
+        when(embeddingService.embedBatch(anyList()))
+                .thenAnswer(inv -> inv.<List<String>>getArgument(0).stream()
+                        .map(s -> new float[4]).toList());
+
+        consumer.processDocument(new DocumentProcessingMessage(44L, false));
+
+        // 关键断言：已删文档的内容不得写入 Qdrant/ES（否则继续被检索召回）
+        verify(vectorStore, never()).upsert(anyList());
+        verify(esRepository, never()).bulkIndex(anyList());
+        verify(processingLock).exitProcessing(44L);
     }
 }
