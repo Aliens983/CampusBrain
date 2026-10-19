@@ -95,6 +95,15 @@ public class PendingBookingExecutor {
             "好的", "好吧", "是的", "可以", "没问题", "确定", "确认", "ok", "yes");
 
     /**
+     * 查询语境否决信号.含这些词的句子是在问进度/状态，不是对确认卡片的应答——
+     * "确认一下我的预约到哪了"、"确定下订单状态"若被判成确认，会在用户并无
+     * 下单意图时触发真实预约.放在肯定词判定之前优先否决（漏判只是交还正常
+     * 问答，误判会造成真实业务动作）.
+     */
+    private static final List<String> QUERY_CONTEXT_MARKERS = List.of(
+            "哪", "状态", "进度", "查");
+
+    /**
      * 判定用户本轮输入是确认、取消还是无关话题（交给后续正常问答理解）.
      * <p>
      * 修复：疑问/请求-动作双重拦截 + 英文整词匹配 + 长句强确认，
@@ -108,6 +117,13 @@ public class PendingBookingExecutor {
 
         // 疑问句一律不判确认/取消（"明天可以预约吗"、"怎么确认"、"能否改期"）
         if (QUESTION_MARKERS.stream().anyMatch(q::contains)) {
+            return ConfirmIntent.NONE;
+        }
+
+        // 查询语境一律不判确认/取消（"确认一下我的预约到哪了"、"确定下订单状态"）.
+        // 必须早于请求-动作分支："帮我确认一下我的预约到哪了"以"帮我"开头且含
+        // "预约"（"约"字），会被请求-动作分支放行成确认
+        if (QUERY_CONTEXT_MARKERS.stream().anyMatch(q::contains)) {
             return ConfirmIntent.NONE;
         }
 
