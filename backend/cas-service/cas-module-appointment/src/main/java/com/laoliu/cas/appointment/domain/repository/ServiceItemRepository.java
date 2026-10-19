@@ -39,7 +39,9 @@ public interface ServiceItemRepository {
     IPage<ServiceItem> findByUserId(Long userId, int page, int pageSize);
 
     /**
-     * 保存服务（新增或更新）
+     * 保存服务（新增或更新）.
+     * <p>更新路径只写可编辑列：booked_count 由下单/取消的条件更新原子维护，
+     * 禁止随全量实体回写（防止与并发预约形成丢失更新导致超卖）.
      */
     ServiceItem save(ServiceItem service);
 

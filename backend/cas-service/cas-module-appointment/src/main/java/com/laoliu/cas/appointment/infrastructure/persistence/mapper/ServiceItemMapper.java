@@ -19,9 +19,11 @@ public interface ServiceItemMapper extends BaseMapper<ServiceItemDO> {
 
     int insertSelective(ServiceItemDO record);
 
+    /**
+     * 管理端更新服务：只写可编辑列（不含 booked_count，见 XML 注释）.
+     * booked_count 由 BookingRepository 的条件更新原子维护，禁止全量回写.
+     */
     int updateByPrimaryKeySelective(ServiceItemDO record);
-
-    int updateByPrimaryKey(ServiceItemDO record);
 
     List<ServiceItemDO> selectUserServices(@Param("userId") Long userId);
 

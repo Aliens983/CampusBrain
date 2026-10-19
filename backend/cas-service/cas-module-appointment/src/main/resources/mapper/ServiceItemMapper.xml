@@ -45,6 +45,11 @@
         VALUES (#{serviceName}, #{serviceDescribe}, #{serviceState})
     </insert>
 
+    <!-- 管理端更新服务：只写可编辑列，刻意不含 booked_count.
+         booked_count 必须由 BookingRepository 的条件更新原子维护，
+         随全量实体回写会与并发下单/取消形成丢失更新（名额账实不符甚至超卖）。
+         category_id / campus 创建后不可变，亦不在本语句更新范围。
+         调用方传入完整加载的实体，service_name / service_describe 必非空。 -->
     <update id="updateByPrimaryKeySelective" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO">
         UPDATE services
         <set>
@@ -57,15 +62,16 @@
             <if test="serviceState != null">
                 service_state = #{serviceState},
             </if>
+            <if test="capacity != null">
+                capacity = #{capacity},
+            </if>
+            <if test="imageUrl != null">
+                image_url = #{imageUrl},
+            </if>
+            <if test="endDate != null">
+                end_date = #{endDate},
+            </if>
         </set>
-        WHERE service_id = #{serviceId}
-    </update>
-
-    <update id="updateByPrimaryKey" parameterType="com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ServiceItemDO">
-        UPDATE services
-        SET service_name = #{serviceName},
-            service_describe = #{serviceDescribe},
-            service_state = #{serviceState}
         WHERE service_id = #{serviceId}
     </update>
 

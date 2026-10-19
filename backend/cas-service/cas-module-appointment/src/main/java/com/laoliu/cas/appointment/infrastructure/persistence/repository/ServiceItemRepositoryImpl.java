@@ -81,13 +81,28 @@ public class ServiceItemRepositoryImpl implements ServiceItemRepository {
 
     @Override
     public ServiceItem save(ServiceItem service) {
-        ServiceItemDO dataObject = ServiceItemDO.fromEntity(service);
         if (service.getServiceId() == null) {
+            ServiceItemDO dataObject = ServiceItemDO.fromEntity(service);
             serviceMapper.insert(dataObject);
-        } else {
-            serviceMapper.updateById(dataObject);
+            return enrich(dataObject.toEntity());
         }
-        return enrich(dataObject.toEntity());
+        serviceMapper.updateByPrimaryKeySelective(toProfileUpdateDO(service));
+        return enrich(service);
+    }
+
+    /**
+     * 管理端服务更新的写入对象：只允许携带可编辑列，显式剔除 booked_count.
+     *
+     * <p>booked_count 由下单/取消的条件更新原子维护（decrementStock/releaseStock）。
+     * 若随"加载-修改-保存"的全量实体回写，读取之后发生的并发下单/取消会被陈旧值
+     * 静默覆盖（丢失更新）：名额扣减被抹掉可导致活动服务超卖，回补被抹掉则服务被
+     * "幽灵占满"永久约不上，且无对账机制自愈。配合 Mapper 层不含该列的选择性更新，
+     * 从两个层面保证 booked_count 不会被应用层全量回写。
+     */
+    private ServiceItemDO toProfileUpdateDO(ServiceItem service) {
+        ServiceItemDO dataObject = ServiceItemDO.fromEntity(service);
+        dataObject.setBookedCount(null);
+        return dataObject;
     }
 
     @Override
