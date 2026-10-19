@@ -118,7 +118,9 @@ file:
     path: ./uploads/
     prefix: /api/files/
     url-prefix: /uploads
-    server-address: http://localhost:18080
+    # 二维码等场景需要拼绝对 URL；本地默认 localhost，部署时经环境变量注入真实地址
+    # （compose 已透传 FILE_UPLOAD_SERVER_ADDRESS）
+    server-address: ${FILE_UPLOAD_SERVER_ADDRESS:http://localhost:18080}
 
 email:
   subject: 验证码

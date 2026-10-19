@@ -103,6 +103,10 @@ services:
       NACOS_ADDR: nacos:8848
       NACOS_USERNAME: ${NACOS_USERNAME:-}
       NACOS_PASSWORD: ${NACOS_PASSWORD:-}
+      # 与 kb-service 对齐：容器统一走 docker profile。cas 侧该 profile 是纯标记
+      # （无 application-docker.yml），用于激活 SeedAccountPasswordInitializer 的
+      # 生产弱口令 fail-fast 闸门；缺了它容器部署将绕过该闸门
+      SPRING_PROFILES_ACTIVE: docker
       # Spring Boot 宽松绑定：环境变量覆盖 application.yml 中写死的 localhost 配置
       SPRING_DATASOURCE_URL: jdbc:mysql://cas-mysql:3306/cas_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
@@ -117,6 +121,9 @@ services:
       INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
       FILE_UPLOAD_PATH: /app/uploads/
       FILE_UPLOAD_DIR: uploads
+      # 二维码等绝对 URL 的对外地址：部署时在宿主机 .env 注入真实域名/地址，
+      # 缺省 localhost（仅本机演示可用）
+      FILE_UPLOAD_SERVER_ADDRESS: ${FILE_UPLOAD_SERVER_ADDRESS:-http://localhost}
       # 运行所需密钥（对应新配置的无默认值占位符）
       MAIL_USERNAME: ${MAIL_USERNAME}
       MAIL_PASSWORD: ${MAIL_PASSWORD}
