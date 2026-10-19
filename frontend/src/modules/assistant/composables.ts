@@ -57,7 +57,7 @@ export function useQaPortal() {
 
   // ===== SSE =====
   /** 保存引用是为了在组件卸载 / 超时 / 出错时能主动关闭，否则切路由后连接仍在跑 */
-  let es: EventSource | null = null
+  let streamAbort: AbortController | null = null
   let streamWatchdog = 0
 
   const uid = computed(() => String(userStore.userInfo?.id ?? 'anon'))
@@ -262,7 +262,7 @@ export function useQaPortal() {
   /** 结束流式：关连接、清看门狗、复位状态。正常结束 / 出错 / 超时 / 卸载共用一条收尾路径 */
   function stopStream(aiMsg?: ChatMsg, title?: string, hint?: string) {
     if (streamWatchdog) { clearTimeout(streamWatchdog); streamWatchdog = 0 }
-    es?.close(); es = null
+    streamAbort?.abort(); streamAbort = null
     streaming.value = false
     // 只有正常收尾才刷新会话标题：异常或超时时答案不完整，
     // 让会话停留在旧标题反而更利于用户回看
@@ -276,6 +276,26 @@ export function useQaPortal() {
       else if (!aiMsg.content) aiMsg.content = '（连接已中断，请重试）'
     }
     scrollToBottom()
+  }
+
+  /**
+   * 解析 SSE 分帧：把一段原始文本切成 { event, data } 序列.
+   * 换行可能是 \n\n 或 \r\n\r\n；同一事件可有多行 data（按 \n 拼接）.
+   */
+  function parseSseFrames(raw: string): { event: string; data: string }[] {
+    const frames: { event: string; data: string }[] = []
+    for (const block of raw.split(/\r?\n\r?\n/)) {
+      if (!block.trim()) continue
+      let event = 'message'
+      const dataLines: string[] = []
+      for (const line of block.split(/\r?\n/)) {
+        if (line.startsWith(':')) continue
+        if (line.startsWith('event:')) event = line.slice(6).trim()
+        else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''))
+      }
+      if (dataLines.length > 0) frames.push({ event, data: dataLines.join('\n') })
+    }
+    return frames
   }
 
   function askQuestion() {
@@ -296,8 +316,16 @@ export function useQaPortal() {
     query.value = ''
     scrollToBottom()
 
-    const params = new URLSearchParams({ query: q, sessionId: currentSessionId.value, token: userStore.token, requestId: uuid() })
-    es = new EventSource(`${BASE}/qa/ask/stream?${params.toString()}`)
+    // token 走 Authorization 头而非 URL query：query 会被 nginx access_log、
+    // 浏览器历史与链路追踪完整记录，令牌明文落盘后可直接冒充任意用户.
+    // （EventSource 无法设置请求头，故改用 fetch + ReadableStream 自行解析 SSE）
+    const params = new URLSearchParams({
+      query: q,
+      sessionId: currentSessionId.value,
+      requestId: uuid(),
+    })
+    const controller = new AbortController()
+    streamAbort = controller
     // 看门狗：服务端既不返回也不关闭连接时（LLM 挂起、网关丢连接），
     // streaming 会永远为 true，输入框被永久锁死，只能刷新页面。
     streamWatchdog = window.setTimeout(() => {
@@ -305,58 +333,120 @@ export function useQaPortal() {
       stopStream(aiMsg, q, '（响应超时（120 秒无数据），已中断，请重试）')
     }, SSE_WATCHDOG_MS)
 
-    es.addEventListener('messageId', event => {
-      const id = Number((event as MessageEvent).data)
-      if (id) aiMsg.id = id
-    })
-    // 槽位更新：展示 AI 当前记住的预约条件
-    es.addEventListener('slots', event => {
-      try { slots.value = JSON.parse((event as MessageEvent).data) as SlotsView } catch { /* 忽略解析失败 */ }
-    })
-    // 待确认动作：渲染确认卡片
-    es.addEventListener('confirm', event => {
+    void (async () => {
+      let resp: Response
       try {
-        pending.value = JSON.parse((event as MessageEvent).data) as PendingView
+        resp = await fetch(`${BASE}/qa/ask/stream?${params.toString()}`, {
+          method: 'GET',
+          headers: authHeaders(),
+          signal: controller.signal,
+        })
+      } catch (err) {
+        // 连接失败（含主动 abort）：abort 是收尾路径的一部分，不再提示
+        if ((err as Error)?.name !== 'AbortError') {
+          if (!aiMsg.content) aiMsg.content = '连接失败，请确认后端服务已启动。'
+          stopStream(aiMsg, q)
+        }
+        return
+      }
+      if (!resp.ok || !resp.body) {
+        // 401 未登录 / 429 限流 / 503 并发已满：网关会返回 JSON 错误体
+        let detail = ''
+        try {
+          const body = (await resp.json()) as { message?: string }
+          if (body?.message) detail = body.message
+        } catch { /* 非 JSON 错误体时用通用文案 */ }
+        aiMsg.content += (aiMsg.content ? '\n\n' : '')
+          + `（${detail || (resp.status === 401 ? '登录已过期，请重新登录' : '请求失败，请稍后再试')}）`
+        stopStream(aiMsg, q)
+        return
+      }
+
+      const reader = resp.body.getReader()
+      const decoder = new TextDecoder('utf-8')
+      let buffer = ''
+      try {
+        for (;;) {
+          const { value, done } = await reader.read()
+          if (done) break
+          buffer += decoder.decode(value, { stream: true })
+          // 缓冲区里可能有半帧：只消费到最后一个空行，其余留待下次
+          const lastBreak = buffer.lastIndexOf('\n\n')
+          if (lastBreak === -1) continue
+          const chunkText = buffer.slice(0, lastBreak)
+          buffer = buffer.slice(lastBreak + 2)
+          for (const frame of parseSseFrames(chunkText)) {
+            if (handleSseFrame(frame.event, frame.data, aiMsg, q)) return
+          }
+        }
+      } catch (err) {
+        if ((err as Error)?.name !== 'AbortError') {
+          if (!aiMsg.content) aiMsg.content = '连接中断，请重试。'
+          stopStream(aiMsg, q)
+        }
+        return
+      }
+      // 服务端未发 [DONE] 就断开：按中断收尾，不让输入框卡在 loading
+      if (streaming.value) stopStream(aiMsg, q)
+    })()
+  }
+
+  /** 处理单个 SSE 分帧；返回 true 表示本轮已收尾，读取循环应停止 */
+  function handleSseFrame(event: string, data: string, aiMsg: ChatMsg, q: string): boolean {
+    if (event === 'messageId') {
+      const id = Number(data)
+      if (id) aiMsg.id = id
+      return false
+    }
+    // 槽位更新：展示 AI 当前记住的预约条件
+    if (event === 'slots') {
+      try { slots.value = JSON.parse(data) as SlotsView } catch { /* 忽略解析失败 */ }
+      return false
+    }
+    // 待确认动作：渲染确认卡片
+    if (event === 'confirm') {
+      try {
+        pending.value = JSON.parse(data) as PendingView
         aiMsg.confirm = pending.value
         pendingIndex.value = messages.value.length - 1
         scheduleScroll()
       } catch { /* 忽略解析失败 */ }
-    })
+      return false
+    }
     // 动作回执：确认/取消执行完成，收起卡片
-    es.addEventListener('action', event => {
-      try { aiMsg.action = JSON.parse((event as MessageEvent).data) as ActionView } catch { /* 忽略解析失败 */ }
+    if (event === 'action') {
+      try { aiMsg.action = JSON.parse(data) as ActionView } catch { /* 忽略解析失败 */ }
       pending.value = null
       pendingIndex.value = null
       slots.value = {}
-    })
-    es.onmessage = event => {
-      if (event.data === '[DONE]') {
-        if (!aiMsg.content) aiMsg.content = '（本次未生成内容，请换个问法试试）'
-        stopStream(aiMsg, q); return
-      }
-      if (event.data.startsWith('[ERROR]')) {
-        aiMsg.content += `\n\n${event.data.replace('[ERROR] ', '')}`
-        stopStream(aiMsg, q); return
-      }
-      aiMsg.content += event.data
-      scheduleScroll()
+      return false
     }
-    // 服务端业务终态错误（HTTP 200 的 SSE 流内 error 事件）：按终态收尾并
-    // close 连接——它不是传输层错误，绝不能让 EventSource 自动重连把同一轮
-    // 问答（含相同 requestId）原样重发。真正的传输层错误才走下方 onerror。
-    es.addEventListener('error', event => {
+    // 服务端业务终态错误（HTTP 200 的 SSE 流内 error 事件）：按终态收尾，
+    // 不重发本轮请求（EventSource 时代会自动重连把同一轮问答原样重跑）
+    if (event === 'error') {
       let msg = '服务处理本次问答时出错，请稍后再试'
       try {
-        const data = JSON.parse((event as MessageEvent).data) as { message?: string }
-        if (data?.message) msg = data.message
+        const payload = JSON.parse(data) as { message?: string }
+        if (payload?.message) msg = payload.message
       } catch { /* 非 JSON 错误体时使用通用文案 */ }
       aiMsg.content += (aiMsg.content ? '\n\n' : '') + `（${msg}）`
       stopStream(aiMsg, q)
-    })
-    es.onerror = () => {
-      if (!aiMsg.content) aiMsg.content = '连接失败，请确认后端服务已启动。'
-      stopStream(aiMsg, q)
+      return true
     }
+    // 默认 message 事件：答案 token 与终止信号
+    if (data === '[DONE]') {
+      if (!aiMsg.content) aiMsg.content = '（本次未生成内容，请换个问法试试）'
+      stopStream(aiMsg, q)
+      return true
+    }
+    if (data.startsWith('[ERROR]')) {
+      aiMsg.content += `\n\n${data.replace('[ERROR] ', '')}`
+      stopStream(aiMsg, q)
+      return true
+    }
+    aiMsg.content += data
+    scheduleScroll()
+    return false
   }
 
   /** 点确认卡片按钮 = 以对应话术发起新一轮提问，让后端走确定性确认分支 */
