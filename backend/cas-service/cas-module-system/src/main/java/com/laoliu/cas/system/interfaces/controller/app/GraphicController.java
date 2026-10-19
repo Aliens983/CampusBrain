@@ -84,11 +84,17 @@ public class GraphicController {
         }
     }
 
-    /** 取真实客户端 IP：优先取 X-Forwarded-For（网关/代理场景），否则回退 remoteAddr */
+    /**
+     * 取真实客户端 IP：优先 X-Real-IP（nginx 以 $remote_addr 覆盖式设置，
+     * 客户端自带的同头会被替换掉，不可伪造），否则回退 remoteAddr.
+     * <p>不取 X-Forwarded-For 首段：nginx 用 $proxy_add_x_forwarded_for 追加而非
+     * 替换，客户端自带的值排在第一位，取首段等于信任攻击者可控输入，轮换伪造头
+     * 即可无限绕过验证码生成频控（登录防自动化的第一道闸）.
+     */
     private String resolveClientIp(HttpServletRequest request) {
-        String forwarded = request.getHeader("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) {
-            return forwarded.split(",")[0].trim();
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp.trim();
         }
         return request.getRemoteAddr();
     }
