@@ -138,8 +138,12 @@ async function doReject(b: TeacherBooking) {
     await rejectBooking(b.orderId)
     await load()
   } catch (error: unknown) {
+    // ElMessageBox.prompt 在「取消/关闭」时 reject 的是字符串 'cancel'/'close'，
+    // 不是 Error 对象。原先按 err.message 判断，字符串没有 .message，
+    // 条件恒为真 → 用户每次点了又后悔，都会看到红色「操作失败」。
+    if (error === 'cancel' || error === 'close') return
     const err = error as { message?: string }
-    if (err.message !== 'cancel') ElMessage.error(err.message || '操作失败')
+    ElMessage.error(err?.message || '操作失败')
   } finally {
     busy.value = null
   }

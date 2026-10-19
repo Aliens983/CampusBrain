@@ -20,6 +20,27 @@
       <div class="service-detail">
         <ServiceHeader :service="service" />
 
+        <!-- 咨询师加载失败：明确错误态 + 重试，绝不掉进「通用预约」模式
+             （通用下单只放行活动报名，用户点确认只会拿到不可理解的错误） -->
+        <el-alert
+          v-if="consultantsFailed"
+          type="error"
+          show-icon
+          :closable="false"
+          title="咨询师列表加载失败"
+          description="网络异常导致咨询师未加载成功，请重试后再预约（勿使用下方通用预约入口）"
+          style="margin: 16px 0"
+        >
+          <template #default>
+            <el-button
+              size="small"
+              @click="reloadConsultants"
+            >
+              重新加载
+            </el-button>
+          </template>
+        </el-alert>
+
         <!-- 模式一：教师咨询 —— 选咨询师 + 选时段（已实现） -->
         <ConsultationPanel
           v-if="consultants.length"
@@ -63,9 +84,10 @@
           @submit="submitRoom"
         />
 
-        <!-- 模式三：普通服务 —— 通用预约 -->
+        <!-- 模式三：普通服务 —— 通用预约（仅活动报名类可用）；
+             咨询师加载失败时不得呈现该入口，否则用户会点出必然失败的请求 -->
         <el-button
-          v-else
+          v-else-if="!consultantsFailed"
           type="primary"
           size="large"
           :loading="booking"
@@ -92,6 +114,8 @@ const {
   service,
   booking,
   consultants,
+  consultantsFailed,
+  reloadConsultants,
   selected,
   slots,
   bookingSlotId,

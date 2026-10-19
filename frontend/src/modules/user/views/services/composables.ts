@@ -40,11 +40,9 @@ export interface RoomLite {
 /** 保持文件服务返回的同源 /uploads 路径。 */
 export { assetUrl } from '@/common/utils/asset'
 
-/** 本地时区 yyyy-MM-dd（避免 toISOString 的 UTC 跨天问题） */
-export function localDate(d = new Date()) {
-  const p = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
+/** 本地时区 yyyy-MM-dd（统一收敛到 common/utils/date，避免各处重复实现） */
+export { localDate } from '@/common/utils/date'
+import { localDate } from '@/common/utils/date'
 
 export function disablePastDate(date: Date) {
   const today = new Date()
@@ -80,6 +78,15 @@ export function useServiceDetail() {
 
   // 教师咨询态
   const consultants = ref<ConsultantLite[]>([])
+  /**
+   * 咨询师列表是否加载成功.
+   * 缺了它，"请求失败"与"该服务确实没有咨询师"同为 consultants=[]，
+   * 模板 v-if 判定会从「选咨询师+时段」掉成「普通服务立即预约」——
+   * 后端通用下单已只放行活动报名，用户点确认只会拿到不可理解的
+   * "请使用专用接口"类错误。有此标志后加载失败会明确呈现错误态。
+   */
+  const consultantsLoaded = ref(false)
+  const consultantsFailed = ref(false)
   const selected = ref<ConsultantLite | null>(null)
   const slots = ref<SlotLite[]>([])
   const bookingSlotId = ref<number | null>(null)
@@ -121,12 +128,14 @@ export function useServiceDetail() {
       }
     } catch (error: unknown) {
       const err = error as { message?: string }
-      ElMessage.error(err.message || '获取服务详情失败')
+      ElMessage.error(err?.message || '获取服务详情失败')
     }
   })
 
   /** 该服务是否配置了咨询师：有则走「选咨询师+时段」 */
   async function loadConsultants(serviceId: number) {
+    consultantsLoaded.value = false
+    consultantsFailed.value = false
     try {
       const res = await request.get('/app/consultations', {
         params: { serviceId, pageNo: 1, pageSize: 100 },
@@ -141,9 +150,18 @@ export function useServiceDetail() {
         rating: c.rating,
         reviews: c.reviews,
       }))
+      consultantsLoaded.value = true
     } catch {
+      // 加载失败不等于「没有咨询师」：不伪装成空列表，页面呈现错误态并可重试
       consultants.value = []
+      consultantsFailed.value = true
     }
+  }
+
+  /** 重新拉取咨询师列表（失败后的重试入口） */
+  async function reloadConsultants() {
+    if (!service.value) return
+    await loadConsultants(service.value.id)
   }
 
   /** 设备借用：读取该服务下的真库设备目录 */
@@ -321,6 +339,9 @@ export function useServiceDetail() {
     service,
     booking,
     consultants,
+    consultantsLoaded,
+    consultantsFailed,
+    reloadConsultants,
     selected,
     slots,
     bookingSlotId,

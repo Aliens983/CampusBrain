@@ -3,6 +3,7 @@ import { ElMessage } from 'element-plus'
 import { fetchBookingRecords, fetchServiceCards } from '@/common/campus'
 import request from '@/common/utils/request'
 import { assetUrl } from '@/common/utils/asset'
+import { localDate } from '@/common/utils/date'
 import type { BookingRecord, DashboardStat, ServiceCard } from '@/common/types'
 
 /** 快捷入口项 */
@@ -68,7 +69,9 @@ export function useDashboard() {
   })
 
   const todayBookings = computed(() => {
-    const today = new Date().toISOString().slice(0, 10)
+    // 本地时区而非 toISOString（UTC）：北京时间 00:00–08:00 用 UTC 会算成昨天，
+    // 表现为「今日预约」在该时段恒为空
+    const today = localDate()
     return bookings.value.filter((b: BookingRecord) => b.date === today).slice(0, 3)
   })
 

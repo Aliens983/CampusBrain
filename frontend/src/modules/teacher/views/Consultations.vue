@@ -194,8 +194,11 @@ async function doReject(b: TeacherBooking) {
     await rejectBooking(b.orderId)
     await load()
   } catch (error: unknown) {
+    // prompt 取消时 reject 的是字符串 'cancel'/'close'（无 .message），
+    // 按 err.message 判断恒为真 → 误报「操作失败」
+    if (error === 'cancel' || error === 'close') return
     const err = error as { message?: string }
-    if (err.message !== 'cancel') ElMessage.error(err.message || '操作失败')
+    ElMessage.error(err?.message || '操作失败')
   } finally {
     busy.value = null
   }
