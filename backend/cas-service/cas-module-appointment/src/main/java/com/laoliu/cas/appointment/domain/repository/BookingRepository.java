@@ -60,15 +60,19 @@ public interface BookingRepository {
     Map<Long, Integer> sumEquipmentOverlapBatch(Collection<Long> equipmentIds, LocalDate date,
                                                 String startTime, String endTime);
 
-    /** 到点自动归还：把已过结束时间的已通过时段单、及已过 end_date 的无时段单置为已完成，返回处理条数 */
-    int autoCompleteExpired();
+    /**
+     * 到点自动归还：把已过结束时间的已通过时段单、及已过 end_date 的无时段单置为已完成.
+     *
+     * @return 被完结的订单引用（订单/归属用户/所属服务），供调用方发布预约变更事件
+     */
+    List<BookingRef> autoCompleteExpired();
 
     /**
      * 超时未审核的待审单自动拒绝并释放所占资源（咨询时段 / 容量型名额）.
      *
-     * @return 实际拒绝条数
+     * @return 被拒绝的订单引用（订单/归属用户/所属服务），供调用方发布预约变更事件
      */
-    int autoRejectStalePending();
+    List<BookingRef> autoRejectStalePending();
 
     /**
      * 幂等插入教室时段预约，返回新订单 orderId；重复提交返回 null.

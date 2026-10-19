@@ -267,6 +267,15 @@
          注意：只处理「待审核」且创建时间已超过 staleHours 的单，
          不影响刚提交、正在等待审核的正常单。 -->
 
+    <!-- 自动拒绝前置查询：选出本次将被拒绝的订单引用，供任务层发布事件。WHERE 与更新条件一致 -->
+    <select id="selectStalePendingForAutoReject"
+            resultType="com.laoliu.cas.appointment.domain.view.BookingRef">
+        SELECT i.order_id AS orderId, i.user_id AS userId, i.service_id AS serviceId
+        FROM item i
+        WHERE i.manage_status = #{pendingCode}
+          AND i.create_time &lt; DATE_SUB(NOW(), INTERVAL #{staleHours} HOUR)
+    </select>
+
     <update id="autoRejectStalePending">
         UPDATE item
         LEFT JOIN time_slot t ON t.id = item.slot_id
@@ -386,6 +395,23 @@
          1) 有时段的预约（咨询/设备/教室）：slot_date 已过，或当天且 end_time 已过；
          2) 无时段的通用/活动预约：所属服务设置了 end_date（活动结束日期）且已过；
             services.end_date 为 NULL 表示不自动完结（长期有效的通用服务）。 -->
+    <!-- 自动完结前置查询：选出本次将被完结的订单引用（order/user/service），
+         供任务层逐条发布预约变更事件失效 KB 缓存。WHERE 与 autoCompleteExpired 更新条件一致；
+         select 先于 update 执行，极端竞态下多发的事件只是额外缓存失效，无害 -->
+    <select id="selectExpiredForAutoComplete"
+            resultType="com.laoliu.cas.appointment.domain.view.BookingRef">
+        SELECT i.order_id AS orderId, i.user_id AS userId, i.service_id AS serviceId
+        FROM item i
+        JOIN services s ON s.service_id = i.service_id
+        WHERE i.manage_status = #{approvedCode}
+          AND (
+                (i.end_time IS NOT NULL
+                    AND (i.slot_date &lt; CURDATE()
+                         OR (i.slot_date = CURDATE() AND i.end_time &lt; DATE_FORMAT(NOW(), '%H:%i'))))
+                OR (i.end_time IS NULL AND s.end_date IS NOT NULL AND s.end_date &lt; CURDATE())
+              )
+    </select>
+
     <update id="autoCompleteExpired">
         UPDATE item i
         JOIN services s ON s.service_id = i.service_id

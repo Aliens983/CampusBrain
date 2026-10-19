@@ -131,19 +131,31 @@ public class BookingRepositoryImpl implements BookingRepository {
     }
 
     @Override
-    public int autoCompleteExpired() {
-        return itemMapper.autoCompleteExpired(APPROVED, COMPLETED);
+    public List<BookingRef> autoCompleteExpired() {
+        // 先选出受影响订单再更新：任务层需按 (userId, serviceId) 发布预约变更事件，
+        // 否则 KB 问答/语义缓存最长 30 分钟继续返回过期状态与余量（与审核/取消链路对齐）
+        List<BookingRef> affected = itemMapper.selectExpiredForAutoComplete(APPROVED);
+        if (affected.isEmpty()) {
+            return List.of();
+        }
+        itemMapper.autoCompleteExpired(APPROVED, COMPLETED);
+        return affected;
     }
 
     @Override
-    public int autoRejectStalePending() {
+    public List<BookingRef> autoRejectStalePending() {
         int staleHours = bookingProperties.getPendingStaleHours();
         // <=0 表示关闭该能力（留给运维按环境调节）
         if (staleHours <= 0) {
-            return 0;
+            return List.of();
         }
-        return itemMapper.autoRejectStalePending(
+        List<BookingRef> affected = itemMapper.selectStalePendingForAutoReject(PENDING, staleHours);
+        if (affected.isEmpty()) {
+            return List.of();
+        }
+        itemMapper.autoRejectStalePending(
                 PENDING, REJECTED, "超过 " + staleHours + " 小时未审核，系统自动拒绝并释放资源", staleHours);
+        return affected;
     }
 
     @Override

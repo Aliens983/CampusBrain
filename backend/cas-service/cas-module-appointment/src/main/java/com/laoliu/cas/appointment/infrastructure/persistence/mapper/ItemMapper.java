@@ -200,6 +200,12 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                             @Param("completedCode") int completedCode);
 
     /**
+     * 自动完结前置查询：选出符合完结条件的订单引用，供任务层发布预约变更事件.
+     * WHERE 与 {@link #autoCompleteExpired} 的更新条件完全一致.
+     */
+    List<BookingRef> selectExpiredForAutoComplete(@Param("approvedCode") int approvedCode);
+
+    /**
      * 超时未审核的待审单自动拒绝，并释放其占用的咨询时段与容量型名额.
      *
      * @param pendingCode  待审核状态码
@@ -212,6 +218,13 @@ public interface ItemMapper extends BaseMapper<ItemDO> {
                                @Param("rejectedCode") int rejectedCode,
                                @Param("reason") String reason,
                                @Param("staleHours") int staleHours);
+
+    /**
+     * 自动拒绝前置查询：选出超时未审核的订单引用，供任务层发布预约变更事件.
+     * WHERE 与 {@link #autoRejectStalePending} 的更新条件完全一致.
+     */
+    List<BookingRef> selectStalePendingForAutoReject(@Param("pendingCode") int pendingCode,
+                                                     @Param("staleHours") int staleHours);
 
     /**
      * 幂等插入教室时段预约.成功时 orderId 回填到 {@code item}.
