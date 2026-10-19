@@ -177,6 +177,47 @@ class AppointmentAssistantServiceImplTest {
             assertFalse(draft.getValid());
             assertTrue(draft.getInvalidReason().contains("不能预约过去的日期"));
         }
+
+        @Test
+        @DisplayName("只传 serviceId 的教师咨询服务 → valid=false，引导改用资源参数")
+        void shouldRejectPlainTeacherServiceWithoutResource() {
+            stubCategory("teacher");
+            when(serviceRepository.findById(1L)).thenReturn(Optional.of(service(1L, -1, 0)));
+
+            AssistantBookingDraft draft = service.createDraft(7L,
+                    AssistantBookingDraftRequest.builder().serviceId(1L).build());
+
+            assertFalse(draft.getValid());
+            assertTrue(draft.getInvalidReason().contains("需选择具体资源与时段"),
+                    "教师咨询类不带资源ID必须在草稿期拦下，否则确认必被下单链路拒绝");
+            assertNull(draft.getDraftId(), "校验不通过不应分配草稿ID");
+        }
+
+        @Test
+        @DisplayName("只传 serviceId 的设备借用服务 → valid=false，提示需设备参数")
+        void shouldRejectPlainEquipmentServiceWithoutResource() {
+            stubCategory("equipment");
+            when(serviceRepository.findById(1L)).thenReturn(Optional.of(service(1L, -1, 0)));
+
+            AssistantBookingDraft draft = service.createDraft(7L,
+                    AssistantBookingDraftRequest.builder().serviceId(1L).build());
+
+            assertFalse(draft.getValid());
+            assertTrue(draft.getInvalidReason().contains("设备ID"));
+        }
+
+        @Test
+        @DisplayName("只传 serviceId 的活动报名服务 → valid=true（容量型免审直通）")
+        void shouldAllowPlainActivityService() {
+            stubCategory("activity");
+            when(serviceRepository.findById(1L)).thenReturn(Optional.of(service(1L, 10, 0)));
+
+            AssistantBookingDraft draft = service.createDraft(7L,
+                    AssistantBookingDraftRequest.builder().serviceId(1L).build());
+
+            assertTrue(draft.getValid());
+            assertNotNull(draft.getDraftId());
+        }
     }
 
     @Nested

@@ -508,6 +508,18 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     private AssistantBookingDraft validatePlainService(ServiceItem service, ServiceCategory category,
                                                        AssistantBookingDraftRequest request) {
+        // 分类白名单与通用下单（BookServiceImpl.bookService）保持一致：
+        // 通用下单只承载容量型预约（当前仅活动报名），时段/资源型服务必须带
+        // 专用资源参数走对应校验分支。此处若不拦，草稿虽判有效，确认时必被
+        // 下单链路以"需使用专用接口"拒绝，违背"草稿=可确认预览"的两段式契约；
+        // 未知/缺失分类一并 fail-closed，不允许生成无资源外键的空壳单。
+        String code = category == null ? null : category.getCode();
+        if (CategoryCode.EQUIPMENT.is(code)) {
+            return invalid(service, category, "设备借用请提供设备ID、日期时段与数量后再预约");
+        }
+        if (!CategoryCode.ACTIVITY.is(code)) {
+            return invalid(service, category, "该服务需选择具体资源与时段，请提供咨询师/教室/设备信息");
+        }
         if (!service.hasCapacity()) {
             return invalid(service, category, "该服务预约名额已满，请选择其他服务");
         }
