@@ -50,7 +50,16 @@ public class WeatherApiImpl implements WeatherApi {
                     .encode()
                     .toUriString();
 
-            log.info("请求URL: {}", url);
+            // 日志中的 URL 必须剔除 key 查询参数：第三方 API 密钥不随日志扩散
+            // （保留 id 与省市参数，便于排查中文参数编码问题）
+            String logUrl = UriComponentsBuilder.fromHttpUrl(weatherApiUrl)
+                    .queryParam("id", apiId)
+                    .queryParam("sheng", sheng)
+                    .queryParam("place", place)
+                    .build()
+                    .encode()
+                    .toUriString();
+            log.info("请求URL(已脱敏): {}", logUrl);
 
             WeatherResponse response = restTemplate.getForObject(url, WeatherResponse.class);
 
