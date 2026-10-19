@@ -448,7 +448,12 @@ public class QaApplicationService implements IQaApplicationService {
                                     Consumer<Long> onMessageId,
                                     Consumer<AssistantEvent> onEvent,
                                     long startTime) {
-        ChatSession latest = chatSessionRepository.find(sid).orElse(session);
+        // 只接受归属本用户的会话快照：find 不做归属校验，若在 sessionId 冒用窗口
+        // 拿到他人会话，会把对方的槽位/待确认草稿经 SSE 推给当前用户，并在 save 时
+        // 以对方身份回写。归属不一致时回退到 loadForUser 加载的隔离会话
+        ChatSession latest = chatSessionRepository.find(sid)
+                .filter(s -> userId != null && userId.equals(s.getUserId()))
+                .orElse(session);
         chatSessionRepository.save(latest);
 
         List<Conversation.CitationRef> citations = pipeline.buildCitations(reranked);

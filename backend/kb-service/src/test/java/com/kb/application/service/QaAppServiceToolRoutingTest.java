@@ -1,8 +1,10 @@
 package com.kb.application.service;
 
+import com.kb.domain.chat.AssistantEvent;
 import com.kb.domain.chat.BookingSlots;
 import com.kb.domain.chat.ChatSession;
 import com.kb.domain.chat.ChatSessionRepository;
+import com.kb.domain.chat.PendingBooking;
 import com.kb.domain.conversation.Conversation;
 import com.kb.domain.conversation.ConversationRepository;
 import com.kb.domain.rag.LlmService;
@@ -23,7 +25,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -189,6 +193,38 @@ class QaAppServiceToolRoutingTest {
             assertFalse(invokeIsAppointment("介绍一下知识库功能"));
             assertFalse(invokeIsAppointment(null));
             assertFalse(invokeIsAppointment(""));
+        }
+    }
+
+    @Nested
+    @DisplayName("会话归属隔离：persistAndNotify 不得回读他人会话")
+    class SessionOwnership {
+
+        @Test
+        @DisplayName("Redis 中会话归属他人时，不得推送其槽位/草稿事件（防 sessionId 冒用泄露）")
+        void shouldNotLeakOtherUsersSessionOnPersist() {
+            String query = "有哪些服务可以预约？";
+            stubPipeline(query);
+            // 冒用窗口：受害者仅在 Redis 有上下文（无 MySQL 消息），find 会读到其会话
+            ChatSession victim = ChatSession.builder()
+                    .sessionId("s1").userId(999L)
+                    .slots(BookingSlots.builder().campus("xs").category("teacher").build())
+                    .pendingBooking(PendingBooking.builder().draftId("draft-victim").summary("受害者草稿").build())
+                    .build();
+            when(chatSessionRepository.find("s1")).thenReturn(Optional.of(victim));
+            when(llmService.generateAnswerWithToolsStreaming(
+                    anyString(), anyList(), anyList(), any(), any(), any()))
+                    .thenReturn("实时答案");
+
+            List<AssistantEvent> events = new ArrayList<>();
+            service.askStreaming(query, "s1", 1L, t -> {}, c -> {}, id -> {}, events::add);
+
+            // 当前用户自己的会话是干净的：不得出现任何携带受害者数据的 slots/confirm 事件
+            for (AssistantEvent event : events) {
+                assertFalse(AssistantEvent.TYPE_SLOTS.equals(event.getType())
+                                || AssistantEvent.TYPE_CONFIRM.equals(event.getType()),
+                        "归属不一致的会话快照不得进入 SSE 事件推送: " + event.getType());
+            }
         }
     }
 
