@@ -250,6 +250,7 @@ class AppointmentAssistantServiceImplTest {
             ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
             verify(redisUtil).set(anyString(), jsonCaptor.capture(), anyLong(), any());
             when(redisUtil.get(anyString())).thenReturn(jsonCaptor.getValue());
+            when(redisUtil.setIfAbsent(anyString(), any(), anyLong(), any())).thenReturn(true);
             // 下单服务返回真实回填 orderId 的提交结果（不再由助手事后猜测最新单）
             when(bookService.bookService(eq(7L), any()))
                     .thenReturn(new BookService.BookingSubmitResult(null, List.of(1001L)));
@@ -260,6 +261,51 @@ class AppointmentAssistantServiceImplTest {
             verify(redisUtil).delete(anyString());
             assertNotNull(result);
             assertEquals(1001L, result.getOrderId());
+        }
+
+        @Test
+        @DisplayName("确认占位已被占用（并发/重试）→ 直接拦下，绝不重复下单")
+        void shouldRejectConcurrentConfirm() throws Exception {
+            stubCategory("activity");
+            when(serviceRepository.findById(1L)).thenReturn(Optional.of(service(1L, -1, 0)));
+
+            AssistantBookingDraft draft = service.createDraft(7L,
+                    AssistantBookingDraftRequest.builder().serviceId(1L).build());
+            ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
+            verify(redisUtil).set(anyString(), jsonCaptor.capture(), anyLong(), any());
+            when(redisUtil.get(anyString())).thenReturn(jsonCaptor.getValue());
+            // 第二个确认请求拿不到占位
+            when(redisUtil.setIfAbsent(anyString(), any(), anyLong(), any())).thenReturn(false);
+
+            BusinessException ex = assertThrows(BusinessException.class,
+                    () -> service.confirmDraft(7L, draft.getDraftId()));
+
+            assertTrue(ex.getMessage().contains("正在确认中"));
+            verify(bookService, never()).bookService(anyLong(), any());
+        }
+
+        @Test
+        @DisplayName("订单已生成但草稿删除失败 → 仍返回成功，不对外报失败诱发重复预约")
+        void shouldSucceedEvenIfDraftDiscardFails() throws Exception {
+            stubCategory("activity");
+            when(serviceRepository.findById(1L)).thenReturn(Optional.of(service(1L, -1, 0)));
+
+            AssistantBookingDraft draft = service.createDraft(7L,
+                    AssistantBookingDraftRequest.builder().serviceId(1L).build());
+            ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
+            verify(redisUtil).set(anyString(), jsonCaptor.capture(), anyLong(), any());
+            when(redisUtil.get(anyString())).thenReturn(jsonCaptor.getValue());
+            when(redisUtil.setIfAbsent(anyString(), any(), anyLong(), any())).thenReturn(true);
+            when(bookService.bookService(eq(7L), any()))
+                    .thenReturn(new BookService.BookingSubmitResult(null, List.of(1002L)));
+            // 删除草稿时 Redis 故障：不得把已生成的订单对外报告成失败
+            when(redisUtil.delete(anyString())).thenThrow(new RuntimeException("redis connection lost"));
+
+            AssistantBookingResult result = service.confirmDraft(7L, draft.getDraftId());
+
+            assertNotNull(result);
+            assertEquals(1002L, result.getOrderId());
+            verify(bookService).bookService(eq(7L), any());
         }
 
         @Test
@@ -283,12 +329,15 @@ class AppointmentAssistantServiceImplTest {
             ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
             verify(redisUtil).set(anyString(), jsonCaptor.capture(), anyLong(), any());
             when(redisUtil.get(anyString())).thenReturn(jsonCaptor.getValue());
+            when(redisUtil.setIfAbsent(anyString(), any(), anyLong(), any())).thenReturn(true);
 
             // 生成草稿后到确认之间，名额被别人占满
             when(serviceRepository.findById(1L)).thenReturn(Optional.of(service(1L, 10, 10)));
 
             assertThrows(BusinessException.class, () -> service.confirmDraft(7L, draft.getDraftId()));
             verify(bookService, never()).bookService(anyLong(), any());
+            // 未下单：占位必须释放，允许用户修正后重新发起
+            verify(redisUtil).delete(anyString());
         }
 
         @Test
@@ -314,6 +363,7 @@ class AppointmentAssistantServiceImplTest {
             ArgumentCaptor<String> jsonCaptor = ArgumentCaptor.forClass(String.class);
             verify(redisUtil).set(anyString(), jsonCaptor.capture(), anyLong(), any());
             when(redisUtil.get(anyString())).thenReturn(jsonCaptor.getValue());
+            when(redisUtil.setIfAbsent(anyString(), any(), anyLong(), any())).thenReturn(true);
             when(consultationService.bookConsultation(eq(7L), eq(3L), eq(9L))).thenReturn(2001L);
 
             AssistantBookingResult result = service.confirmDraft(7L, draft.getDraftId());

@@ -73,6 +73,16 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     /** 草稿 Redis key 前缀（按用户隔离，防越权读取他人草稿） */
     private static final String DRAFT_KEY_PREFIX = "assistant:booking:draft:";
 
+    /**
+     * 确认占位 Redis key 前缀（按用户 + 草稿隔离）.
+     * 确认是"读取草稿→二次校验→下单→删草稿"的多步非原子流程，双击/网络重试/
+     * 并发请求会让同一草稿进入多个执行流；占位键保证同一草稿同时只有一个确认在途.
+     */
+    private static final String CONFIRM_CLAIM_PREFIX = "assistant:booking:confirming:";
+
+    /** 确认占位存活时长（分钟）：覆盖一次确认的最坏耗时，期间重试被明确拦下 */
+    private static final long CONFIRM_CLAIM_TTL_MINUTES = 2L;
+
     private final ServiceItemRepository serviceRepository;
     private final ServiceCategoryRepository serviceCategoryRepository;
     /** 走应用服务（带 @Cacheable）而非直接查库，避免每次助手问答全表扫服务 */
@@ -327,32 +337,58 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     @Override
     public AssistantBookingResult confirmDraft(Long userId, String draftId) {
         AssistantBookingDraft stored = loadDraft(userId, draftId);
-        // 二次校验：草稿生成后到确认之间，容量 / 时段 / 库存可能已经变化
-        AssistantBookingDraft revalidated = resolveAndValidate(toRequest(stored));
-        if (Boolean.FALSE.equals(revalidated.getValid())) {
+        // 并发/重试保护：原子占位确认流程。双击、EventSource 重连重发、客户端
+        // 超时重试都会让同一草稿进入多个执行流；占位失败即说明已有人在确认中，
+        // 直接拦下，避免同一草稿重复下单（或订单已生成却对外报告失败）
+        if (!redisUtil.setIfAbsent(claimKey(userId, draftId), "1",
+                CONFIRM_CLAIM_TTL_MINUTES, TimeUnit.MINUTES)) {
             throw new BusinessException(BookErrorCode.BOOKING_FAILED.getCode(),
-                    revalidated.getInvalidReason());
+                    "该预约正在确认中，请稍候查看结果，勿重复提交");
         }
+        boolean booked = false;
+        try {
+            // 二次校验：草稿生成后到确认之间，容量 / 时段 / 库存可能已经变化
+            AssistantBookingDraft revalidated = resolveAndValidate(toRequest(stored));
+            if (Boolean.FALSE.equals(revalidated.getValid())) {
+                throw new BusinessException(BookErrorCode.BOOKING_FAILED.getCode(),
+                        revalidated.getInvalidReason());
+            }
 
-        Long orderId = executeBooking(userId, stored);
-        discardDraft(userId, draftId);
+            Long orderId = executeBooking(userId, stored);
+            booked = true;
+            // 草稿删除失败绝不外抛：订单已生成，对外报错会让用户以为失败而重复
+            // 预约；降级为错误日志，由占位键 TTL 兜住重试窗口，残留草稿交由对账清理
+            try {
+                discardDraft(userId, draftId);
+            } catch (Exception e) {
+                log.error("预约草稿删除失败（订单已生成，需人工对账清理残留草稿）: "
+                                + "userId={}, draftId={}, orderId={}",
+                        userId, draftId, orderId, e);
+            }
 
-        return AssistantBookingResult.builder()
-                .orderId(orderId)
-                .status(Boolean.TRUE.equals(stored.getNeedAudit()) ? "PENDING" : "APPROVED")
-                .statusText(Boolean.TRUE.equals(stored.getNeedAudit()) ? "待审核" : "已通过")
-                .message(Boolean.TRUE.equals(stored.getNeedAudit())
-                        ? "预约已提交，等待管理员审核：" + stored.getSummary()
-                        : "预约成功：" + stored.getSummary())
-                .resourceType(stored.getResourceType())
-                .resourceName(stored.getResourceName())
-                .serviceName(stored.getServiceName())
-                .campusName(stored.getCampusName())
-                .date(stored.getDate())
-                .startTime(stored.getStartTime())
-                .endTime(stored.getEndTime())
-                .quantity(stored.getQuantity())
-                .build();
+            return AssistantBookingResult.builder()
+                    .orderId(orderId)
+                    .status(Boolean.TRUE.equals(stored.getNeedAudit()) ? "PENDING" : "APPROVED")
+                    .statusText(Boolean.TRUE.equals(stored.getNeedAudit()) ? "待审核" : "已通过")
+                    .message(Boolean.TRUE.equals(stored.getNeedAudit())
+                            ? "预约已提交，等待管理员审核：" + stored.getSummary()
+                            : "预约成功：" + stored.getSummary())
+                    .resourceType(stored.getResourceType())
+                    .resourceName(stored.getResourceName())
+                    .serviceName(stored.getServiceName())
+                    .campusName(stored.getCampusName())
+                    .date(stored.getDate())
+                    .startTime(stored.getStartTime())
+                    .endTime(stored.getEndTime())
+                    .quantity(stored.getQuantity())
+                    .build();
+        } finally {
+            // 未真正下单（校验失败/异常）才释放占位：允许用户修正参数后重新发起；
+            // 已下单则保留占位至 TTL 自然过期，堵住"删草稿失败 + 立即重试"的重复预约窗口
+            if (!booked) {
+                redisUtil.delete(claimKey(userId, draftId));
+            }
+        }
     }
 
     @Override
@@ -632,6 +668,10 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
 
     private String draftKey(Long userId, String draftId) {
         return DRAFT_KEY_PREFIX + userId + ":" + draftId;
+    }
+
+    private String claimKey(Long userId, String draftId) {
+        return CONFIRM_CLAIM_PREFIX + userId + ":" + draftId;
     }
 
     private AssistantBookingDraftRequest toRequest(AssistantBookingDraft draft) {

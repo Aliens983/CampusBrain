@@ -9,8 +9,12 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
+
+import java.util.concurrent.TimeUnit;
 
 /**
  * RedisUtil 计数器读取回归测试.
@@ -63,5 +67,18 @@ class RedisUtilTest {
         RedisUtil redisUtil = new RedisUtil(redisTemplate);
 
         assertNull(redisUtil.getCounter("counter"));
+    }
+
+    @Test
+    @DisplayName("setIfAbsent：SET NX 成功返回 true，key 已存在返回 false")
+    void shouldReflectSetIfAbsentResult() {
+        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        when(valueOperations.setIfAbsent("claim", "1", 2L, TimeUnit.MINUTES)).thenReturn(true);
+        when(valueOperations.setIfAbsent("taken", "1", 2L, TimeUnit.MINUTES)).thenReturn(false);
+
+        RedisUtil redisUtil = new RedisUtil(redisTemplate);
+
+        assertTrue(redisUtil.setIfAbsent("claim", "1", 2L, TimeUnit.MINUTES));
+        assertFalse(redisUtil.setIfAbsent("taken", "1", 2L, TimeUnit.MINUTES));
     }
 }

@@ -28,6 +28,16 @@ public class RedisUtil {
         redisTemplate.opsForValue().set(key, value, timeout, unit);
     }
 
+    /**
+     * 原子占位：key 不存在时才写入并返回 true，已存在返回 false（SET NX EX）.
+     * <p>
+     * 用于并发/重试防护（如预约确认占位），判定与写入由 Redis 单条完成，
+     * 不存在"检查-写入"之间的竞态窗口.
+     */
+    public <T> boolean setIfAbsent(String key, T value, long timeout, TimeUnit unit) {
+        return Boolean.TRUE.equals(redisTemplate.opsForValue().setIfAbsent(key, value, timeout, unit));
+    }
+
     @SuppressWarnings("unchecked")
     public <T> T get(String key) {
         return (T) redisTemplate.opsForValue().get(key);
