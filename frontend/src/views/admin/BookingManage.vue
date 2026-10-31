@@ -2,7 +2,13 @@
   <div class="page-shell">
     <section class="admin-hero">
       <div class="admin-hero__main">
+        <p class="hz-eyebrow">
+          Booking review · HZNU
+        </p>
         <h1>预约审核</h1>
+        <p class="admin-hero__desc">
+          按校区查看预约队列，处理审核、异常单据与状态流转。
+        </p>
       </div>
       <div class="admin-hero__signal">
         <div class="signal-card">
@@ -513,39 +519,25 @@ function campusName(c?: string) {
 </script>
 
 <style scoped lang="scss">
-.admin-hero {
-  position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
-  padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
-  box-shadow: var(--shadow-card); overflow: hidden;
+.booking-stack,
+.dialog-list,
+.drawer-stack {
+  display: grid;
+  gap: 12px;
 }
-.admin-hero::before {
-  content:""; position:absolute; inset:0;
-  background: radial-gradient(circle at 18% 20%, rgba(255,255,255,.12), transparent 18%),
-              linear-gradient(140deg, transparent 14%, rgba(255,255,255,.08) 42%, transparent 72%);
-}
-.admin-hero::after {
-  content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
-  animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
-}
-.admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
-.hero-chip { display:inline-flex; padding:6px 12px; border-radius:999px; font-size:12px; letter-spacing:.08em; background:rgba(255,255,255,.12); margin-bottom:14px; }
-.admin-hero h1 { margin:12px 0 10px; font-size:36px; line-height:1.18; }
-.admin-hero p { max-width:740px; margin:0; line-height:1.8; color:rgba(255,255,255,.82); }
-.admin-hero__signal { display:grid; gap:12px; }
-.signal-card { display:grid; gap:4px; padding:16px 18px; border-radius:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); cursor:pointer; transition:background .2s; }
-.signal-card:hover { background:rgba(255,255,255,.14); }
-.signal-card span { font-size:13px; color:rgba(255,255,255,.64); }
-.signal-card strong { font-size:26px; font-weight:700; }
-.signal-card small { font-size:12px; color:rgba(255,255,255,.5); }
 
-@keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
-.booking-stack, .dialog-list, .drawer-stack { display: grid; gap: 14px; }
-.section-head__filters { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.service-search { width: 240px; max-width: 46vw; }
+.section-head__filters {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
 
-/* 分页栏固定在列表左下角 */
+.service-search {
+  width: 240px;
+  max-width: 46vw;
+}
+
 .list-pagination {
   display: flex;
   justify-content: flex-start;
@@ -553,16 +545,93 @@ function campusName(c?: string) {
   gap: 8px;
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 1px solid var(--border-soft);
+  border-top: 1px solid var(--line);
 }
-.booking-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); cursor: pointer; transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
-.booking-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
-.booking-item__main { flex: 1; display: grid; gap: 10px; }
-.booking-item__head { display: flex; justify-content: space-between; gap: 12px; }
-.head-tags { display: inline-flex; align-items: center; gap: 8px; flex-shrink: 0; }
-.booking-item__head p { margin: 4px 0 0; color: var(--text-tertiary); font-size: 12px; }
-.booking-item__meta { display: flex; flex-wrap: wrap; gap: 12px; color: var(--text-secondary); font-size: 13px; }
-.booking-item__action, .button-row { display: flex; gap: 10px; }
-.dialog-card { padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #fff, #F9FCFF); border: 1px solid var(--border-soft); }
-@media (max-width: 960px) { .admin-hero { grid-template-columns: 1fr; } .booking-item, .booking-item__head, .booking-item__action, .button-row { flex-direction: column; align-items: stretch; } }
+
+.booking-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  cursor: pointer;
+  transition:
+    transform 0.18s var(--ease-out),
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.booking-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(176, 138, 69, 0.42);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.booking-item__main {
+  display: grid;
+  flex: 1;
+  gap: 8px;
+  min-width: 0;
+}
+
+.booking-item__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.booking-item__head strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.head-tags {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.booking-item__head p {
+  margin: 4px 0 0;
+  color: var(--ink-4);
+  font-size: 11.5px;
+}
+
+.booking-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.booking-item__action,
+.button-row {
+  display: flex;
+  gap: 10px;
+}
+
+.dialog-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+@media (max-width: 960px) {
+  .booking-item,
+  .booking-item__head,
+  .booking-item__action,
+  .button-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
 </style>

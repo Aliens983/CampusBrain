@@ -2,7 +2,13 @@
   <div class="page-shell">
     <section class="admin-hero">
       <div class="admin-hero__main">
+        <p class="hz-eyebrow">
+          Users & roles · HZNU
+        </p>
         <h1>用户与权限</h1>
+        <p class="admin-hero__desc">
+          管理校园账号、角色与访问权限，保持身份体系清晰可靠。
+        </p>
       </div>
       <div class="admin-hero__signal">
         <div class="signal-card">
@@ -297,39 +303,20 @@ function roleText(role: UserRole) {
 </script>
 
 <style scoped lang="scss">
-.field-tip { margin-top: 6px; font-size: 12px; line-height: 1.6; color: var(--text-tertiary); }
-
-.admin-hero {
-  position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
-  padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
-  box-shadow: var(--shadow-card); overflow: hidden;
+.field-tip {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--ink-4);
 }
-.admin-hero::before {
-  content:""; position:absolute; inset:0;
-  background: radial-gradient(circle at 18% 20%, rgba(255,255,255,.12), transparent 18%),
-              linear-gradient(140deg, transparent 14%, rgba(255,255,255,.08) 42%, transparent 72%);
-}
-.admin-hero::after {
-  content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
-  animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
-}
-.admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
-.hero-chip { display:inline-flex; padding:6px 12px; border-radius:999px; font-size:12px; letter-spacing:.08em; background:rgba(255,255,255,.12); margin-bottom:14px; }
-.admin-hero h1 { margin:12px 0 10px; font-size:36px; line-height:1.18; }
-.admin-hero p { max-width:740px; margin:0; line-height:1.8; color:rgba(255,255,255,.82); }
-.admin-hero__signal { display:grid; gap:12px; }
-.signal-card { display:grid; gap:4px; padding:16px 18px; border-radius:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); cursor:pointer; transition:background .2s; }
-.signal-card:hover { background:rgba(255,255,255,.14); }
-.signal-card span { font-size:13px; color:rgba(255,255,255,.64); }
-.signal-card strong { font-size:26px; font-weight:700; }
-.signal-card small { font-size:12px; color:rgba(255,255,255,.5); }
 
-@keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
-.user-stack, .dialog-list, .drawer-stack { display: grid; gap: 14px; }
+.user-stack,
+.dialog-list,
+.drawer-stack {
+  display: grid;
+  gap: 12px;
+}
 
-/* 分页栏固定在列表左下角 */
 .list-pagination {
   display: flex;
   justify-content: flex-start;
@@ -337,16 +324,97 @@ function roleText(role: UserRole) {
   gap: 8px;
   margin-top: 18px;
   padding-top: 16px;
-  border-top: 1px solid var(--border-soft);
+  border-top: 1px solid var(--line);
 }
-.user-item { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 18px; border-radius: 20px; border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF); transition: transform .24s ease, box-shadow .24s ease, border-color .24s ease; }
-.user-item:hover { transform: translateY(-4px); box-shadow: 0 18px 28px rgba(20,33,61,.1); border-color: rgba(63,182,255,.14); }
-.user-item__avatar { width: 56px; height: 56px; display: grid; place-items: center; border-radius: 18px; background: linear-gradient(135deg, #3FB6FF, #ADE2FF); color: #fff; font-size: 22px; font-weight: 700; }
-.user-item__main { display: grid; gap: 10px; }
-.user-item__head { display: flex; justify-content: space-between; gap: 12px; }
-.user-item__head p { margin: 4px 0 0; color: var(--text-tertiary); font-size: 12px; }
-.user-item__meta { display: flex; flex-wrap: wrap; gap: 12px; color: var(--text-secondary); font-size: 13px; }
-.user-item__action { display: flex; align-items: center; gap: 10px; }
-.dialog-card { padding: 16px; border-radius: 18px; background: linear-gradient(180deg, #fff, #F9FCFF); border: 1px solid var(--border-soft); }
-@media (max-width: 960px) { .admin-hero { grid-template-columns: 1fr; } .user-item, .user-item__head, .user-item__action { display: flex; flex-direction: column; align-items: stretch; } }
+
+.user-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  transition:
+    transform 0.18s var(--ease-out),
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.user-item:hover {
+  transform: translateY(-2px);
+  border-color: rgba(176, 138, 69, 0.42);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
+}
+
+.user-item__avatar {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--paper-2);
+  color: var(--lake);
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.user-item__main {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.user-item__head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.user-item__head strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.user-item__head p {
+  margin: 4px 0 0;
+  color: var(--ink-4);
+  font-size: 11.5px;
+}
+
+.user-item__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.user-item__action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dialog-card {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+@media (max-width: 960px) {
+  .user-item,
+  .user-item__head,
+  .user-item__action {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
 </style>

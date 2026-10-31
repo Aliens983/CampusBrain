@@ -2,7 +2,13 @@
   <div class="page-shell">
     <section class="admin-hero">
       <div class="admin-hero__main">
+        <p class="hz-eyebrow">
+          System settings · HZNU
+        </p>
         <h1>系统设置</h1>
+        <p class="admin-hero__desc">
+          维护预约策略、通知通道与首页轮播，让平台保持统一秩序。
+        </p>
       </div>
       <div class="admin-hero__signal">
         <div class="signal-card">
@@ -259,63 +265,38 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.admin-hero {
-  position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
-  padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
-  box-shadow: var(--shadow-card); overflow: hidden;
-}
-.admin-hero::before {
-  content:""; position:absolute; inset:0;
-  background: radial-gradient(circle at 18% 20%, rgba(255,255,255,.12), transparent 18%),
-              linear-gradient(140deg, transparent 14%, rgba(255,255,255,.08) 42%, transparent 72%);
-}
-.admin-hero::after {
-  content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
-  animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
-}
-.admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
-.hero-chip { display:inline-flex; padding:6px 12px; border-radius:999px; font-size:12px; letter-spacing:.08em; background:rgba(255,255,255,.12); margin-bottom:14px; }
-.admin-hero h1 { margin:12px 0 10px; font-size:36px; line-height:1.18; }
-.admin-hero p { max-width:740px; margin:0; line-height:1.8; color:rgba(255,255,255,.82); }
-.admin-hero__signal { display:grid; gap:12px; }
-.signal-card { display:grid; gap:4px; padding:16px 18px; border-radius:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); transition:background .2s; }
-.signal-card:hover { background:rgba(255,255,255,.14); }
-.signal-card span { font-size:13px; color:rgba(255,255,255,.64); }
-.signal-card strong { font-size:26px; font-weight:700; }
-.signal-card small { font-size:12px; color:rgba(255,255,255,.5); }
-
-@keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
-
 .span-6 {
   grid-column: span 6;
 }
 
 .setting-stack {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .setting-item {
   display: grid;
   gap: 10px;
-  padding: 18px;
-  border-radius: 20px;
-  border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #F9FCFF);
-  transition: transform 0.24s ease, box-shadow 0.24s ease;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  transition:
+    transform 0.18s var(--ease-out),
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .setting-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 28px rgba(20, 33, 61, 0.1);
+  transform: translateY(-2px);
+  border-color: rgba(176, 138, 69, 0.42);
+  background: var(--surface);
 }
 
 .setting-item p {
   margin: 4px 0 0;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--ink-3);
+  font-size: 12px;
   line-height: 1.7;
 }
 
@@ -325,10 +306,6 @@ onMounted(() => {
 }
 
 @media (max-width: 1200px) {
-  .admin-hero {
-    grid-template-columns: 1fr;
-  }
-
   .span-6 {
     grid-column: span 12;
   }
@@ -339,11 +316,42 @@ onMounted(() => {
     grid-template-columns: 1fr;
   }
 }
-.carousel-card { grid-column: 1 / -1; }
-.carousel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
-.carousel-thumb { display: grid; gap: 6px; padding: 8px; border: 1px solid var(--border-soft); border-radius: 12px; background: #fff; }
-.carousel-thumb img { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; display: block; }
-.carousel-thumb { cursor: grab; }
-.carousel-thumb:active { cursor: grabbing; }
-.drag-hint { font-size: 11px; color: var(--text-tertiary); text-align: center; }
+
+.carousel-card {
+  grid-column: 1 / -1;
+}
+
+.carousel-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.carousel-thumb {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  cursor: grab;
+}
+
+.carousel-thumb:active {
+  cursor: grabbing;
+}
+
+.carousel-thumb img {
+  display: block;
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.drag-hint {
+  font-size: 10.5px;
+  color: var(--ink-4);
+  text-align: center;
+}
 </style>
