@@ -7,7 +7,12 @@
 # 此处不再覆盖 datasource，避免"本地跑通、容器里却连 localhost"这类不一致。
 
 spring:
-  # 网易 163 邮箱 SMTP（本地发验证码用；需 source scripts/load-env.sh）
+  # 本地开发直接从 backend/.env 读取配置（进程需在 backend 目录启动）；
+  # optional 表示文件不存在时跳过，CI/无 .env 环境仍由真实环境变量注入。
+  # [.properties] 显式指定解析器，避免 Spring 因扩展名 .env 而无法识别格式。
+  config:
+    import: optional:file:./.env[.properties]
+  # 网易 163 邮箱 SMTP（本地发验证码用）
   mail:
     host: ${MAIL_HOST:smtp.163.com}
     port: ${MAIL_PORT:465}

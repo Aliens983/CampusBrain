@@ -1,0 +1,14 @@
+# ============================================================
+# Development Profile Configuration
+#
+# 本地开发直接从 backend/.env 读取密钥与连接配置（进程需在 backend 目录启动：
+# IDEA Run Configuration 的工作目录、scripts/run-local.sh 均满足）。
+# 容器部署使用 docker profile，不会加载本文件。
+#
+# optional: 文件不存在时跳过——CI/无 .env 环境下仍由真实环境变量注入。
+# [.properties] 显式指定解析器，避免 Spring 因扩展名 .env 而无法识别格式。
+# ============================================================
+
+spring:
+  config:
+    import: optional:file:./.env[.properties]
