@@ -6,6 +6,10 @@ server:
 spring:
   application:
     name: cas-service
+  # 统一序列化时区：容器 JVM 可能是 UTC，避免 JSON 时间比业务时间早 8 小时
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
   config:
     import: optional:nacos:cas-service.yaml
   cloud:

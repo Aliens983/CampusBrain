@@ -87,6 +87,8 @@ services:
     environment:
       # 容器统一走 docker profile：logback 只输出控制台，日志由 Docker 收集
       SPRING_PROFILES_ACTIVE: docker
+      # 业务时区：与 cas-mysql 的 +08:00 对齐，避免 JVM 默认 UTC 造成 8 小时偏差
+      TZ: Asia/Shanghai
       SERVER_PORT: 80        # Spring Boot 环境变量覆盖：让网关在容器内监听 80，与 nginx 约定一致
       NACOS_ADDR: nacos:8848
       NACOS_USERNAME: ${NACOS_USERNAME:-}
@@ -119,6 +121,8 @@ services:
       # （无 application-docker.yml），用于激活 SeedAccountPasswordInitializer 的
       # 生产弱口令 fail-fast 闸门；缺了它容器部署将绕过该闸门
       SPRING_PROFILES_ACTIVE: docker
+      # 业务时区：与 cas-mysql 的 +08:00 对齐，避免 JVM 默认 UTC 造成 8 小时偏差
+      TZ: Asia/Shanghai
       # Spring Boot 宽松绑定：环境变量覆盖 application.yml 中写死的 localhost 配置
       SPRING_DATASOURCE_URL: jdbc:mysql://cas-mysql:3306/cas_db?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
@@ -206,6 +210,8 @@ services:
       INTERNAL_SIGN_SECRET: ${INTERNAL_SIGN_SECRET}
       # 容器统一走 docker profile（INFO 日志、仅控制台输出；jar 内不再写死 active profile）
       SPRING_PROFILES_ACTIVE: docker
+      # 业务时区：与 cas-mysql 的 +08:00 对齐，避免 JVM 默认 UTC 造成 8 小时偏差
+      TZ: Asia/Shanghai
       # 大模型：对话走 DeepSeek（OpenAI 兼容接口），Embedding 走硅基流动
       OPENAI_API_KEY: ${DEEPSEEK_API_KEY}
       EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
@@ -243,6 +249,8 @@ services:
         max-file: "5"
     ports:
       - "80:80"   # nginx 托管静态页 + 反向代理到 gateway/cas-service
+    environment:
+      TZ: Asia/Shanghai   # 访问日志时间与业务时区一致
     depends_on:
       - gateway
       - cas-service

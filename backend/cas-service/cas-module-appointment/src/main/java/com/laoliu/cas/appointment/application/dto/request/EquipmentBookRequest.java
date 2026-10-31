@@ -1,6 +1,8 @@
 package com.laoliu.cas.appointment.application.dto.request;
 
+import com.laoliu.cas.appointment.domain.service.BookingLimits;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -18,6 +20,8 @@ public class EquipmentBookRequest {
 
     @NotNull(message = "借用数量不能为空")
     @Min(value = 1, message = "借用数量至少为 1")
+    @Max(value = BookingLimits.MAX_EQUIPMENT_QUANTITY,
+            message = "借用数量不能超过 " + BookingLimits.MAX_EQUIPMENT_QUANTITY)
     @Schema(description = "借用数量", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer quantity;
 

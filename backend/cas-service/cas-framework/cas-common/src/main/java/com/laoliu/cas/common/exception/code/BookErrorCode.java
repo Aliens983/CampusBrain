@@ -39,6 +39,8 @@ public interface BookErrorCode {
 
     ErrorCode BORROW_TIME_INVALID = new ErrorCode(40016, "借用时间不合法，请检查日期与起止时段");
 
+    ErrorCode BORROW_QUANTITY_INVALID = new ErrorCode(40022, "借用数量必须在 1 到 %d 之间");
+
     /**
      * 设备借用必须走专用端点.
      * 通用下单只传 serviceId，拿不到 equipmentId / 借用时段 / 数量，

@@ -3,6 +3,7 @@ package com.laoliu.cas.appointment.domain.service;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.ErrorCode;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
+import com.laoliu.cas.common.time.BusinessTime;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -57,7 +58,7 @@ public final class BookingWindowPolicy {
         if (date == null || startTime == null || startTime.isBlank()) {
             throw new BusinessException(errorCode);
         }
-        LocalDate today = LocalDate.now();
+        LocalDate today = BusinessTime.today();
         if (date.isBefore(today)) {
             throw new BusinessException(errorCode, "不能预约过去的日期");
         }
@@ -71,7 +72,8 @@ public final class BookingWindowPolicy {
             throw new BusinessException(errorCode, "开始时间格式应为 HH:mm");
         }
         // 今天：开始时刻必须晚于当前时刻（否则该时段已经开始或已结束）
-        if (!start.isAfter(LocalTime.now().withSecond(0).withNano(0))) {
+        LocalTime now = BusinessTime.nowTime().withSecond(0).withNano(0);
+        if (!start.isAfter(now)) {
             throw new BusinessException(errorCode, "该时段已开始或已结束，请选择更晚的时段");
         }
     }

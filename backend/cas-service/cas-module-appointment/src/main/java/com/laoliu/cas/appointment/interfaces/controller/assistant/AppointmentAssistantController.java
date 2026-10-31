@@ -122,7 +122,7 @@ public class AppointmentAssistantController {
     @PostMapping("/bookings/draft")
     public CommonResult<AssistantBookingDraft> createDraft(
             @RequestHeader(value = "X-User-Id", required = false) Long headerUserId,
-            @RequestBody AssistantBookingDraftRequest request) {
+            @jakarta.validation.Valid @RequestBody AssistantBookingDraftRequest request) {
         Long userId = resolveUserId(headerUserId);
         if (userId == null) {
             return CommonResult.badRequest("缺少用户身份");

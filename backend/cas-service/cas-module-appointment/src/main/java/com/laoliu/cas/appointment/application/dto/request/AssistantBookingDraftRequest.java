@@ -1,6 +1,8 @@
 package com.laoliu.cas.appointment.application.dto.request;
 
+import com.laoliu.cas.appointment.domain.service.BookingLimits;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Max;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -43,6 +45,8 @@ public class AssistantBookingDraftRequest {
     private Long equipmentId;
 
     @Schema(description = "借用数量（设备场景，默认 1）", example = "1")
+    @Max(value = BookingLimits.MAX_EQUIPMENT_QUANTITY,
+            message = "借用数量不能超过 " + BookingLimits.MAX_EQUIPMENT_QUANTITY)
     private Integer quantity;
 
     @Schema(description = "日期 yyyy-MM-dd（教室/设备/咨询场景必填）", example = "2026-09-12")

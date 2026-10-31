@@ -1,5 +1,6 @@
 package com.laoliu.cas.appointment.infrastructure.mq;
 
+import com.laoliu.cas.common.time.BusinessTime;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -64,7 +65,7 @@ public class BookingEventPublisher {
                 .userId(userId)
                 .serviceId(serviceId)
                 .traceId(MDC.get("traceId"))
-                .occurredAt(LocalDateTime.now())
+                .occurredAt(BusinessTime.now())
                 .build();
         final String payload;
         try {

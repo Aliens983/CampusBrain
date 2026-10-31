@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import com.laoliu.cas.appointment.domain.entity.ServiceCategory;
 import com.laoliu.cas.appointment.domain.entity.TimeSlot;
 import com.laoliu.cas.appointment.domain.enums.CategoryCode;
+import com.laoliu.cas.appointment.domain.service.BookingLimits;
 import com.laoliu.cas.appointment.domain.repository.BookingRepository;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.domain.repository.EquipmentRepository;
@@ -38,6 +39,7 @@ import com.laoliu.cas.appointment.domain.view.BookingQueryView;
 import com.laoliu.cas.appointment.domain.view.TimeSlotView;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
+import com.laoliu.cas.common.time.BusinessTime;
 import com.laoliu.cas.redis.util.RedisUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -515,6 +517,10 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
     private AssistantBookingDraft validateEquipment(ServiceItem service, ServiceCategory category,
                                                     AssistantBookingDraftRequest request) {
         int quantity = request.getQuantity() == null || request.getQuantity() < 1 ? 1 : request.getQuantity();
+        if (quantity > BookingLimits.MAX_EQUIPMENT_QUANTITY) {
+            return invalid(service, category,
+                    "借用数量不能超过 " + BookingLimits.MAX_EQUIPMENT_QUANTITY);
+        }
         TimeWindow window = TimeWindow.of(request.getDate(), request.getStartTime(), request.getEndTime());
         if (window.error != null) {
             return invalid(service, category, window.error);
@@ -524,17 +530,18 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             return invalid(service, category, "设备不存在");
         }
         if (!service.getServiceId().equals(equipment.getServiceId())) {
-            // 先校验归属再算库存：跨服务设备不在本服务资源域内，其库存与本服务无关
+            // 先校验归属再算库存：跨服务的教室根本不在本服务资源域内，不应参与时段冲突判定
             return invalid(service, category, "该设备不属于所选服务，请确认后重试");
         }
         int stock = equipment.getAvailableStock() == null ? 0 : equipment.getAvailableStock();
         int occupied = bookingRepository.sumEquipmentOverlap(equipment.getId(), window.date, window.start, window.end);
-        if (occupied + quantity > stock) {
+        // long 相加防 int 溢出（数量上限已在上面拦截，这里再兜一层）
+        if ((long) occupied + quantity > stock) {
             return invalid(service, category, String.format(
                     "该时段设备库存不足（可借 %d，已被占用 %d），请减少数量或换时段", stock, occupied));
         }
         List<String> warnings = new ArrayList<>();
-        if (stock - occupied - quantity <= 1) {
+        if ((long) stock - occupied - quantity <= 1) {
             warnings.add("该时段设备余量紧张，请尽快确认");
         }
         return valid(AssistantBookingDraft.TYPE_EQUIPMENT, "设备借用", service, category,
@@ -885,7 +892,7 @@ public class AppointmentAssistantServiceImpl implements AppointmentAssistantServ
             } catch (Exception e) {
                 return new TimeWindow(null, null, null, "日期格式不正确，应为 yyyy-MM-dd");
             }
-            if (parsed.isBefore(LocalDate.now())) {
+            if (parsed.isBefore(BusinessTime.today())) {
                 return new TimeWindow(null, null, null, "不能预约过去的日期");
             }
             return new TimeWindow(parsed, start, end, null);

@@ -8,6 +8,7 @@ import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ConsultC
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ConsultChatMessageDO;
 import com.laoliu.cas.appointment.infrastructure.persistence.mapper.ConsultChatConversationMapper;
 import com.laoliu.cas.appointment.infrastructure.persistence.mapper.ConsultChatMessageMapper;
+import com.laoliu.cas.common.time.BusinessTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
@@ -69,7 +70,7 @@ public class ConsultChatRepositoryImpl implements ConsultChatRepository {
         ConsultChatConversationDO dox = ConsultChatConversationDO.builder()
                 .studentId(studentId)
                 .teacherId(teacherId)
-                .createdAt(LocalDateTime.now())
+                .createdAt(BusinessTime.now())
                 .build();
         try {
             conversationMapper.insert(dox);
@@ -87,7 +88,7 @@ public class ConsultChatRepositoryImpl implements ConsultChatRepository {
                 .senderId(senderId)
                 .content(content)
                 .readFlag(false)
-                .createdAt(LocalDateTime.now())
+                .createdAt(BusinessTime.now())
                 .build();
         messageMapper.insert(dox);
         return dox.toEntity();

@@ -1,5 +1,6 @@
 # 运行阶段镜像（需先在宿主机 mvn package 生成 jar，避免 Docker 内 Maven 镜像源问题）
 FROM eclipse-temurin:17-jre-alpine
+ENV TZ=Asia/Shanghai
 WORKDIR /app
 COPY cas-service/cas-server/target/cas-server-1.0.0.jar app.jar
 COPY uploads/ /app/default-uploads/

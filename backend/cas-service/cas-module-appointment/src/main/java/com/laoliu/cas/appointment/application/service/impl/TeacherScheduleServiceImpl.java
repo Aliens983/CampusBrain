@@ -12,6 +12,7 @@ import com.laoliu.cas.appointment.domain.repository.ScheduleCancelRepository;
 import com.laoliu.cas.appointment.domain.repository.TimeSlotRepository;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.ForbiddenException;
+import com.laoliu.cas.common.time.BusinessTime;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +45,7 @@ public class TeacherScheduleServiceImpl implements TeacherScheduleService {
 
     @Override
     public List<TeacherScheduleSlotResponse> getMySchedule(Long teacherUserId, LocalDate from, LocalDate to) {
-        LocalDate start = from == null ? LocalDate.now() : from;
+        LocalDate start = from == null ? BusinessTime.today() : from;
         LocalDate end = to == null ? start.plusDays(13) : to;
         if (end.isBefore(start) || end.isAfter(start.plusDays(30))) {
             throw new BusinessException(400, "日期范围无效，最多查询31天");
@@ -86,7 +87,7 @@ public class TeacherScheduleServiceImpl implements TeacherScheduleService {
                 .orElseThrow(() -> new BusinessException(400, "排班时段不存在"));
         Consultant owner = consultants.stream().filter(c -> c.getId().equals(slot.getConsultantId())).findFirst()
                 .orElseThrow(() -> new ForbiddenException(403, "不能操作其他教师的排班"));
-        if (!slot.getSlotDate().isAfter(LocalDate.now())) {
+        if (!slot.getSlotDate().isAfter(BusinessTime.today())) {
             throw new BusinessException(400, "只能申请取消未来日期的排班");
         }
         if (slotAvailability(slotId) != AVAILABLE) {

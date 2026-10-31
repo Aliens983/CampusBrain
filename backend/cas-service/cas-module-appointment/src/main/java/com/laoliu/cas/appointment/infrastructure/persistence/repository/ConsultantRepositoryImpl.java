@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.CommonErrorCode;
+import com.laoliu.cas.common.time.BusinessTime;
 import com.laoliu.cas.appointment.domain.entity.Consultant;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.infrastructure.persistence.dataobject.ConsultantDO;
@@ -92,7 +93,7 @@ public class ConsultantRepositoryImpl implements ConsultantRepository {
         // 否则 DateTimeParseException 会穿透成 500（正确语义应为 400 参数错误）.
         LocalDate day;
         if (date == null || date.isBlank()) {
-            day = LocalDate.now();
+            day = BusinessTime.today();
         } else {
             try {
                 day = LocalDate.parse(date);

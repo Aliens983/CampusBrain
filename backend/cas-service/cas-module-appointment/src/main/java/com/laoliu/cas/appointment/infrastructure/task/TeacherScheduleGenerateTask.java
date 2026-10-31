@@ -3,6 +3,7 @@ package com.laoliu.cas.appointment.infrastructure.task;
 import com.laoliu.cas.appointment.domain.entity.Consultant;
 import com.laoliu.cas.appointment.domain.repository.ConsultantRepository;
 import com.laoliu.cas.appointment.domain.repository.TimeSlotRepository;
+import com.laoliu.cas.common.time.BusinessTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -49,7 +50,7 @@ public class TeacherScheduleGenerateTask {
             log.warn("No active teacher consultants found; fixed schedule generation skipped");
             return;
         }
-        LocalDate start = LocalDate.now();
+        LocalDate start = BusinessTime.today();
         LocalDate end = start.plusDays(13);
         int inserted = 0;
         for (Consultant consultant : consultants) {

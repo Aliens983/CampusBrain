@@ -10,4 +10,4 @@ find /app/default-uploads -type f | while IFS= read -r source; do
     cp "$source" "$target"
   fi
 done
-exec java -Xms256m -Xmx512m -jar /app/app.jar
+exec java -Duser.timezone=Asia/Shanghai -Xms256m -Xmx512m -jar /app/app.jar

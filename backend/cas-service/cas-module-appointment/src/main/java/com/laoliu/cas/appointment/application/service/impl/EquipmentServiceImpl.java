@@ -1,5 +1,6 @@
 package com.laoliu.cas.appointment.application.service.impl;
 
+import com.laoliu.cas.appointment.domain.service.BookingLimits;
 import com.laoliu.cas.appointment.domain.service.BookingWindowPolicy;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.laoliu.cas.appointment.application.service.EquipmentService;
@@ -85,6 +86,10 @@ public class EquipmentServiceImpl implements EquipmentService {
         if (equipmentId == null || req == null || req.getQuantity() == null || req.getQuantity() < 1) {
             throw new BusinessException(BookErrorCode.BORROW_TIME_INVALID);
         }
+        if (req.getQuantity() > BookingLimits.MAX_EQUIPMENT_QUANTITY) {
+            throw new BusinessException(BookErrorCode.BORROW_QUANTITY_INVALID,
+                    BookingLimits.MAX_EQUIPMENT_QUANTITY);
+        }
         if (req.getStartTime() == null || req.getEndTime() == null
                 || req.getStartTime().compareTo(req.getEndTime()) >= 0) {
             throw new BusinessException(BookErrorCode.BORROW_TIME_INVALID);
@@ -106,7 +111,9 @@ public class EquipmentServiceImpl implements EquipmentService {
         int stock = equipment.getAvailableStock() == null ? 0 : equipment.getAvailableStock();
         int occupied = bookingRepository.sumEquipmentOverlap(
                 equipmentId, date, req.getStartTime(), req.getEndTime());
-        if (occupied + req.getQuantity() > stock) {
+        // 用 long 相加：即使调用方绕过 @Max 传入 Integer.MAX_VALUE，也不会溢出成负数
+        long requested = req.getQuantity();
+        if ((long) occupied + requested > stock) {
             throw new BusinessException(BookErrorCode.EQUIPMENT_STOCK_NOT_ENOUGH);
         }
 
