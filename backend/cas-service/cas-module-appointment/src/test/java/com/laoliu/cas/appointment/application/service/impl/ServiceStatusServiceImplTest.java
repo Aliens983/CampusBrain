@@ -340,6 +340,27 @@ class ServiceStatusServiceImplTest {
         }
     }
 
+    // ======================== 用户详情测试 ========================
+
+    @Test
+    @DisplayName("用户订单详情：按 userId+orderId 查询并补状态描述，查不到返回 null")
+    void shouldGetOwnedBookingDetailWithDescription() {
+        BookingQueryView view = buildPendingStatus();
+        when(bookingRepository.getServiceStatusByOrderIdAndUserId(BOOKING_USER_ID, VALID_ORDER_ID))
+                .thenReturn(view);
+
+        BookingQueryView result = serviceStatusService
+                .getServiceStatusByUserIdAndOrderId(BOOKING_USER_ID, VALID_ORDER_ID);
+
+        assertSame(view, result);
+        assertEquals("已提交,待审核", result.getStatusDescription());
+        verify(bookingRepository).getServiceStatusByOrderIdAndUserId(BOOKING_USER_ID, VALID_ORDER_ID);
+
+        when(bookingRepository.getServiceStatusByOrderIdAndUserId(BOOKING_USER_ID, INVALID_ORDER_ID))
+                .thenReturn(null);
+        assertNull(serviceStatusService.getServiceStatusByUserIdAndOrderId(BOOKING_USER_ID, INVALID_ORDER_ID));
+    }
+
     // ======================== 辅助方法 ========================
 
     private BookingQueryView buildPendingStatus() {

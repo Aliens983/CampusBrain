@@ -221,14 +221,40 @@ export async function fetchAdminServicesPage(params: {
   }
 }
 
-export async function fetchBookingRecords() {
-  const response = (await request.get('/users/me/bookings')) as { bookings?: BackendBooking[]; serviceStatusList?: BackendBooking[] }
-  // 后端 UserInfoAndServicesViaMPRespVO 的字段名是 bookings
-  const list = response?.bookings || response?.serviceStatusList
-  if (!Array.isArray(list)) {
-    throw new Error('获取预约记录失败')
-  }
-  return list.map(mapBooking)
+export interface BookingPage {
+  records: BookingRecord[]
+  total: number
+}
+
+/**
+ * 用户预约分页：走 /app/bookings/mine，返回资源名/时段等完整字段.
+ * 以前走 /users/me/bookings：只有基础字段且默认 pageSize=10，超过 10 条即丢失.
+ */
+export async function fetchBookingPage(params: {
+  pageNo?: number
+  pageSize?: number
+  manageStatus?: number
+} = {}): Promise<BookingPage> {
+  const data = (await request.get('/app/bookings/mine', {
+    params: {
+      pageNo: params.pageNo ?? 1,
+      pageSize: params.pageSize ?? 200,
+      ...(params.manageStatus !== undefined ? { manageStatus: params.manageStatus } : {}),
+    },
+  })) as { records?: BackendBooking[]; total?: number }
+  const records = (data?.records || []).map(mapBooking)
+  return { records, total: Number(data?.total || records.length) }
+}
+
+/** 工作台/详情兜底：取最近一页（最多 200 条） */
+export async function fetchBookingRecords(): Promise<BookingRecord[]> {
+  return (await fetchBookingPage({ pageNo: 1, pageSize: 200 })).records
+}
+
+/** 单条预约详情：后端带归属校验，不再拉全量列表后 find */
+export async function fetchBookingDetail(orderId: number): Promise<BookingRecord | null> {
+  const data = (await request.get(`/app/bookings/mine/${orderId}`)) as BackendBooking | null
+  return data ? mapBooking(data, 0) : null
 }
 
 /** 2.2.3：用户列表改为服务端分页，只拉当前页 */

@@ -132,7 +132,7 @@ import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowLeft, ChatDotRound } from '@element-plus/icons-vue'
-import { fetchBookingRecords } from '@/common/campus'
+import { fetchBookingDetail } from '@/common/campus'
 import request from '@/common/utils/request'
 import type { BookingRecord, BookingStatus } from '@/common/types'
 import { openChatByBooking } from '@/common/consultChat'
@@ -156,8 +156,7 @@ onMounted(load)
 async function load() {
   const id = Number(route.params.id)
   try {
-    const records = await fetchBookingRecords()
-    booking.value = records.find(r => r.id === id) || null
+    booking.value = await fetchBookingDetail(id)
     if (!booking.value) ElMessage.warning('未找到该预约记录')
   } catch (error: unknown) {
     const err = error as { message?: string }

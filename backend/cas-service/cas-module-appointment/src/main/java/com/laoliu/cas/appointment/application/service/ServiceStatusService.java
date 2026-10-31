@@ -26,6 +26,15 @@ public interface ServiceStatusService {
     /** 根据订单ID获取预约状态（审核/管理员操作链路内部使用） */
     BookingQueryView getServiceStatusByOrderId(Long orderId);
 
+    /**
+     * 用户视角：按订单ID获取自己的预约详情（带归属校验，查不到返回 null）.
+     *
+     * @param userId  当前登录用户ID
+     * @param orderId 订单ID
+     * @return 预约详情；不存在或不属于该用户时返回 null
+     */
+    BookingQueryView getServiceStatusByUserIdAndOrderId(Long userId, Long orderId);
+
     /** 发送审核邮件 */
     void sendAuditEmail(Long orderId, String title, String content);
 

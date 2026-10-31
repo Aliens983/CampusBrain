@@ -18,7 +18,7 @@
           预约概览
         </div>
         <div class="hero-panel__item">
-          <strong>{{ bookings.length }}</strong><span>全部预约</span>
+          <strong>{{ total || bookings.length }}</strong><span>全部预约</span>
         </div>
         <div class="hero-panel__item">
           <strong>{{ pendingCount }}</strong><span>处理中</span>
@@ -127,6 +127,18 @@
       </article>
     </div>
 
+    <div
+      v-if="hasMore"
+      class="load-more"
+    >
+      <el-button
+        :loading="loadingMore"
+        @click="loadMore"
+      >
+        加载更多（已显示 {{ bookings.length }} / {{ total }}）
+      </el-button>
+    </div>
+
   </div>
 </template>
 
@@ -135,13 +147,18 @@ import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { ArrowRight, Calendar, Clock, Location } from '@element-plus/icons-vue'
-import { fetchBookingRecords } from '@/common/campus'
+import { fetchBookingPage } from '@/common/campus'
 import type { BookingRecord, BookingStatus } from '@/common/types'
 
 const router = useRouter()
 const filter = ref('all')
 const bookings = ref<BookingRecord[]>([])
+const total = ref(0)
+const pageNo = ref(1)
+const pageSize = 200
 const loading = ref(false)
+const loadingMore = ref(false)
+const hasMore = computed(() => bookings.value.length < total.value)
 const filters = [
   { label: '全部', value: 'all' },
   { label: '处理中', value: 'pending' },
@@ -156,7 +173,7 @@ const approvedCount = computed(() => bookings.value.filter((item) => item.status
 onMounted(async () => {
   loading.value = true
   try {
-    bookings.value = await fetchBookingRecords()
+    await loadPage(1, true)
   } catch (error: unknown) {
     const err = error as { message?: string }
     ElMessage.error(err.message || '获取预约记录失败')
@@ -164,6 +181,26 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function loadPage(page: number, replace: boolean) {
+  const result = await fetchBookingPage({ pageNo: page, pageSize })
+  bookings.value = replace ? result.records : [...bookings.value, ...result.records]
+  total.value = result.total
+  pageNo.value = page
+}
+
+async function loadMore() {
+  if (loadingMore.value || !hasMore.value) return
+  loadingMore.value = true
+  try {
+    await loadPage(pageNo.value + 1, false)
+  } catch (error: unknown) {
+    const err = error as { message?: string }
+    ElMessage.error(err.message || '加载更多预约失败')
+  } finally {
+    loadingMore.value = false
+  }
+}
 
 function statusTag(status: BookingStatus) {
   return { pending: 'warning', approved: 'success', rejected: 'danger', completed: 'info', cancelled: 'info' }[status]
@@ -187,6 +224,12 @@ function campusName(c?: string) {
   padding: 60px;
   color: var(--ink-3);
   font-size: 13px;
+}
+
+.load-more {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 4px;
 }
 
 .booking-stack {

@@ -59,6 +59,15 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
     }
 
     @Override
+    public BookingQueryView getServiceStatusByUserIdAndOrderId(Long userId, Long orderId) {
+        BookingQueryView view = bookingRepository.getServiceStatusByOrderIdAndUserId(userId, orderId);
+        if (view != null) {
+            setStatusDescription(view);
+        }
+        return view;
+    }
+
+    @Override
     public void sendAuditEmail(Long orderId, String title, String content) {
         String email = bookingRepository.getUserEmailByOrderId(orderId);
         if (email != null && !email.isEmpty()) {

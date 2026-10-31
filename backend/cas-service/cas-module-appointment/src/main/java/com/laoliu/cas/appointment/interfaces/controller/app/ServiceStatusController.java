@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -45,6 +46,21 @@ public class ServiceStatusController {
                 .getServiceStatusByUserIdWithDescription(userId, req)
                 .convert(BookingViewConverter::toResponse);
         return CommonResult.success(PageResult.of(statusPage));
+    }
+
+    @Operation(summary = "获取当前用户的单条预约详情",
+            description = "按订单 ID 查询自己的预约；不存在或不属于当前用户时返回 404，避免枚举他人订单")
+    @GetMapping("/mine/{orderId}")
+    public CommonResult<ServiceStatusResponse> getMyBooking(@PathVariable Long orderId) {
+        Long userId = getUserIdViaTokenApi.getUserId();
+        if (userId == null) {
+            return CommonResult.badRequest("无法获取用户信息，请重新登录");
+        }
+        var view = serviceStatusService.getServiceStatusByUserIdAndOrderId(userId, orderId);
+        if (view == null) {
+            return CommonResult.notFound("预约不存在");
+        }
+        return CommonResult.success(BookingViewConverter.toResponse(view));
     }
 
 }
