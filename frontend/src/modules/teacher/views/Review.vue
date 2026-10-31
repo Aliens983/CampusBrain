@@ -1,8 +1,13 @@
 <template>
   <div class="teacher-page">
     <section class="page-head">
-      <h1>待我审核</h1>
-      <p>学生预约我名下咨询档期的申请。通过后该时段锁定；拒绝需填原因，时段会释放给他人再约。</p>
+      <div>
+        <p class="hz-eyebrow">
+          Review queue · HZNU
+        </p>
+        <h1>待我审核</h1>
+        <p>学生预约我名下咨询档期的申请。通过后该时段锁定；拒绝需填原因，时段会释放给他人再约。</p>
+      </div>
     </section>
 
     <el-card class="list-card">
@@ -155,69 +160,81 @@ onMounted(load)
 <style scoped lang="scss">
 .teacher-page {
   display: grid;
-  gap: 16px;
-}
-
-.page-head {
-  padding: 22px 26px;
-  border-radius: 24px;
-  color: #fff;
-  background: linear-gradient(135deg, #0e6cd6, #3fb6ff 60%, #ade2ff);
-  box-shadow: var(--shadow-card);
-}
-.page-head h1 {
-  margin: 0 0 6px;
-  font-size: 24px;
-}
-.page-head p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.86);
-  font-size: 13px;
-  line-height: 1.7;
+  gap: 18px;
 }
 
 .list-card {
-  border-radius: 18px;
-  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
 }
 
 .item-list {
-  min-height: 120px;
   display: grid;
   gap: 10px;
+  min-height: 120px;
 }
+
 .row {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #f9fcff);
+  gap: 16px;
+  padding: 15px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  transition: border-color 0.16s ease, background-color 0.16s ease;
 }
+
+.row:hover {
+  border-color: rgba(176, 138, 69, 0.36);
+  background: var(--surface);
+}
+
 .row__main {
-  flex: 1;
   display: grid;
+  flex: 1;
   gap: 6px;
+  min-width: 0;
 }
+
 .row__head {
   display: flex;
   align-items: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
+
+.row__head strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .row__meta {
   display: flex;
   flex-wrap: wrap;
   gap: 6px 16px;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--ink-3);
+  font-size: 12px;
 }
+
 .muted {
-  color: var(--text-tertiary);
+  color: var(--ink-4);
 }
+
 .row__action {
   display: flex;
-  gap: 8px;
   flex-shrink: 0;
+  gap: 8px;
+}
+
+@media (max-width: 700px) {
+  .row {
+    flex-wrap: wrap;
+  }
+
+  .row__action {
+    width: 100%;
+    justify-content: flex-end;
+  }
 }
 </style>

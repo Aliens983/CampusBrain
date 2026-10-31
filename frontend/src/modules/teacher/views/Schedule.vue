@@ -2,11 +2,15 @@
   <div class="schedule-page">
     <header class="page-head">
       <div>
+        <p class="hz-eyebrow">
+          Teaching schedule · HZNU
+        </p>
         <h1>我的排班</h1>
         <p>教师咨询固定时段 · 工作日</p>
       </div>
       <el-date-picker
         v-model="selectedDate"
+        class="schedule-date"
         type="date"
         value-format="YYYY-MM-DD"
         :disabled-date="disableDate"
@@ -104,7 +108,13 @@ interface CancelRequest {
   auditRemark?: string
 }
 
-const selectedDate = ref(dayjs().format('YYYY-MM-DD'))
+/** 默认落到最近的工作日：周末不排班，避免一进页面就是空白态 */
+function nearestWeekday(from = dayjs()) {
+  let d = from
+  while (d.day() === 0 || d.day() === 6) d = d.add(1, 'day')
+  return d.format('YYYY-MM-DD')
+}
+const selectedDate = ref(nearestWeekday())
 const slots = ref<ScheduleSlot[]>([])
 const requests = ref<CancelRequest[]>([])
 const loading = ref(false)
@@ -167,24 +177,172 @@ onMounted(() => { void loadSchedule(); void loadRequests() })
 </script>
 
 <style scoped lang="scss">
-.schedule-page { display: grid; gap: 18px; }
-.page-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 20px 24px; background: #fff; border: 1px solid #dce5ed; border-radius: 8px; }
-.page-head h1 { margin: 0; font-size: 22px; color: #17324d; }
-.page-head p { margin: 6px 0 0; color: #718096; font-size: 13px; }
-.date-strip { display: flex; gap: 8px; overflow-x: auto; padding: 2px; }
-.date-button { display: grid; gap: 5px; min-width: 74px; padding: 10px; border: 1px solid #dce5ed; border-radius: 6px; color: #526579; background: #fff; cursor: pointer; }
-.date-button strong { color: #193650; }
-.date-button.is-active { border-color: #16835d; background: #eaf6f1; color: #116548; }
-.date-button.is-active strong { color: #116548; }
-.date-button.is-weekend { opacity: 0.45; cursor: not-allowed; background: #f4f6f8; }
-.slot-grid, .request-list { display: grid; gap: 10px; min-height: 160px; }
-.slot-row, .request-row { display: flex; align-items: center; gap: 16px; padding: 14px 16px; background: #fff; border: 1px solid #dce5ed; border-radius: 6px; }
-.slot-time { display: grid; gap: 2px; min-width: 74px; color: #163a5b; }
-.slot-time span, .request-row p, .request-row small { color: #718096; font-size: 12px; }
-.slot-info { display: grid; gap: 4px; flex: 1; }
-.slot-info span { color: #718096; font-size: 12px; }
-.request-row > div { flex: 1; }
-.request-row p { margin: 5px 0; }
-.dialog-meta { margin-top: 0; color: #53687c; }
-@media (max-width: 640px) { .page-head { align-items: flex-start; flex-direction: column; } .slot-row { flex-wrap: wrap; } .slot-info { min-width: 45%; } }
+.schedule-page {
+  display: grid;
+  gap: 18px;
+}
+
+.schedule-date {
+  width: 180px;
+  flex-shrink: 0;
+}
+
+.date-strip {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px;
+  scrollbar-width: none;
+}
+
+.date-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.date-button {
+  display: grid;
+  gap: 5px;
+  min-width: 74px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.date-button span {
+  font-size: 10.5px;
+  color: var(--ink-4);
+}
+
+.date-button strong {
+  font-family: var(--font-latin);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.date-button:hover {
+  border-color: var(--gold);
+}
+
+.date-button.is-active {
+  border-color: var(--lake);
+  background: var(--lake);
+  color: #f7f1e4;
+}
+
+.date-button.is-active strong {
+  color: #f7f1e4;
+}
+
+.date-button.is-active span {
+  color: rgba(247, 241, 228, 0.7);
+}
+
+.date-button.is-weekend {
+  opacity: 0.42;
+  cursor: not-allowed;
+  background: var(--surface-2);
+}
+
+.slot-grid,
+.request-list {
+  display: grid;
+  gap: 10px;
+  min-height: 160px;
+}
+
+.slot-row,
+.request-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.slot-row:hover,
+.request-row:hover {
+  border-color: rgba(176, 138, 69, 0.36);
+  background: var(--surface);
+}
+
+.slot-time {
+  display: grid;
+  gap: 2px;
+  min-width: 74px;
+  color: var(--ink);
+}
+
+.slot-time strong {
+  font-family: var(--font-latin);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--lake);
+}
+
+.slot-time span,
+.request-row p,
+.request-row small {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.slot-info {
+  display: grid;
+  flex: 1;
+  gap: 4px;
+}
+
+.slot-info strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.slot-info span {
+  color: var(--ink-4);
+  font-size: 11.5px;
+}
+
+.request-row > div {
+  flex: 1;
+}
+
+.request-row p {
+  margin: 5px 0;
+}
+
+.request-row small {
+  color: var(--ink-4);
+}
+
+.dialog-meta {
+  margin-top: 0;
+  color: var(--ink-3);
+}
+
+@media (max-width: 640px) {
+  .schedule-date {
+    width: 100%;
+  }
+
+  .slot-row {
+    flex-wrap: wrap;
+  }
+
+  .slot-info {
+    min-width: 45%;
+  }
+}
 </style>
