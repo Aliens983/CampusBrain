@@ -8,14 +8,20 @@
         <el-icon><ArrowLeft /></el-icon>
         <span>返回</span>
       </button>
-      <h1 class="page-hero__title">
-        服务详情
-      </h1>
+      <div class="detail-page-hero__copy">
+        <p class="hz-eyebrow">
+          Service detail · HZNU
+        </p>
+        <h1 class="page-hero__title">
+          服务详情
+        </h1>
+      </div>
+      <span class="detail-page-hero__hint">查看信息 · 选择资源 · 提交预约</span>
     </section>
 
     <el-card
       v-if="service"
-      class="panel-card"
+      class="panel-card service-detail-card"
     >
       <div class="service-detail">
         <ServiceHeader :service="service" />
@@ -148,13 +154,65 @@ const {
 .detail-page-hero {
   display: flex;
   align-items: center;
-  gap: 26px;
-  padding: 26px 36px;
+  gap: 22px;
+  padding: 24px 36px;
 }
-.detail-page-hero .back-btn { margin-right: 6px; }
-/* 让返回按钮/标题浮在 hero 装饰光效之上，避免看起来“叠字” */
-.detail-page-hero > * { position: relative; z-index: 1; }
-.detail-page-hero .back-btn { flex: 0 0 auto; }
-.detail-page-hero .page-hero__title { margin: 0; font-size: 26px; line-height: 1.2; }
-.service-detail { display: grid; gap: 18px; max-width: 760px; }
+
+.detail-page-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.detail-page-hero .back-btn {
+  flex: 0 0 auto;
+  margin-right: 2px;
+}
+
+.detail-page-hero__copy {
+  display: grid;
+  gap: 3px;
+}
+
+.detail-page-hero__copy .hz-eyebrow {
+  color: var(--gold-soft);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+}
+
+.detail-page-hero .page-hero__title {
+  margin: 0;
+  font-size: 26px;
+  line-height: 1.2;
+}
+
+.detail-page-hero__hint {
+  margin-left: auto;
+  font-family: var(--font-latin);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: rgba(247, 241, 228, 0.5);
+  white-space: nowrap;
+}
+
+.service-detail-card {
+  width: 100%;
+  max-width: 1040px;
+  align-self: center;
+}
+
+.service-detail {
+  display: grid;
+  gap: 18px;
+}
+
+@media (max-width: 700px) {
+  .detail-page-hero {
+    padding: 20px 24px;
+    gap: 14px;
+  }
+
+  .detail-page-hero__hint {
+    display: none;
+  }
+}
 </style>

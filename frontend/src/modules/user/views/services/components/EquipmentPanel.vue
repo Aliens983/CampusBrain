@@ -142,35 +142,3 @@ const end = computed({
   set: (value: string) => emit('update:end', value),
 })
 </script>
-
-<style scoped lang="scss">
-.consult-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.consult-card {
-  display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 16px; text-align: left;
-  border: 1px solid var(--border-soft); background: linear-gradient(180deg, #fff, #F9FCFF);
-  cursor: pointer; transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
-}
-.consult-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20,33,61,.08); }
-.consult-card.is-active { border-color: #3FB6FF; background: #F6FAFF; box-shadow: 0 0 0 1px #3FB6FF; }
-.consult-card:disabled { opacity: .55; cursor: not-allowed; }
-.consult-card__avatar { width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #ADE2FF, #7BD0FF); color: #fff; font-weight: 700; }
-.consult-card__avatar.equipment { border-radius: 12px; background: linear-gradient(135deg, #5eead4, #0d9488); }
-.consult-card__body { flex: 1; min-width: 0; }
-.consult-card__body strong { font-size: 14px; }
-.consult-card__body p { margin: 2px 0; color: var(--text-secondary); font-size: 12px; }
-.consult-card__expertise { color: var(--text-tertiary); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
-.equip-stock { font-size: 12px; font-weight: 600; color: #0d9488; flex-shrink: 0; }
-.equip-stock.is-empty { color: #dc2626; }
-
-.slot-panel { display: grid; gap: 12px; padding: 16px; border-radius: 16px; background: #F4FAFF; border: 1px solid var(--border-soft); }
-.slot-submit { justify-self: start; margin-top: 4px; }
-
-.borrow-panel { gap: 14px; }
-.borrow-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
-.borrow-grid .borrow-full { grid-column: 1 / -1; }
-.borrow-grid label { display: grid; gap: 6px; font-size: 13px; color: var(--text-secondary); }
-.borrow-grid em { font-style: normal; font-size: 12px; color: var(--text-tertiary); }
-.borrow-tip { margin: 0; font-size: 12px; color: var(--text-tertiary); }
-
-@media (max-width: 700px) { .consult-grid, .borrow-grid { grid-template-columns: 1fr; } }
-</style>

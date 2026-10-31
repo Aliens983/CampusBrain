@@ -13,7 +13,10 @@
     >
       {{ service.code }}
     </div>
-    <div>
+    <div class="service-detail__intro">
+      <p class="hz-eyebrow">
+        Campus service · HZNU
+      </p>
       <h3>{{ service.name }}</h3>
       <p class="muted">
         {{ service.description }}
@@ -44,13 +47,69 @@ defineProps<{ service: ServiceCard }>()
 </script>
 
 <style scoped lang="scss">
-.service-detail__cover { display: flex; align-items: center; gap: 16px; }
-.service-detail__cover h3 { margin: 0 0 4px; font-size: 20px; }
-.service-detail__cover .muted { margin: 0; }
-.cover-badge { width: 72px; height: 72px; border-radius: 18px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; color: #fff; flex-shrink: 0; }
-.cover-badge__img { object-fit: cover; background: #fff; }
-.info-list { display: grid; gap: 8px; }
-.info-row { display: flex; justify-content: space-between; align-items: center; font-size: 14px; padding: 6px 0; border-bottom: 1px dashed var(--border-soft); }
-.info-row:last-child { border-bottom: none; }
-.info-row span { color: var(--text-secondary); }
+.service-detail__cover {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.service-detail__intro {
+  min-width: 0;
+}
+
+.service-detail__intro .hz-eyebrow {
+  margin: 0 0 6px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+}
+
+.service-detail__cover h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.service-detail__cover .muted {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.cover-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  min-height: 0;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  color: #f7f1e4;
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
+
+.cover-badge__img {
+  object-fit: cover;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+
+.info-list {
+  margin-top: 18px;
+}
+
+.info-row {
+  align-items: center;
+  font-size: 13px;
+}
+
+.info-row:last-child {
+  padding-bottom: 0;
+}
 </style>
