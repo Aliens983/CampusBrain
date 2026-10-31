@@ -4,6 +4,7 @@ import com.laoliu.cas.system.domain.entity.User;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.UserErrorCode;
+import com.laoliu.cas.common.log.AuditLog;
 import com.laoliu.cas.common.util.PasswordUtils;
 import com.laoliu.cas.redis.util.RedisUtil;
 import com.laoliu.auth.JWTUtils;
@@ -55,6 +56,7 @@ public class AuthService {
      */
     public String login(String email, String password, String captchaUuid, String captchaCode) {
         if (email == null || password == null) {
+            AuditLog.failure("LOGIN", null, "USER", maskEmail(email), "reason=EMPTY_CREDENTIALS");
             throw new BusinessException(UserErrorCode.EMAIL_OR_PASSWORD_EMPTY);
         }
 
@@ -62,24 +64,33 @@ public class AuthService {
         String failKey = LOGIN_FAIL_KEY_PREFIX + email;
         Long failCount = redisUtil.getCounter(failKey);
         if (failCount != null && failCount >= MAX_LOGIN_FAIL) {
+            AuditLog.failure("LOGIN", null, "USER", maskEmail(email), "reason=LOCKED");
             throw new BusinessException(UserErrorCode.LOGIN_FAILED_TOO_MANY_TIMES);
         }
 
         // 2. 图形验证码校验（一次性）
-        captchaService.validateCaptcha(captchaUuid, captchaCode);
+        try {
+            captchaService.validateCaptcha(captchaUuid, captchaCode);
+        } catch (BusinessException e) {
+            AuditLog.failure("LOGIN", null, "USER", maskEmail(email), "reason=CAPTCHA:" + e.getMessage());
+            throw e;
+        }
 
         // 3. 校验账号与密码
         String encodePassword = userRepository.getEncodePasswordByEmail(email);
         if (encodePassword == null) {
             recordLoginFailure(failKey);
+            AuditLog.failure("LOGIN", null, "USER", maskEmail(email), "reason=USER_NOT_EXIST");
             throw new BusinessException(UserErrorCode.USER_NOT_EXIST);
         }
         if (passwordUtils.matches(password, encodePassword)) {
             redisUtil.delete(failKey);
             Long userId = userRepository.getUserIdByEmail(email);
+            AuditLog.success("LOGIN", userId, "USER", userId, "email=" + maskEmail(email));
             return jwtUtils.generateToken(buildLoginUser(userId, email));
         }
         recordLoginFailure(failKey);
+        AuditLog.failure("LOGIN", null, "USER", maskEmail(email), "reason=PASSWORD_ERROR");
         throw new BusinessException(UserErrorCode.PASSWORD_ERROR);
     }
 
@@ -129,6 +140,7 @@ public class AuthService {
         redisUtil.removeVerificationCode("verification_code:" + email);
         // 重置成功，清掉历史试错计数
         redisUtil.delete(failKey);
+        AuditLog.success("PASSWORD_RESET", userId, "USER", userId, "email=" + maskEmail(email));
 
         return jwtUtils.generateToken(buildLoginUser(userId, email));
     }
@@ -187,11 +199,26 @@ public class AuthService {
 
         try {
             User savedUser = userRepository.save(user);
+            AuditLog.success("USER_REGISTER", savedUser.getId(), "USER", savedUser.getId(),
+                    "email=" + maskEmail(email));
             return savedUser.getId();
         } catch (DuplicateKeyException e) {
             // 邮箱唯一索引兜底：两个请求同时通过前面的「先查」并发注册时，
             // 数据库拒绝第二个插入，统一返回「邮箱已注册」而非把 1062 抛成 500
+            AuditLog.failure("USER_REGISTER", null, "USER", maskEmail(email), "reason=USER_ALREADY_EXISTS");
             throw new BusinessException(UserErrorCode.USER_ALREADY_EXISTS);
         }
+    }
+
+    /** 审计日志只保留邮箱域名与首字符，避免完整邮箱进入日志平台. */
+    private static String maskEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "-";
+        }
+        int at = email.indexOf('@');
+        if (at <= 0) {
+            return "***";
+        }
+        return email.charAt(0) + "***" + email.substring(at);
     }
 }
