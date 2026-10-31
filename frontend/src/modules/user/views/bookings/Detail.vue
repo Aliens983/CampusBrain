@@ -8,8 +8,10 @@
         <el-icon><ArrowLeft /></el-icon>
         <span>返回</span>
       </button>
-      <div>
-        <span class="detail-hero__chip">预约详情</span>
+      <div class="detail-hero__copy">
+        <p class="hz-eyebrow">
+          Booking detail · HZNU
+        </p>
         <h1>{{ booking?.serviceName || '加载中...' }}</h1>
         <p v-if="booking">
           {{ booking.bookingNo }} · {{ booking.date }} {{ booking.timeRange }}
@@ -21,6 +23,9 @@
       v-if="booking"
       class="panel-card"
     >
+      <h2 class="detail-card__title">
+        预约信息
+      </h2>
       <div class="detail-grid">
         <div class="detail-row">
           <span>预约编号</span><strong>{{ booking.bookingNo }}</strong>
@@ -114,7 +119,8 @@
         :loading="chatBusy"
         @click="openConsultChat"
       >
-        💬 联系咨询老师
+        <el-icon><ChatDotRound /></el-icon>
+        <span>联系咨询老师</span>
       </el-button>
       <span class="detail-actions__tip">与咨询教师在线上留言沟通，仅教师咨询开放。</span>
     </div>
@@ -125,7 +131,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, ChatDotRound } from '@element-plus/icons-vue'
 import { fetchBookingRecords } from '@/common/campus'
 import request from '@/common/utils/request'
 import type { BookingRecord, BookingStatus } from '@/common/types'
@@ -206,22 +212,137 @@ function campusName(c?: string) {
 
 <style scoped lang="scss">
 .detail-hero {
-  padding: 28px 32px;
-  border-radius: 24px;
-  background: linear-gradient(135deg, #0E6CD6, #3FB6FF 62%, #ADE2FF);
-  color: #fff;
+  position: relative;
+  padding: 26px 32px 28px;
+  border-radius: var(--radius-2xl);
+  color: #f7f1e4;
+  background:
+    radial-gradient(ellipse 60% 90% at 90% 10%, rgba(63, 182, 255, 0.12), transparent 60%),
+    linear-gradient(135deg, #16323c 0%, #21434d 58%, #2e5b68 100%);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
 }
-.back-btn { margin-bottom: 20px; } /* 样式来自全局 .back-btn，仅保留间距 */
-.detail-hero__chip { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 11px; letter-spacing: .06em; background: rgba(255,255,255,.14); margin-bottom: 10px; }
-.detail-hero h1 { margin: 0 0 6px; font-size: 28px; font-weight: 700; }
-.detail-hero p { margin: 0; color: rgba(255,255,255,.7); font-size: 14px; }
 
-.detail-grid { display: grid; gap: 4px; }
-.detail-row { display: flex; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border-soft); align-items: center; }
-.detail-row:last-child { border-bottom: none; }
-.detail-row span { width: 90px; color: var(--text-secondary); font-size: 13px; flex-shrink: 0; }
-.detail-row strong { flex: 1; font-size: 14px; }
+.detail-hero::after {
+  content: "";
+  position: absolute;
+  top: -100px;
+  right: -80px;
+  width: 280px;
+  height: 280px;
+  border: 1px solid rgba(214, 193, 154, 0.22);
+  border-radius: 50%;
+  box-shadow: 0 0 0 30px rgba(214, 193, 154, 0.03);
+  pointer-events: none;
+}
 
-.detail-actions { display: flex; align-items: center; gap: 14px; padding: 6px 4px; }
-.detail-actions__tip { font-size: 12px; color: var(--text-tertiary); }
+.detail-hero > * {
+  position: relative;
+  z-index: 1;
+}
+
+.back-btn {
+  margin-bottom: 16px;
+}
+
+.detail-hero__copy .hz-eyebrow {
+  color: var(--gold-soft);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+}
+
+.detail-hero h1 {
+  margin: 8px 0 6px;
+  font-family: var(--font-serif);
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #f8f2e6;
+}
+
+.detail-hero p {
+  margin: 0;
+  color: rgba(247, 241, 228, 0.62);
+  font-size: 12.5px;
+}
+
+.detail-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 6px;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.detail-card__title::before {
+  content: "";
+  width: 3px;
+  height: 17px;
+  border-radius: 1px;
+  background: var(--gold);
+}
+
+.detail-grid {
+  display: grid;
+}
+
+.detail-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
+}
+
+.detail-row span {
+  width: 92px;
+  flex-shrink: 0;
+  color: var(--ink-4);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+}
+
+.detail-row strong {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 2px 4px;
+}
+
+.detail-actions__tip {
+  font-size: 11.5px;
+  color: var(--ink-4);
+}
+
+@media (max-width: 700px) {
+  .detail-hero {
+    padding: 22px 24px 24px;
+  }
+
+  .detail-hero h1 {
+    font-size: 24px;
+  }
+
+  .detail-row {
+    align-items: flex-start;
+  }
+
+  .detail-row span {
+    width: 78px;
+  }
+
+  .detail-actions {
+    flex-wrap: wrap;
+  }
+}
 </style>
