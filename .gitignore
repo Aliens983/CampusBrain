@@ -5,6 +5,7 @@ docs/
 # ===== IDE =====
 .idea/
 .vscode/
+.run/
 .jdt-classes/
 *.iml
 *.iws
