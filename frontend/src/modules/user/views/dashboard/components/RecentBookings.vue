@@ -1,11 +1,18 @@
 <template>
-  <el-card class="surface-card">
+  <el-card
+    class="surface-card"
+    shadow="never"
+  >
     <template #header>
       <div class="card-head">
-        <div>
-          <h3>最近预约</h3>
-          <p>审批进度和时间安排随时回看。</p>
+        <div class="card-head__title">
+          <span class="card-head__index">肆</span>
+          <div>
+            <h3>最近预约</h3>
+            <p>审批进度和时间安排随时回看。</p>
+          </div>
         </div>
+        <span class="card-head__en">Recent</span>
       </div>
     </template>
     <div class="booking-stack">
@@ -15,7 +22,7 @@
         class="booking-card"
         @click="emit('open-booking', item.id)"
       >
-        <div>
+        <div class="booking-card__main">
           <strong>{{ item.serviceName }}</strong>
           <p>{{ item.date }} {{ item.timeRange }}</p>
         </div>
@@ -49,30 +56,55 @@ function statusText(status: BookingStatus) {
 
 <style scoped lang="scss">
 .surface-card {
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 
 .card-head {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  gap: 16px;
+}
+
+.card-head__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.card-head__index {
+  padding-top: 3px;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  color: var(--gold);
 }
 
 .card-head h3 {
-  font-size: 17px;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .card-head p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 2px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.card-head__en {
+  padding-top: 4px;
+  font-family: var(--font-latin);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-4);
 }
 
 .booking-stack {
   display: grid;
-  gap: 10px;
 }
 
 .booking-card {
@@ -80,26 +112,40 @@ function statusText(status: BookingStatus) {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #F9FCFF);
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
   cursor: pointer;
-  transition: transform .2s ease;
+  transition: transform 0.16s var(--ease-out);
+}
+
+.booking-card:first-child {
+  border-top: 0;
+  padding-top: 4px;
 }
 
 .booking-card:hover {
-  transform: translateX(4px);
+  transform: translateX(3px);
+}
+
+.booking-card__main {
+  min-width: 0;
 }
 
 .booking-card strong {
-  font-size: 13px;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .booking-card p {
-  font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 2px;
+  margin-top: 3px;
+  font-family: var(--font-latin);
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  color: var(--ink-4);
 }
 </style>

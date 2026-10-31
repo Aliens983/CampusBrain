@@ -1,22 +1,28 @@
 <template>
-  <el-card class="surface-card">
+  <el-card
+    class="surface-card"
+    shadow="never"
+  >
     <template #header>
       <div class="card-head">
-        <div>
-          <h3>常用服务</h3>
-          <p>常用校园预约服务，点击卡片即可发起预约。</p>
+        <div class="card-head__title">
+          <span class="card-head__index">贰</span>
+          <div>
+            <h3>常用服务</h3>
+            <p>常用校园预约服务，点击卡片即可发起预约。</p>
+          </div>
         </div>
         <el-button
           text
           @click="emit('view-all')"
         >
-          全部服务
+          全部服务 →
         </el-button>
       </div>
     </template>
     <div class="service-grid">
       <article
-        v-for="service in services"
+        v-for="service in services.slice(0, 4)"
         :key="service.id"
         class="service-card"
         @click="emit('select', service)"
@@ -68,25 +74,42 @@ const emit = defineEmits<{
 
 <style scoped lang="scss">
 .surface-card {
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 
 .card-head {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  gap: 16px;
+}
+
+.card-head__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.card-head__index {
+  padding-top: 3px;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  color: var(--gold);
 }
 
 .card-head h3 {
-  font-size: 17px;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .card-head p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 2px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
 }
 
 .service-grid {
@@ -97,47 +120,47 @@ const emit = defineEmits<{
 
 .service-card {
   display: flex;
-  gap: 14px;
-  padding: 16px;
-  border-radius: 16px;
-  border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #F9FCFF);
+  gap: 13px;
+  padding: 15px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
   cursor: pointer;
-  transition: transform .24s ease, box-shadow .24s ease;
+  transition:
+    transform 0.18s var(--ease-out),
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .service-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 16px 28px rgba(20,33,61,.1);
+  transform: translateY(-2px);
+  border-color: rgba(176, 138, 69, 0.42);
+  background: var(--surface);
 }
 
 .service-card__cover {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #fff;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #f7f1e4;
   flex-shrink: 0;
 }
 
-/* 上传过封面图：用真实图片替代渐变底（与 service-card__cover 同尺寸） */
 .service-card__cover-img {
   width: 52px;
   height: 52px;
-  border-radius: 14px;
+  border-radius: 8px;
   object-fit: cover;
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--line);
   flex-shrink: 0;
 }
-
-.gradient-brand { background: linear-gradient(135deg, #ADE2FF, #7BD0FF); }
-.gradient-teal { background: linear-gradient(135deg, #11998e, #38ef7d); }
-.gradient-amber { background: linear-gradient(135deg, #f093fb, #f5576c); }
-.gradient-slate { background: linear-gradient(135deg, #4b6cb7, #182848); }
 
 .service-card__content {
   flex: 1;
@@ -152,24 +175,41 @@ const emit = defineEmits<{
 }
 
 .service-card__head strong {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .service-card__content p {
-  font-size: 12px;
-  color: var(--text-secondary);
   margin-top: 4px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 11.5px;
+  color: var(--ink-3);
 }
 
 .service-card__meta {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin-top: 8px;
-  font-size: 11px;
-  color: var(--text-secondary);
+  font-size: 10.5px;
+  color: var(--ink-4);
+}
+
+.service-card__meta span + span::before {
+  content: "·";
+  margin-right: 10px;
+  color: var(--gold);
+}
+
+@media (max-width: 720px) {
+  .service-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card-head :deep(.el-button) {
+    display: none;
+  }
 }
 </style>

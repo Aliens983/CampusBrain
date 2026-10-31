@@ -126,9 +126,4 @@ function goShortcut(item: DashboardShortcut) {
   }
 }
 
-.weather-widget { background: linear-gradient(180deg, #F1F7FF, #fff) !important; }
-.weather-mini { display: flex; align-items: center; gap: 14px; }
-.weather-mini__icon { font-size: 36px; }
-.weather-mini strong { font-size: 22px; }
-.weather-mini p { margin: 2px 0 0; color: var(--text-secondary); font-size: 13px; }
 </style>

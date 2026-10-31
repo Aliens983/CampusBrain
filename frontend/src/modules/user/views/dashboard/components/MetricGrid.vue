@@ -1,11 +1,12 @@
 <template>
   <section class="metric-grid">
     <article
-      v-for="stat in stats"
+      v-for="(stat, index) in stats"
       :key="stat.label"
-      class="metric-card spot-tilt"
+      class="metric-card"
       @click="emit('select', stat.label)"
     >
+      <span class="metric-card__index">{{ String(index + 1).padStart(2, '0') }}</span>
       <span class="metric-card__label">{{ stat.label }}</span>
       <strong class="metric-card__value">{{ stat.value }}</strong>
       <span
@@ -42,49 +43,73 @@ function toneClass(tone: DashboardStat['tone']) {
 .metric-card {
   position: relative;
   display: grid;
-  gap: 8px;
-  padding: 22px;
-  border-radius: 22px;
-  background: rgba(255,255,255,.92);
-  border: 1px solid var(--border-soft);
+  gap: 6px;
+  padding: 22px 22px 20px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
   box-shadow: var(--shadow-card);
-  overflow: hidden;
   cursor: pointer;
-  transition: transform .18s cubic-bezier(.22,1,.36,1), box-shadow .26s ease;
+  overflow: hidden;
+  transition:
+    transform 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out),
+    border-color 0.2s ease;
 }
 
 .metric-card::after {
-  content: '';
+  content: "";
   position: absolute;
-  inset: auto -16px -16px auto;
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(30, 152, 242, 0.06), rgba(30, 152, 242, 0));
+  left: 22px;
+  bottom: 0;
+  width: 32px;
+  height: 2px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.24s var(--ease-out);
 }
 
 .metric-card:hover {
-  transform: translateY(-6px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover);
+  border-color: rgba(176, 138, 69, 0.34);
+}
+
+.metric-card:hover::after {
+  transform: scaleX(1);
+}
+
+.metric-card__index {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-family: var(--font-latin);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  opacity: 0.72;
 }
 
 .metric-card__label {
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
 }
 
 .metric-card__value {
-  font-size: 34px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #0E6CD6 0%, #3FB6FF 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-family: var(--font-serif);
+  font-size: 36px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: 0.01em;
+  color: var(--ink);
 }
 
 .metric-card__trend {
-  font-size: 12px;
   width: fit-content;
+  margin-top: 4px;
+  font-size: 10.5px;
 }
 
 @media (max-width: 1100px) {

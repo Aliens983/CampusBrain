@@ -43,10 +43,11 @@ const dialogVisible = computed({
 }
 
 .detail-dialog__item {
-  padding: 12px;
-  border-radius: 10px;
-  background: linear-gradient(180deg, #fff, #F9FCFF);
-  border: 1px solid var(--border-soft);
-  font-size: 13px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: 12.5px;
 }
 </style>

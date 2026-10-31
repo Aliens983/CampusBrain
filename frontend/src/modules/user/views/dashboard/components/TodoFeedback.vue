@@ -1,11 +1,18 @@
 <template>
-  <el-card class="surface-card">
+  <el-card
+    class="surface-card"
+    shadow="never"
+  >
     <template #header>
       <div class="card-head">
-        <div>
-          <h3>待处理反馈</h3>
-          <p>今天最值得优先关注的事项。</p>
+        <div class="card-head__title">
+          <span class="card-head__index">叁</span>
+          <div>
+            <h3>待处理反馈</h3>
+            <p>今天最值得优先关注的事项。</p>
+          </div>
         </div>
+        <span class="card-head__en">To-do</span>
       </div>
     </template>
     <div class="todo-stack">
@@ -42,30 +49,55 @@ const emit = defineEmits<{
 
 <style scoped lang="scss">
 .surface-card {
-  border-radius: 24px;
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
 }
 
 .card-head {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
-  align-items: center;
+  gap: 16px;
+}
+
+.card-head__title {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+}
+
+.card-head__index {
+  padding-top: 3px;
+  font-family: var(--font-serif);
+  font-size: 11px;
+  color: var(--gold);
 }
 
 .card-head h3 {
-  font-size: 17px;
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 18px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .card-head p {
-  font-size: 13px;
-  color: var(--text-secondary);
-  margin-top: 2px;
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.card-head__en {
+  padding-top: 4px;
+  font-family: var(--font-latin);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-4);
 }
 
 .todo-stack {
   display: grid;
-  gap: 12px;
 }
 
 .todo-card {
@@ -73,36 +105,42 @@ const emit = defineEmits<{
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #fff, #F9FCFF);
+  padding: 15px 0;
+  border-top: 1px solid var(--line);
   cursor: pointer;
-  transition: transform .2s ease;
+  transition: transform 0.16s var(--ease-out);
+}
+
+.todo-card:first-child {
+  border-top: 0;
+  padding-top: 4px;
 }
 
 .todo-card:hover {
-  transform: translateX(4px);
+  transform: translateX(3px);
 }
 
 .todo-card__main {
   flex: 1;
+  min-width: 0;
 }
 
 .todo-card__main strong {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .todo-card__main p {
+  margin-top: 3px;
   font-size: 11px;
-  color: var(--text-secondary);
-  margin-top: 2px;
+  line-height: 1.65;
+  color: var(--ink-4);
 }
 
 .todo-card__badge {
-  font-size: 11px;
-  padding: 4px 10px;
-  border-radius: 999px;
+  flex-shrink: 0;
+  font-size: 10px;
+  padding: 3px 8px;
 }
 </style>

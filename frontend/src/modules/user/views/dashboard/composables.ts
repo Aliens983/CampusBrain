@@ -92,10 +92,10 @@ export function useDashboard() {
 
   // 按资源类别组织的预约入口（指向真实分类，配合服务中心分类 Tab）
   const shortcuts: DashboardShortcut[] = [
-    { title: '教师咨询', desc: '心理咨询 / 学业辅导', path: '/services', query: { category: 'teacher' }, icon: '🧑‍🏫', tone: 'tone-blue' },
-    { title: '设备借用', desc: '按时间段借用设备', path: '/services', query: { category: 'equipment' }, icon: '🖨️', tone: 'tone-teal' },
-    { title: '教室空间', desc: '选教室 · 自选时段', path: '/services', query: { category: 'space' }, icon: '🏫', tone: 'tone-amber' },
-    { title: '活动报名', desc: '校园活动报名', path: '/services', query: { category: 'activity' }, icon: '📣', tone: 'tone-slate' },
+    { title: '教师咨询', desc: '心理咨询 / 学业辅导', path: '/services', query: { category: 'teacher' }, icon: 'Reading', tone: 'tone-blue' },
+    { title: '设备借用', desc: '按时间段借用设备', path: '/services', query: { category: 'equipment' }, icon: 'Monitor', tone: 'tone-teal' },
+    { title: '教室空间', desc: '选教室 · 自选时段', path: '/services', query: { category: 'space' }, icon: 'OfficeBuilding', tone: 'tone-amber' },
+    { title: '活动报名', desc: '校园活动报名', path: '/services', query: { category: 'activity' }, icon: 'Notification', tone: 'tone-slate' },
   ]
 
   const todoList = computed<DashboardTodo[]>(() => {

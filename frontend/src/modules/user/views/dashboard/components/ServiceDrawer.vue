@@ -21,6 +21,9 @@
           {{ service.code }}
         </div>
         <div>
+          <p class="hz-eyebrow">
+            Service preview · HZNU
+          </p>
           <h3>{{ service.name }}</h3>
           <p class="muted">
             {{ service.description }}
@@ -41,7 +44,6 @@
           <el-tag
             v-for="tag in service.tags"
             :key="tag"
-            round
           >
             {{ tag }}
           </el-tag>
@@ -84,42 +86,46 @@ const drawerVisible = computed({
   gap: 16px;
 }
 
+.drawer-stack .hz-eyebrow {
+  margin: 0 0 6px;
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+}
+
+.drawer-stack h3 {
+  margin: 0 0 6px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.drawer-stack .muted {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+
 .cover-badge {
-  width: 64px;
-  height: 64px;
-  border-radius: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  font-weight: 700;
-  color: #fff;
+  width: 72px;
+  height: 72px;
+  min-height: 0;
+  border-radius: var(--radius-sm);
+  color: #f7f1e4;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
-/* 抽屉速览里上传过封面时，用图片替代渐变底 */
 .cover-badge__img {
   object-fit: cover;
-  background: #fff;
-}
-
-.gradient-brand { background: linear-gradient(135deg, #ADE2FF, #7BD0FF); }
-.gradient-teal { background: linear-gradient(135deg, #11998e, #38ef7d); }
-.gradient-amber { background: linear-gradient(135deg, #f093fb, #f5576c); }
-.gradient-slate { background: linear-gradient(135deg, #4b6cb7, #182848); }
-
-.info-list {
-  display: grid;
-  gap: 10px;
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  font-size: 13px;
-}
-
-.info-row span {
-  color: var(--text-secondary);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
 }
 
 .tag-wrap {
