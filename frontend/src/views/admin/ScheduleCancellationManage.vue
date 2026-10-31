@@ -1,7 +1,13 @@
 <template>
   <div class="admin-page">
     <header class="page-head">
-      <div><h1>排班调整审批</h1><p>审批教师提交的咨询时段取消排班申请</p></div>
+      <div>
+        <p class="hz-eyebrow">
+          Schedule review · HZNU
+        </p>
+        <h1>排班调整审批</h1>
+        <p>审批教师提交的咨询时段取消排班申请。</p>
+      </div>
       <el-button :icon="Refresh" :loading="loading" @click="load">刷新</el-button>
     </header>
     <section class="summary"><span>待处理申请</span><strong>{{ requests.length }}</strong></section>
@@ -73,18 +79,109 @@ onMounted(load)
 </script>
 
 <style scoped lang="scss">
-.admin-page { display: grid; gap: 16px; }
-.page-head { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; background: #fff; border: 1px solid #dce5ed; border-radius: 6px; }
-.page-head h1 { margin: 0; font-size: 22px; color: #17324d; }
-.page-head p { margin: 6px 0 0; color: #718096; font-size: 13px; }
-.summary { display: flex; align-items: center; gap: 18px; padding: 12px 16px; background: #eff7f3; color: #275a43; border-left: 3px solid #248259; }
-.summary strong { font-size: 20px; }
-.request-list { display: grid; gap: 10px; min-height: 180px; }
-.request-row { display: flex; align-items: center; gap: 20px; padding: 16px; background: #fff; border: 1px solid #dce5ed; border-radius: 6px; }
-.request-main { flex: 1; min-width: 0; }
-.request-title, .request-meta, .actions { display: flex; align-items: center; gap: 10px; }
-.request-title strong { color: #18344d; }
-.request-meta { flex-wrap: wrap; margin-top: 9px; color: #75879a; font-size: 12px; }
-.request-main p { margin: 10px 0 0; color: #40576d; white-space: pre-wrap; overflow-wrap: anywhere; }
-@media (max-width: 680px) { .request-row { align-items: flex-start; flex-direction: column; } .actions { width: 100%; } }
+.admin-page {
+  display: grid;
+  gap: 18px;
+}
+
+.page-head .el-button {
+  flex-shrink: 0;
+  color: #f7f1e4;
+  background: transparent;
+  border-color: rgba(247, 241, 228, 0.42);
+}
+
+.page-head .el-button:hover {
+  color: var(--ink);
+  background: #f7f1e4;
+  border-color: #f7f1e4;
+}
+
+.summary {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 18px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--gold);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.summary strong {
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--lake);
+}
+
+.request-list {
+  display: grid;
+  gap: 10px;
+  min-height: 180px;
+}
+
+.request-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.request-row:hover {
+  border-color: rgba(176, 138, 69, 0.36);
+  background: var(--surface);
+}
+
+.request-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.request-title,
+.request-meta,
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.request-title strong {
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.request-meta {
+  flex-wrap: wrap;
+  margin-top: 9px;
+  color: var(--ink-4);
+  font-size: 11.5px;
+}
+
+.request-main p {
+  margin: 10px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 680px) {
+  .request-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .actions {
+    width: 100%;
+  }
+}
 </style>

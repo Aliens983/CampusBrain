@@ -2,7 +2,13 @@
   <div class="page-shell">
     <section class="admin-hero">
       <div class="admin-hero__main">
+        <p class="hz-eyebrow">
+          Campus utilities · HZNU
+        </p>
         <h1>工具箱</h1>
+        <p class="admin-hero__desc">
+          天气、二维码与文件上传等日常工具，集中在一处。
+        </p>
       </div>
       <div class="admin-hero__signal">
         <div
@@ -22,7 +28,7 @@
       >
         <div class="tools-card__head">
           <div class="tools-card__icon">
-            🌤
+            <el-icon><Sunny /></el-icon>
           </div>
           <div>
             <h3>天气查询</h3>
@@ -54,7 +60,7 @@
           class="weather-card"
         >
           <div class="weather-card__icon">
-            {{ weatherIcon(weather.weather1) }}
+            <el-icon><component :is="weatherIcon(weather.weather1)" /></el-icon>
           </div>
           <div class="weather-card__info">
             <strong>{{ weather.shi }} {{ weather.qu }}</strong>
@@ -73,7 +79,7 @@
       >
         <div class="tools-card__head">
           <div class="tools-card__icon">
-            📱
+            <el-icon><Postcard /></el-icon>
           </div>
           <div>
             <h3>二维码生成</h3>
@@ -121,7 +127,7 @@
     >
       <div class="tools-card__head">
         <div class="tools-card__icon">
-          ☁️
+          <el-icon><Cloudy /></el-icon>
         </div>
         <div>
           <h3>OSS 文件上传</h3>
@@ -172,7 +178,7 @@
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import type { UploadFile, UploadUserFile } from 'element-plus'
-import { UploadFilled } from '@element-plus/icons-vue'
+import { Cloudy, Postcard, Sunny, UploadFilled } from '@element-plus/icons-vue'
 import request from '@/common/utils/request'
 import axios from 'axios'
 
@@ -193,12 +199,12 @@ async function fetchWeather() {
 }
 
 function weatherIcon(desc: string) {
-  if (!desc) return '🌈'
-  if (desc.includes('晴')) return '☀️'
-  if (desc.includes('云')) return '⛅'
-  if (desc.includes('雨')) return '🌧'
-  if (desc.includes('雪')) return '🌨'
-  return '🌈'
+  if (!desc) return 'Sunny'
+  if (desc.includes('晴')) return 'Sunny'
+  if (desc.includes('云')) return 'Cloudy'
+  if (desc.includes('雨')) return 'Drizzling'
+  if (desc.includes('雪')) return 'Cloudy'
+  return 'PartlyCloudy'
 }
 
 // ====== QR Code ======
@@ -275,96 +281,157 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-.admin-hero {
-  position: relative; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 20px;
-  padding: 32px; border-radius: 30px; color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
-  box-shadow: var(--shadow-card); overflow: hidden;
-}
-.admin-hero::before {
-  content:""; position:absolute; inset:0;
-  background: radial-gradient(circle at 18% 20%, rgba(255,255,255,.12), transparent 18%),
-              linear-gradient(140deg, transparent 14%, rgba(255,255,255,.08) 42%, transparent 72%);
-}
-.admin-hero::after {
-  content:""; position:absolute; inset:-30% -6% auto auto; width:280px; height:280px; border-radius:50%;
-  background: radial-gradient(circle, rgba(123,208,255,.24), rgba(123,208,255,0));
-  animation: adminGlow 8s ease-in-out infinite; pointer-events:none;
-}
-.admin-hero__main, .admin-hero__signal { position:relative; z-index:1; }
-.hero-chip { display:inline-flex; padding:6px 12px; border-radius:999px; font-size:12px; letter-spacing:.08em; background:rgba(255,255,255,.12); margin-bottom:14px; }
-.admin-hero h1 { margin:12px 0 10px; font-size:32px; line-height:1.18; }
-.admin-hero p { max-width:740px; margin:0; line-height:1.8; color:rgba(255,255,255,.82); }
-.admin-hero__signal { display:grid; gap:12px; }
-.signal-card { display:grid; gap:4px; padding:16px 18px; border-radius:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.1); cursor:pointer; transition:background .2s; }
-.signal-card:hover { background:rgba(255,255,255,.14); }
-.signal-card span { font-size:13px; color:rgba(255,255,255,.64); }
-.signal-card strong { font-size:26px; font-weight:700; }
-.signal-card small { font-size:12px; color:rgba(255,255,255,.5); }
-
-@keyframes adminGlow { 0%,100%{ transform:translate3d(0,0,0) scale(1); } 50%{ transform:translate3d(-16px,-8px,0) scale(1.06); } }
-
 .tools-card {
-  background: #fff; border: 1px solid var(--border-soft); border-radius: 18px;
-  padding: 24px; box-shadow: var(--shadow-card); margin-bottom: 20px;
+  margin-bottom: 20px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
+
 .tools-card__head {
-  display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding-bottom: 18px;
-  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
 }
-.tools-card__icon { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: #F1F7FF; font-size: 24px; flex-shrink: 0; }
-.tools-card__head h3 { margin: 0 0 2px; font-size: 17px; font-weight: 700; }
-.tools-card__head p { margin: 0; color: var(--text-secondary); font-size: 13px; }
 
-.chat-messages { height: 320px; overflow-y: auto; display: grid; gap: 14px; padding: 4px 0; margin-bottom: 16px; }
-.chat-empty { display: grid; place-items: center; gap: 10px; padding: 40px; text-align: center; }
-.chat-empty__icon { font-size: 40px; }
-.chat-empty p { color: var(--text-tertiary); margin:0; }
-.chat-hints { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.chat-hints span { padding: 6px 14px; border-radius: 999px; background: #F1F7FF; color: var(--brand-500); font-size: 12px; cursor: pointer; transition: background .2s; }
-.chat-hints span:hover { background: #E0ECFD; }
-
-.chat-msg { display: flex; gap: 10px; align-items: flex-start; }
-.chat-msg.user { flex-direction: row-reverse; }
-.chat-msg__avatar { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: #F1F7FF; font-size: 16px; flex-shrink: 0; }
-.chat-msg.user .chat-msg__avatar { background: #D3EEFF; }
-.chat-msg__bubble {
-  max-width: 70%; padding: 12px 16px; border-radius: 16px; font-size: 14px; line-height: 1.65;
-  background: #f3f4f6; color: #1f2937; white-space: pre-wrap; word-break: break-word;
+.tools-card__icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--lake);
+  font-size: 21px;
 }
-.chat-msg.user .chat-msg__bubble { background: linear-gradient(135deg, #7BD0FF, #3FB6FF); color: #fff; }
-.typing span { display:inline-block; width:6px; height:6px; border-radius:50%; background:#94a3b8; margin:0 2px; animation: typingBounce 1.4s ease-in-out infinite; }
-.typing span:nth-child(2) { animation-delay: .2s; }
-.typing span:nth-child(3) { animation-delay: .4s; }
-@keyframes typingBounce { 0%,80%,100%{ transform:scale(.6); opacity:.5; } 40%{ transform:scale(1); opacity:1; } }
 
-.chat-input { display: flex; gap: 10px; }
+.tools-card__head h3 {
+  margin: 0 0 2px;
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--ink);
+}
 
-.tools-form { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
-/* 输入框均分剩余宽度，按钮固定舒展不缩 */
-.tools-form .el-input { flex: 1 1 0; min-width: 0; }
+.tools-card__head p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+
+.tools-form {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.tools-form .el-input {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .tools-form:not(.tools-form--wide) .el-button {
   flex: 0 0 auto;
-  min-width: 128px;
+  min-width: 118px;
   margin: 0;
-  font-weight: 600;
 }
-.tools-form--wide { flex-direction: column; align-items: stretch; gap: 16px; }
 
-.weather-card { display: flex; gap: 18px; align-items: center; padding: 20px; border-radius: 18px; background: linear-gradient(135deg, #F1F7FF, #ecfeff); border: 1px solid #E1ECFE; }
-.weather-card__icon { font-size: 52px; }
-.weather-card__info strong { font-size: 17px; }
-.weather-card__main { margin: 4px 0; font-size: 15px; color: var(--text-secondary); }
-.weather-card__main b { color: var(--text-primary); font-size: 18px; margin-left: 6px; }
-.weather-card__info small { color: var(--text-tertiary); }
+.tools-form--wide {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 16px;
+}
 
-.qr-result { display: grid; place-items: center; gap: 14px; padding: 10px; }
-.qr-result img { width: 190px; height: 190px; border-radius: 14px; border: 1px solid var(--border-soft); padding: 8px; background: #fff; }
+.weather-card {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
 
-.oss-result { margin-top: 14px; display: grid; gap: 6px; }
-.oss-result__label { font-size: 13px; color: var(--text-secondary); }
+.weather-card__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--lake);
+  font-size: 26px;
+  line-height: 1;
+}
 
-.span-6 { grid-column: span 6; }
+.weather-card__info strong {
+  font-family: var(--font-serif);
+  font-size: 16px;
+  color: var(--ink);
+}
 
-@media (max-width: 960px) { .admin-hero { grid-template-columns: 1fr; } .span-6 { grid-column: span 12; } }
+.weather-card__main {
+  margin: 4px 0;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.weather-card__main b {
+  margin-left: 6px;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  color: var(--lake);
+}
+
+.weather-card__info small {
+  color: var(--ink-4);
+  font-size: 11px;
+}
+
+.qr-result {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  padding: 10px;
+}
+
+.qr-result img {
+  width: 190px;
+  height: 190px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+
+.oss-result {
+  display: grid;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.oss-result__label {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.span-6 {
+  grid-column: span 6;
+}
+
+@media (max-width: 960px) {
+  .span-6 {
+    grid-column: span 12;
+  }
+}
 </style>
