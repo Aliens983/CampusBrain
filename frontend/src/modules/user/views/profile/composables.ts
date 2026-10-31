@@ -40,10 +40,10 @@ export function usePasswordChange(visible: Ref<boolean>) {
     if (/[^A-Za-z0-9]/.test(v)) cells++
     cells = Math.min(cells, 4)
     const map = [
-      { label: '弱', color: '#ef4444' },
-      { label: '一般', color: '#f97316' },
-      { label: '中', color: '#eab308' },
-      { label: '强', color: '#22c55e' },
+      { label: '弱', color: 'var(--seal)' },
+      { label: '一般', color: 'var(--warning-500)' },
+      { label: '中', color: 'var(--gold)' },
+      { label: '强', color: 'var(--celadon-deep)' },
     ]
     return { cells, label: map[cells - 1].label, color: map[cells - 1].color }
   })

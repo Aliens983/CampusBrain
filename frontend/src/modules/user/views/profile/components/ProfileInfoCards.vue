@@ -8,6 +8,9 @@
         </el-avatar>
       </div>
       <div class="profile-card__info">
+        <p class="hz-eyebrow profile-card__eyebrow">
+          Member profile · HZNU
+        </p>
         <h2>{{ user?.username || '未登录' }}</h2>
         <p class="profile-card__dept">
           {{ user?.department || '未分配部门' }}
@@ -68,27 +71,144 @@ defineProps<{
 .span-7 { grid-column: span 7; }
 
 .profile-card {
-  display: flex; align-items: center; gap: 24px;
-  padding: 28px; border-radius: 20px; background: #fff;
-  border: 1px solid var(--border-soft); box-shadow: var(--shadow-card);
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 26px 28px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
-.profile-card__avatar { flex-shrink: 0; }
-.profile-card__info { display: grid; gap: 4px; }
-.profile-card__info h2 { margin: 0; font-size: 22px; font-weight: 700; }
-.profile-card__dept { margin: 2px 0 0; color: var(--text-secondary); font-size: 14px; }
-.profile-card__email { margin: 0; color: var(--text-tertiary); font-size: 13px; }
+
+.profile-card__avatar {
+  flex-shrink: 0;
+}
+
+.profile-card__avatar :deep(.el-avatar) {
+  border: 1px solid var(--line-strong);
+  background: var(--paper-2);
+  color: var(--lake);
+  font-size: 26px;
+}
+
+.profile-card__info {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.profile-card__eyebrow {
+  margin: 0 0 2px;
+  font-size: 8.5px;
+  letter-spacing: 0.18em;
+}
+
+.profile-card__info h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.profile-card__dept {
+  margin: 2px 0 0;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.profile-card__email {
+  margin: 0;
+  color: var(--ink-4);
+  font-size: 12px;
+}
 
 .info-card {
-  padding: 24px 28px; border-radius: 20px; background: #fff;
-  border: 1px solid var(--border-soft); box-shadow: var(--shadow-card);
+  padding: 24px 28px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
-.info-card__title { margin: 0 0 18px; font-size: 16px; font-weight: 700; }
-.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.info-item { display: grid; gap: 4px; }
-.info-item__label { font-size: 12px; color: var(--text-tertiary); }
-.info-item__value { font-size: 14px; font-weight: 500; color: var(--text-primary); }
 
-@media (max-width: 1200px) { .span-5, .span-7 { grid-column: span 12; } }
-@media (max-width: 900px) { .info-grid { grid-template-columns: 1fr; } }
-@media (max-width: 500px) { .profile-card { flex-direction: column; text-align: center; } }
+.info-card__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 18px;
+  font-family: var(--font-serif);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.info-card__title::before {
+  content: "";
+  width: 3px;
+  height: 17px;
+  border-radius: 1px;
+  background: var(--gold);
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 28px;
+}
+
+.info-item {
+  display: grid;
+  gap: 4px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.info-item:nth-child(-n + 2) {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.info-item__label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: var(--ink-4);
+}
+
+.info-item__value {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+@media (max-width: 1200px) {
+  .span-5,
+  .span-7 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 900px) {
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .info-item:nth-child(-n + 2) {
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .info-item:first-child {
+    padding-top: 0;
+    border-top: 0;
+  }
+}
+
+@media (max-width: 500px) {
+  .profile-card {
+    flex-direction: column;
+    text-align: center;
+  }
+}
 </style>
