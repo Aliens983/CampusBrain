@@ -1,113 +1,55 @@
-/* 全局样式变量 */
+/* 全局样式变量 —— 与 global.css 的「江南学府 · 湖光书卷」令牌保持一致 */
 :root {
-  /* 主题色 */
-  --primary-color: #7BD0FF;
-  --primary-color-light: #ADE2FF;
-  --primary-color-dark: #1E98F2;
-  
+  /* 主题色：湖山墨蓝，校徽蓝只作高亮 */
+  --primary-color: #2e5b68;
+  --primary-color-light: #5f8776;
+  --primary-color-dark: #21434d;
+
   /* 成功色 */
-  --success-color: #67C23A;
-  --success-color-light: #85CE61;
-  --success-color-dark: #5DA935;
-  
+  --success-color: #3f7a5a;
+  --success-color-light: #6b9c7e;
+  --success-color-dark: #326248;
+
   /* 警告色 */
-  --warning-color: #E6A23C;
-  --warning-color-light: #F5D8A6;
-  --warning-color-dark: #CF8825;
-  
+  --warning-color: #a8722c;
+  --warning-color-light: #c29460;
+  --warning-color-dark: #865b23;
+
   /* 危险色 */
-  --danger-color: #F56C6C;
-  --danger-color-light: #F78989;
-  --danger-color-dark: #DD6161;
-  
+  --danger-color: #a8452f;
+  --danger-color-light: #c2705f;
+  --danger-color-dark: #863728;
+
   /* 信息色 */
-  --info-color: #909399;
-  --info-color-light: #C0C4CC;
-  --info-color-dark: #7F8289;
-  
+  --info-color: #61777b;
+  --info-color-light: #899b9e;
+  --info-color-dark: #4e5f62;
+
   /* 文字色 */
-  --text-primary: #303133;
-  --text-regular: #606266;
-  --text-secondary: #909399;
-  --text-placeholder: #C0C4CC;
-  
+  --text-primary: #18313b;
+  --text-regular: #2c4a54;
+  --text-secondary: #61777b;
+  --text-placeholder: #93a3a1;
+
   /* 背景色 */
-  --bg-color: #F5F7FA;
-  --bg-color-light: #FFFFFF;
-  
+  --bg-color: #f5f1e6;
+  --bg-color-light: #fffdf7;
+
   /* 边框色 */
-  --border-color: #DCDFE6;
-  --border-color-light: #E4E7ED;
-  
+  --border-color: rgba(24, 49, 59, 0.12);
+  --border-color-light: rgba(24, 49, 59, 0.08);
+
   /* 阴影 */
-  --shadow-color: rgba(0, 0, 0, 0.12);
-  --shadow-light: rgba(0, 0, 0, 0.08);
-  
+  --shadow-color: rgba(24, 49, 59, 0.18);
+  --shadow-light: rgba(24, 49, 59, 0.08);
+
   /* 圆角 */
-  --border-radius: 4px;
-  --border-radius-large: 8px;
-  
+  --border-radius: 6px;
+  --border-radius-large: 10px;
+
   /* 过渡 */
-  --transition-duration: 0.3s;
-  --transition-timing: ease;
-}
-
-/* 全局样式重置 */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-html,
-body,
-#app {
-  height: 100%;
-  width: 100%;
-  overflow: hidden;
-}
-
-/* 字体 */
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-primary);
-  background-color: var(--bg-color);
-}
-
-/* 链接 */
-a {
-  color: var(--primary-color);
-  text-decoration: none;
-  
-  &:hover {
-    color: var(--primary-color-light);
-  }
-}
-
-/* 滚动条 */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-  
-  &:hover {
-    background: var(--border-color-light);
-  }
-}
-
-/* 滚动条容器 */
-::-webkit-scrollbar-container {
-  background: transparent;
+  --transition-duration: 0.2s;
+  --transition-timing: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* 清除浮动 */

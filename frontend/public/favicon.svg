@@ -1,12 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0E6CD6"/>
-      <stop offset="0.58" stop-color="#3FB6FF"/>
-      <stop offset="1" stop-color="#7BD0FF"/>
-    </linearGradient>
-  </defs>
-  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#g)"/>
-  <path d="M41 20.5a14 14 0 1 0 0 23" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/>
-  <circle cx="43.5" cy="18.5" r="4.6" fill="#fff"/>
+  <rect width="64" height="64" rx="12" fill="#f5f1e6"/>
+  <rect x="8" y="8" width="48" height="48" rx="3" fill="none" stroke="#a8452f" stroke-width="2.4"/>
+  <rect x="13" y="13" width="38" height="38" rx="2" fill="none" stroke="#a8452f" stroke-width="0.8" opacity="0.45"/>
+  <text x="32" y="45" text-anchor="middle" font-family="'Noto Serif CJK SC','Source Han Serif SC','Songti SC',STSong,SimSun,serif" font-size="33" font-weight="700" fill="#a8452f">杭</text>
 </svg>
