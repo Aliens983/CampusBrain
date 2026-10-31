@@ -21,6 +21,7 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -190,6 +191,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
     }
 
     private Mono<Void> unauthorized(ServerWebExchange exchange, String message) {
+        ServerHttpRequest request = exchange.getRequest();
+        log.warn("access_denied method={} path={} status=401 reason={} ip={} traceId={}",
+                request.getMethod() == null ? "-" : request.getMethod().name(),
+                request.getURI().getPath(), message, clientIp(request),
+                headerOrUnknown(request, TraceIdGlobalFilter.TRACE_ID_HEADER));
+
         ServerHttpResponse response = exchange.getResponse();
         response.setStatusCode(HttpStatus.UNAUTHORIZED);
         // 错误体统一走 common-auth AuthErrorResponses（code/message/timestamp），
@@ -199,6 +206,26 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                 .getBytes(StandardCharsets.UTF_8);
         DataBuffer buffer = response.bufferFactory().wrap(bytes);
         return response.writeWith(Mono.just(buffer));
+    }
+
+    private static String headerOrUnknown(ServerHttpRequest request, String name) {
+        String value = request.getHeaders().getFirst(name);
+        return value == null || value.isBlank() ? "-" : value;
+    }
+
+    private static String clientIp(ServerHttpRequest request) {
+        String realIp = request.getHeaders().getFirst("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp;
+        }
+        String forwarded = request.getHeaders().getFirst("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            return forwarded.split(",")[0].trim();
+        }
+        InetSocketAddress remote = request.getRemoteAddress();
+        return remote != null && remote.getAddress() != null
+                ? remote.getAddress().getHostAddress()
+                : "-";
     }
 
     @Override
