@@ -7,6 +7,7 @@ import com.kb.domain.document.Document;
 import com.kb.domain.document.DocumentChunk;
 import com.kb.domain.document.DocumentRepository;
 import com.kb.domain.document.DocumentStatus;
+import com.kb.domain.document.DocumentVisibility;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.kb.infrastructure.persistence.mysql.dataobject.DocumentChunkDO;
 import com.kb.infrastructure.persistence.mysql.dataobject.DocumentDO;
@@ -84,15 +85,15 @@ public class DocumentRepositoryImpl implements DocumentRepository {
     }
 
     @Override
-    public List<Document> findByOwnerId(Long ownerId, int page, int size) {
-        return documentMapper.selectPageByOwnerId(ownerId, (long) page * size, size).stream()
+    public List<Document> findVisibleToUser(Long userId, int page, int size) {
+        return documentMapper.selectPageVisibleToUser(userId, (long) page * size, size).stream()
                 .map(this::toDocument)
                 .toList();
     }
 
     @Override
-    public List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword, int page, int size) {
-        return documentMapper.selectPageByOwnerIdAndTitle(ownerId, keyword, (long) page * size, size)
+    public List<Document> searchVisibleToUser(Long userId, String keyword, int page, int size) {
+        return documentMapper.selectPageVisibleToUserAndTitle(userId, keyword, (long) page * size, size)
                 .stream().map(this::toDocument).toList();
     }
 
@@ -178,6 +179,7 @@ public class DocumentRepositoryImpl implements DocumentRepository {
                 .status(DocumentStatus.valueOf(docDO.getStatus()))
                 .chunkCount(docDO.getChunkCount())
                 .ownerId(docDO.getOwnerId())
+                .visibility(parseVisibility(docDO.getVisibility()))
                 .metadata(parseJsonMap(docDO.getMetadataJson()))
                 .errorMsg(docDO.getErrorMsg())
                 .createdAt(docDO.getCreatedAt())
@@ -195,6 +197,8 @@ public class DocumentRepositoryImpl implements DocumentRepository {
         docDO.setStatus(doc.getStatus().name());
         docDO.setChunkCount(doc.getChunkCount());
         docDO.setOwnerId(doc.getOwnerId());
+        docDO.setVisibility(doc.getVisibility() == null
+                ? DocumentVisibility.PUBLIC.name() : doc.getVisibility().name());
         docDO.setMetadataJson(toJson(doc.getMetadata()));
         docDO.setErrorMsg(doc.getErrorMsg());
         return docDO;
@@ -215,6 +219,15 @@ public class DocumentRepositoryImpl implements DocumentRepository {
     }
 
     // ========== Utilities ==========
+
+    /** 存量行（null/空）按 PUBLIC 处理；非法值 fail-closed 为 PRIVATE，避免脏数据泄露. */
+    private DocumentVisibility parseVisibility(String value) {
+        if (value == null || value.isBlank()) {
+            return DocumentVisibility.PUBLIC;
+        }
+        DocumentVisibility visibility = DocumentVisibility.parseOrNull(value);
+        return visibility == null ? DocumentVisibility.PRIVATE : visibility;
+    }
 
     private String toJson(Object obj) {
         if (obj == null) return null;

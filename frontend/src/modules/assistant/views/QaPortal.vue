@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { DocumentItem } from '../composables'
 import { useQaPortal } from '../composables'
+import type { UploadVisibility } from '../composables'
 import KnowledgeStrip from '../components/KnowledgeStrip.vue'
 import ChatHeader from '../components/ChatHeader.vue'
 import ContextStrip from '../components/ContextStrip.vue'
@@ -18,7 +19,7 @@ import ChatComposer from '../components/ChatComposer.vue'
  */
 const {
   isAdmin, query, messages, streaming, slotChips, pendingIndex,
-  sessions, currentSessionId, documents, documentsVisible, uploading,
+  sessions, currentSessionId, documents, documentsVisible, uploading, uploadVisibility,
   chatBodyRef, canFeedback,
   onSwitchSession, startNewSession, sessionLabel, formatSessionDate, resetContext,
   askQuestion, reply, onBodyScroll, recordFeedback,
@@ -27,6 +28,10 @@ const {
 
 function onDeleteDocument(doc: DocumentItem) {
   void deleteDocument(doc)
+}
+
+function onUpdateUploadVisibility(value: UploadVisibility) {
+  uploadVisibility.value = value
 }
 
 /** 选择文件后逐个上传 */
@@ -42,8 +47,10 @@ function onPickFiles(files: FileList) {
       v-model:visible="documentsVisible"
       :documents="documents"
       :uploading="uploading"
+      :upload-visibility="uploadVisibility"
       :status-type="statusType"
       :status-label="statusLabel"
+      @update:upload-visibility="onUpdateUploadVisibility"
       @refresh="refreshDocuments"
       @pick="onPickFiles"
       @delete="onDeleteDocument"

@@ -50,6 +50,7 @@ public enum ErrorCode {
     DOCUMENT_PARSE_FAILED(3002, "文档解析失败"),
     DOCUMENT_UNSUPPORTED_TYPE(3003, "不支持的文件类型"),
     DOCUMENT_TOO_LARGE(3004, "文件大小超过限制"),
+    DOCUMENT_INVALID_VISIBILITY(3005, "文档可见性参数无效"),
 
     // ---- 问答 ----
     QA_LLM_FAILED(4001, "AI 回答生成失败，请稍后重试"),

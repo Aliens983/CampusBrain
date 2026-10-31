@@ -108,19 +108,21 @@ public class QdrantVectorStore implements VectorStoreService {
                     .setScoreThreshold((float) scoreThreshold)
                     .setWithPayload(enable(true));
 
-            // 归属过滤——可见 = 全局共享（owner_id 缺失/空）OR 当前用户私有
+            // 可见性过滤：
+            //   1) 本人私有文档（owner_id == 当前用户）
+            //   2) PUBLIC 文档
+            //   3) 旧数据缺失 visibility 时按 PUBLIC 兼容
             Filter.Builder filterBuilder = Filter.newBuilder();
-            Condition.Builder ownerMatches = Condition.newBuilder().setField(
-                    FieldCondition.newBuilder().setKey("owner_id").setMatch(
-                            Match.newBuilder().setKeyword(String.valueOf(ownerId))));
-            Condition.Builder shared = Condition.newBuilder().setIsEmpty(
-                    IsEmptyCondition.newBuilder().setKey("owner_id"));
             if (ownerId != null) {
-                filterBuilder.addShould(ownerMatches).addShould(shared);
-            } else {
-                // 匿名/系统检索：仅共享文档
-                filterBuilder.addMust(shared);
+                filterBuilder.addShould(Condition.newBuilder().setField(
+                        FieldCondition.newBuilder().setKey("owner_id").setMatch(
+                                Match.newBuilder().setKeyword(String.valueOf(ownerId)))));
             }
+            filterBuilder.addShould(Condition.newBuilder().setField(
+                    FieldCondition.newBuilder().setKey("visibility").setMatch(
+                            Match.newBuilder().setKeyword("PUBLIC"))));
+            filterBuilder.addShould(Condition.newBuilder().setIsEmpty(
+                    IsEmptyCondition.newBuilder().setKey("visibility")));
             spb.setFilter(filterBuilder.build());
 
             List<ScoredPoint> results = qdrantClient.searchAsync(spb.build())

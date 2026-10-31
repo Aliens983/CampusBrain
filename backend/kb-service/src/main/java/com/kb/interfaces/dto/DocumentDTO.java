@@ -29,6 +29,8 @@ public class DocumentDTO {
     private String status;
     @Schema(description = "分块数量")
     private Integer chunkCount;
+    @Schema(description = "可见范围：PUBLIC / PRIVATE")
+    private String visibility;
     @Schema(description = "创建时间")
     private LocalDateTime createdAt;
 
@@ -40,6 +42,7 @@ public class DocumentDTO {
                 .fileSize(doc.getFileSize())
                 .status(doc.getStatus().name())
                 .chunkCount(doc.getChunkCount())
+                .visibility(doc.getVisibility() == null ? null : doc.getVisibility().name())
                 .createdAt(doc.getCreatedAt())
                 .build();
     }

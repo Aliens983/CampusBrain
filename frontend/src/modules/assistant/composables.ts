@@ -3,9 +3,12 @@ import { ElMessage } from 'element-plus'
 import { useUserStore } from '@/common/stores/user'
 import { API_SUCCESS_CODE } from '@/common/utils/request'
 import { campusLabel, categoryLabel, loadCategoryDictionary } from '@/common/dictionary'
+import { parseSseFrames } from './utils/sse'
 
 /** 知识库文档条目 */
-export interface DocumentItem { id: number; title: string; fileType?: string; status?: string }
+export interface DocumentItem { id: number; title: string; fileType?: string; status?: string; visibility?: 'PUBLIC' | 'PRIVATE' }
+/** 文档上传可见范围 */
+export type UploadVisibility = 'PUBLIC' | 'PRIVATE'
 /** 会话列表条目（存 localStorage） */
 export interface SessionMeta { id: string; title: string; updatedAt: string }
 /** 多轮对话中 AI 记住的预约条件（槽位） */
@@ -14,8 +17,17 @@ export interface SlotsView { campus?: string; category?: string; date?: string; 
 export interface PendingView { action: 'BOOK' | 'CANCEL'; draftId?: string; orderId?: number; summary?: string; needAudit?: boolean }
 /** 动作执行回执 */
 export interface ActionView { status?: string; statusText?: string; message?: string; orderId?: number }
+/** 引用来源（后端 citations 事件） */
+export interface CitationRef {
+  documentId?: number
+  documentTitle?: string
+  chunkId?: string
+  chunkIndex?: number
+  snippet?: string
+  score?: number
+}
 /** 一条对话消息 */
-export interface ChatMsg { id?: number; role: 'user' | 'assistant'; content: string; confirm?: PendingView; action?: ActionView }
+export interface ChatMsg { id?: number; role: 'user' | 'assistant'; content: string; confirm?: PendingView; action?: ActionView; citations?: CitationRef[] }
 
 const BASE = '/api/v1/kb'
 /** 看门狗阈值：略大于后端 LLM 流式超时（90s），给正常长回答留足余量 */
@@ -48,6 +60,8 @@ export function useQaPortal() {
   const documents = ref<DocumentItem[]>([])
   const documentsVisible = ref(false)
   const uploading = ref(false)
+  /** 新上传文档的可见范围：校园知识默认公开，只有明确选择私有时才限制为 owner */
+  const uploadVisibility = ref<UploadVisibility>('PUBLIC')
 
   // ===== 聊天区自动滚动 =====
   const chatBodyRef = ref<HTMLElement | null>(null)
@@ -278,26 +292,6 @@ export function useQaPortal() {
     scrollToBottom()
   }
 
-  /**
-   * 解析 SSE 分帧：把一段原始文本切成 { event, data } 序列.
-   * 换行可能是 \n\n 或 \r\n\r\n；同一事件可有多行 data（按 \n 拼接）.
-   */
-  function parseSseFrames(raw: string): { event: string; data: string }[] {
-    const frames: { event: string; data: string }[] = []
-    for (const block of raw.split(/\r?\n\r?\n/)) {
-      if (!block.trim()) continue
-      let event = 'message'
-      const dataLines: string[] = []
-      for (const line of block.split(/\r?\n/)) {
-        if (line.startsWith(':')) continue
-        if (line.startsWith('event:')) event = line.slice(6).trim()
-        else if (line.startsWith('data:')) dataLines.push(line.slice(5).replace(/^ /, ''))
-      }
-      if (dataLines.length > 0) frames.push({ event, data: dataLines.join('\n') })
-    }
-    return frames
-  }
-
   function askQuestion() {
     const q = query.value.trim()
     if (!q || streaming.value) return
@@ -413,6 +407,14 @@ export function useQaPortal() {
       } catch { /* 忽略解析失败 */ }
       return false
     }
+    // 引用来源：存到消息上供 ChatMessage 渲染，不能落到默认分支追加到正文
+    if (event === 'citations') {
+      try {
+        const parsed = JSON.parse(data) as CitationRef[]
+        aiMsg.citations = Array.isArray(parsed) ? parsed : []
+      } catch { /* 忽略解析失败 */ }
+      return false
+    }
     // 动作回执：确认/取消执行完成，收起卡片
     if (event === 'action') {
       try { aiMsg.action = JSON.parse(data) as ActionView } catch { /* 忽略解析失败 */ }
@@ -434,18 +436,22 @@ export function useQaPortal() {
       return true
     }
     // 默认 message 事件：答案 token 与终止信号
-    if (data === '[DONE]') {
+    if (event === 'message' && data === '[DONE]') {
       if (!aiMsg.content) aiMsg.content = '（本次未生成内容，请换个问法试试）'
       stopStream(aiMsg, q)
       return true
     }
-    if (data.startsWith('[ERROR]')) {
+    if (event === 'message' && data.startsWith('[ERROR]')) {
       aiMsg.content += `\n\n${data.replace('[ERROR] ', '')}`
       stopStream(aiMsg, q)
       return true
     }
-    aiMsg.content += data
-    scheduleScroll()
+    // 只把默认 message 事件当正文；未知命名事件（协议扩展/心跳）必须忽略，
+    // 否则 citations 等结构化事件的 JSON 会被拼进回答
+    if (event === 'message') {
+      aiMsg.content += data
+      scheduleScroll()
+    }
     return false
   }
 
@@ -487,6 +493,7 @@ export function useQaPortal() {
     try {
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('visibility', uploadVisibility.value)
       const resp = await fetch(`${BASE}/documents/upload`, {
         method: 'POST', headers: authHeaders(), body: formData
       })
@@ -528,7 +535,7 @@ export function useQaPortal() {
     isAdmin, query, messages, streaming,
     slots, pending, pendingIndex, slotChips,
     sessions, currentSessionId,
-    documents, documentsVisible, uploading,
+    documents, documentsVisible, uploading, uploadVisibility,
     chatBodyRef, canFeedback,
     // 会话
     onSwitchSession, startNewSession, sessionLabel, formatSessionDate, resetContext,

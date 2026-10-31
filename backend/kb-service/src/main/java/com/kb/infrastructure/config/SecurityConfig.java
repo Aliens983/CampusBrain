@@ -61,7 +61,7 @@ public class SecurityConfig {
                         // 文档上传仅限管理员；删除允许「owner 本人或管理员」，
                         // 具体归属判定由 DocumentApplicationService 完成
                         .requestMatchers(HttpMethod.POST, "/documents/upload")
-                            .hasRole("ADMIN")
+                            .hasAnyRole("ADMIN", "SUPER_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .securityContext(sc -> sc.requireExplicitSave(false))

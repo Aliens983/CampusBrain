@@ -106,15 +106,85 @@ class DocumentApplicationServiceTest {
     }
 
     @Test
-    @DisplayName("普通用户搜索带 owner 条件且 size 上限被截断到 100")
+    @DisplayName("普通用户搜索按可见范围下推（PUBLIC + 本人 PRIVATE），size 上限被截断到 100")
     void userSearchShouldClampSize() {
         login(9L, "USER");
-        when(documentRepository.searchByOwnerIdAndTitle(eq(9L), eq("rag"), eq(2), eq(100)))
+        when(documentRepository.searchVisibleToUser(eq(9L), eq("rag"), eq(2), eq(100)))
                 .thenReturn(List.of());
 
         service.searchVisibleDocuments("rag", 2, 999);
 
-        verify(documentRepository).searchByOwnerIdAndTitle(9L, "rag", 2, 100);
+        verify(documentRepository).searchVisibleToUser(9L, "rag", 2, 100);
+    }
+
+    @Test
+    @DisplayName("普通用户列表走可见范围查询（PUBLIC + 本人 PRIVATE）")
+    void userListShouldUseVisibilityQuery() {
+        login(9L, "USER");
+        when(documentRepository.findVisibleToUser(9L, 0, 20)).thenReturn(List.of());
+
+        service.listVisibleDocuments(0, 20);
+
+        verify(documentRepository).findVisibleToUser(9L, 0, 20);
+        verify(documentRepository, never()).findAll(anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("上传默认 PUBLIC，显式 PRIVATE 时落库为 PRIVATE")
+    void uploadShouldPersistVisibility() {
+        login(1L, "ADMIN");
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "guide.md", "text/markdown", "content".getBytes());
+        when(documentTypeRegistry.extractFileType("guide.md")).thenReturn("md");
+        when(documentTypeRegistry.supports("md")).thenReturn(true);
+        when(documentRepository.save(any(Document.class)))
+                .thenAnswer(invocation -> {
+                    Document saved = invocation.getArgument(0);
+                    return Document.builder().id(12L).visibility(saved.getVisibility()).build();
+                });
+
+        service.uploadDocument(file);
+        service.uploadDocument(file, "PRIVATE");
+
+        org.mockito.ArgumentCaptor<Document> captor =
+                org.mockito.ArgumentCaptor.forClass(Document.class);
+        verify(documentRepository, times(2)).save(captor.capture());
+        assertThat(captor.getAllValues().get(0).getVisibility())
+                .isEqualTo(com.kb.domain.document.DocumentVisibility.PUBLIC);
+        assertThat(captor.getAllValues().get(1).getVisibility())
+                .isEqualTo(com.kb.domain.document.DocumentVisibility.PRIVATE);
+    }
+
+    @Test
+    @DisplayName("上传非法 visibility 直接拒绝，不落盘不落库")
+    void uploadShouldRejectInvalidVisibility() {
+        login(1L, "ADMIN");
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "guide.md", "text/markdown", "content".getBytes());
+
+        assertThatThrownBy(() -> service.uploadDocument(file, "SECRET"))
+                .isInstanceOf(com.kb.infrastructure.common.BusinessException.class)
+                .hasMessageContaining("可见性");
+
+        verifyNoInteractions(documentRepository);
+        verify(documentDispatcher, never()).send(anyLong());
+    }
+
+    @Test
+    @DisplayName("PUBLIC 文档可被其他用户读取，PRIVATE 文档对非 owner 视为不存在")
+    void publicDocumentVisibleToOtherUser() {
+        login(9L, "USER");
+        Document publicDoc = Document.builder().id(20L).ownerId(1L)
+                .visibility(com.kb.domain.document.DocumentVisibility.PUBLIC).build();
+        when(documentRepository.findById(20L)).thenReturn(Optional.of(publicDoc));
+        assertThat(service.getDocument(20L)).isSameAs(publicDoc);
+
+        Document privateDoc = Document.builder().id(21L).ownerId(1L)
+                .visibility(com.kb.domain.document.DocumentVisibility.PRIVATE).build();
+        when(documentRepository.findById(21L)).thenReturn(Optional.of(privateDoc));
+        assertThatThrownBy(() -> service.getDocument(21L))
+                .isInstanceOf(com.kb.infrastructure.common.BusinessException.class)
+                .hasMessageContaining("文档不存在");
     }
 
     @Test

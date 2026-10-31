@@ -4,6 +4,7 @@ import com.kb.domain.document.Document;
 import com.kb.domain.document.DocumentChunk;
 import com.kb.domain.document.DocumentRepository;
 import com.kb.domain.document.DocumentStatus;
+import com.kb.domain.document.DocumentVisibility;
 import com.kb.domain.event.DocumentProcessedEvent;
 import com.kb.domain.rag.*;
 import com.kb.infrastructure.persistence.elasticsearch.EsDocumentEntity;
@@ -194,8 +195,8 @@ public class DocumentProcessingConsumer {
                 processingLock.exitProcessing(documentId);
                 return;
             }
-            // 写入归属用户 ownerId，检索端据此过滤
-            store(chunks, embeddings, documentId, doc.getOwnerId());
+            // 写入归属用户与可见范围，检索端据此过滤
+            store(chunks, embeddings, documentId, doc.getOwnerId(), doc.getVisibility());
 
             // === Step 6: Mark READY ===
             documentRepository.markReady(documentId, chunks.size());
@@ -290,7 +291,8 @@ public class DocumentProcessingConsumer {
         return embeddings;
     }
 
-    private void store(List<DocumentChunk> chunks, List<float[]> embeddings, Long documentId, Long ownerId) {
+    private void store(List<DocumentChunk> chunks, List<float[]> embeddings, Long documentId,
+                       Long ownerId, DocumentVisibility visibility) {
         List<VectorStoreService.VectorPoint> qdrantPoints = new ArrayList<>();
         List<EsDocumentEntity> esDocs = new ArrayList<>();
 
@@ -307,10 +309,12 @@ public class DocumentProcessingConsumer {
             payload.put("content", chunk.getContent());
             payload.put("section_title", chunk.getMetadata() != null
                     ? chunk.getMetadata().getOrDefault("sectionTitle", "") : "");
-            // 写入归属用户，检索端据此过滤跨用户私有泄露；null 视为全局共享
+            // 写入归属用户与可见范围：owner 用于私有隔离，visibility 决定是否全员可检索
             if (ownerId != null) {
                 payload.put("owner_id", String.valueOf(ownerId));
             }
+            payload.put("visibility", (visibility == null
+                    ? DocumentVisibility.PUBLIC : visibility).name());
 
             qdrantPoints.add(new VectorStoreService.VectorPoint(
                     chunk.getQdrantId(), vector, payload));
@@ -324,6 +328,8 @@ public class DocumentProcessingConsumer {
                     .createdAt(LocalDateTime.now()
                             .format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
                     .ownerId(ownerId)
+                    .visibility((visibility == null
+                            ? DocumentVisibility.PUBLIC : visibility).name())
                     .build());
         }
 

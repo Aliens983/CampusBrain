@@ -44,23 +44,23 @@ public interface DocumentRepository {
                                          LocalDateTime threshold, int limit);
 
     /**
-     * 按归属用户分页查询，按创建时间倒序.
+     * 按可见范围分页查询：PUBLIC 文档 + 当前用户自己的 PRIVATE 文档，按创建时间倒序.
      *
-     * @param ownerId 归属用户ID
-     * @param page    0 基页码
-     * @param size    每页条数
+     * @param userId 当前登录用户ID
+     * @param page   0 基页码
+     * @param size   每页条数
      */
-    List<Document> findByOwnerId(Long ownerId, int page, int size);
+    List<Document> findVisibleToUser(Long userId, int page, int size);
 
     /**
-     * 按归属用户 + 标题关键词分页查询（下推 SQL，避免全表内存过滤）.
+     * 按可见范围 + 标题关键词分页查询（下推 SQL，避免全表内存过滤）.
      *
-     * @param ownerId 归属用户ID
+     * @param userId  当前登录用户ID
      * @param keyword 标题关键词
      * @param page    0 基页码
      * @param size    每页条数
      */
-    List<Document> searchByOwnerIdAndTitle(Long ownerId, String keyword, int page, int size);
+    List<Document> searchVisibleToUser(Long userId, String keyword, int page, int size);
 
     /**
      * 管理员视角：全量标题关键词分页查询（无 owner 条件，下推 SQL）.

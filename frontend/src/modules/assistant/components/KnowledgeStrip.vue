@@ -1,22 +1,29 @@
 <script setup lang="ts">
-import { ref } from 'vue'
-import type { DocumentItem } from '../composables'
+import { computed, ref } from 'vue'
+import type { DocumentItem, UploadVisibility } from '../composables'
 
 /** 管理员可见的知识库条 + 文档管理弹窗 */
 const props = defineProps<{
   documents: DocumentItem[]
   uploading: boolean
   visible: boolean
+  uploadVisibility: UploadVisibility
   statusType: (status?: string) => 'success' | 'warning' | 'danger' | 'info'
   statusLabel: (status?: string) => string
 }>()
 
 const emit = defineEmits<{
   (e: 'update:visible', value: boolean): void
+  (e: 'update:uploadVisibility', value: UploadVisibility): void
   (e: 'refresh'): void
   (e: 'pick', files: FileList): void
   (e: 'delete', doc: DocumentItem): void
 }>()
+
+const visibilityModel = computed({
+  get: () => props.uploadVisibility,
+  set: (value: UploadVisibility) => emit('update:uploadVisibility', value),
+})
 
 // 隐藏的 file input 由本组件自己持有，父组件只需响应 pick 事件
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -47,6 +54,10 @@ function onFileSelected(event: Event) {
         @change="onFileSelected"
       >
       <span class="knowledge-strip__hint">支持 PDF、Markdown、TXT、Excel</span>
+      <el-select v-model="visibilityModel" size="small" class="visibility-select" aria-label="文档可见范围">
+        <el-option label="公开" value="PUBLIC" />
+        <el-option label="私有" value="PRIVATE" />
+      </el-select>
       <el-button text @click="emit('update:visible', true)">文档管理</el-button>
       <el-button text @click="emit('refresh')">刷新</el-button>
       <el-button type="primary" :loading="props.uploading" @click="triggerUpload">上传文档</el-button>
@@ -61,6 +72,13 @@ function onFileSelected(event: Event) {
       <el-table v-if="props.documents.length" :data="props.documents" size="small">
         <el-table-column prop="title" label="文档" min-width="220" />
         <el-table-column prop="fileType" label="类型" width="100" />
+        <el-table-column label="可见" width="80">
+          <template #default="{ row }">
+            <el-tag size="small" :type="row.visibility === 'PRIVATE' ? 'info' : 'success'">
+              {{ row.visibility === 'PRIVATE' ? '私有' : '公开' }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag size="small" :type="props.statusType(row.status)">{{ props.statusLabel(row.status) }}</el-tag>
@@ -96,6 +114,10 @@ function onFileSelected(event: Event) {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.visibility-select {
+  width: 92px;
 }
 
 .knowledge-strip__title strong {

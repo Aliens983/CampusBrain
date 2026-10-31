@@ -6,6 +6,7 @@ import com.kb.domain.document.DocumentProcessingDispatcher;
 import com.kb.domain.document.DocumentRepository;
 import com.kb.domain.document.DocumentStatus;
 import com.kb.domain.document.DocumentTypeRegistry;
+import com.kb.domain.document.DocumentVisibility;
 import com.kb.domain.document.IndexDeleteFailureRepository;
 import com.kb.domain.document.IndexTarget;
 import com.kb.domain.document.KnowledgeCacheInvalidator;
@@ -105,6 +106,17 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     @Override
     @Transactional
     public Long uploadDocument(MultipartFile file) {
+        return uploadDocument(file, DocumentVisibility.PUBLIC.name());
+    }
+
+    @Override
+    @Transactional
+    public Long uploadDocument(MultipartFile file, String visibility) {
+        DocumentVisibility documentVisibility = DocumentVisibility.parseOrNull(visibility);
+        if (documentVisibility == null) {
+            throw new BusinessException.DocumentException(
+                    ErrorCode.DOCUMENT_INVALID_VISIBILITY, visibility);
+        }
         String originalFilename = file.getOriginalFilename();
         // 原始文件名仅用于展示标题前脱敏（去 HTML 标签/控制字符/截断），
         // 防止 XSS/显示注入；扩展名解析与安全性校验用端口唯一实现
@@ -141,6 +153,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
                     .filePath(localPath)
                     .status(DocumentStatus.UPLOADED)
                     .ownerId(SecurityFrameworkUtils.getLoginUserId())
+                    .visibility(documentVisibility)
                     .chunkCount(0)
                     .build();
             Document saved = documentRepository.save(doc);
@@ -191,7 +204,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
             // 取不到身份时一律返回空，绝不退化成"全量可见"
             return List.of();
         }
-        return documentRepository.findByOwnerId(userId, normalizedPage, normalizedSize);
+        return documentRepository.findVisibleToUser(userId, normalizedPage, normalizedSize);
     }
 
     /**
@@ -219,7 +232,7 @@ public class DocumentApplicationService implements IDocumentApplicationService {
         if (userId == null) {
             return List.of();
         }
-        return documentRepository.searchByOwnerIdAndTitle(
+        return documentRepository.searchVisibleToUser(
                 userId, keyword, normalizedPage, normalizedSize);
     }
 
@@ -392,13 +405,15 @@ public class DocumentApplicationService implements IDocumentApplicationService {
     }
 
     /**
-     * 获取并校验文档归属：仅文档 owner 本人可访问，否则视为不存在
+     * 获取并校验文档可读性：PUBLIC 文档所有登录用户可读；
+     * PRIVATE 文档仅 owner 本人可读，否则视为不存在（避免枚举）.
      */
     private Document getOwnedDocument(Long id) {
         Document doc = documentRepository.findById(id)
                 .orElseThrow(() -> new BusinessException.DocumentException(
                         ErrorCode.DOCUMENT_NOT_FOUND, "id=" + id));
-        if (!isOwner(doc, SecurityFrameworkUtils.getLoginUserId())) {
+        boolean publicDocument = doc.getVisibility() == DocumentVisibility.PUBLIC;
+        if (!publicDocument && !isAdmin() && !isOwner(doc, SecurityFrameworkUtils.getLoginUserId())) {
             throw new BusinessException.DocumentException(
                     ErrorCode.DOCUMENT_NOT_FOUND, "id=" + id);
         }

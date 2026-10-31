@@ -79,8 +79,14 @@ public class EsDocumentEntity {
     private String createdAt;
 
     /**
-     * 文档归属用户 ID：null 视为全局共享知识，非 null 仅属主可见.
+     * 文档归属用户 ID：null 视为无主文档（兼容旧数据）.
      * 检索端据此过滤，杜绝跨用户私有文档泄露.
      */
     private Long ownerId;
+
+    /**
+     * 文档可见范围：PUBLIC 全员可检索 / PRIVATE 仅 owner.
+     * 旧索引缺失该字段时按 PUBLIC 兼容处理.
+     */
+    private String visibility;
 }

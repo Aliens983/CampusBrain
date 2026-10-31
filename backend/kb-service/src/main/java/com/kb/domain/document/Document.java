@@ -47,6 +47,9 @@ public class Document {
     /** 文档所属用户ID */
     private Long ownerId;
 
+    /** 文档可见范围：PUBLIC 全员可检索，PRIVATE 仅 owner */
+    private DocumentVisibility visibility;
+
     /** 文档元数据（如作者、页数、创建日期等） */
     private Map<String, Object> metadata;
 

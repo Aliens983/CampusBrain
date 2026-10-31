@@ -14,6 +14,15 @@ public interface IDocumentApplicationService {
 
     Long uploadDocument(MultipartFile file);
 
+    /**
+     * 上传文档并指定可见范围（PUBLIC/PRIVATE，默认 PUBLIC）.
+     *
+     * @param file       上传文件
+     * @param visibility 可见范围，空值按 PUBLIC
+     * @return 文档 ID
+     */
+    Long uploadDocument(MultipartFile file, String visibility);
+
     Document getDocument(Long id);
 
     /**

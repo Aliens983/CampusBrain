@@ -37,6 +37,19 @@ const renderedContent = computed(() =>
         <span v-else-if="props.streaming" class="chat-msg__typing">AI 正在检索知识库并生成答案…</span>
         <span v-else class="chat-msg__typing">…</span>
 
+        <!-- 引用来源：后端 citations 事件，独立于正文渲染 -->
+        <div v-if="props.message.citations?.length" class="chat-msg__citations">
+          <span class="citations-label">引用来源</span>
+          <span
+            v-for="(citation, index) in props.message.citations"
+            :key="citation.chunkId || `${citation.documentId}-${index}`"
+            class="citation-chip"
+            :title="citation.snippet || citation.documentTitle || ''"
+          >
+            {{ index + 1 }}. {{ citation.documentTitle || '未命名文档' }}
+          </span>
+        </div>
+
         <!-- 预约动作结果（确认/取消执行后回执） -->
         <div v-if="props.message.action" class="action-badge">
           <span class="action-badge__dot" />{{ props.message.action.message }}
@@ -154,6 +167,33 @@ const renderedContent = computed(() =>
 .chat-msg__typing {
   color: var(--ink-4);
   font-size: 12px;
+}
+
+.chat-msg__citations {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 9px;
+  border-top: 1px dashed var(--line);
+}
+
+.citations-label {
+  color: var(--ink-4);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+}
+
+.citation-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--paper-2);
+  color: var(--ink-3);
+  font-size: 10.5px;
+  line-height: 1.6;
+  cursor: default;
 }
 
 /* ===== Markdown 正文（AI 回复） ===== */

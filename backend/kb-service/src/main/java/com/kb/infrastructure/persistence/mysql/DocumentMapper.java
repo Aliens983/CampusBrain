@@ -46,13 +46,13 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
                                              @Param("limit") int limit);
 
     /**
-     * 按归属用户分页查询.
+     * 按可见范围分页查询：PUBLIC + 本人 PRIVATE.
      */
-    @Select("SELECT * FROM document WHERE owner_id = #{ownerId} " +
+    @Select("SELECT * FROM document WHERE (visibility = 'PUBLIC' OR owner_id = #{userId}) " +
             "ORDER BY created_at DESC LIMIT #{offset}, #{size}")
-    List<DocumentDO> selectPageByOwnerId(@Param("ownerId") Long ownerId,
-                                         @Param("offset") long offset,
-                                         @Param("size") int size);
+    List<DocumentDO> selectPageVisibleToUser(@Param("userId") Long userId,
+                                             @Param("offset") long offset,
+                                             @Param("size") int size);
 
     /**
      * 全量分页查询（管理员列表）.
@@ -61,15 +61,15 @@ public interface DocumentMapper extends BaseMapper<DocumentDO> {
     List<DocumentDO> selectPageAll(@Param("offset") long offset, @Param("size") int size);
 
     /**
-     * 归属 + 标题关键词分页搜索.
+     * 可见范围 + 标题关键词分页搜索.
      */
-    @Select("SELECT * FROM document WHERE owner_id = #{ownerId} " +
+    @Select("SELECT * FROM document WHERE (visibility = 'PUBLIC' OR owner_id = #{userId}) " +
             "AND LOWER(title) LIKE CONCAT('%', LOWER(#{keyword}), '%') " +
             "ORDER BY created_at DESC LIMIT #{offset}, #{size}")
-    List<DocumentDO> selectPageByOwnerIdAndTitle(@Param("ownerId") Long ownerId,
-                                                 @Param("keyword") String keyword,
-                                                 @Param("offset") long offset,
-                                                 @Param("size") int size);
+    List<DocumentDO> selectPageVisibleToUserAndTitle(@Param("userId") Long userId,
+                                                     @Param("keyword") String keyword,
+                                                     @Param("offset") long offset,
+                                                     @Param("size") int size);
 
     /**
      * 全量标题关键词分页搜索（管理员）.

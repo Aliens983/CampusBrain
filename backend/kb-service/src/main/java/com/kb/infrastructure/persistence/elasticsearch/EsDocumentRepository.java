@@ -98,17 +98,18 @@ public class EsDocumentRepository implements DocumentIndexCleaner {
                                                 )
                                         );
                                         if (ownerId != null) {
-                                            // (ownerId == 当前用户) OR (ownerId 缺失 -> 共享文档)
+                                            // 本人私有文档
                                             b.should(sh -> sh.term(t -> t
                                                     .field("ownerId")
                                                     .value(ownerId.toString())));
-                                            // exists:false 用 "must_not exists" 表达共享文档
-                                            b.should(sh -> sh.bool(sb -> sb
-                                                    .mustNot(mn -> mn.exists(e -> e.field("ownerId")))));
-                                            b.minimumShouldMatch("1");
-                                        } else {
-                                            b.mustNot(mn -> mn.exists(e -> e.field("ownerId")));
                                         }
+                                        // PUBLIC 文档全员可见；旧索引缺失 visibility 时按 PUBLIC 兼容
+                                        b.should(sh -> sh.match(m -> m
+                                                .field("visibility")
+                                                .query("PUBLIC")));
+                                        b.should(sh -> sh.bool(sb -> sb
+                                                .mustNot(mn -> mn.exists(e -> e.field("visibility")))));
+                                        b.minimumShouldMatch("1");
                                         return b;
                                     })
                             )

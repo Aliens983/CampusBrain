@@ -50,6 +50,14 @@ public class EsIndexService {
                 createIndex();
                 log.info("Elasticsearch index '{}' created successfully", indexName);
             } else {
+                // 老索引没有 visibility 字段：补 keyword mapping，避免动态映射成 text
+                // 导致 visibility 过滤语义不稳定. 已存在同类型字段时该调用为幂等空操作.
+                try {
+                    esClient.indices().putMapping(p -> p.index(indexName)
+                            .properties("visibility", pr -> pr.keyword(k -> k)));
+                } catch (Exception mappingEx) {
+                    log.warn("Failed to add visibility mapping to existing index '{}'", indexName, mappingEx);
+                }
                 log.info("Elasticsearch index '{}' already exists", indexName);
             }
         } catch (IOException e) {
@@ -86,6 +94,7 @@ public class EsIndexService {
                         .properties("sectionTitle", p -> p
                                 .text(t -> t.analyzer("standard"))
                         )
+                        .properties("visibility", p -> p.keyword(k -> k))
                         .properties("createdAt", p -> p.date(d -> d))
                 )
         ));

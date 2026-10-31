@@ -26,18 +26,22 @@ public class DocumentController {
     /** 文档应用服务 */
     private final IDocumentApplicationService documentService;
 
-    @Operation(summary = "上传文档", description = "上传文档文件（支持 PDF/MD/DOCX/TXT/HTML），后台异步处理")
+    @Operation(summary = "上传文档",
+            description = "上传文档文件（支持 PDF/MD/DOCX/TXT/HTML），后台异步处理；visibility=PUBLIC/PRIVATE，默认 PUBLIC")
     @PostMapping("/upload")
     public ApiResponse<Map<String, Object>> uploadDocument(
-            @Parameter(description = "文档文件，最大 50MB") @RequestParam("file") MultipartFile file) {
+            @Parameter(description = "文档文件，最大 50MB") @RequestParam("file") MultipartFile file,
+            @Parameter(description = "可见范围：PUBLIC（默认，全员可检索）/ PRIVATE（仅本人）")
+            @RequestParam(value = "visibility", required = false, defaultValue = "PUBLIC") String visibility) {
         if (file.isEmpty()) {
             return ApiResponse.badRequest("文件不能为空");
         }
 
-        Long docId = documentService.uploadDocument(file);
+        Long docId = documentService.uploadDocument(file, visibility);
         return ApiResponse.success(Map.of(
                 "documentId", docId,
                 "fileName", file.getOriginalFilename(),
+                "visibility", visibility,
                 "message", "文档已上传，正在后台处理中..."
         ));
     }
@@ -50,7 +54,7 @@ public class DocumentController {
     }
 
     @Operation(summary = "获取文档列表",
-            description = "分页列出当前用户有权查看的文档：普通用户仅返回自己上传的，ADMIN 返回全部")
+            description = "分页列出当前用户有权查看的文档：PUBLIC 文档 + 自己上传的 PRIVATE 文档；ADMIN 返回全部")
     @GetMapping
     public ApiResponse<List<DocumentDTO>> listDocuments(
             @Parameter(description = "页码，0 基") @RequestParam(defaultValue = "0") int page,
