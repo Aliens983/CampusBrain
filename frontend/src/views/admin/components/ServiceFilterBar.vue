@@ -60,23 +60,90 @@ const emit = defineEmits<{
 </template>
 
 <style scoped lang="scss">
-.toolbar { display: flex; gap: 12px; }
-.service-search { width: 240px; max-width: 46vw; }
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.service-search {
+  width: 240px;
+  max-width: 46vw;
+}
+
+.service-search :deep(.el-input-group__append) {
+  padding: 0;
+  border-color: var(--line);
+  background: var(--surface-2);
+  box-shadow: none;
+}
+
+.service-search :deep(.el-input-group__append .el-button) {
+  height: 100%;
+  margin: 0;
+  padding: 0 16px;
+  border: none;
+  background: transparent;
+  color: var(--lake);
+  box-shadow: none;
+}
+
+.service-search :deep(.el-input-group__append .el-button:hover) {
+  background: var(--surface);
+  color: var(--lake-deep);
+}
+
 .campus-seg {
-  display: inline-flex; gap: 4px; padding: 4px; margin-bottom: 14px;
-  border-radius: 999px; background: #EEF2F7;
+  display: inline-flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
 }
+
 .campus-seg__item {
-  display: inline-flex; align-items: center; gap: 6px; padding: 6px 18px;
-  border-radius: 999px; border: 0; font-size: 13px; color: var(--text-secondary);
-  background: transparent; cursor: pointer;
-  transition: background .2s, color .2s, box-shadow .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, box-shadow 0.16s ease;
 }
-.campus-seg__item:hover { color: var(--text-primary); }
+
+.campus-seg__item:hover {
+  color: var(--ink);
+}
+
 .campus-seg__item.is-active {
-  background: #fff; color: #3B82F6; font-weight: 600;
-  box-shadow: 0 2px 8px rgba(20, 33, 61, .1);
+  background: var(--surface);
+  color: var(--lake);
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgba(24, 49, 59, 0.08);
 }
-.campus-seg__count { font-size: 11px; opacity: .7; }
-@media (max-width: 960px) { .toolbar { display: flex; flex-direction: column; align-items: stretch; } }
+
+.campus-seg__count {
+  font-family: var(--font-latin);
+  font-size: 10px;
+  color: var(--gold);
+}
+
+@media (max-width: 960px) {
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .service-search {
+    max-width: none;
+    width: 100%;
+  }
+}
 </style>

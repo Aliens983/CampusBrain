@@ -67,7 +67,11 @@ const emit = defineEmits<{
 
 <style scoped lang="scss">
 .cover-prev {
-  display: block; width: 100%; max-height: 150px; object-fit: cover;
-  border-radius: 12px; border: 1px solid var(--border-soft);
+  display: block;
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
 }
 </style>

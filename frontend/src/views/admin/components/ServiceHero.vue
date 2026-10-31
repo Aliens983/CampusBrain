@@ -7,7 +7,13 @@ const emit = defineEmits<{ (e: 'create'): void }>()
 <template>
   <section class="admin-hero">
     <div class="admin-hero__main">
+      <p class="hz-eyebrow">
+        Service governance · HZNU
+      </p>
       <h1>服务治理</h1>
+      <p class="admin-hero__desc">
+        维护服务目录、开放状态与封面，让每一项校园资源都清晰可达。
+      </p>
       <div class="hero-actions">
         <el-button type="primary" size="large" @click="emit('create')">新增服务</el-button>
       </div>
@@ -22,47 +28,3 @@ const emit = defineEmits<{ (e: 'create'): void }>()
     </div>
   </section>
 </template>
-
-<style scoped lang="scss">
-.admin-hero {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 20px;
-  padding: 32px;
-  border-radius: 30px;
-  color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-}
-.admin-hero::before {
-  content: ""; position: absolute; inset: 0;
-  background: radial-gradient(circle at 18% 20%, rgba(255, 255, 255, .12), transparent 18%),
-              linear-gradient(140deg, transparent 14%, rgba(255, 255, 255, .08) 42%, transparent 72%);
-}
-.admin-hero::after {
-  content: ""; position: absolute; inset: -30% -6% auto auto; width: 280px; height: 280px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(123, 208, 255, .24), rgba(123, 208, 255, 0));
-  animation: adminGlow 8s ease-in-out infinite; pointer-events: none;
-}
-.admin-hero__main, .admin-hero__signal { position: relative; z-index: 1; }
-.admin-hero h1 { margin: 12px 0 10px; font-size: 36px; line-height: 1.18; }
-.hero-actions { display: flex; gap: 12px; margin-top: 22px; }
-.admin-hero__signal { display: grid; gap: 12px; }
-.signal-card {
-  display: grid; gap: 4px; padding: 16px 18px; border-radius: 16px;
-  background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .1);
-  cursor: pointer; transition: background .2s;
-}
-.signal-card:hover { background: rgba(255, 255, 255, .14); }
-.signal-card span { font-size: 13px; color: rgba(255, 255, 255, .64); }
-.signal-card strong { font-size: 26px; font-weight: 700; }
-.signal-card small { font-size: 12px; color: rgba(255, 255, 255, .5); }
-@keyframes adminGlow {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(-16px, -8px, 0) scale(1.06); }
-}
-@media (max-width: 960px) { .admin-hero { grid-template-columns: 1fr; } }
-</style>

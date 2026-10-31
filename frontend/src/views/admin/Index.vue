@@ -2,7 +2,13 @@
   <div class="admin-page">
     <section class="admin-hero">
       <div class="admin-hero__main">
+        <p class="hz-eyebrow">
+          Admin overview · HZNU
+        </p>
         <h1>管理概览</h1>
+        <p class="admin-hero__desc">
+          平台运行状态、待办事项与常用管理入口。
+        </p>
       </div>
 
       <div class="admin-hero__signal">
@@ -101,106 +107,6 @@ const quickActions = [
   gap: 20px;
 }
 
-.admin-hero {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 20px;
-  padding: 32px;
-  border-radius: 30px;
-  color: #fff;
-  background: linear-gradient(135deg, #0f172a, #132949 55%, #3FB6FF);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-}
-
-.admin-hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.12), transparent 18%),
-    linear-gradient(140deg, transparent 14%, rgba(255, 255, 255, 0.08) 42%, transparent 72%);
-  pointer-events: none;
-}
-
-.admin-hero::after {
-  content: "";
-  position: absolute;
-  inset: -30% -6% auto auto;
-  width: 280px;
-  height: 280px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(139, 92, 246, 0.24), rgba(139, 92, 246, 0));
-  animation: adminGlow 8s ease-in-out infinite;
-  pointer-events: none;
-}
-
-.admin-hero__main,
-.admin-hero__signal {
-  position: relative;
-  z-index: 1;
-}
-
-.hero-chip {
-  display: inline-flex;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.admin-hero h1 {
-  margin: 12px 0 10px;
-  font-size: 36px;
-  line-height: 1.18;
-}
-
-.admin-hero p {
-  max-width: 740px;
-  margin: 0;
-  line-height: 1.8;
-  color: rgba(255, 255, 255, 0.82);
-}
-
-.admin-hero__signal {
-  display: grid;
-  gap: 12px;
-  align-content: center;
-}
-
-/* 与其它管理页 hero 右侧的 signal-card 保持一致 */
-.signal-card {
-  display: grid;
-  gap: 4px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.signal-card:hover {
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.signal-card span {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.64);
-}
-
-.signal-card strong {
-  font-size: 26px;
-  font-weight: 700;
-}
-
-.signal-card small {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5);
-}
-
 .admin-metrics {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -212,13 +118,13 @@ const quickActions = [
   display: grid;
   gap: 10px;
   padding: 22px;
-  border-radius: 22px;
-  border: 1px solid var(--border-soft);
-  background: rgba(255, 255, 255, 0.94);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: var(--surface);
   box-shadow: var(--shadow-card);
   overflow: hidden;
   cursor: pointer;
-  transition: transform 0.26s ease, box-shadow 0.26s ease;
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s var(--ease-out);
 }
 
 .metric-panel::after {
@@ -228,12 +134,12 @@ const quickActions = [
   width: 96px;
   height: 96px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(124, 58, 237, 0.08), rgba(124, 58, 237, 0));
+  background: radial-gradient(circle, rgba(176, 138, 69, 0.07), rgba(176, 138, 69, 0));
   pointer-events: none;
 }
 
 .metric-panel:hover {
-  transform: translateY(-6px);
+  transform: translateY(-2px);
   box-shadow: var(--shadow-card-hover);
 }
 
@@ -253,8 +159,11 @@ const quickActions = [
 }
 
 .metric-panel strong {
+  font-family: var(--font-serif);
   font-size: 34px;
+  font-weight: 600;
   line-height: 1;
+  color: var(--ink);
 }
 
 .quick-grid {
@@ -266,24 +175,30 @@ const quickActions = [
 .quick-box {
   display: grid;
   gap: 10px;
-  text-align: left;
   padding: 20px 22px;
-  border: 1px solid var(--border-soft);
-  border-radius: 18px;
-  background: linear-gradient(180deg, #fff, #F9FCFF);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  font-family: var(--font-sans);
+  text-align: left;
   cursor: pointer;
-  transition: transform 0.24s ease, box-shadow 0.24s ease, border-color 0.24s ease;
+  transition:
+    transform 0.18s var(--ease-out),
+    border-color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .quick-box:hover {
-  transform: translateY(-4px);
-  border-color: rgba(124, 58, 237, 0.18);
-  box-shadow: 0 16px 28px rgba(20, 33, 61, 0.1);
+  transform: translateY(-2px);
+  border-color: rgba(176, 138, 69, 0.42);
+  background: var(--surface);
 }
 
 .quick-box strong {
+  font-family: var(--font-serif);
   font-size: 15px;
   font-weight: 600;
+  color: var(--ink);
 }
 
 .quick-box span {
@@ -292,21 +207,7 @@ const quickActions = [
   line-height: 1.6;
 }
 
-@keyframes adminGlow {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  50% {
-    transform: translate3d(-20px, 22px, 0) scale(1.12);
-  }
-}
-
 @media (max-width: 1200px) {
-  .admin-hero {
-    grid-template-columns: 1fr;
-  }
-
   .admin-metrics {
     grid-template-columns: repeat(2, 1fr);
   }

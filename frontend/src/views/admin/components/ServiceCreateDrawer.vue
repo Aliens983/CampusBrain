@@ -103,9 +103,19 @@ const emit = defineEmits<{
 </template>
 
 <style scoped lang="scss">
-.field-tip { margin-top: 4px; font-size: 12px; line-height: 1.6; color: var(--text-tertiary); }
+.field-tip {
+  margin-top: 4px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--ink-4);
+}
+
 .cover-prev {
-  display: block; width: 100%; max-height: 150px; object-fit: cover;
-  border-radius: 12px; border: 1px solid var(--border-soft);
+  display: block;
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
 }
 </style>
