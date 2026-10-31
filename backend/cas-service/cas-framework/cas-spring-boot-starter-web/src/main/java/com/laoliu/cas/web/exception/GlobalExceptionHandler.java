@@ -37,23 +37,25 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public CommonResult<?> handleException(Exception e, HttpServletRequest request) {
-        log.error("全局异常处理: ", e);
-        log.error("请求URL: {}", request.getRequestURI());
+        log.error("unhandled_error path={} method={} userId={}",
+                request.getRequestURI(), request.getMethod(), userId(request), e);
         return CommonResult.internalServerError("服务器内部错误");
     }
 
     @ExceptionHandler(RuntimeException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public CommonResult<?> handleRuntimeException(RuntimeException e, HttpServletRequest request) {
-        log.error("运行时异常: ", e);
-        log.error("请求URL: {}", request.getRequestURI());
+        log.error("unhandled_runtime_error path={} method={} userId={}",
+                request.getRequestURI(), request.getMethod(), userId(request), e);
         return CommonResult.internalServerError("服务器内部错误");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public CommonResult<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
-        log.warn("参数校验失败: {}", e.getMessage());
+    public CommonResult<?> handleMethodArgumentNotValidException(MethodArgumentNotValidException e,
+                                                                 HttpServletRequest request) {
+        log.warn("validation_failed path={} method={} userId={} detail={}",
+                request.getRequestURI(), request.getMethod(), userId(request), e.getMessage());
         List<ObjectError> allErrors = e.getBindingResult().getAllErrors();
         StringBuilder message = new StringBuilder();
         for (ObjectError error : allErrors) {
@@ -64,15 +66,18 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED)
-    public CommonResult<?> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
-        log.warn("请求方法不支持: {}", e.getMessage());
+    public CommonResult<?> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e,
+                                                                       HttpServletRequest request) {
+        log.warn("method_not_allowed path={} method={} userId={} detail={}",
+                request.getRequestURI(), request.getMethod(), userId(request), e.getMessage());
         return CommonResult.methodNotAllowed(e.getMessage());
     }
 
     @ExceptionHandler(BindException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public CommonResult<?> handleBindException(BindException e) {
-        log.warn("参数校验失败: {}", e.getMessage());
+    public CommonResult<?> handleBindException(BindException e, HttpServletRequest request) {
+        log.warn("validation_failed path={} method={} userId={} detail={}",
+                request.getRequestURI(), request.getMethod(), userId(request), e.getMessage());
         List<ObjectError> allErrors = e.getBindingResult().getAllErrors();
         StringBuilder message = new StringBuilder();
         for (ObjectError error : allErrors) {
@@ -91,8 +96,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public CommonResult<?> handleBusinessException(BusinessException e, HttpServletRequest request) {
-        log.warn("业务异常: {}", e.getMessage());
         Integer code = e.getCode();
+        log.warn("business_error path={} method={} userId={} code={} message={}",
+                request.getRequestURI(), request.getMethod(), userId(request), code, e.getMessage());
         if (code != null) {
             return CommonResult.error(code, e.getMessage());
         }
@@ -101,22 +107,31 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
-    public CommonResult<?> handleUnauthorizedException(UnauthorizedException e) {
-        log.warn("未授权访问: {}", e.getMessage());
+    public CommonResult<?> handleUnauthorizedException(UnauthorizedException e, HttpServletRequest request) {
+        log.warn("unauthorized path={} method={} userId={} message={}",
+                request.getRequestURI(), request.getMethod(), userId(request), e.getMessage());
         return CommonResult.unauthorized(e.getMessage());
     }
 
     @ExceptionHandler(ForbiddenException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public CommonResult<?> handleForbiddenException(ForbiddenException e) {
-        log.warn("禁止访问: {}", e.getMessage());
+    public CommonResult<?> handleForbiddenException(ForbiddenException e, HttpServletRequest request) {
+        log.warn("forbidden path={} method={} userId={} message={}",
+                request.getRequestURI(), request.getMethod(), userId(request), e.getMessage());
         return CommonResult.forbidden(e.getMessage());
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public CommonResult<?> handleResourceNotFoundException(ResourceNotFoundException e) {
-        log.warn("资源未找到: {}", e.getMessage());
+    public CommonResult<?> handleResourceNotFoundException(ResourceNotFoundException e, HttpServletRequest request) {
+        log.warn("resource_not_found path={} method={} userId={} message={}",
+                request.getRequestURI(), request.getMethod(), userId(request), e.getMessage());
         return CommonResult.notFound(e.getMessage());
+    }
+
+    /** 网关会透传 X-User-Id；直连/白名单请求没有该头，用 "-" 占位. */
+    private static String userId(HttpServletRequest request) {
+        String userId = request.getHeader("X-User-Id");
+        return userId == null || userId.isBlank() ? "-" : userId;
     }
 }

@@ -76,6 +76,7 @@ public class GlobalExceptionHandler {
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
                 .reduce((a, b) -> a + "; " + b)
                 .orElse("参数校验失败");
+        log.warn("Validation failed: {}", msg);
         return ApiResponse.error(ErrorCode.BAD_REQUEST, msg);
     }
 
@@ -89,6 +90,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ApiResponse<Void> handleFileTooLarge(MaxUploadSizeExceededException e) {
+        log.warn("Upload too large: {}", e.getMessage());
         return ApiResponse.error(ErrorCode.DOCUMENT_TOO_LARGE);
     }
 
