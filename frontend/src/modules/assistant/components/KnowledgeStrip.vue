@@ -85,35 +85,70 @@ function onFileSelected(event: Event) {
   justify-content: space-between;
   gap: 16px;
   padding: 10px 14px;
-  border: 1px solid rgba(63, 182, 255, .16);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .82);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
+
 .knowledge-strip__title,
-.knowledge-strip__actions { display: flex; align-items: center; gap: 10px; }
+.knowledge-strip__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.knowledge-strip__title strong {
+  font-family: var(--font-serif);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
 .strip-icon {
-  width: 28px;
-  height: 28px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  font-size: 10px;
-  color: #fff;
-  font-weight: 800;
-  background: linear-gradient(135deg, #1167b1, #3fb6ff);
-  box-shadow: 0 8px 18px rgba(30, 152, 242, .2);
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--lake);
+  border-radius: var(--radius-sm);
+  background: var(--lake);
+  color: #f7f1e4;
+  font-family: var(--font-serif);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
 }
+
 .doc-count {
   padding: 3px 8px;
-  border-radius: 999px;
-  color: #2673a8;
-  background: #eef8ff;
-  font-size: 12px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: var(--surface-2);
+  color: var(--gold);
+  font-family: var(--font-latin);
+  font-size: 10px;
+  letter-spacing: 0.06em;
 }
-.knowledge-strip__hint { color: var(--text-tertiary); font-size: 12px; }
+
+.knowledge-strip__hint {
+  color: var(--ink-4);
+  font-size: 11px;
+}
+
 @media (max-width: 720px) {
-  .knowledge-strip { align-items: flex-start; flex-direction: column; gap: 8px; }
-  .knowledge-strip__actions { width: 100%; }
-  .knowledge-strip__hint { margin-right: auto; }
+  .knowledge-strip {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .knowledge-strip__actions {
+    width: 100%;
+  }
+
+  .knowledge-strip__hint {
+    margin-right: auto;
+  }
 }
 </style>

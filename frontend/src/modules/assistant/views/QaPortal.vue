@@ -88,35 +88,44 @@ function onPickFiles(files: FileList) {
 
 <style scoped>
 .qa-portal {
-  height: calc(100vh - 126px);
+  height: calc(100vh - 240px);
   min-height: 560px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
+
 .chat-workspace {
   min-height: 0;
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid rgba(37, 99, 155, .1);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .9);
-  box-shadow: 0 18px 50px rgba(30, 75, 115, .1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
 }
+
 .chat-body {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   overflow-y: auto;
   padding: 28px clamp(18px, 7vw, 110px);
-  background: linear-gradient(180deg, rgba(249, 252, 255, .78), rgba(242, 248, 255, .5));
+  background: var(--surface-2);
 }
+
 @media (max-width: 720px) {
-  .qa-portal { height: calc(100vh - 156px); min-height: 520px; }
-  .chat-body { padding: 20px 14px; }
+  .qa-portal {
+    height: calc(100vh - 240px);
+    min-height: 520px;
+  }
+
+  .chat-body {
+    padding: 20px 14px;
+  }
 }
 </style>

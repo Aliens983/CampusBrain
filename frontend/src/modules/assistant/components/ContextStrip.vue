@@ -22,9 +22,22 @@ const emit = defineEmits<{ (e: 'reset'): void }>()
   align-items: center;
   gap: 8px;
   padding: 9px 24px;
-  border-bottom: 1px solid rgba(37, 99, 155, .09);
-  background: rgba(240, 249, 255, .72);
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
 }
-.ctx-strip__label { color: var(--text-tertiary); font-size: 12px; }
-.ctx-strip__reset { margin-left: auto; color: var(--text-tertiary); }
+
+.ctx-strip__label {
+  color: var(--ink-4);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.ctx-strip__reset {
+  margin-left: auto;
+  color: var(--ink-4);
+}
+
+.ctx-strip__reset:hover {
+  color: var(--lake);
+}
 </style>

@@ -18,7 +18,7 @@ const emit = defineEmits<{
 <template>
   <header class="chat-head">
     <div class="chat-head__identity">
-      <div class="chat-head__avatar">AI</div>
+      <div class="chat-head__avatar">问</div>
       <div>
         <div class="chat-head__title">AI 助手</div>
         <div class="chat-head__subtitle">基于知识库与实时预约数据回答问题</div>
@@ -54,41 +54,103 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 18px 24px;
-  border-bottom: 1px solid rgba(37, 99, 155, .09);
-  background: rgba(248, 252, 255, .82);
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
+
 .chat-head__identity,
-.chat-head__actions { display: flex; align-items: center; }
-.chat-head__identity { gap: 12px; }
-.chat-head__actions { gap: 10px; }
+.chat-head__actions {
+  display: flex;
+  align-items: center;
+}
+
+.chat-head__identity {
+  gap: 12px;
+}
+
+.chat-head__actions {
+  gap: 10px;
+}
+
 .chat-head__avatar {
-  width: 40px;
-  height: 40px;
   display: grid;
   place-items: center;
-  border-radius: 12px;
-  font-size: 13px;
-  color: #fff;
-  font-weight: 800;
-  background: linear-gradient(135deg, #1167b1, #3fb6ff);
-  box-shadow: 0 8px 18px rgba(30, 152, 242, .2);
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--lake);
+  border-radius: var(--radius-md);
+  background: var(--lake);
+  color: #f7f1e4;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
 }
-.chat-head__title { font-size: 16px; font-weight: 700; }
-.chat-head__subtitle { margin-top: 3px; color: var(--text-tertiary); font-size: 12px; }
-.chat-head__select { width: 260px; }
-.chat-head__select :deep(.el-input__wrapper) {
-  border-radius: 10px;
-  box-shadow: 0 0 0 1px rgba(63, 182, 255, .16) inset;
+
+.chat-head__title {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
 }
-.session-option { display: flex; justify-content: space-between; gap: 12px; width: 100%; }
-.session-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.session-option small { flex-shrink: 0; color: var(--text-tertiary); }
-.new-session-button { height: 36px; border-radius: 10px; font-weight: 600; }
-.new-session-button__icon { margin-right: 5px; font-size: 18px; line-height: 1; }
+
+.chat-head__subtitle {
+  margin-top: 3px;
+  color: var(--ink-4);
+  font-size: 11.5px;
+}
+
+.chat-head__select {
+  width: 260px;
+}
+
+.session-option {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.session-option span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-option small {
+  flex-shrink: 0;
+  color: var(--ink-4);
+  font-family: var(--font-latin);
+  font-size: 10px;
+}
+
+.new-session-button {
+  height: 36px;
+  border-radius: var(--radius-sm);
+}
+
+.new-session-button__icon {
+  margin-right: 5px;
+  font-size: 17px;
+  line-height: 1;
+}
+
 @media (max-width: 720px) {
-  .chat-head { align-items: flex-start; flex-direction: column; padding: 14px 16px; }
-  .chat-head__actions { width: 100%; }
-  .chat-head__select { flex: 1; width: auto; }
+  .chat-head {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 14px 16px;
+  }
+
+  .chat-head__actions {
+    width: 100%;
+  }
+
+  .chat-head__select {
+    flex: 1;
+    width: auto;
+  }
 }
 </style>

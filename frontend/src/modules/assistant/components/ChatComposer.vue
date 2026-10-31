@@ -54,36 +54,56 @@ const emit = defineEmits<{
 .chat-composer {
   flex-shrink: 0;
   padding: 16px clamp(18px, 7vw, 110px) 18px;
-  border-top: 1px solid rgba(37, 99, 155, .09);
-  background: rgba(255, 255, 255, .96);
+  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
-.qa-input { display: flex; gap: 12px; }
-.qa-input .el-input { flex: 1; }
+
+.qa-input {
+  display: flex;
+  gap: 12px;
+}
+
+.qa-input .el-input {
+  flex: 1;
+}
+
 .qa-input .el-textarea :deep(.el-textarea__inner) {
   min-height: 44px !important;
   padding: 12px 14px;
-  border-radius: 12px;
-  box-shadow: 0 0 0 1px rgba(63, 182, 255, .16) inset;
+  border-radius: var(--radius-sm);
 }
+
 .qa-input__btn {
   flex-shrink: 0;
   min-width: 96px;
   margin: 0;
-  border-radius: 12px;
-  font-weight: 600;
+  border-radius: var(--radius-sm);
 }
+
 .composer-hint {
   display: flex;
   align-items: center;
   gap: 4px;
   margin-top: 7px;
-  color: var(--text-tertiary);
-  font-size: 11px;
+  color: var(--ink-4);
+  font-size: 10.5px;
 }
-.composer-hint > span { margin-right: auto; }
-.composer-hint .el-button { padding: 2px 5px; }
+
+.composer-hint > span {
+  margin-right: auto;
+}
+
+.composer-hint .el-button {
+  padding: 2px 5px;
+}
+
 @media (max-width: 720px) {
-  .chat-composer { padding: 12px 14px; }
-  .composer-hint > span { display: none; }
+  .chat-composer {
+    padding: 12px 14px;
+  }
+
+  .composer-hint > span {
+    display: none;
+  }
 }
 </style>

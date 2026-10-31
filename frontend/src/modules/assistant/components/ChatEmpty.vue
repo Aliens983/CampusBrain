@@ -11,7 +11,10 @@ const suggestions = [
 
 <template>
   <div class="chat-empty">
-    <div class="chat-empty__icon">AI</div>
+    <div class="chat-empty__icon">问</div>
+    <p class="chat-empty__eyebrow">
+      Knowledge & booking · HZNU
+    </p>
     <h2>今天想了解什么？</h2>
     <p>你可以询问校园服务、预约规则，也可以直接查询可用时段。</p>
     <div class="chat-empty__suggestions">
@@ -30,40 +33,75 @@ const suggestions = [
   padding: 36px 18px;
   text-align: center;
 }
+
 .chat-empty__icon {
-  width: 58px;
-  height: 58px;
-  margin-bottom: 18px;
   display: grid;
   place-items: center;
-  border-radius: 18px;
-  font-size: 16px;
-  color: #fff;
-  font-weight: 800;
-  background: linear-gradient(135deg, #1167b1, #3fb6ff);
-  box-shadow: 0 8px 18px rgba(30, 152, 242, .2);
+  width: 58px;
+  height: 58px;
+  margin-bottom: 16px;
+  border: 1px solid var(--lake);
+  border-radius: var(--radius-md);
+  background: var(--lake);
+  color: #f7f1e4;
+  font-family: var(--font-serif);
+  font-size: 24px;
+  font-weight: 600;
 }
-.chat-empty h2 { margin: 0 0 8px; font-size: 22px; }
-.chat-empty p { margin: 0; color: var(--text-secondary); font-size: 13px; }
+
+.chat-empty__eyebrow {
+  margin: 0 0 10px;
+  font-family: var(--font-latin);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.chat-empty h2 {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+}
+
+.chat-empty p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+
 .chat-empty__suggestions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
-  margin-top: 22px;
+  margin-top: 24px;
 }
+
 .chat-empty__suggestions button {
   padding: 9px 14px;
-  border: 1px solid rgba(63, 182, 255, .2);
-  border-radius: 10px;
-  color: #2673a8;
-  background: rgba(255, 255, 255, .75);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-family: var(--font-sans);
+  font-size: 12px;
   cursor: pointer;
-  transition: .2s;
+  transition:
+    transform 0.16s var(--ease-out),
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease;
 }
+
 .chat-empty__suggestions button:hover {
-  border-color: #3fb6ff;
-  background: #fff;
   transform: translateY(-1px);
+  border-color: rgba(176, 138, 69, 0.45);
+  background: var(--surface-2);
+  color: var(--lake);
 }
 </style>
