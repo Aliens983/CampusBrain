@@ -1,8 +1,11 @@
 <template>
   <div class="conversations-page">
-    <section class="page-hero">
+    <section class="page-hero page-hero--single">
+      <p class="hz-eyebrow">
+        Consultation messages · HZNU
+      </p>
       <h1 class="page-hero__title">咨询消息</h1>
-      <p class="muted">
+      <p class="page-hero__desc">
         与「教师咨询」中咨询过的老师在线沟通。仅咨询场景开放，其余服务不提供聊天。
       </p>
     </section>
@@ -106,94 +109,108 @@ onMounted(async () => {
 <style scoped lang="scss">
 .conversations-page {
   display: grid;
-  gap: 16px;
+  gap: 20px;
 }
-.page-hero {
-  padding: 20px 26px;
-  border-radius: 20px;
-  color: #fff;
-  background: linear-gradient(135deg, #0e6cd6, #3fb6ff 60%, #ade2ff);
-  box-shadow: var(--shadow-card);
-}
-.page-hero h1 {
-  margin: 0 0 6px;
-  font-size: 22px;
-}
-.page-hero .muted {
-  color: rgba(255, 255, 255, 0.85);
-  margin: 0;
-  font-size: 13px;
-}
+
 .list-card {
-  border-radius: 18px;
-  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
 }
+
 .conv-list {
-  min-height: 120px;
   display: grid;
   gap: 8px;
+  min-height: 120px;
 }
+
 .conv-row {
   display: flex;
   align-items: center;
   gap: 12px;
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  background: linear-gradient(180deg, #fff, #f9fcff);
-  cursor: pointer;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
   text-align: left;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  transition:
+    transform 0.16s var(--ease-out),
+    border-color 0.16s ease,
+    background-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
+
 .conv-row:hover {
-  border-color: rgba(63, 182, 255, 0.5);
-  background: #f4faff;
+  transform: translateY(-1px);
+  border-color: rgba(176, 138, 69, 0.42);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
+
 .conv-row__avatar {
+  display: grid;
+  place-items: center;
   width: 40px;
   height: 40px;
   flex-shrink: 0;
-  display: grid;
-  place-items: center;
+  border: 1px solid var(--line);
   border-radius: 50%;
-  color: #fff;
-  font-weight: 700;
-  background: linear-gradient(135deg, #1f6fb2, #3fb6ff);
+  background: var(--paper-2);
+  color: var(--lake);
+  font-family: var(--font-serif);
+  font-size: 15px;
+  font-weight: 600;
 }
+
 .conv-row__body {
+  display: grid;
   flex: 1;
   min-width: 0;
-  display: grid;
   gap: 3px;
 }
+
 .conv-row__head {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.conv-row__role {
-  font-size: 11px;
-  color: var(--text-tertiary);
-  border: 1px solid var(--border-soft);
-  padding: 0 6px;
-  border-radius: 6px;
+
+.conv-row__head strong {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
 }
+
+.conv-row__role {
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+}
+
 .conv-row__preview {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+  color: var(--ink-3);
 }
+
 .conv-row__side {
   display: grid;
   justify-items: end;
   gap: 4px;
   flex-shrink: 0;
 }
+
 .conv-row__time {
-  font-size: 11px;
-  color: var(--text-tertiary);
+  font-family: var(--font-latin);
+  font-size: 10px;
+  color: var(--ink-4);
 }
 </style>

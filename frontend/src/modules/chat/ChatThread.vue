@@ -9,7 +9,7 @@
         <span>会话列表</span>
       </button>
       <div class="thread__title">
-        <span class="thread__dot">💬</span>
+        <span class="thread__dot"><el-icon><ChatDotRound /></el-icon></span>
         <strong>{{ peerName || '咨询沟通' }}</strong>
         <el-tag
           v-if="peerRole"
@@ -28,7 +28,7 @@
     >
       <el-empty
         v-if="!loading && messages.length === 0"
-        description="还没有消息，打个招呼吧 👋"
+        description="还没有消息，先打个招呼吧。"
       />
       <div
         v-for="m in messages"
@@ -74,7 +74,7 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, nextTick, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft } from '@element-plus/icons-vue'
+import { ArrowLeft, ChatDotRound } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import {
   fetchChatMessages,
@@ -180,12 +180,12 @@ function fmtTime(t?: string) {
 .thread {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 150px);
+  height: calc(100vh - 200px);
   min-height: 480px;
-  border: 1px solid var(--border-soft);
-  border-radius: 20px;
-  background: #fff;
   overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
   box-shadow: var(--shadow-card);
 }
 
@@ -193,47 +193,52 @@ function fmtTime(t?: string) {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--border-soft);
-  background: linear-gradient(180deg, #f7fbff, #fff);
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
-.back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border: none;
-  background: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 13px;
+
+.thread__head .back-btn {
   padding: 6px 10px;
-  border-radius: 10px;
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
 }
-.back-btn:hover {
-  background: rgba(63, 182, 255, 0.1);
-  color: var(--primary);
+
+.thread__head .back-btn:hover {
+  color: var(--lake);
+  background: var(--surface-2);
 }
+
 .thread__title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: 14px;
+  color: var(--ink);
 }
+
 .thread__dot {
-  font-size: 16px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--lake);
+  font-size: 14px;
 }
 
 .thread__body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 10px;
-  background:
-    radial-gradient(circle at 10% 10%, rgba(63, 182, 255, 0.05), transparent 30%),
-    radial-gradient(circle at 90% 90%, rgba(14, 108, 214, 0.04), transparent 30%);
+  gap: 12px;
+  overflow-y: auto;
+  padding: 22px;
+  background: var(--surface-2);
 }
+
 .thread__loading {
   min-height: 60px;
 }
@@ -241,50 +246,58 @@ function fmtTime(t?: string) {
 .bubble-row {
   display: flex;
 }
+
 .bubble-row.is-mine {
   justify-content: flex-end;
 }
+
 .bubble {
+  position: relative;
   max-width: 68%;
   padding: 10px 14px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid var(--border-soft);
-  box-shadow: 0 2px 6px rgba(20, 40, 80, 0.05);
-  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
+
 .bubble-row.is-mine .bubble {
-  background: linear-gradient(135deg, #0e6cd6, #3fb6ff);
-  color: #fff;
-  border: none;
+  border-color: var(--lake);
+  background: var(--lake);
+  color: #f7f1e4;
 }
+
 .bubble p {
   margin: 0 0 4px;
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 13px;
+  line-height: 1.7;
   white-space: pre-wrap;
   word-break: break-word;
 }
+
 .bubble__time {
-  font-size: 11px;
-  opacity: 0.55;
   display: block;
   text-align: right;
+  font-family: var(--font-latin);
+  font-size: 9.5px;
+  opacity: 0.55;
 }
 
 .thread__composer {
   display: flex;
   gap: 10px;
   padding: 14px;
-  border-top: 1px solid var(--border-soft);
-  background: #fff;
+  border-top: 1px solid var(--line);
+  background: var(--surface);
 }
+
 .thread__composer :deep(.el-textarea__inner) {
-  border-radius: 12px;
+  border-radius: var(--radius-sm);
 }
+
 .thread__send {
   align-self: flex-end;
-  border-radius: 12px;
-  min-width: 90px;
+  min-width: 86px;
+  border-radius: var(--radius-sm);
 }
 </style>
