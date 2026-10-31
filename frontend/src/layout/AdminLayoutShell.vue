@@ -2,40 +2,57 @@
   <div class="admin-shell">
     <aside class="sidebar">
       <div class="sidebar__brand">
-        <div class="sidebar__mark">
-          CAS
-        </div>
-        <div>
-          <strong>Admin Console</strong>
-          <p>校园预约后台</p>
+        <span class="sidebar__seal">杭</span>
+        <div class="sidebar__brand-text">
+          <strong>智汇校园</strong>
+          <p>管理控制台</p>
+          <span>HZNU · ADMIN CONSOLE</span>
         </div>
       </div>
 
-      <button
-        v-for="item in navItems"
-        :key="item.path"
-        class="sidebar__item"
-        :class="{ 'is-active': route.path === item.path }"
-        @click="router.push(item.path)"
-      >
-        <el-icon class="sidebar__icon">
-          <component :is="item.icon" />
-        </el-icon>
-        {{ item.label }}
-      </button>
+      <nav class="sidebar__nav">
+        <button
+          v-for="item in navItems"
+          :key="item.path"
+          class="sidebar__item"
+          :class="{ 'is-active': route.path === item.path }"
+          @click="router.push(item.path)"
+        >
+          <el-icon class="sidebar__icon">
+            <component :is="item.icon" />
+          </el-icon>
+          {{ item.label }}
+        </button>
+      </nav>
+
+      <div class="sidebar__foot">
+        <span class="sidebar__motto">勤慎诚恕 · 博雅精进</span>
+        <span>HZNU · 1908</span>
+      </div>
     </aside>
 
     <div class="workspace">
-      <header class="workspace__header glass-panel">
-        <div
-          v-if="weather"
-          class="weather-pill"
-        >
-          <span class="weather-pill__icon">{{ weatherIcon(weather.weather1) }}</span>
-          <span class="weather-pill__text">{{ weather.shi }} {{ weather.weather1 }} {{ weather.temp }}</span>
+      <header class="workspace__header">
+        <div class="workspace__title">
+          <span>Admin console</span>
+          <strong>校园预约管理台</strong>
         </div>
-        <div class="workspace__actions">
-          <el-button @click="logout">
+
+        <div class="workspace__header-right">
+          <div
+            v-if="weather"
+            class="weather"
+          >
+            <el-icon class="weather__icon">
+              <component :is="weatherIcon(weather.weather1)" />
+            </el-icon>
+            <span class="weather__place">杭州</span>
+            <span class="weather__text">{{ weather.weather1 }} {{ weather.temp }}</span>
+          </div>
+          <el-button
+            class="workspace__logout"
+            @click="logout"
+          >
             退出
           </el-button>
         </div>
@@ -63,7 +80,12 @@ onMounted(async () => {
 })
 
 function weatherIcon(d: string) {
-  if (!d) return '☀️'; if (d.includes('晴')) return '☀️'; if (d.includes('云')) return '⛅'; if (d.includes('雨')) return '🌧'; if (d.includes('雪')) return '🌨'; return '🌈'
+  if (!d) return 'Sunny'
+  if (d.includes('晴')) return 'Sunny'
+  if (d.includes('云')) return 'Cloudy'
+  if (d.includes('雨')) return 'Drizzling'
+  if (d.includes('雪')) return 'Cloudy'
+  return 'PartlyCloudy'
 }
 
 const route = useRoute()
@@ -89,44 +111,93 @@ function logout() {
 
 <style scoped lang="scss">
 .admin-shell {
-  height: 100vh;            /* 整页定高，不让 body 滚动，左栏因此固定 */
+  height: 100vh;
   overflow: hidden;
   display: grid;
-  grid-template-columns: 272px 1fr;
+  grid-template-columns: 264px 1fr;
 }
 
 .sidebar {
   position: relative;
-  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  padding: 24px 16px 18px;
+  color: #f7f1e4;
   background:
-    radial-gradient(circle at 18% -6%, rgba(123, 208, 255, 0.22), transparent 46%),
-    linear-gradient(180deg, #143A78, #1A4C92 55%, #1F63B8);
-  color: #fff;
-  overflow-y: auto;         /* 菜单多时左栏内部自滚，但栏体始终固定 */
+    radial-gradient(ellipse 80% 40% at 20% 0%, rgba(63, 182, 255, 0.12), transparent 60%),
+    linear-gradient(180deg, #17333d 0%, #1d3f4a 58%, #244c58 100%);
+  overflow-y: auto;
+}
+
+.sidebar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='80' viewBox='0 0 420 80'%3E%3Cpath d='M0 40 Q 52.5 16 105 40 T 210 40 T 315 40 T 420 40' fill='none' stroke='%23d6c19a' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: 420px 80px;
 }
 
 .sidebar__brand {
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 12px;
-  margin-bottom: 24px;
-  padding: 8px;
+  padding: 6px 10px 22px;
+  border-bottom: 1px solid rgba(247, 241, 228, 0.12);
 }
 
-.sidebar__mark {
-  width: 44px;
-  height: 44px;
-  display: grid;
+.sidebar__seal {
+  display: inline-grid;
   place-items: center;
-  border-radius: 14px;
-  background: linear-gradient(135deg, #ADE2FF, #1E98F2);
-  font-weight: 800;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border: 1.5px solid rgba(214, 193, 154, 0.64);
+  border-radius: 3px;
+  color: var(--gold-soft);
+  background: rgba(247, 241, 228, 0.04);
+  box-shadow: inset 0 0 0 3px #17333d, inset 0 0 0 4px rgba(214, 193, 154, 0.28);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.sidebar__brand p {
-  margin: 4px 0 0;
-  color: rgba(255, 255, 255, 0.68);
-  font-size: 12px;
+.sidebar__brand-text {
+  display: grid;
+  line-height: 1.3;
+}
+
+.sidebar__brand-text strong {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+}
+
+.sidebar__brand-text p {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: rgba(247, 241, 228, 0.6);
+}
+
+.sidebar__brand-text span {
+  margin-top: 5px;
+  font-family: var(--font-latin);
+  font-size: 7.5px;
+  letter-spacing: 0.15em;
+  color: rgba(247, 241, 228, 0.36);
+}
+
+.sidebar__nav {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 3px;
+  margin-top: 20px;
 }
 
 .sidebar__item {
@@ -135,24 +206,31 @@ function logout() {
   align-items: center;
   gap: 11px;
   width: 100%;
-  margin-bottom: 6px;
-  padding: 13px 16px;
-  text-align: left;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.78);
+  padding: 12px 14px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 7px;
   background: transparent;
+  color: rgba(247, 241, 228, 0.68);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
   cursor: pointer;
-  transition: background 0.22s ease, color 0.22s ease, transform 0.22s ease;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease;
 }
 
 .sidebar__icon {
-  font-size: 17px;
+  font-size: 16px;
   flex-shrink: 0;
-  opacity: 0.85;
-  transition: opacity 0.22s ease;
+  opacity: 0.76;
+  transition: opacity 0.16s ease;
+}
+
+.sidebar__item:hover {
+  color: #f7f1e4;
+  background: rgba(247, 241, 228, 0.06);
 }
 
 .sidebar__item:hover .sidebar__icon,
@@ -160,17 +238,10 @@ function logout() {
   opacity: 1;
 }
 
-.sidebar__item:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.08);
-  transform: translateX(2px);
-}
-
 .sidebar__item.is-active {
-  color: #fff;
-  font-weight: 700;
-  background: linear-gradient(135deg, rgba(63, 182, 255, 0.95), rgba(30, 152, 242, 0.9));
-  box-shadow: 0 10px 24px rgba(30, 120, 220, 0.34);
+  color: #f7f1e4;
+  font-weight: 600;
+  background: rgba(247, 241, 228, 0.1);
 }
 
 .sidebar__item.is-active::before {
@@ -179,10 +250,31 @@ function logout() {
   left: -16px;
   top: 50%;
   transform: translateY(-50%);
-  width: 4px;
-  height: 22px;
-  border-radius: 0 4px 4px 0;
-  background: #7BD0FF;
+  width: 3px;
+  height: 20px;
+  border-radius: 0 3px 3px 0;
+  background: var(--gold-soft);
+}
+
+.sidebar__foot {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 5px;
+  margin-top: auto;
+  padding: 18px 10px 0;
+  border-top: 1px solid rgba(247, 241, 228, 0.12);
+  font-family: var(--font-latin);
+  font-size: 7.5px;
+  letter-spacing: 0.14em;
+  color: rgba(247, 241, 228, 0.32);
+}
+
+.sidebar__motto {
+  font-family: var(--font-serif);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: rgba(214, 193, 154, 0.66);
 }
 
 .workspace {
@@ -199,27 +291,74 @@ function logout() {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 18px;
-  border-radius: 24px;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255, 253, 247, 0.82);
+  box-shadow: var(--shadow-soft);
+  backdrop-filter: blur(14px);
 }
 
-.workspace__actions {
-  display: flex;
-  gap: 10px;
+.workspace__title {
+  display: grid;
+  line-height: 1.3;
 }
 
-/* 右侧一组（天气 + 操作按钮）整体锚定最右，
-   这样标题字数变化不会让中间的天气被 space-between 挤动 */
+.workspace__title span {
+  font-family: var(--font-latin);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold);
+}
+
+.workspace__title strong {
+  margin-top: 3px;
+  font-family: var(--font-serif);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink);
+}
+
 .workspace__header-right {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
+.weather {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+.weather__icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.weather__place {
+  font-family: var(--font-latin);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+}
+
+.workspace__logout {
+  height: 32px;
+  padding: 0 16px;
+  font-size: 12.5px;
+}
+
 .workspace__content {
   flex: 1;
-  min-height: 0;            /* 允许 flex 子项压缩并独立滚动 */
-  overflow-y: auto;         /* 只有右侧内容滚动，左侧面板与顶栏保持不动 */
+  min-height: 0;
+  overflow-y: auto;
   margin-top: 18px;
   padding-bottom: 24px;
 }
@@ -240,36 +379,17 @@ function logout() {
   .workspace__header {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+  }
+
+  .workspace__header-right {
+    justify-content: space-between;
   }
 }
 
-.weather-pill { display: flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 10px; background: rgba(63,182,255,.06); border: 1px solid rgba(63,182,255,.1); }
-.weather-pill__icon { font-size: 18px; }
-.weather-pill__text { font-size: 12px; color: var(--text-secondary); white-space: nowrap; }
-@media (max-width: 900px) { .weather-pill { display: none; } }
-
-/* 顶栏操作按钮：小胶囊，与用户端「管理后台」成套 */
-.workspace__actions .el-button {
-  height: 34px;
-  padding: 0 18px;
-  border-radius: 999px;
-  font-size: 13px;
-  margin-left: 0;
-}
-.workspace__actions .el-button--default {
-  color: #3E4C66;
-  border-color: #E2ECFC;
-  background: #fff;
-}
-.workspace__actions .el-button--default:hover {
-  color: #1E98F2;
-  border-color: #CBEBFF;
-  background: #F4FAFF;
-  box-shadow: none;
-}
-.workspace__actions .el-button--default:last-child:hover {
-  color: #dc2626;
-  border-color: #fda4af;
-  background: #fff1f2;
+@media (max-width: 600px) {
+  .weather__text {
+    display: none;
+  }
 }
 </style>

@@ -1,17 +1,21 @@
 <template>
   <div class="shell">
-    <header class="shell__header glass-panel">
+    <header class="shell__header">
       <div
         class="brand"
         @click="router.push('/teacher/review')"
       >
-        <div class="brand__mark">
-          TEA
-        </div>
-        <span class="brand__title">教师工作台</span>
+        <span class="hz-seal brand__seal">杭</span>
+        <span class="brand__text">
+          <strong>教师工作台</strong>
+          <span>HZNU · FACULTY</span>
+        </span>
       </div>
 
-      <nav class="nav">
+      <nav
+        class="nav"
+        aria-label="教师端导航"
+      >
         <button
           v-for="item in navItems"
           :key="item.path"
@@ -19,7 +23,11 @@
           :class="{ 'is-active': route.path.startsWith(item.path) }"
           @click="router.push(item.path)"
         >
-          {{ navLabel(item) }}
+          <span>{{ item.label }}</span>
+          <span
+            v-if="item.chat && unread > 0"
+            class="nav__badge"
+          >{{ unread }}</span>
         </button>
       </nav>
 
@@ -29,8 +37,14 @@
           @command="handleCommand"
         >
           <span class="user-trigger">
-            <el-avatar :size="34">{{ initial }}</el-avatar>
-            <span class="user-name">{{ userStore.userInfo?.username || '教师' }}</span>
+            <span class="user-avatar">{{ initial }}</span>
+            <span class="user-meta">
+              <span class="user-name">{{ userStore.userInfo?.username || '教师' }}</span>
+              <span class="user-role">FACULTY MEMBER</span>
+            </span>
+            <el-icon class="user-caret">
+              <ArrowDown />
+            </el-icon>
           </span>
           <template #dropdown>
             <el-dropdown-menu>
@@ -52,6 +66,12 @@
     <main class="shell__content">
       <router-view />
     </main>
+
+    <footer class="shell__footer">
+      <span class="shell__motto">勤慎诚恕 · 博雅精进</span>
+      <span class="shell__meta">仓前 · 下沙 / HZNU 1908</span>
+      <span class="shell__meta">教师工作台 · CampusBrain</span>
+    </footer>
   </div>
 </template>
 
@@ -74,11 +94,6 @@ const navItems = [
 ]
 
 const unread = useChatUnread()
-
-function navLabel(item: { label: string; chat?: boolean }) {
-  if (item.chat && unread.value > 0) return `${item.label} · ${unread.value}`
-  return item.label
-}
 
 let unreadTimer: number | undefined
 onMounted(() => {
@@ -104,67 +119,139 @@ function handleCommand(command: string) {
 <style scoped lang="scss">
 .shell {
   min-height: 100vh;
-  padding: 18px;
+  display: flex;
+  flex-direction: column;
 }
 
 .shell__header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 10px 20px;
-  border-radius: 20px;
-  flex-wrap: nowrap;
+  gap: 28px;
+  height: 80px;
+  padding: 0 max(28px, calc((100vw - 1440px) / 2));
+  background: rgba(245, 241, 230, 0.9);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+}
+
+.shell__header::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(176, 138, 69, 0.42), transparent);
+  pointer-events: none;
 }
 
 .brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   cursor: pointer;
   flex-shrink: 0;
 }
-.brand__mark {
-  width: 36px;
-  height: 36px;
-  display: grid;
-  place-items: center;
-  border-radius: 10px;
-  color: #fff;
-  font-weight: 800;
-  font-size: 13px;
-  background: linear-gradient(135deg, #1f6fb2, #3FB6FF);
+
+.brand__seal {
+  width: 38px;
+  height: 38px;
+  font-size: 19px;
 }
-.brand__title {
-  font-size: 14px;
+
+.brand__text {
+  display: grid;
+  line-height: 1.2;
+}
+
+.brand__text strong {
+  font-family: var(--font-serif);
+  font-size: 18px;
   font-weight: 600;
-  color: var(--text-primary);
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.brand__text span {
+  margin-top: 4px;
+  font-family: var(--font-latin);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: var(--ink-4);
   white-space: nowrap;
 }
 
 .nav {
   display: flex;
-  gap: 4px;
+  align-items: stretch;
+  gap: 2px;
   flex: 1;
   justify-content: center;
+  height: 100%;
+  min-width: 0;
 }
+
 .nav__item {
-  padding: 8px 16px;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 15px;
   border: 0;
-  border-radius: 999px;
-  font-size: 13px;
   background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  letter-spacing: 0.02em;
   white-space: nowrap;
-  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+  transition: color 0.16s ease;
 }
+
+.nav__item::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  right: 15px;
+  bottom: 17px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.22s var(--ease-out);
+}
+
 .nav__item:hover {
-  background: rgba(63, 182, 255, 0.06);
-  color: var(--brand-500);
+  color: var(--lake);
 }
+
+.nav__item:hover::after,
+.nav__item.is-active::after {
+  transform: scaleX(1);
+}
+
 .nav__item.is-active {
-  color: #fff;
-  background: linear-gradient(135deg, #3FB6FF, #ADE2FF);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.nav__badge {
+  display: grid;
+  place-items: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--seal);
+  color: #fffdf7;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .header-right {
@@ -173,45 +260,166 @@ function handleCommand(command: string) {
   gap: 12px;
   flex-shrink: 0;
 }
+
 .user-dropdown {
   cursor: pointer;
 }
+
 .user-trigger {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
+
+.user-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--lake);
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.user-meta {
+  display: grid;
+  line-height: 1.25;
+}
+
 .user-name {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-  max-width: 100px;
+  max-width: 96px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12.5px;
+  color: var(--ink);
+}
+
+.user-role {
+  margin-top: 2px;
+  font-family: var(--font-latin);
+  font-size: 8px;
+  letter-spacing: 0.14em;
+  color: var(--ink-4);
+}
+
+.user-caret {
+  font-size: 11px;
+  color: var(--ink-4);
 }
 
 .shell__content {
-  margin-top: 18px;
+  flex: 1;
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 28px 28px 0;
 }
 
-@media (max-width: 720px) {
+.shell__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
+  max-width: 1440px;
+  margin: 40px auto 0;
+  padding: 22px 28px 30px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-4);
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+}
+
+.shell__motto {
+  font-family: var(--font-serif);
+  font-size: 12px;
+  letter-spacing: 0.18em;
+  color: var(--ink-3);
+}
+
+.shell__motto::before {
+  content: "—— ";
+  color: var(--gold);
+}
+
+.shell__meta {
+  font-family: var(--font-latin);
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 900px) {
   .shell__header {
+    height: auto;
     flex-wrap: wrap;
     gap: 10px;
+    padding: 12px 20px 0;
   }
+
+  .brand {
+    flex: 1;
+  }
+
+  .brand__text span {
+    display: none;
+  }
+
+  .user-meta {
+    display: none;
+  }
+
   .nav {
     order: 3;
     flex-basis: 100%;
+    height: 48px;
     justify-content: flex-start;
-    min-width: 0;
     overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
   }
-  .nav::-webkit-scrollbar { display: none; }
-  .nav__item { flex-shrink: 0; }
-  .user-name {
+
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav__item {
+    flex-shrink: 0;
+    padding: 0 11px;
+  }
+
+  .nav__item::after {
+    left: 11px;
+    right: 11px;
+    bottom: 9px;
+  }
+
+  .shell__content {
+    padding: 20px 20px 0;
+  }
+
+  .shell__footer {
+    flex-wrap: wrap;
+    padding: 20px 20px 26px;
+  }
+}
+
+@media (max-width: 560px) {
+  .shell__header {
+    padding: 10px 14px 0;
+  }
+
+  .shell__content {
+    padding: 16px 14px 0;
+  }
+
+  .shell__footer {
+    padding: 18px 14px 24px;
+  }
+
+  .shell__meta:last-child {
     display: none;
   }
 }
