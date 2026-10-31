@@ -13,6 +13,7 @@ import com.kb.infrastructure.metrics.BusinessMetrics;
 import com.kb.infrastructure.rag.graph.GraphAssistedRetriever;
 import com.kb.infrastructure.rag.llm.NoAnswerMarkers;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -29,6 +30,7 @@ import java.util.function.Consumer;
  *
  * @author forever-king
  */
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AnswerPipeline {
@@ -90,7 +92,9 @@ public class AnswerPipeline {
         List<RetrievalResult> retrieved = graphAssisted
                 ? graphRetriever.retrieve(rewritten, userId)
                 : searchService.search(rewritten, userId);
-        metrics.recordRetrievalLatency(System.currentTimeMillis() - retrievalStart);
+        long retrievalMs = System.currentTimeMillis() - retrievalStart;
+        metrics.recordRetrievalLatency(retrievalMs);
+        log.debug("retrieval_completed hits={} durationMs={}", retrieved == null ? 0 : retrieved.size(), retrievalMs);
         return rerankerService.rerank(rewritten, retrieved);
     }
 
@@ -106,40 +110,49 @@ public class AnswerPipeline {
                            List<LlmService.ChatMessage> history,
                            ChatSession session, Consumer<String> onToken,
                            CancellationToken cancellationToken) {
+        long startMs = System.currentTimeMillis();
         boolean appointmentRelated = isAppointmentQuery(query) || !session.slotsOrEmpty().isEmpty();
+        boolean hasDocs = reranked != null && !reranked.isEmpty();
         String contextHint = session.slotsOrEmpty().describe();
+        String mode = appointmentRelated ? "tools" : (hasDocs ? "rag" : "direct");
+        String answer;
 
         // SSE 链路（onToken != null）：三条路径全部真流式，支持断连取消
         if (onToken != null) {
             if (appointmentRelated) {
-                return llmService.generateAnswerWithToolsStreaming(
+                answer = llmService.generateAnswerWithToolsStreaming(
                         query, reranked, history, onToken, contextHint, cancellationToken);
-            }
-            if (reranked != null && !reranked.isEmpty()) {
+            } else if (hasDocs) {
                 // RAG 流内部带"无法回答"前缀门控，命中标记时自动切换直接流式兜底，
                 // 不会把"无法回答"与兜底答案拼在一起
-                return llmService.generateAnswerStreaming(
+                answer = llmService.generateAnswerStreaming(
                         query, reranked, history, onToken, cancellationToken);
+            } else {
+                answer = llmService.generateAnswerDirectStreaming(
+                        query, history, onToken, cancellationToken);
             }
-            return llmService.generateAnswerDirectStreaming(
-                    query, history, onToken, cancellationToken);
+            mode += "_streaming";
+        } else if (appointmentRelated) {
+            // 同步链路：一次性返回
+            answer = llmService.generateAnswerWithTools(query, reranked, history, null, contextHint);
+        } else if (hasDocs) {
+            answer = llmService.generateAnswer(query, reranked, history);
+            // 同步链路与流式前缀门控共用 NoAnswerMarkers 唯一词表，不做私有复制
+            if (NoAnswerMarkers.looksLikeNoAnswer(answer)) {
+                mode = "rag_direct_fallback";
+                answer = llmService.generateAnswerDirect(query, history);
+            }
+        } else {
+            // 同步链路无召回时走同步兜底，绝不能走流式分支传 null 消费者，
+            // 否则 LangChain4jLlmService 的 tokenConsumer.accept 会 NPE 并污染熔断统计.
+            answer = llmService.generateAnswerDirect(query, history);
         }
 
-        // 同步链路：一次性返回
-        if (appointmentRelated) {
-            return llmService.generateAnswerWithTools(query, reranked, history, null, contextHint);
-        }
-        if (reranked != null && !reranked.isEmpty()) {
-            String ragAnswer = llmService.generateAnswer(query, reranked, history);
-            // 同步链路与流式前缀门控共用 NoAnswerMarkers 唯一词表，不做私有复制
-            if (NoAnswerMarkers.looksLikeNoAnswer(ragAnswer)) {
-                ragAnswer = llmService.generateAnswerDirect(query, history);
-            }
-            return ragAnswer;
-        }
-        // 同步链路无召回时走同步兜底，绝不能走流式分支传 null 消费者，
-        // 否则 LangChain4jLlmService 的 tokenConsumer.accept 会 NPE 并污染熔断统计.
-        return llmService.generateAnswerDirect(query, history);
+        // 只记录模式、召回数、答案长度与耗时，不记录问题与答案正文（避免隐私进日志）
+        log.info("qa_llm_completed mode={} docs={} answerChars={} durationMs={}",
+                mode, hasDocs ? reranked.size() : 0,
+                answer == null ? 0 : answer.length(), System.currentTimeMillis() - startMs);
+        return answer;
     }
 
     /**

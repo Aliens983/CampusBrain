@@ -62,11 +62,16 @@ public class OpenAiEmbeddingService implements EmbeddingService {
         if (text == null || text.isEmpty()) {
             return new float[0];
         }
+        long startMs = System.currentTimeMillis();
         try {
             Embedding embedding = embeddingModel.embed(text).content();
-            return embedding.vector();
+            float[] vector = embedding.vector();
+            log.debug("embedding_completed chars={} dims={} durationMs={}",
+                    text.length(), vector.length, System.currentTimeMillis() - startMs);
+            return vector;
         } catch (Exception e) {
-            log.error("Embedding failed for text (length={})", text.length(), e);
+            log.error("embedding_failed chars={} durationMs={}",
+                    text.length(), System.currentTimeMillis() - startMs, e);
             throw new LlmUnavailableException("Embedding 调用失败", e);
         }
     }
@@ -86,6 +91,7 @@ public class OpenAiEmbeddingService implements EmbeddingService {
         if (texts == null || texts.isEmpty()) {
             return List.of();
         }
+        long startMs = System.currentTimeMillis();
         int effectiveBatchSize = Math.max(1, batchSize);
 
         // 按批次切分并提交并发任务
@@ -116,9 +122,13 @@ public class OpenAiEmbeddingService implements EmbeddingService {
                 batchResults.set(task.batchIndex(), vectors);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                log.error("embedding_batch_interrupted batch={} texts={} durationMs={}",
+                        task.batchIndex(), texts.size(), System.currentTimeMillis() - startMs);
                 throw new RuntimeException("Embedding 批处理被中断", e);
             } catch (ExecutionException e) {
                 Throwable cause = e.getCause() != null ? e.getCause() : e;
+                log.error("embedding_batch_failed batch={} texts={} durationMs={}",
+                        task.batchIndex(), texts.size(), System.currentTimeMillis() - startMs, cause);
                 throw new RuntimeException("Embedding 批处理失败: batch=" + task.batchIndex(), cause);
             }
         }
@@ -127,6 +137,8 @@ public class OpenAiEmbeddingService implements EmbeddingService {
         for (List<float[]> batchResult : batchResults) {
             allEmbeddings.addAll(batchResult);
         }
+        log.info("embedding_batch_completed texts={} batches={} durationMs={}",
+                texts.size(), tasks.size(), System.currentTimeMillis() - startMs);
         return allEmbeddings;
     }
 
@@ -140,6 +152,7 @@ public class OpenAiEmbeddingService implements EmbeddingService {
      * 调用模型嵌入单批文本，返回与入参等长、同序的向量列表.
      */
     private List<float[]> embedOneBatch(List<String> batch) {
+        long startMs = System.currentTimeMillis();
         Response<List<Embedding>> response = embeddingModel.embedAll(
                 batch.stream().map(TextSegment::from).toList()
         );
@@ -147,7 +160,8 @@ public class OpenAiEmbeddingService implements EmbeddingService {
         for (Embedding embedding : response.content()) {
             vectors.add(embedding.vector());
         }
-        log.debug("Embedded batch of {} texts", batch.size());
+        log.debug("embedding_request_completed texts={} durationMs={}",
+                batch.size(), System.currentTimeMillis() - startMs);
         return vectors;
     }
 

@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.UUID;
 
@@ -36,6 +35,7 @@ public class OSSServiceImpl implements OSSService {
 
     @Override
     public String uploadFile(MultipartFile file) {
+        long startMs = System.currentTimeMillis();
         OSS ossClient = new OSSClientBuilder().build(endpoint, accessKeyId, accessKeySecret);
 
         try {
@@ -49,9 +49,13 @@ public class OSSServiceImpl implements OSSService {
             // 生成带签名的临时访问URL（有效期1小时），避免私有bucket无法访问
             java.util.Date expiration = new java.util.Date(System.currentTimeMillis() + 3600 * 1000);
             java.net.URL signedUrl = ossClient.generatePresignedUrl(bucketName, fileName, expiration);
+            log.info("oss_upload_completed bytes={} durationMs={}",
+                    file.getSize(), System.currentTimeMillis() - startMs);
             return signedUrl.toString();
-        } catch (IOException e) {
-            log.error("文件上传失败", e);
+        } catch (Exception e) {
+            // 不打印签名 URL / AK/SK，只保留大小与耗时
+            log.error("oss_upload_failed bytes={} durationMs={}",
+                    file.getSize(), System.currentTimeMillis() - startMs, e);
             throw new BusinessException(CommonErrorCode.FILE_UPLOAD_FAILED);
         } finally {
             ossClient.shutdown();

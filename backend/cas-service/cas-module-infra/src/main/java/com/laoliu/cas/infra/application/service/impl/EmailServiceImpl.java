@@ -44,6 +44,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     @Async
     public void sendEmail(String to, String subject, String content) {
+        long startMs = System.currentTimeMillis();
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             String fromEmail = environment.getProperty("spring.mail.username");
@@ -55,13 +56,27 @@ public class EmailServiceImpl implements EmailService {
             sentCounter.increment();
             // 不打 content：验证码类邮件的正文就是明文验证码（"您的验证码是：123456"），
             // 落日志等于把重置密码的凭据写给运维、日志平台和 docker logs
-            log.info("邮件发送成功，发件人：{}，收件人：{}，主题：{}", fromEmail, to, subject);
+            log.info("email_sent to={} subject={} durationMs={}",
+                    maskEmail(to), subject, System.currentTimeMillis() - startMs);
         } catch (Exception e) {
             failedCounter.increment();
             // 本方法为 @Async 异步执行，调用方不会也无法捕获这里抛出的异常，
             // 再抛 BusinessException 只会落到 AsyncUncaughtExceptionHandler，对业务毫无意义.
             // 邮件属于"尽力通知"，失败仅记录日志，不影响主下单/审核事务.
-            log.error("邮件发送失败，收件人：{}，主题：{}，错误信息：{}", to, subject, e.getMessage(), e);
+            log.error("email_send_failed to={} subject={} durationMs={}",
+                    maskEmail(to), subject, System.currentTimeMillis() - startMs, e);
         }
+    }
+
+    /** 邮件日志只保留首字符与域名，避免完整收件人进入日志平台. */
+    private static String maskEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return "-";
+        }
+        int at = email.indexOf('@');
+        if (at <= 0) {
+            return "***";
+        }
+        return email.charAt(0) + "***" + email.substring(at);
     }
 }

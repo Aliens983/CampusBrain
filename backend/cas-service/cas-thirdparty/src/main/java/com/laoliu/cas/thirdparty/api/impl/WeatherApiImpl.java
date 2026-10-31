@@ -37,8 +37,9 @@ public class WeatherApiImpl implements WeatherApi {
     @Override
     @Cacheable(value = "weather", key = "#sheng + ':' + #place")
     public WeatherResponse getWeather(String sheng, String place) {
+        long startMs = System.currentTimeMillis();
         try {
-            log.info("调用天气API - 省份: {}, 城市: {}", sheng, place);
+            log.info("weather_query_start province={} city={}", sheng, place);
 
             // 用 UriComponentsBuilder 显式 URL 编码，避免中文参数在 URL 中被错误处理
             String url = UriComponentsBuilder.fromHttpUrl(weatherApiUrl)
@@ -64,13 +65,20 @@ public class WeatherApiImpl implements WeatherApi {
             WeatherResponse response = restTemplate.getForObject(url, WeatherResponse.class);
 
             if (response == null || response.getCode() != 200) {
-                log.warn("天气API返回异常: response={}", response);
-                throw new BusinessException(500, "获取天气信息失败");
+                log.warn("weather_query_failed province={} city={} durationMs={} response={}",
+                        sheng, place, System.currentTimeMillis() - startMs, response);
+                throw new BusinessException(CommonErrorCode.WEATHER_QUERY_FAILED);
             }
 
+            log.info("weather_query_completed province={} city={} durationMs={}",
+                    sheng, place, System.currentTimeMillis() - startMs);
             return response;
+        } catch (BusinessException e) {
+            // 非 200 已在上方记录 weather_query_failed，避免再打一遍 error
+            throw e;
         } catch (Exception e) {
-            log.error("获取天气信息失败", e);
+            log.error("weather_query_error province={} city={} durationMs={}",
+                    sheng, place, System.currentTimeMillis() - startMs, e);
             throw new BusinessException(CommonErrorCode.WEATHER_QUERY_FAILED);
         }
     }
