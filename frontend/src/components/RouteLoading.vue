@@ -21,33 +21,36 @@
 
 .route-loading__card {
   width: min(320px, calc(100vw - 32px));
-  padding: 28px 24px;
+  padding: 26px 24px;
   text-align: center;
-  border-radius: 24px;
-  border: 1px solid var(--border-soft);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: var(--shadow-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-soft);
 }
 
 .route-loading__spinner {
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   margin: 0 auto 14px;
-  border: 3px solid rgba(20, 88, 212, 0.14);
-  border-top-color: var(--brand-500);
+  border: 2.5px solid var(--line);
+  border-top-color: var(--lake);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 
 .route-loading__title {
+  font-family: var(--font-serif);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ink);
 }
 
 .route-loading__text {
   margin-top: 6px;
-  color: var(--text-secondary);
-  font-size: 13px;
+  color: var(--ink-4);
+  font-size: 11.5px;
 }
 
 @keyframes spin {
