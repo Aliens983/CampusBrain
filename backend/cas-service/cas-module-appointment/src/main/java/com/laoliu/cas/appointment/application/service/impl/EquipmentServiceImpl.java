@@ -16,6 +16,7 @@ import com.laoliu.cas.appointment.application.dto.response.EquipmentResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
+import com.laoliu.cas.common.log.AuditLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -117,6 +118,10 @@ public class EquipmentServiceImpl implements EquipmentService {
             throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
         }
         bookingEventPublisher.publishChanged(userId, equipment.getServiceId(), "BOOKED");
+        AuditLog.success("BOOKING_CREATE_EQUIPMENT", userId, "ORDER", orderId,
+                "serviceId=" + equipment.getServiceId() + " equipmentId=" + equipmentId
+                        + " qty=" + req.getQuantity() + " date=" + date
+                        + " start=" + req.getStartTime() + " end=" + req.getEndTime());
         return orderId;
     }
 

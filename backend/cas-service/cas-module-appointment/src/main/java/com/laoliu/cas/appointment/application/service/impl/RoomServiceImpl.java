@@ -12,6 +12,7 @@ import com.laoliu.cas.appointment.application.dto.response.RoomResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
+import com.laoliu.cas.common.log.AuditLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -86,6 +87,9 @@ public class RoomServiceImpl implements RoomService {
             throw new BusinessException(BookErrorCode.BOOKING_REPEATED);
         }
         bookingEventPublisher.publishChanged(userId, room.getServiceId(), "BOOKED");
+        AuditLog.success("BOOKING_CREATE_ROOM", userId, "ORDER", orderId,
+                "serviceId=" + room.getServiceId() + " roomId=" + roomId + " date=" + date
+                        + " start=" + req.getStartTime() + " end=" + req.getEndTime());
         return orderId;
     }
 

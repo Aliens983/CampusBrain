@@ -14,6 +14,7 @@ import com.laoliu.cas.appointment.domain.view.BookingRef;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
+import com.laoliu.cas.common.log.AuditLog;
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.system.api.UserInfoApi;
 import com.laoliu.cas.system.api.dto.UserInfoDTO;
@@ -121,6 +122,8 @@ public class BookServiceImpl implements BookService {
                 bookingRepository.approveActivityBookings(userId, activityServiceIds);
             }
             bookingMetrics.recordCreated(createdOrderIds.size());
+            AuditLog.success("BOOKING_CREATE_ACTIVITY", userId, "ORDER", createdOrderIds,
+                    "serviceIds=" + serviceIds + " count=" + createdOrderIds.size());
             return new BookingSubmitResult(userInfoApi.getUserById(userId), createdOrderIds);
         } catch (BusinessException e) {
             throw e;
@@ -212,6 +215,8 @@ public class BookServiceImpl implements BookService {
         for (BookingRef ref : cancellable) {
             bookingEventPublisher.publishChanged(ref.userId(), ref.serviceId(), "CANCELLED");
         }
+        AuditLog.success("BOOKING_CANCEL", userId, "ORDER", cancellableIds,
+                "count=" + cancellableIds.size());
         return true;
     }
 

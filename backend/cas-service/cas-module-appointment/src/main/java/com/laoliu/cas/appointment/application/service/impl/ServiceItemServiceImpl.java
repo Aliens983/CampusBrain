@@ -9,7 +9,9 @@ import com.laoliu.cas.appointment.domain.repository.ServiceCategoryRepository;
 import com.laoliu.cas.appointment.domain.repository.ServiceItemRepository;
 import com.laoliu.cas.appointment.application.dto.request.ServiceAddRequest;
 import com.laoliu.cas.appointment.application.dto.request.ServicePageRequest;
+import com.laoliu.cas.common.log.AuditLog;
 import com.laoliu.cas.common.result.PageResult;
+import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -73,6 +75,8 @@ public class ServiceItemServiceImpl implements ServiceItemService {
                         .findFirst()
                         .orElse(null);
         if (category == null) {
+            AuditLog.failure("SERVICE_CREATE", SecurityFrameworkUtils.getLoginUserId(), "SERVICE", null,
+                    "categoryId=" + request.getCategoryId() + " category_missing");
             return false;
         }
         ServiceItem service = ServiceItem.builder()
@@ -87,7 +91,11 @@ public class ServiceItemServiceImpl implements ServiceItemService {
                 // V6 已建列但此前无写入点，导致 end_date 恒为 NULL，无时段的预约永不完结
                 .endDate(request.getEndDate())
                 .build();
-        serviceRepository.save(service);
+        ServiceItem saved = serviceRepository.save(service);
+        AuditLog.success("SERVICE_CREATE", SecurityFrameworkUtils.getLoginUserId(), "SERVICE", saved.getServiceId(),
+                "name=" + saved.getServiceName() + " categoryId=" + category.getId()
+                        + " campus=" + saved.getCampus() + " state=" + saved.getServiceState()
+                        + " capacity=" + saved.getCapacity());
         return true;
     }
 
@@ -95,7 +103,10 @@ public class ServiceItemServiceImpl implements ServiceItemService {
     @CacheEvict(value = "services", allEntries = true)
     public boolean updateService(Long id, ServiceAddRequest request) {
         ServiceItem existing = serviceRepository.findById(id).orElse(null);
-        if (existing == null) return false;
+        if (existing == null) {
+            AuditLog.failure("SERVICE_UPDATE", SecurityFrameworkUtils.getLoginUserId(), "SERVICE", id, "not_found");
+            return false;
+        }
         existing.setServiceName(request.getServiceName());
         existing.setServiceDescribe(request.getServiceDescribe());
         if (request.getServiceState() != null) existing.setServiceState(request.getServiceState());
@@ -104,6 +115,9 @@ public class ServiceItemServiceImpl implements ServiceItemService {
         if (request.getImageUrl() != null) existing.setImageUrl(request.getImageUrl());
         if (request.getEndDate() != null) existing.setEndDate(request.getEndDate());
         serviceRepository.save(existing);
+        AuditLog.success("SERVICE_UPDATE", SecurityFrameworkUtils.getLoginUserId(), "SERVICE", id,
+                "name=" + existing.getServiceName() + " state=" + existing.getServiceState()
+                        + " capacity=" + existing.getCapacity() + " endDate=" + existing.getEndDate());
         return true;
     }
 

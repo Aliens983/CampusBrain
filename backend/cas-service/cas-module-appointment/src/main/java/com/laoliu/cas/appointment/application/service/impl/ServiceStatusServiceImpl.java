@@ -11,6 +11,8 @@ import com.laoliu.cas.appointment.application.dto.request.ServiceStatusPageReque
 import com.laoliu.cas.common.enums.ManageStatus;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
+import com.laoliu.cas.common.log.AuditLog;
+import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import com.laoliu.cas.infra.api.email.EmailService;
 import com.laoliu.cas.system.api.NotificationSettingsApi;
 import lombok.RequiredArgsConstructor;
@@ -104,6 +106,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
             sendAuditEmail(orderId, "预约审核通过通知", emailContent);
         }
+        AuditLog.success("BOOKING_AUDIT_APPROVE", SecurityFrameworkUtils.getLoginUserId(),
+                "ORDER", orderId,
+                "source=" + source.name() + " applicantId=" + serviceInfo.getUserId() + " reason=" + reason);
     }
 
     /**
@@ -155,6 +160,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
             sendAuditEmail(orderId, "预约审核未通过通知", emailContent);
         }
+        AuditLog.success("BOOKING_AUDIT_REJECT", SecurityFrameworkUtils.getLoginUserId(),
+                "ORDER", orderId,
+                "source=" + source.name() + " applicantId=" + serviceInfo.getUserId() + " reason=" + reason);
     }
 
     /**
@@ -186,6 +194,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
             sendAuditEmail(orderId, "预约被管理员取消通知", emailContent);
         }
+        AuditLog.success("BOOKING_ADMIN_FORCE_CANCEL", SecurityFrameworkUtils.getLoginUserId(),
+                "ORDER", orderId,
+                "applicantId=" + serviceInfo.getUserId() + " reason=" + reason);
     }
 
     /**
@@ -214,6 +225,9 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (notificationSettings.isEmailAllowed(serviceInfo.getUserId())) {
             sendAuditEmail(orderId, "预约完结通知", emailContent);
         }
+        AuditLog.success("BOOKING_ADMIN_FORCE_COMPLETE", SecurityFrameworkUtils.getLoginUserId(),
+                "ORDER", orderId,
+                "applicantId=" + serviceInfo.getUserId() + " reason=" + reason);
     }
 
     /** 订单必须存在，否则抛 404 语义错误码 */

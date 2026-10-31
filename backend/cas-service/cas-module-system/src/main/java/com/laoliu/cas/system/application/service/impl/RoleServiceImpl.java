@@ -4,6 +4,8 @@ import com.laoliu.auth.policy.RolePolicy;
 import com.laoliu.cas.common.enums.UserRoleEnum;
 import com.laoliu.cas.common.exception.ForbiddenException;
 import com.laoliu.cas.common.exception.ResourceNotFoundException;
+import com.laoliu.cas.common.log.AuditLog;
+import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import com.laoliu.cas.system.application.service.RoleService;
 import com.laoliu.cas.system.domain.entity.User;
 import com.laoliu.cas.system.domain.repository.UserRepository;
@@ -36,6 +38,8 @@ public class RoleServiceImpl implements RoleService {
             throw new ForbiddenException(403, "角色仅支持 0 普通用户 / 1 管理员 / 3 教师");
         }
         userRepository.updateRole(userId, newRole);
+        AuditLog.success("USER_ROLE_CHANGE", SecurityFrameworkUtils.getLoginUserId(), "USER", userId,
+                "fromRole=" + user.getRole() + " toRole=" + newRole);
     }
 
     @Override

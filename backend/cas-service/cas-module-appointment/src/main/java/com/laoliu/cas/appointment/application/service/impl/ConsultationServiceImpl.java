@@ -19,6 +19,7 @@ import com.laoliu.cas.appointment.application.dto.response.ConsultantResponse;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.BookErrorCode;
 import com.laoliu.cas.common.exception.code.ServiceErrorCode;
+import com.laoliu.cas.common.log.AuditLog;
 import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -122,6 +123,10 @@ public class ConsultationServiceImpl implements ConsultationService {
         }
 
         bookingEventPublisher.publishChanged(userId, consultant.getServiceId(), "BOOKED");
+        AuditLog.success("BOOKING_CREATE_CONSULTATION", userId, "ORDER", orderId,
+                "serviceId=" + consultant.getServiceId() + " consultantId=" + consultantId
+                        + " slotId=" + slotId + " date=" + slot.getSlotDate()
+                        + " start=" + slot.getStartTime() + " end=" + slot.getEndTime());
         return orderId;
     }
 

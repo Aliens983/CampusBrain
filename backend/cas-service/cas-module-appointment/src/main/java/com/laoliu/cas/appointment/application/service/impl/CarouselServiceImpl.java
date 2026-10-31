@@ -6,6 +6,8 @@ import com.laoliu.cas.appointment.domain.entity.Carousel;
 import com.laoliu.cas.appointment.domain.repository.CarouselRepository;
 import com.laoliu.cas.common.exception.BusinessException;
 import com.laoliu.cas.common.exception.code.ContentErrorCode;
+import com.laoliu.cas.common.log.AuditLog;
+import com.laoliu.cas.common.security.SecurityFrameworkUtils;
 import com.laoliu.cas.infra.api.file.FileService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -70,6 +72,8 @@ public class CarouselServiceImpl implements CarouselService {
                 .enabled(1)
                 .build();
         carouselRepository.save(carousel);
+        AuditLog.success("CAROUSEL_CREATE", SecurityFrameworkUtils.getLoginUserId(), "CAROUSEL", carousel.getId(),
+                "sort=" + carousel.getSort());
         return carousel;
     }
 
@@ -77,13 +81,17 @@ public class CarouselServiceImpl implements CarouselService {
     public void delete(Long id) {
         Carousel carousel = carouselRepository.findById(id);
         if (carousel == null) {
-            // 幂等：重复删除不报错
+            // 幂等：重复删除不报错，审计记为成功但标注 already_absent
+            AuditLog.success("CAROUSEL_DELETE", SecurityFrameworkUtils.getLoginUserId(), "CAROUSEL", id,
+                    "already_absent=true");
             return;
         }
         // 先删库再清物理文件——行未删掉就不应产生孤儿清理；
         // 文件删除 fail-open（FileService 内部仅告警），极端情况下残留文件可由运维清理
         carouselRepository.deleteById(id);
         fileService.deleteByUrl(carousel.getImageUrl());
+        AuditLog.success("CAROUSEL_DELETE", SecurityFrameworkUtils.getLoginUserId(), "CAROUSEL", id,
+                "sort=" + carousel.getSort());
     }
 
     @Override
@@ -95,5 +103,7 @@ public class CarouselServiceImpl implements CarouselService {
         for (int i = 0; i < orderedIds.size(); i++) {
             carouselRepository.updateSort(orderedIds.get(i), i + 1);
         }
+        AuditLog.success("CAROUSEL_REORDER", SecurityFrameworkUtils.getLoginUserId(), "CAROUSEL", "all",
+                "orderedIds=" + orderedIds);
     }
 }
