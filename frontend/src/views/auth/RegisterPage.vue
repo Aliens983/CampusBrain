@@ -1,147 +1,202 @@
 <template>
-  <div class="auth-page">
+  <div class="register-page">
     <div class="register-card">
-      <div class="register-card__strip" />
-      <div class="auth-head">
-        <div class="auth-head__brand">
-          <span class="auth-head__logo">C</span>
-          <span>CampusBrain 智汇校园</span>
-        </div>
-        <span class="status-pill is-success">安全注册</span>
-        <h1>创建校园预约账号</h1>
-        <p>使用邮箱验证码完成注册；注册后即可预约空间、设备与咨询服务。</p>
-      </div>
-
-      <el-form
-        ref="formRef"
-        :model="form"
-        :rules="rules"
-        label-position="top"
-      >
-        <el-row :gutter="16">
-          <el-col
-            :md="12"
-            :xs="24"
-          >
-            <el-form-item
-              label="姓名"
-              prop="name"
-            >
-              <el-input v-model="form.name" />
-            </el-form-item>
-          </el-col>
-          <el-col
-            :md="12"
-            :xs="24"
-          >
-            <el-form-item
-              label="邮箱"
-              prop="email"
-            >
-              <el-input v-model="form.email" />
-            </el-form-item>
-          </el-col>
-          <el-col
-            :md="12"
-            :xs="24"
-          >
-            <el-form-item
-              label="图形验证码"
-              prop="captcha"
-            >
-              <div class="captcha-row">
-                <el-input
-                  v-model="form.captcha"
-                  placeholder="图形验证码"
-                />
-                <div
-                  class="captcha-box"
-                  @click="refreshCaptcha"
-                >
-                  <img
-                    v-if="captchaImage"
-                    :src="captchaImage"
-                    alt="captcha"
-                  >
-                  <span v-else>获取验证码</span>
-                </div>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col
-            :md="12"
-            :xs="24"
-          >
-            <el-form-item
-              label="年级/部门"
-              prop="grade"
-            >
-              <el-input v-model="form.grade" />
-            </el-form-item>
-          </el-col>
-          <el-col
-            :md="12"
-            :xs="24"
-          >
-            <el-form-item
-              label="验证码"
-              prop="code"
-            >
-              <div class="verify-row">
-                <el-input v-model="form.code" />
-                <el-button
-                  :loading="sending"
-                  @click="sendCode"
-                >
-                  发送验证码
-                </el-button>
-              </div>
-            </el-form-item>
-          </el-col>
-          <el-col
-            :md="12"
-            :xs="24"
-          >
-            <el-form-item
-              label="密码"
-              prop="password"
-            >
-              <el-input
-                v-model="form.password"
-                type="password"
-                show-password
-              />
-            </el-form-item>
-          </el-col>
-          <el-col
-            :md="12"
-            :xs="24"
-          >
-            <el-form-item
-              label="确认密码"
-              prop="confirmPassword"
-            >
-              <el-input
-                v-model="form.confirmPassword"
-                type="password"
-                show-password
-              />
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-
-      <div class="actions">
-        <el-button @click="router.push('/login')">
-          返回登录
-        </el-button>
-        <el-button
-          type="primary"
-          :loading="loading"
-          @click="submit"
+      <header class="register-hero">
+        <img
+          class="register-hero__photo"
+          :src="cqImg"
+          alt="杭州师范大学仓前校区校门"
         >
-          提交注册
-        </el-button>
+        <div class="register-hero__veil" />
+        <div class="register-hero__brand">
+          <span class="register-hero__seal">杭</span>
+          <span class="register-hero__brand-text">
+            <strong>智汇校园</strong>
+            <span>HZNU · CAMPUSBRAIN</span>
+          </span>
+        </div>
+        <span
+          class="register-hero__verse"
+          aria-hidden="true"
+        >勤慎诚恕 · 博雅精进</span>
+        <div class="register-hero__copy">
+          <p class="register-hero__eyebrow">
+            Create account · HZNU
+          </p>
+          <h1>加入智汇校园</h1>
+          <p>用邮箱验证码完成注册；注册后即可预约空间、设备与咨询服务。</p>
+        </div>
+      </header>
+
+      <div class="register-body">
+        <div class="register-body__head">
+          <span class="register-body__index">01</span>
+          <div>
+            <h2>填写校园身份</h2>
+            <p>信息仅用于校园预约与通知，请使用真实邮箱。</p>
+          </div>
+        </div>
+
+        <el-form
+          ref="formRef"
+          :model="form"
+          :rules="rules"
+          label-position="top"
+        >
+          <el-row :gutter="18">
+            <el-col
+              :md="12"
+              :xs="24"
+            >
+              <el-form-item
+                label="姓名"
+                prop="name"
+              >
+                <el-input
+                  v-model="form.name"
+                  placeholder="请输入真实姓名"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col
+              :md="12"
+              :xs="24"
+            >
+              <el-form-item
+                label="邮箱"
+                prop="email"
+              >
+                <el-input
+                  v-model="form.email"
+                  placeholder="name@example.com"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col
+              :md="12"
+              :xs="24"
+            >
+              <el-form-item
+                label="图形验证码"
+                prop="captcha"
+              >
+                <div class="captcha-row">
+                  <el-input
+                    v-model="form.captcha"
+                    placeholder="输入右侧字符"
+                  />
+                  <div
+                    class="captcha-box"
+                    title="点击刷新验证码"
+                    @click="refreshCaptcha"
+                  >
+                    <img
+                      v-if="captchaImage"
+                      :src="captchaImage"
+                      alt="captcha"
+                    >
+                    <span v-else>获取验证码</span>
+                  </div>
+                </div>
+              </el-form-item>
+            </el-col>
+            <el-col
+              :md="12"
+              :xs="24"
+            >
+              <el-form-item
+                label="年级 / 部门"
+                prop="grade"
+              >
+                <el-input
+                  v-model="form.grade"
+                  placeholder="如：2024 级 / 信息学院"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col
+              :md="12"
+              :xs="24"
+            >
+              <el-form-item
+                label="邮箱验证码"
+                prop="code"
+              >
+                <div class="verify-row">
+                  <el-input
+                    v-model="form.code"
+                    placeholder="6 位验证码"
+                  />
+                  <el-button
+                    :loading="sending"
+                    @click="sendCode"
+                  >
+                    发送验证码
+                  </el-button>
+                </div>
+              </el-form-item>
+            </el-col>
+            <el-col
+              :md="12"
+              :xs="24"
+            >
+              <el-form-item
+                label="密码"
+                prop="password"
+              >
+                <el-input
+                  v-model="form.password"
+                  type="password"
+                  show-password
+                  placeholder="设置登录密码"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col
+              :md="12"
+              :xs="24"
+            >
+              <el-form-item
+                label="确认密码"
+                prop="confirmPassword"
+              >
+                <el-input
+                  v-model="form.confirmPassword"
+                  type="password"
+                  show-password
+                  placeholder="再次输入密码"
+                />
+              </el-form-item>
+            </el-col>
+            <el-col
+              :md="12"
+              :xs="24"
+            >
+              <div class="register-note">
+                <span class="register-note__mark">注</span>
+                <p>注册默认为学生账号；教师与管理员权限由学校管理员在后台分配。</p>
+              </div>
+            </el-col>
+          </el-row>
+        </el-form>
+
+        <div class="actions">
+          <el-button @click="router.push('/login')">
+            返回登录
+          </el-button>
+          <el-button
+            type="primary"
+            :loading="loading"
+            @click="submit"
+          >
+            提交注册
+          </el-button>
+        </div>
+
+        <div class="register-foot">
+          <span>勤慎诚恕 · 博雅精进</span>
+          <span>HZNU · EST. 1908</span>
+        </div>
       </div>
     </div>
   </div>
@@ -152,6 +207,7 @@ import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import request from '@/common/utils/request'
+import cqImg from '@/assets/images/campus/cq-hero.jpg'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
@@ -241,74 +297,212 @@ onMounted(() => {
 </script>
 
 <style scoped lang="scss">
-.auth-page {
+.register-page {
+  position: relative;
   min-height: 100vh;
+  padding: 32px;
   display: grid;
   place-items: center;
-  padding: 28px;
+  overflow: hidden;
+}
+
+.register-page::before {
+  content: "1908";
+  position: absolute;
+  left: -30px;
+  bottom: -110px;
+  font-family: var(--font-latin);
+  font-size: clamp(200px, 26vw, 360px);
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: rgba(24, 49, 59, 0.035);
+  pointer-events: none;
+  user-select: none;
 }
 
 .register-card {
   position: relative;
-  width: min(920px, 100%);
-  padding: 40px;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 24px 60px rgba(16, 24, 40, 0.12);
+  z-index: 1;
+  width: min(980px, 100%);
+  border-radius: 20px;
   overflow: hidden;
-  animation: registerIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-.register-card__strip {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, #0E6CD6, #3FB6FF 55%, #7BD0FF);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: 0 44px 96px -54px rgba(24, 49, 59, 0.6);
+  animation: registerIn 0.42s var(--ease-out) both;
 }
 
 @keyframes registerIn {
-  from { opacity: 0; transform: translateY(18px) scale(0.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
-.auth-head {
-  margin-bottom: 22px;
+.register-hero {
+  position: relative;
+  min-height: 238px;
+  padding: 30px 38px;
+  display: flex;
+  flex-direction: column;
+  color: #f7f1e4;
+  overflow: hidden;
+  isolation: isolate;
 }
 
-.auth-head__brand {
+.register-hero__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 52%;
+  z-index: -2;
+  filter: saturate(0.78) contrast(1.02);
+}
+
+.register-hero__veil {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    linear-gradient(95deg, rgba(13, 32, 39, 0.9) 0%, rgba(15, 38, 46, 0.62) 52%, rgba(15, 38, 46, 0.2) 100%),
+    linear-gradient(0deg, rgba(13, 32, 39, 0.58), transparent 55%);
+}
+
+.register-hero__brand {
   display: flex;
   align-items: center;
-  gap: 9px;
-  margin-bottom: 16px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: var(--brand-700);
+  gap: 11px;
 }
 
-.auth-head__logo {
-  display: grid;
+.register-hero__seal {
+  display: inline-grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 9px;
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid rgba(214, 193, 154, 0.72);
+  border-radius: 3px;
+  color: var(--gold-soft);
+  background: rgba(247, 241, 228, 0.06);
+  box-shadow: inset 0 0 0 3px rgba(13, 32, 39, 0.5), inset 0 0 0 4px rgba(214, 193, 154, 0.3);
+  font-family: var(--font-serif);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.register-hero__brand-text {
+  display: grid;
+  line-height: 1.2;
+}
+
+.register-hero__brand-text strong {
+  font-family: var(--font-serif);
   font-size: 15px;
-  font-weight: 800;
-  color: #fff;
-  background: linear-gradient(135deg, #0E6CD6, #3FB6FF);
-  box-shadow: 0 6px 14px rgba(30, 152, 242, 0.28);
+  font-weight: 600;
+  letter-spacing: 0.14em;
 }
 
-.auth-head h1 {
-  margin: 14px 0 8px;
-  font-size: 34px;
+.register-hero__brand-text span {
+  margin-top: 3px;
+  font-family: var(--font-latin);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  color: rgba(247, 241, 228, 0.52);
 }
 
-.auth-head p {
+.register-hero__verse {
+  position: absolute;
+  top: 50%;
+  right: 34px;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.32em;
+  font-family: var(--font-serif);
+  font-size: 12px;
+  color: rgba(214, 193, 154, 0.64);
+}
+
+.register-hero__copy {
+  margin-top: auto;
+  padding-top: 34px;
+}
+
+.register-hero__eyebrow {
+  margin: 0 0 8px;
+  font-family: var(--font-latin);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--gold-soft);
+}
+
+.register-hero h1 {
+  margin: 0 0 8px;
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: #f8f2e6;
+}
+
+.register-hero p {
   margin: 0;
-  color: var(--text-secondary);
+  max-width: 460px;
+  font-size: 12.5px;
+  line-height: 1.8;
+  color: rgba(247, 241, 228, 0.72);
+}
+
+.register-body {
+  padding: 32px 38px 28px;
+}
+
+.register-body__head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.register-body__index {
+  font-family: var(--font-latin);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--gold);
+  padding-top: 5px;
+}
+
+.register-body__head h2 {
+  margin: 0 0 4px;
+  font-family: var(--font-serif);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.register-body__head p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+
+.register-body :deep(.el-form-item) {
+  margin-bottom: 16px;
+}
+
+.register-body :deep(.el-form-item__label) {
+  padding-bottom: 5px;
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-3);
+}
+
+.register-body :deep(.el-input__wrapper) {
+  min-height: 42px;
+  background: var(--surface-2);
 }
 
 .verify-row {
@@ -318,33 +512,129 @@ onMounted(() => {
   width: 100%;
 }
 
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
 .captcha-row {
   display: grid;
-  grid-template-columns: 1fr 120px;
+  grid-template-columns: 1fr 122px;
   gap: 10px;
   width: 100%;
 }
 
 .captcha-box {
-  height: 40px;
+  height: 42px;
   display: grid;
   place-items: center;
-  border-radius: 10px;
-  border: 1px solid var(--border-soft, #e0e0e0);
-  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
   overflow: hidden;
   cursor: pointer;
+  transition: border-color 0.16s ease;
+}
+
+.captcha-box:hover {
+  border-color: rgba(176, 138, 69, 0.5);
 }
 
 .captcha-box img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.captcha-box span {
+  font-size: 11px;
+  color: var(--ink-4);
+}
+
+.register-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 42px;
+  margin-top: 27px;
+  padding: 12px 14px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
+.register-note__mark {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: 1px solid rgba(176, 138, 69, 0.45);
+  border-radius: 2px;
+  font-family: var(--font-serif);
+  font-size: 10px;
+  color: var(--gold);
+}
+
+.register-note p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--ink-3);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.register-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 26px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  font-family: var(--font-latin);
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  color: var(--ink-4);
+}
+
+.register-foot span:first-child {
+  font-family: var(--font-serif);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+@media (max-width: 700px) {
+  .register-page {
+    padding: 12px;
+  }
+
+  .register-card {
+    border-radius: 14px;
+  }
+
+  .register-hero {
+    padding: 22px 24px;
+    min-height: 210px;
+  }
+
+  .register-hero__verse {
+    display: none;
+  }
+
+  .register-hero h1 {
+    font-size: 26px;
+  }
+
+  .register-body {
+    padding: 24px 22px 22px;
+  }
+
+  .register-foot {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
 }
 </style>

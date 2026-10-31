@@ -1,23 +1,58 @@
 <template>
   <section class="auth-hero">
-    <div class="auth-hero__deco auth-hero__deco--1" />
-    <div class="auth-hero__deco auth-hero__deco--2" />
-    <div class="auth-hero__brand">
-      <span class="auth-hero__logo">C</span>
-      <span>CampusBrain 智汇校园</span>
+    <img
+      class="auth-hero__photo"
+      :src="xsImg"
+      alt="杭州师范大学下沙校区荷塘"
+      loading="eager"
+    >
+    <div class="auth-hero__veil" />
+
+    <div class="auth-hero__inner">
+      <div class="auth-hero__brand">
+        <span class="auth-hero__seal">杭</span>
+        <span class="auth-hero__brand-text">
+          <strong>智汇校园</strong>
+          <span>HZNU · CAMPUSBRAIN</span>
+        </span>
+      </div>
+
+      <div
+        class="auth-hero__verse"
+        aria-hidden="true"
+      >
+        勤慎诚恕 · 博雅精进
+      </div>
+
+      <div class="auth-hero__copy">
+        <p class="auth-hero__eyebrow">
+          HANGZHOU NORMAL UNIVERSITY · EST. 1908
+        </p>
+        <h1>
+          湖光潋滟<br>
+          <em>书香如故</em>
+        </h1>
+        <p class="auth-hero__lede">
+          {{ resetMode ? '循着邮箱里的那封来信，重新回到你的校园。' : '在仓前与下沙之间，预约一段属于你的校园时光。' }}
+        </p>
+        <ul class="auth-hero__points">
+          <li><span>壹</span>两校区服务，按仓前 / 下沙分流</li>
+          <li><span>贰</span>咨询、教室、设备、活动一站办理</li>
+          <li><span>叁</span>知识库 AI 助手，随时解答预约问题</li>
+        </ul>
+      </div>
+
+      <div class="auth-hero__footer">
+        <span>仓前 · 下沙</span>
+        <span>CAMPUS APPOINTMENT × RAG ASSISTANT</span>
+      </div>
     </div>
-    <span class="status-pill is-brand auth-hero__pill">校园预约门户</span>
-    <h1>校园预约系统</h1>
-    <p>{{ resetMode ? '通过邮箱验证码重置您的密码。' : '统一提供空间、设备与咨询等预约服务。' }}</p>
-    <ul class="auth-hero__points">
-      <li>两校区服务，按仓前 / 下沙分流预约</li>
-      <li>咨询、教室、设备、活动一站式办理</li>
-      <li>知识库 AI 助手，随时解答预约问题</li>
-    </ul>
   </section>
 </template>
 
 <script setup lang="ts">
+import xsImg from '@/assets/images/campus/xs-hero.jpg'
+
 defineProps<{
   resetMode: boolean
 }>()
@@ -26,144 +61,238 @@ defineProps<{
 <style scoped lang="scss">
 .auth-hero {
   position: relative;
-  padding: 44px;
-  color: #fff;
+  display: flex;
+  min-height: 620px;
+  padding: 44px 48px;
   overflow: hidden;
+  color: #f7f1e4;
+  isolation: isolate;
+}
+
+.auth-hero__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 58% 50%;
+  z-index: -2;
+  filter: saturate(0.82) contrast(1.02);
+}
+
+.auth-hero__veil {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background:
-    radial-gradient(circle at 82% 8%, rgba(255, 255, 255, 0.16), transparent 42%),
-    linear-gradient(145deg, #0E6CD6, #3FB6FF 56%, #7BD0FF);
+    linear-gradient(100deg, rgba(13, 32, 39, 0.92) 0%, rgba(15, 38, 46, 0.76) 44%, rgba(15, 38, 46, 0.28) 78%, rgba(15, 38, 46, 0.1) 100%),
+    linear-gradient(0deg, rgba(13, 32, 39, 0.55), transparent 45%);
 }
 
 .auth-hero::after {
   content: "";
   position: absolute;
-  inset: auto -90px -110px auto;
-  width: 320px;
-  height: 320px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0));
+  inset: 0;
+  z-index: -1;
   pointer-events: none;
+  opacity: 0.14;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='420' height='80' viewBox='0 0 420 80'%3E%3Cpath d='M0 40 Q 52.5 16 105 40 T 210 40 T 315 40 T 420 40' fill='none' stroke='%23d6c19a' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: 420px 80px;
+  mask-image: linear-gradient(180deg, transparent 10%, #000 55%, transparent 95%);
 }
 
-.auth-hero__deco {
-  position: absolute;
-  border-radius: 22px;
-  border: 1.5px solid rgba(255, 255, 255, 0.28);
-  pointer-events: none;
-}
-.auth-hero__deco--1 {
-  top: 42px;
-  right: 48px;
-  width: 84px;
-  height: 84px;
-  transform: rotate(18deg);
-  animation: decoFloatA 9s ease-in-out infinite;
-}
-.auth-hero__deco--2 {
-  bottom: 70px;
-  right: 110px;
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
-  animation: decoFloatB 7s ease-in-out infinite;
-}
-
-@keyframes decoFloatA {
-  0%, 100% { transform: rotate(18deg) translateY(0); }
-  50% { transform: rotate(26deg) translateY(-12px); }
-}
-@keyframes decoFloatB {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-14px); }
+.auth-hero__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
 }
 
 .auth-hero__brand {
-  position: relative;
-  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  color: rgba(255, 255, 255, 0.92);
+  gap: 12px;
 }
 
-.auth-hero__logo {
-  display: grid;
+.auth-hero__seal {
+  display: inline-grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 9px;
-  font-size: 16px;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  width: 40px;
+  height: 40px;
+  border: 1.5px solid rgba(214, 193, 154, 0.72);
+  border-radius: 3px;
+  color: var(--gold-soft);
+  background: rgba(247, 241, 228, 0.06);
+  box-shadow: inset 0 0 0 3px rgba(13, 32, 39, 0.5), inset 0 0 0 4px rgba(214, 193, 154, 0.32);
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
 }
 
-.auth-hero__pill {
-  position: relative;
-  z-index: 1;
-  display: inline-flex;
-  margin-top: 40px;
-  color: #fff;
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.28);
+.auth-hero__brand-text {
+  display: grid;
+  line-height: 1.2;
+}
+
+.auth-hero__brand-text strong {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: #f7f1e4;
+}
+
+.auth-hero__brand-text span {
+  margin-top: 4px;
+  font-family: var(--font-latin);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  color: rgba(247, 241, 228, 0.56);
+}
+
+.auth-hero__verse {
+  position: absolute;
+  top: 50%;
+  right: -12px;
+  transform: translateY(-50%);
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.34em;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  color: rgba(214, 193, 154, 0.72);
+}
+
+.auth-hero__verse::before {
+  content: "";
+  display: inline-block;
+  width: 1px;
+  height: 46px;
+  margin-bottom: 18px;
+  background: rgba(214, 193, 154, 0.4);
+}
+
+.auth-hero__copy {
+  margin-top: auto;
+  padding: 56px 0 36px;
+  max-width: 520px;
+}
+
+.auth-hero__eyebrow {
+  margin: 0 0 18px;
+  font-family: var(--font-latin);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: var(--gold-soft);
 }
 
 .auth-hero h1 {
-  position: relative;
-  z-index: 1;
-  margin: 18px 0 12px;
-  font-size: 44px;
+  margin: 0 0 20px;
+  font-family: var(--font-serif);
+  font-size: clamp(42px, 4.4vw, 58px);
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: 0.04em;
+  color: #f8f2e6;
 }
 
-.auth-hero p {
-  position: relative;
-  z-index: 1;
+.auth-hero h1 em {
+  font-style: normal;
+  color: var(--gold-soft);
+}
+
+.auth-hero__lede {
   margin: 0;
-  max-width: 520px;
-  line-height: 1.8;
-  color: rgba(255, 255, 255, 0.88);
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.9;
+  color: rgba(247, 241, 228, 0.78);
 }
 
 .auth-hero__points {
-  position: relative;
-  z-index: 1;
-  margin: 30px 0 0;
-  padding: 0;
-  list-style: none;
   display: grid;
   gap: 12px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
 .auth-hero__points li {
   display: flex;
   align-items: center;
-  gap: 10px;
-  font-size: 13.5px;
-  color: rgba(255, 255, 255, 0.92);
+  gap: 11px;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  color: rgba(247, 241, 228, 0.78);
 }
 
-.auth-hero__points li::before {
-  content: "";
-  width: 7px;
-  height: 7px;
+.auth-hero__points span {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(214, 193, 154, 0.34);
   border-radius: 50%;
+  font-family: var(--font-latin);
+  font-size: 9px;
+  color: var(--gold-soft);
   flex-shrink: 0;
-  background: #fff;
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.18);
 }
 
-@media (max-width: 960px) {
+.auth-hero__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: auto;
+  padding-top: 22px;
+  border-top: 1px solid rgba(247, 241, 228, 0.16);
+  font-family: var(--font-latin);
+  font-size: 8.5px;
+  letter-spacing: 0.16em;
+  color: rgba(247, 241, 228, 0.46);
+}
+
+@media (max-width: 1100px) {
   .auth-hero {
-    padding: 32px;
+    padding: 34px 36px;
+    min-height: 420px;
   }
-  .auth-hero__points {
+
+  .auth-hero__verse {
     display: none;
   }
+
+  .auth-hero__copy {
+    padding: 36px 0 20px;
+  }
+
+  .auth-hero__points,
+  .auth-hero__footer {
+    display: none;
+  }
+
   .auth-hero h1 {
-    font-size: 32px;
+    font-size: clamp(32px, 5vw, 42px);
+  }
+}
+
+@media (max-width: 700px) {
+  .auth-hero {
+    min-height: 260px;
+    padding: 24px;
+  }
+
+  .auth-hero__lede {
+    font-size: 13px;
+  }
+
+  .auth-hero__copy {
+    padding: 26px 0 0;
   }
 }
 </style>

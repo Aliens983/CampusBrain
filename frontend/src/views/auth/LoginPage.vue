@@ -58,31 +58,86 @@ const {
 
 <style scoped lang="scss">
 .auth-page {
+  position: relative;
   min-height: 100vh;
-  padding: 28px;
+  padding: 32px;
   display: grid;
   place-items: center;
+  overflow: hidden;
+}
+
+/* 页面水印：超大号 HZNU 衬线字，只做纸面肌理 */
+.auth-page::before {
+  content: "HZNU";
+  position: absolute;
+  right: -30px;
+  bottom: -130px;
+  font-family: var(--font-latin);
+  font-size: clamp(200px, 26vw, 380px);
+  line-height: 1;
+  letter-spacing: 0.06em;
+  color: rgba(24, 49, 59, 0.035);
+  pointer-events: none;
+  user-select: none;
+}
+
+.auth-page::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(176, 138, 69, 0.3), transparent);
+  pointer-events: none;
 }
 
 .auth-shell {
   position: relative;
-  width: min(1100px, 100%);
+  z-index: 1;
+  width: min(1180px, 100%);
   display: grid;
-  grid-template-columns: 1fr 460px;
-  border-radius: 28px;
+  grid-template-columns: minmax(0, 1.12fr) minmax(420px, 0.88fr);
+  border-radius: 20px;
   overflow: hidden;
-  box-shadow: 0 28px 70px rgba(16, 24, 40, 0.18);
-  animation: authIn 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow:
+    0 44px 96px -54px rgba(24, 49, 59, 0.6),
+    0 1px 0 rgba(255, 255, 255, 0.8) inset;
+  animation: authIn 0.42s var(--ease-out) both;
+}
+
+.auth-shell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 2;
+  background: linear-gradient(90deg, var(--lake), var(--hz-blue) 56%, var(--gold));
 }
 
 @keyframes authIn {
-  from { opacity: 0; transform: translateY(18px) scale(0.985); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 960px) {
   .auth-shell {
     grid-template-columns: 1fr;
+    max-width: 620px;
+  }
+}
+
+@media (max-width: 600px) {
+  .auth-page {
+    padding: 12px;
+  }
+
+  .auth-shell {
+    border-radius: 14px;
   }
 }
 </style>
