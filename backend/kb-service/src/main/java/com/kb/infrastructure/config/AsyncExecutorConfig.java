@@ -1,10 +1,13 @@
 package com.kb.infrastructure.config;
 
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.TaskDecorator;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -42,6 +45,7 @@ public class AsyncExecutorConfig {
         executor.setMaxPoolSize(size);
         executor.setQueueCapacity(128);
         executor.setThreadNamePrefix("retrieval-");
+        executor.setTaskDecorator(mdcTaskDecorator());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(10);
         executor.initialize();
@@ -62,9 +66,51 @@ public class AsyncExecutorConfig {
         executor.setMaxPoolSize(parallelism);
         executor.setQueueCapacity(200);
         executor.setThreadNamePrefix("embedding-");
+        executor.setTaskDecorator(mdcTaskDecorator());
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         return executor.getThreadPoolExecutor();
+    }
+
+    /**
+     * @Async 使用的默认线程池：补齐 MDC 传递，否则异步通知/文档状态日志会丢失 traceId.
+     */
+    @Bean(name = "taskExecutor")
+    public ThreadPoolTaskExecutor taskExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(8);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("kb-async-");
+        executor.setTaskDecorator(mdcTaskDecorator());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
+        executor.initialize();
+        return executor;
+    }
+
+    /** 把提交任务时的 MDC 复制到执行线程，任务结束后恢复执行线程原有上下文. */
+    private static TaskDecorator mdcTaskDecorator() {
+        return task -> {
+            Map<String, String> submitContext = MDC.getCopyOfContextMap();
+            return () -> {
+                Map<String, String> previous = MDC.getCopyOfContextMap();
+                if (submitContext == null) {
+                    MDC.clear();
+                } else {
+                    MDC.setContextMap(submitContext);
+                }
+                try {
+                    task.run();
+                } finally {
+                    if (previous == null) {
+                        MDC.clear();
+                    } else {
+                        MDC.setContextMap(previous);
+                    }
+                }
+            };
+        };
     }
 }

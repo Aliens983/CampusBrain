@@ -1,11 +1,13 @@
 package com.kb.infrastructure.client;
 
 import com.kb.domain.chat.ChatContextHolder;
+import com.kb.infrastructure.common.TraceIdFilter;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
 import com.laoliu.auth.AuthConstants;
 import com.laoliu.auth.InternalSigner;
 import feign.RequestInterceptor;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -53,6 +55,13 @@ public class CasFeignConfig {
             template.header(AuthConstants.HEADER_USER_ROLE, role);
             template.header(AuthConstants.HEADER_TIMESTAMP, timestamp);
             template.header(AuthConstants.HEADER_INTERNAL_SIGN, sign);
+
+            // 把 KB 当前请求的 traceId 透传给 CAS，保证一次“问答→预约查询/确认”
+            // 在 KB 与 CAS 两侧能按同一个 traceId 串起来；没有上下文时由 CAS 自行生成.
+            String traceId = MDC.get(TraceIdFilter.MDC_KEY);
+            if (traceId != null && !traceId.isBlank()) {
+                template.header(TraceIdFilter.TRACE_ID_HEADER, traceId);
+            }
         };
     }
 }

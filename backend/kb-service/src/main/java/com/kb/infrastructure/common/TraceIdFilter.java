@@ -27,9 +27,9 @@ import java.util.UUID;
 public class TraceIdFilter extends OncePerRequestFilter {
 
     /** TraceId Header 名称，支持前端传入 */
-    private static final String TRACE_ID_HEADER = "X-Trace-Id";
+    public static final String TRACE_ID_HEADER = "X-Trace-Id";
     /** MDC Key */
-    private static final String MDC_KEY = "traceId";
+    public static final String MDC_KEY = "traceId";
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,

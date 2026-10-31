@@ -10,6 +10,7 @@ import com.kb.interfaces.dto.ApiResponse;
 import com.kb.interfaces.dto.FeedbackRequest;
 import com.kb.interfaces.dto.QaRequest;
 import com.kb.interfaces.dto.QaResponse;
+import com.kb.infrastructure.common.TraceIdFilter;
 import com.kb.infrastructure.concurrency.SseConcurrencyLimiter;
 import com.kb.infrastructure.ratelimit.annotations.RateLimit;
 import com.kb.infrastructure.security.SecurityFrameworkUtils;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.slf4j.MDC;
 import org.springframework.http.codec.ServerSentEvent;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -102,9 +104,10 @@ public class QaController {
             @Parameter(description = "会话 ID，不传则自动生成新会话") @RequestParam(required = false, defaultValue = "") String sessionId,
             @Parameter(description = "本轮请求 ID，用于在途幂等去重") @RequestParam(required = false) String requestId) {
 
-        // 在 Servlet 线程内解析身份：SSE 的 Flux 会在异步线程执行，
-        // 不能依赖 SecurityContext 的线程继承
+        // 在 Servlet 线程内解析身份与 traceId：SSE 的 Flux 会在异步线程执行，
+        // 不能依赖 SecurityContext / MDC 的线程继承
         Long userId = SecurityFrameworkUtils.getLoginUserId();
+        String traceId = MDC.get(TraceIdFilter.MDC_KEY);
 
         // 在途幂等闸：EventSource 遇到传输错误会自动用同一 URL 重发，同一轮问答
         // （含同一 requestId）在途重复到达时直接 409，避免重复落库/重复计费/重复触发
@@ -129,6 +132,11 @@ public class QaController {
             // 订阅被取消（浏览器关闭/主动 abort）时立即通知下游中止生成
             sink.onCancel(cancellationToken::cancel);
             sink.onDispose(cancellationToken::cancel);
+            // 把 Servlet 线程的 traceId 带到 boundedElastic 执行线程；
+            // 检索/embedding 线程池另有 TaskDecorator 负责继续传递.
+            if (traceId != null && !traceId.isBlank()) {
+                MDC.put(TraceIdFilter.MDC_KEY, traceId);
+            }
             try {
                 qaService.askStreaming(query, sessionId, userId, cancellationToken,
                         token -> {
@@ -201,6 +209,8 @@ public class QaController {
                         log.debug("发送 SSE 终止事件失败，连接可能已断开: {}", terminalEx.toString());
                     }
                 }
+            } finally {
+                MDC.remove(TraceIdFilter.MDC_KEY);
             }
         })
         // 订阅到 boundedElastic：本服务是 Servlet 栈，Flux 默认在容器线程上订阅，

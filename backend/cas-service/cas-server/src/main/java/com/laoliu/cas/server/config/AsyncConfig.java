@@ -1,11 +1,14 @@
 package com.laoliu.cas.server.config;
 
+import org.slf4j.MDC;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.task.TaskDecorator;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
+import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -37,6 +40,8 @@ public class AsyncConfig {
         executor.setMaxPoolSize(16);
         executor.setQueueCapacity(200);
         executor.setThreadNamePrefix(THREAD_NAME_PREFIX);
+        // 邮件等旁路任务也要带 traceId，否则 @Async 线程里的日志无法与请求关联
+        executor.setTaskDecorator(mdcTaskDecorator());
         // 队列满且线程数达上限时由调用方线程执行，配合下面的拒绝策略避免静默丢任务
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         // 等待在途任务结束再关闭，避免应用停机瞬间丢掉"审核通过"通知邮件
@@ -44,5 +49,28 @@ public class AsyncConfig {
         executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         return executor;
+    }
+
+    private static TaskDecorator mdcTaskDecorator() {
+        return task -> {
+            Map<String, String> submitContext = MDC.getCopyOfContextMap();
+            return () -> {
+                Map<String, String> previous = MDC.getCopyOfContextMap();
+                if (submitContext == null) {
+                    MDC.clear();
+                } else {
+                    MDC.setContextMap(submitContext);
+                }
+                try {
+                    task.run();
+                } finally {
+                    if (previous == null) {
+                        MDC.clear();
+                    } else {
+                        MDC.setContextMap(previous);
+                    }
+                }
+            };
+        };
     }
 }

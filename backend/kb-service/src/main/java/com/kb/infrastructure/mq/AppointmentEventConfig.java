@@ -3,8 +3,10 @@ package com.kb.infrastructure.mq;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kb.infrastructure.cache.QaCacheService;
 import com.kb.infrastructure.cache.SemanticCacheService;
+import com.kb.infrastructure.common.TraceIdFilter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -70,16 +72,24 @@ public class AppointmentEventConfig {
         String body = new String(message.getBody(), StandardCharsets.UTF_8);
         try {
             AppointmentChangedEvent event = objectMapper.readValue(body, AppointmentChangedEvent.class);
-            log.info("KB 收到预约变更事件: eventType={}, userId={}, serviceId={}, occurredAt={}",
-                    event.getEventType(), event.getUserId(), event.getServiceId(), event.getOccurredAt());
-            // 预约创建/取消会改变实时余量、可约状态与"我的预约"，
-            // 失效精确 + 语义两层问答缓存，避免把过期答案继续返回给用户.
-            // 失效失败只记日志：缓存是可重建的派生数据，不应让消费异常反复重投卡住队列.
+            String traceId = event.getTraceId();
+            if (traceId != null && !traceId.isBlank()) {
+                MDC.put(TraceIdFilter.MDC_KEY, traceId);
+            }
             try {
-                qaCacheService.evictAll();
-                semanticCacheService.evictAll();
-            } catch (Exception cacheEx) {
-                log.warn("预约变更联动失效问答缓存失败，将依赖缓存 TTL 自然过期", cacheEx);
+                log.info("KB 收到预约变更事件: eventType={}, userId={}, serviceId={}, occurredAt={}",
+                        event.getEventType(), event.getUserId(), event.getServiceId(), event.getOccurredAt());
+                // 预约创建/取消会改变实时余量、可约状态与"我的预约"，
+                // 失效精确 + 语义两层问答缓存，避免把过期答案继续返回给用户.
+                // 失效失败只记日志：缓存是可重建的派生数据，不应让消费异常反复重投卡住队列.
+                try {
+                    qaCacheService.evictAll();
+                    semanticCacheService.evictAll();
+                } catch (Exception cacheEx) {
+                    log.warn("预约变更联动失效问答缓存失败，将依赖缓存 TTL 自然过期", cacheEx);
+                }
+            } finally {
+                MDC.remove(TraceIdFilter.MDC_KEY);
             }
         } catch (Exception e) {
             log.error("解析预约变更事件失败，已丢弃该消息: {}", body, e);

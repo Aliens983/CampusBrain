@@ -36,5 +36,8 @@ public class AppointmentChangedEvent implements Serializable {
 
     private Long serviceId;
 
+    /** CAS 侧产生事件时的 traceId；旧消息可能为空 */
+    private String traceId;
+
     private LocalDateTime occurredAt;
 }

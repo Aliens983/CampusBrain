@@ -34,6 +34,9 @@ public class AppointmentChangedEvent implements Serializable {
     /** 关联的服务 ID */
     private Long serviceId;
 
+    /** 产生该事件的请求 traceId，供 KB 消费端关联日志 */
+    private String traceId;
+
     /** 事件发生时间 */
     private LocalDateTime occurredAt;
 }
