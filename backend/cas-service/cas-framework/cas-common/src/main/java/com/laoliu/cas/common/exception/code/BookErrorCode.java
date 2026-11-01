@@ -71,6 +71,9 @@ public interface BookErrorCode {
 
     ErrorCode AUDIT_FAILED = new ErrorCode(40005, "审核操作失败");
 
+    ErrorCode AUDIT_TRANSITION_INVALID = new ErrorCode(40023,
+            "当前预约状态不允许该审核操作：仅待审核可通过，待审核/已通过可驳回");
+
     ErrorCode AUDIT_REASON_REQUIRED = new ErrorCode(40006, "拒绝时必须填写原因");
 
     ErrorCode INVALID_AUDIT_STATUS = new ErrorCode(40007, "无效的审核状态");

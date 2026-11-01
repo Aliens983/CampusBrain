@@ -91,12 +91,17 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (serviceInfo == null) {
             throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
         }
+        Integer currentStatus = serviceInfo.getManageStatus();
+        if (currentStatus == null || currentStatus != ManageStatus.SUBMIT.getCode()) {
+            throw new BusinessException(BookErrorCode.AUDIT_TRANSITION_INVALID);
+        }
 
         // 通过仅允许待审核单（状态机白名单）；已通过/已取消等单再点通过会失败
         boolean success = bookingRepository.auditService(
                 orderId, ManageStatus.APPROVED.getCode(), reason, List.of(ManageStatus.SUBMIT));
         if (!success) {
-            throw new BusinessException(BookErrorCode.AUDIT_FAILED);
+            // 查询后状态被并发改变（取消/自动拒绝等）：按状态冲突返回，不暴露模糊的“审核失败”
+            throw new BusinessException(BookErrorCode.AUDIT_TRANSITION_INVALID);
         }
         bookingMetrics.recordAudit(true, source, System.nanoTime() - startNanos);
 
@@ -137,6 +142,12 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
         if (serviceInfo == null) {
             throw new BusinessException(BookErrorCode.STATUS_NOT_FOUND);
         }
+        Integer currentStatus = serviceInfo.getManageStatus();
+        if (currentStatus == null
+                || (currentStatus != ManageStatus.SUBMIT.getCode()
+                && currentStatus != ManageStatus.APPROVED.getCode())) {
+            throw new BusinessException(BookErrorCode.AUDIT_TRANSITION_INVALID);
+        }
 
         // 拒绝允许待审核单与已通过单（已通过单可被修正）.
         // 下方的释放库存/时段对两种来源都幂等安全：待审核单释放其占用，
@@ -145,7 +156,7 @@ public class ServiceStatusServiceImpl implements ServiceStatusService {
                 orderId, ManageStatus.REJECTED.getCode(), reason,
                 List.of(ManageStatus.SUBMIT, ManageStatus.APPROVED));
         if (!success) {
-            throw new BusinessException(BookErrorCode.AUDIT_FAILED);
+            throw new BusinessException(BookErrorCode.AUDIT_TRANSITION_INVALID);
         }
         bookingMetrics.recordAudit(false, source, System.nanoTime() - startNanos);
 

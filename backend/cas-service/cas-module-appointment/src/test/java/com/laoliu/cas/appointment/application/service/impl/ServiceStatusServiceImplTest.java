@@ -129,7 +129,7 @@ class ServiceStatusServiceImplTest {
         }
 
         @Test
-        @DisplayName("审核更新失败时应当抛出 AUDIT_FAILED 异常")
+        @DisplayName("审核更新失败时按状态冲突返回，而不是模糊的审核失败")
         void shouldThrowExceptionWhenAuditUpdateFails() {
             // Given
             BookingQueryView status = buildPendingStatus();
@@ -139,7 +139,22 @@ class ServiceStatusServiceImplTest {
             // When & Then
             BusinessException exception = assertThrows(BusinessException.class,
                     () -> serviceStatusService.auditPass(VALID_ORDER_ID, null, AuditSource.ADMIN));
-            assertEquals(BookErrorCode.AUDIT_FAILED.getCode(), exception.getCode());
+            assertEquals(BookErrorCode.AUDIT_TRANSITION_INVALID.getCode(), exception.getCode());
+            verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());
+        }
+
+        @Test
+        @DisplayName("已取消等终态单点通过时直接按状态冲突拒绝，不调用更新")
+        void shouldRejectAuditWhenStatusIsTerminal() {
+            BookingQueryView cancelled = buildPendingStatus();
+            cancelled.setManageStatus(ManageStatus.CANCELLED.getCode());
+            when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(cancelled);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> serviceStatusService.auditPass(VALID_ORDER_ID, null, AuditSource.ADMIN));
+
+            assertEquals(BookErrorCode.AUDIT_TRANSITION_INVALID.getCode(), exception.getCode());
+            verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any(), anyList());
             verify(emailService, never()).sendEmail(anyString(), anyString(), anyString());
         }
     }
@@ -220,6 +235,20 @@ class ServiceStatusServiceImplTest {
             BusinessException exception = assertThrows(BusinessException.class,
                     () -> serviceStatusService.auditReject(VALID_ORDER_ID, "   ", AuditSource.ADMIN));
             assertEquals(BookErrorCode.AUDIT_REASON_REQUIRED.getCode(), exception.getCode());
+        }
+
+        @Test
+        @DisplayName("已取消等终态单驳回时按状态冲突拒绝")
+        void shouldRejectRejectWhenStatusIsTerminal() {
+            BookingQueryView cancelled = buildPendingStatus();
+            cancelled.setManageStatus(ManageStatus.CANCELLED.getCode());
+            when(bookingRepository.getServiceStatusByOrderId(VALID_ORDER_ID)).thenReturn(cancelled);
+
+            BusinessException exception = assertThrows(BusinessException.class,
+                    () -> serviceStatusService.auditReject(VALID_ORDER_ID, "理由", AuditSource.ADMIN));
+
+            assertEquals(BookErrorCode.AUDIT_TRANSITION_INVALID.getCode(), exception.getCode());
+            verify(bookingRepository, never()).auditService(anyLong(), anyInt(), any(), anyList());
         }
 
         @Test

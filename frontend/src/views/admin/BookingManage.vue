@@ -92,7 +92,7 @@
             <el-button
               size="small"
               type="success"
-              :disabled="item.status !== 'pending'"
+              :disabled="!canApprove(item)"
               @click.stop="handleAudit('通过', item)"
             >
               通过
@@ -100,7 +100,7 @@
             <el-button
               size="small"
               type="danger"
-              :disabled="item.status !== 'pending'"
+              :disabled="!canReject(item)"
               @click.stop="handleAudit('驳回', item)"
             >
               驳回
@@ -186,6 +186,9 @@
             <div class="info-row">
               <span>编号</span><strong>{{ selectedBooking.bookingNo }}</strong>
             </div>
+            <div class="info-row">
+              <span>状态</span><strong>{{ statusText(selectedBooking.status) }}</strong>
+            </div>
             <div
               v-if="selectedBooking.campus"
               class="info-row"
@@ -223,16 +226,25 @@
               <span>用途说明</span><strong>{{ selectedBooking.remarks || '暂无' }}</strong>
             </div>
           </div>
+          <el-alert
+            v-if="!isAuditable(selectedBooking)"
+            type="info"
+            :closable="false"
+            show-icon
+            :title="`该预约${statusText(selectedBooking.status)}，不可再次审核`"
+          />
           <el-input
             v-model="auditReason"
             type="textarea"
             :rows="4"
+            :disabled="!isAuditable(selectedBooking)"
             :placeholder="'请输入审核意见（驳回时必填）'"
           />
           <div class="button-row">
             <el-button
               type="success"
               :loading="auditing"
+              :disabled="!canApprove(selectedBooking)"
               @click="handleAudit('通过')"
             >
               通过
@@ -240,6 +252,7 @@
             <el-button
               type="danger"
               :loading="auditing"
+              :disabled="!canReject(selectedBooking)"
               @click="handleAudit('驳回')"
             >
               驳回
@@ -360,7 +373,7 @@ function mapAdminBooking(item: AdminBooking): BookingItem {
       : dateTime.slice(11, 16) || '待分配时段',
     status: statusMap[item.manageStatus] || 'pending',
     createdAt: dateTime || '待定',
-    remarks: item.reason || item.statusDescription || '',
+    remarks: item.reason || '',
   }
 }
 
@@ -459,9 +472,30 @@ onMounted(() => {
   void loadPendingTotal()
 })
 
+function canApprove(item: BookingItem): boolean {
+  return item.status === 'pending'
+}
+
+/** 与后端状态机对齐：待审核可直接驳回，已通过可驳回修正；取消/完成/已驳回为终态 */
+function canReject(item: BookingItem): boolean {
+  return item.status === 'pending' || item.status === 'approved'
+}
+
+function isAuditable(item: BookingItem): boolean {
+  return canApprove(item) || canReject(item)
+}
+
+function canAudit(action: '通过' | '驳回', item: BookingItem): boolean {
+  return action === '通过' ? canApprove(item) : canReject(item)
+}
+
 function handleAudit(action: '通过' | '驳回', item?: BookingItem) {
   const target = item || selectedBooking.value
   if (!target) return
+  if (!canAudit(action, target)) {
+    ElMessage.warning(`该预约${statusText(target.status)}，不可${action}`)
+    return
+  }
   // 从列表按钮直接点击时，先关闭抽屉防止 dialog 关闭后抽屉闪现
   if (item) {
     closeBookingDrawer()
@@ -476,6 +510,13 @@ function handleAudit(action: '通过' | '驳回', item?: BookingItem) {
 async function confirmAudit() {
   const target = auditTarget.value
   if (!target) return
+
+  if (!canAudit(auditAction.value, target)) {
+    ElMessage.warning(`该预约${statusText(target.status)}，不可${auditAction.value}`)
+    closeAuditDialog()
+    await reloadAfterMutation()
+    return
+  }
 
   if (auditAction.value === '驳回' && !auditReason.value.trim()) {
     ElMessage.warning('驳回时必须填写原因')
