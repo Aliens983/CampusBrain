@@ -5,10 +5,15 @@
         class="brand"
         @click="router.push('/teacher/review')"
       >
-        <span class="hz-seal brand__seal">杭</span>
+        <span class="brand__crest">
+          <img
+            :src="hznuCrest"
+            alt="杭州师范大学校徽"
+          >
+        </span>
         <span class="brand__text">
           <strong>教师工作台</strong>
-          <span>HZNU · FACULTY</span>
+          <span>杭州师范大学 · HZNU</span>
         </span>
       </div>
 
@@ -68,9 +73,15 @@
     </main>
 
     <footer class="shell__footer">
+      <span class="shell__footer-brand">
+        <img
+          :src="hznuCrest"
+          alt=""
+        >
+        杭州师范大学 · 教师工作台
+      </span>
       <span class="shell__motto">勤慎诚恕 · 博雅精进</span>
       <span class="shell__meta">仓前 · 下沙 / HZNU 1908</span>
-      <span class="shell__meta">教师工作台 · CampusBrain</span>
     </footer>
   </div>
 </template>
@@ -80,6 +91,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/common/stores/user'
 import { useChatUnread, refreshChatUnread } from '@/common/consultChat'
+import hznuCrest from '@/assets/images/brand/hznu-crest.png'
 
 const route = useRoute()
 const router = useRouter()
@@ -160,6 +172,20 @@ function handleCommand(command: string) {
   width: 38px;
   height: 38px;
   font-size: 19px;
+}
+
+.brand__crest {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+}
+
+.brand__crest img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
 }
 
 .brand__text {
@@ -322,6 +348,7 @@ function handleCommand(command: string) {
 
 .shell__footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
@@ -340,6 +367,23 @@ function handleCommand(command: string) {
   font-size: 12px;
   letter-spacing: 0.18em;
   color: var(--ink-3);
+}
+
+.shell__footer-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-3);
+  font-family: var(--font-serif);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+}
+
+.shell__footer-brand img {
+  width: 17px;
+  height: 17px;
+  object-fit: contain;
+  opacity: 0.72;
 }
 
 .shell__motto::before {

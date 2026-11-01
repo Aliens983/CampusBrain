@@ -2,10 +2,15 @@
   <div class="admin-shell">
     <aside class="sidebar">
       <div class="sidebar__brand">
-        <span class="sidebar__seal">杭</span>
+        <span class="sidebar__crest">
+          <img
+            :src="hznuCrest"
+            alt="杭州师范大学校徽"
+          >
+        </span>
         <div class="sidebar__brand-text">
-          <strong>智汇校园</strong>
-          <p>管理控制台</p>
+          <strong>杭州师范大学</strong>
+          <p>智汇校园 · 管理控制台</p>
           <span>HZNU · ADMIN CONSOLE</span>
         </div>
       </div>
@@ -26,6 +31,11 @@
       </nav>
 
       <div class="sidebar__foot">
+        <img
+          class="sidebar__logo"
+          :src="hznuLogoLight"
+          alt="杭州师范大学"
+        >
         <span class="sidebar__motto">勤慎诚恕 · 博雅精进</span>
         <span>HZNU · 1908</span>
       </div>
@@ -70,6 +80,8 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/common/stores/user'
 import request from '@/common/utils/request'
+import hznuCrest from '@/assets/images/brand/hznu-crest.png'
+import hznuLogoLight from '@/assets/images/brand/hznu-logo-light.png'
 
 const weather = ref<{ shi: string; weather1: string; temp: string } | null>(null)
 
@@ -164,6 +176,29 @@ function logout() {
   font-size: 18px;
   font-weight: 700;
   line-height: 1;
+}
+
+.sidebar__crest {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.sidebar__crest img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: 0.84;
+}
+
+.sidebar__logo {
+  width: 118px;
+  height: auto;
+  margin-bottom: 3px;
+  opacity: 0.5;
 }
 
 .sidebar__brand-text {

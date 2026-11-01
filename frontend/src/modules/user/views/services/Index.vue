@@ -184,6 +184,8 @@
         重置筛选
       </el-button>
     </section>
+    <CampusStory compact />
+
   </div>
 </template>
 
@@ -192,8 +194,9 @@ import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { Search, Loading } from '@element-plus/icons-vue'
-import cqImg from '@/assets/images/campus/cq-hero.jpg'
-import xsImg from '@/assets/images/campus/xs-hero.jpg'
+import CampusStory from '@/components/CampusStory.vue'
+import cqImg from '@/assets/images/campus/cq-library.jpg'
+import xsImg from '@/assets/images/campus/xs-lake.jpg'
 import { fetchServiceCards, fetchServiceCategories, type ServiceCategoryOption } from '@/common/campus'
 import type { ServiceCard } from '@/common/types'
 import { assetUrl } from '@/common/utils/asset'
@@ -210,8 +213,8 @@ const loading = ref(false)
 const currentYear = new Date().getFullYear()
 
 const campusOptions = [
-  { value: 'cq', label: '仓前校区', desc: '勤园 · 恕园教学楼' },
-  { value: 'xs', label: '下沙校区', desc: 'A–E 教学楼' },
+  { value: 'cq', label: '仓前校区', desc: '叠书成塔 · 余杭塘河' },
+  { value: 'xs', label: '下沙校区', desc: '蕙风湖 · 钱塘江畔' },
 ]
 
 /** 墨色遮罩 + 实景图：左侧压暗保证文字清晰，右侧保留校园细节 */

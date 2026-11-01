@@ -12,6 +12,8 @@
       @select="openMetricDetail"
     />
 
+    <CampusStory />
+
     <section class="dashboard-grid">
       <div class="dashboard-grid__main">
         <QuickShortcuts
@@ -58,6 +60,7 @@ import { useRouter } from 'vue-router'
 import { useDashboard, type DashboardShortcut } from './composables'
 import HeroSection from './components/HeroSection.vue'
 import MetricGrid from './components/MetricGrid.vue'
+import CampusStory from '@/components/CampusStory.vue'
 import QuickShortcuts from './components/QuickShortcuts.vue'
 import ServiceRecommend from './components/ServiceRecommend.vue'
 import TodoFeedback from './components/TodoFeedback.vue'

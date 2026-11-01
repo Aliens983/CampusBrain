@@ -9,16 +9,22 @@
         >
         <div class="register-hero__veil" />
         <div class="register-hero__brand">
-          <span class="register-hero__seal">杭</span>
+          <span class="register-hero__crest">
+            <img
+              :src="hznuCrest"
+              alt="杭州师范大学校徽"
+            >
+          </span>
           <span class="register-hero__brand-text">
-            <strong>智汇校园</strong>
-            <span>HZNU · CAMPUSBRAIN</span>
+            <strong>杭州师范大学</strong>
+            <span>智汇校园 · HZNU</span>
           </span>
         </div>
-        <span
-          class="register-hero__verse"
-          aria-hidden="true"
-        >勤慎诚恕 · 博雅精进</span>
+        <img
+          class="register-hero__motto"
+          :src="hznuMottoLight"
+          alt="校训：勤慎诚恕，博雅精进"
+        >
         <div class="register-hero__copy">
           <p class="register-hero__eyebrow">
             Create account · HZNU
@@ -194,7 +200,14 @@
         </div>
 
         <div class="register-foot">
-          <span>勤慎诚恕 · 博雅精进</span>
+          <div class="register-foot__brand">
+            <img
+              :src="hznuLogo"
+              alt="杭州师范大学"
+              class="register-foot__logo"
+            >
+            <span>勤慎诚恕 · 博雅精进</span>
+          </div>
           <span>HZNU · EST. 1908</span>
         </div>
       </div>
@@ -208,6 +221,9 @@ import { useRouter } from 'vue-router'
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus'
 import request from '@/common/utils/request'
 import cqImg from '@/assets/images/campus/cq-hero.jpg'
+import hznuCrest from '@/assets/images/brand/hznu-crest.png'
+import hznuMottoLight from '@/assets/images/brand/hznu-motto-light.png'
+import hznuLogo from '@/assets/images/brand/hznu-logo.png'
 
 const router = useRouter()
 const formRef = ref<FormInstance>()
@@ -390,6 +406,22 @@ onMounted(() => {
   line-height: 1;
 }
 
+.register-hero__crest {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+}
+
+.register-hero__crest img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: 0.88;
+}
+
 .register-hero__brand-text {
   display: grid;
   line-height: 1.2;
@@ -411,17 +443,16 @@ onMounted(() => {
   color: rgba(247, 241, 228, 0.52);
 }
 
-.register-hero__verse {
+.register-hero__motto {
   position: absolute;
   top: 50%;
-  right: 34px;
+  right: 16px;
+  width: auto;
+  height: 160px;
   transform: translateY(-50%);
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  letter-spacing: 0.32em;
-  font-family: var(--font-serif);
-  font-size: 12px;
-  color: rgba(214, 193, 154, 0.64);
+  opacity: 0.62;
+  filter: drop-shadow(0 8px 24px rgba(13, 32, 39, 0.3));
+  pointer-events: none;
 }
 
 .register-hero__copy {
@@ -605,6 +636,18 @@ onMounted(() => {
   letter-spacing: 0.12em;
 }
 
+.register-foot__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.register-foot__logo {
+  width: 84px;
+  height: auto;
+  opacity: 0.72;
+}
+
 @media (max-width: 700px) {
   .register-page {
     padding: 12px;
@@ -619,7 +662,7 @@ onMounted(() => {
     min-height: 210px;
   }
 
-  .register-hero__verse {
+  .register-hero__motto {
     display: none;
   }
 

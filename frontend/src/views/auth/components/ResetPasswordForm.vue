@@ -87,7 +87,14 @@
     </el-form>
 
     <div class="auth-card__foot">
-      <span>勤慎诚恕 · 博雅精进</span>
+      <div class="auth-card__brand">
+        <img
+          :src="hznuLogo"
+          alt="杭州师范大学"
+          class="auth-card__logo"
+        >
+        <span>勤慎诚恕 · 博雅精进</span>
+      </div>
       <span>HZNU · 1908</span>
     </div>
   </section>
@@ -97,6 +104,7 @@
 import { ref } from 'vue'
 import type { FormInstance, FormRules } from 'element-plus'
 import type { ResetFormState } from '../composables'
+import hznuLogo from '@/assets/images/brand/hznu-logo.png'
 
 defineProps<{
   form: ResetFormState
@@ -214,6 +222,18 @@ async function handleSubmit() {
   font-family: var(--font-serif);
   font-size: 10px;
   letter-spacing: 0.12em;
+}
+
+.auth-card__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-card__logo {
+  width: 84px;
+  height: auto;
+  opacity: 0.72;
 }
 
 @media (max-width: 700px) {

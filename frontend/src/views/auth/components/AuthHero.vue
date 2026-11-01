@@ -10,19 +10,23 @@
 
     <div class="auth-hero__inner">
       <div class="auth-hero__brand">
-        <span class="auth-hero__seal">杭</span>
+        <span class="auth-hero__crest">
+          <img
+            :src="hznuCrest"
+            alt="杭州师范大学校徽"
+          >
+        </span>
         <span class="auth-hero__brand-text">
-          <strong>智汇校园</strong>
-          <span>HZNU · CAMPUSBRAIN</span>
+          <strong>杭州师范大学</strong>
+          <span>智汇校园 · HZNU</span>
         </span>
       </div>
 
-      <div
-        class="auth-hero__verse"
-        aria-hidden="true"
+      <img
+        class="auth-hero__motto"
+        :src="hznuMottoLight"
+        alt="校训：勤慎诚恕，博雅精进"
       >
-        勤慎诚恕 · 博雅精进
-      </div>
 
       <div class="auth-hero__copy">
         <p class="auth-hero__eyebrow">
@@ -52,6 +56,8 @@
 
 <script setup lang="ts">
 import xsImg from '@/assets/images/campus/xs-hero.jpg'
+import hznuCrest from '@/assets/images/brand/hznu-crest.png'
+import hznuMottoLight from '@/assets/images/brand/hznu-motto-light.png'
 
 defineProps<{
   resetMode: boolean
@@ -131,6 +137,22 @@ defineProps<{
   line-height: 1;
 }
 
+.auth-hero__crest {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+}
+
+.auth-hero__crest img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+  opacity: 0.88;
+}
+
 .auth-hero__brand-text {
   display: grid;
   line-height: 1.2;
@@ -153,26 +175,16 @@ defineProps<{
   color: rgba(247, 241, 228, 0.56);
 }
 
-.auth-hero__verse {
+.auth-hero__motto {
   position: absolute;
   top: 50%;
-  right: -12px;
+  right: 18px;
+  width: auto;
+  height: 190px;
   transform: translateY(-50%);
-  writing-mode: vertical-rl;
-  text-orientation: upright;
-  letter-spacing: 0.34em;
-  font-family: var(--font-serif);
-  font-size: 13px;
-  color: rgba(214, 193, 154, 0.72);
-}
-
-.auth-hero__verse::before {
-  content: "";
-  display: inline-block;
-  width: 1px;
-  height: 46px;
-  margin-bottom: 18px;
-  background: rgba(214, 193, 154, 0.4);
+  opacity: 0.62;
+  filter: drop-shadow(0 8px 24px rgba(13, 32, 39, 0.3));
+  pointer-events: none;
 }
 
 .auth-hero__copy {
@@ -263,7 +275,7 @@ defineProps<{
     min-height: 420px;
   }
 
-  .auth-hero__verse {
+  .auth-hero__motto {
     display: none;
   }
 
