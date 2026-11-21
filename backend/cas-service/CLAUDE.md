@@ -46,9 +46,7 @@ cas-framework（聚合）
   ├─ cas-spring-boot-starter-web    GlobalExceptionHandler、Web 配置
   ├─ cas-spring-boot-starter-security  JWTFilter + InternalAuthFilter + SecurityAutoConfiguration
   ├─ cas-spring-boot-starter-mybatis  MyBatis-Plus 配置
-  ├─ cas-spring-boot-starter-redis    RedisTemplate + RedisUtil
-  ├─ cas-spring-boot-starter-mq       MqAutoConfiguration（RabbitMQ 基础配置，非空 stub）
-  └─ cas-spring-boot-starter-test     BaseApplicationTest
+  └─ cas-spring-boot-starter-redis    RedisTemplate + RedisUtil
 cas-module-infra-api    跨模块契约（FileService / EmailService），无实现、零框架依赖（仅 spring-web 签名）
 cas-module-infra        文件 / 邮件 / 二维码（依赖 infra-api + framework + thirdparty 的 OSSService）
 cas-thirdparty          天气、阿里云 OSS、短信（仅依赖 common；AI 对话链已删除，见下）
